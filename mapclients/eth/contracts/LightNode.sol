@@ -4,14 +4,14 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-//import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./lib/RLPReader.sol";
 import "./lib/RLPEncode.sol";
+//import "./lib/ILightNode.sol";
 
 interface IVerifyProof {
-
-    function verifyTrieProof(bytes32 hash, bytes memory _expectedValue, bytes[] memory proofs,bytes memory _key) pure external returns (bool success);
+    function verifyTrieProof(bytes32 hash, bytes memory _expectedValue, bytes[] memory proofs,bytes memory _key)
+    pure external returns (bool success);
 }
 
 // import "hardhat/console.sol";
@@ -21,6 +21,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
+
 
     struct blockHeader {
         bytes parentHash;
@@ -33,16 +34,10 @@ contract LightNode is UUPSUpgradeable, Initializable {
         uint256 gasLimit;
         uint256 gasUsed;
         uint256 time;
-        bytes extraData;
+        istanbulExtra extraData;
         bytes mixDigest;
         bytes nonce;
         uint256 baseFee;
-    }
-
-    struct txParams {
-        address From;
-        address To;
-        uint256 Value;
     }
 
     struct txProve{
@@ -52,7 +47,9 @@ contract LightNode is UUPSUpgradeable, Initializable {
     }
 
     struct txLogs{
-        uint index;
+        bytes PostStateOrStatus;
+        uint CumulativeGasUsed;
+        bytes Bloom;
         Log[] logs;
     }
 
@@ -61,42 +58,6 @@ contract LightNode is UUPSUpgradeable, Initializable {
         bytes[] topics;
         bytes data;
     }
-
-
-
-    struct proveData {
-        blockHeader header;
-        txLogs logs;
-        txProve prove;
-        txParams Tx;
-    }
-
-    // struct txProve {
-    //     bytes header;
-    //     txParams Tx;
-    //     bytes receipt;
-    //     bytes32[] prove;
-    // }
-    // struct txProveTest {
-    //     bytes header;
-    //     txParams Tx;
-    //     bytes _expectedValue;
-    //     bytes[] prove;
-    //     bytes key;
-    //     uint256 keyIndex;
-    //     uint256 proofIndex;
-    // }
-
-//    struct Log {
-//        address addr;
-//        bytes[] topics;
-//        bytes data;
-//    }
-//
-//    struct txLogs{
-//        uint index;
-//        Log[] logs;
-//    }
 
     struct istanbulAggregatedSeal {
         uint256 round;
@@ -113,7 +74,34 @@ contract LightNode is UUPSUpgradeable, Initializable {
         bytes[] addedPubKey;
     }
 
-    // LogSwapOut(bytes32,address,address,address,uint256,uint256,uint256)
+    struct proveData {
+        blockHeader header;
+        txLogs logs;
+        txProve prove;
+    }
+
+
+    function proveVerify(proveData memory _proveData) external view returns (bool success, string memory message) {
+        (success,message)=getVerifyTrieProof(_proveData);
+        if (!success) {
+            message = "receipt mismatch";
+        }
+
+        bytes32 hash = keccak256(abi.encodePacked(proveData.logs));
+    }
+
+    function save(blockHeader memory bh) external {
+        (
+        bool ret,
+        uint256 removeList,
+        bytes[] memory addedPubKey
+        ) = _verifyHeader(bh);
+        require(ret, "verifyHeader failed");
+        _changeValidators(removeList, addedPubKey);
+    }
+
+
+    //LogSwapOut(bytes32,address,address,address,uint256,uint256,uint256)
     //bytes32 constant EventHash = 0xcfdd266a10c21b3f2a2da4a807706d3f3825d37ca51d341eef4dce804212a8a3;
     bytes32 constant EventHash = 0x55b6db7dd8522bdf7ec2d1fb141241ed070d807546f1619b46d2e5844576395a;
 
@@ -134,8 +122,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     /** initialize  **********************************************************/
     function initialize(bytes memory firstBlock, uint256 epoch)
     external
-    initializer
-    {
+    initializer {
         _changeAdmin(msg.sender);
         epochLength = 20;
         _initFirstBlock(firstBlock, epoch);
@@ -153,12 +140,12 @@ contract LightNode is UUPSUpgradeable, Initializable {
     }
 
     /** external function *********************************************************/
-    function save(bytes memory rlpHeader) external {
+    function save(blockHeader memory bh) external {
         (
         bool ret,
         uint256 removeList,
         bytes[] memory addedPubKey
-        ) = _verifyHeader(rlpHeader);
+        ) = _verifyHeader(bh);
         require(ret, "verifyHeader failed");
         _changeValidators(removeList, addedPubKey);
     }
@@ -167,14 +154,8 @@ contract LightNode is UUPSUpgradeable, Initializable {
         address router,
         uint256 srcChain,
         uint256 dstChain,
-//        bytes calldata rlpTxProve,
-        proveData memory _proveData
-    ) external view returns (bool success, string memory message) {
-//        txProve memory txp = _decodeTxProve(rlpTxProve);
-//        blockHeader memory bh = _decodeHeader(txp.header);
- //       Log[] memory logs = _decodeTxReceipt(txp.receipt);
-
-
+        proveData memory _proveData)
+    external view returns (bool success, string memory message) {
         (Log memory lg, bool found) = _queryLog(router, _proveData.logs.logs);
         if (!found) {
             return (false, "LightNode: event log not found");
@@ -184,10 +165,6 @@ contract LightNode is UUPSUpgradeable, Initializable {
         if (!success) {
             return (success, message);
         }
-
-//        MPT.MerkleProof memory mp;
-//        bytes32 leaf = keccak256(txp.receipt);
-//        bytes32 root = bytes32(bh.receipHash);
 
         (success,message)=getVerifyTrieProof(_proveData);
         if (!success) {
@@ -200,12 +177,10 @@ contract LightNode is UUPSUpgradeable, Initializable {
     }
 
     function getVerifyTrieProof(proveData memory _proveData) public view returns(
-        bool success, string memory message
-       // bytes32 hash, bytes memory _expectedValue, bytes[] memory proofs,bytes memory _key
+        bool success, string memory message){
 
-    ){
-
-        success = verifyProof.verifyTrieProof(bytes32(_proveData.header.receipHash),_proveData.prove.expectedValue,_proveData.prove.prove,_proveData.prove.keyIndex);
+        success = verifyProof.verifyTrieProof(bytes32(_proveData.header.receipHash),_proveData.prove.expectedValue,
+            _proveData.prove.prove,_proveData.prove.keyIndex);
         if (!success) {
             message = "receipt mismatch";
         }else{
@@ -215,10 +190,8 @@ contract LightNode is UUPSUpgradeable, Initializable {
 
     /** sstore functions *******************************************************/
 
-    function _initFirstBlock(bytes memory firstBlock, uint256 epoch) private {
-        blockHeader memory bh = _decodeHeader(firstBlock);
+    function _initFirstBlock(blockHeader memory bh, uint256 epoch) private {
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
-
         keyNum = ist.addedPubKey.length;
         // nowNumber = bh.number;
         bytes[] memory keys = new bytes[](keyNum);
@@ -246,8 +219,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     }
 
     function _changeValidators(uint256 removedVal, bytes[] memory addVal)
-    private
-    {
+    private {
         (uint256[] memory list, uint8 oldVal) = _readRemoveList(removedVal);
         bytes[] memory newKeys = new bytes[](oldVal + addVal.length);
         bytes[] memory currentKeys = currentValidators();
@@ -277,8 +249,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _decodeTxReceipt(bytes memory rlpBytes)
     public
     pure
-    returns (Log[] memory logs)
-    {
+    returns (Log[] memory logs){
         RLPReader.RLPItem[] memory i5ls = rlpBytes.toRlpItem().toList();
         //RLPReader.RLPItem[] memory i5ls = ls[5].toList(); //logs
 
@@ -304,8 +275,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _queryLog(address coinAddr, Log[] memory logs)
     public
     pure
-    returns (Log memory lg, bool found)
-    {
+    returns (Log memory lg, bool found){
         found = false;
         uint256 num = logs.length;
         for (uint256 i = 0; i < num; i++) {
@@ -320,7 +290,6 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _verifyTxParams(
         uint256 srcChain,
         uint256 dstChain,
-        txParams memory txparams,
         Log memory log
     ) public pure returns (bool suc, string memory message ) {
         if (log.topics.length < 4) {
@@ -357,23 +326,19 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _bytesSlice32(bytes memory data, uint256 offset)
     public
     pure
-    returns (uint256 slice)
-    {
+    returns (uint256 slice){
         bytes memory tmp = new bytes(32);
         for (uint256 i = 0; i < 32; i++) {
             tmp[i] = data[offset + i];
         }
         slice = uint256(bytes32(tmp));
-
     }
 
     function _decodeHeader(bytes memory rlpBytes)
     public
     pure
-    returns (blockHeader memory bh)
-    {
+    returns (blockHeader memory bh){
         RLPReader.RLPItem[] memory ls = rlpBytes.toRlpItem().toList();
-
         bh = blockHeader({
         parentHash: ls[0].toBytes(),
         coinbase: ls[1].toAddress(),
@@ -396,8 +361,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _encodeHeader(blockHeader memory bh)
     public
     pure
-    returns (bytes memory output)
-    {
+    returns (bytes memory output){
         bytes[] memory list = new bytes[](14);
         list[0] = RLPEncode.encodeBytes(bh.parentHash); //
         list[1] = RLPEncode.encodeAddress(bh.coinbase); //
@@ -419,8 +383,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _decodeExtraData(bytes memory extraData)
     public
     pure
-    returns (istanbulExtra memory ist)
-    {
+    returns (istanbulExtra memory ist){
         bytes memory decodeBytes = _splitExtra(extraData);
         RLPReader.RLPItem[] memory ls = decodeBytes.toRlpItem().toList();
         RLPReader.RLPItem memory item0 = ls[0];
@@ -461,27 +424,21 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _splitExtra(bytes memory extra)
     public
     pure
-    returns (bytes memory newExtra)
-    {
+    returns (bytes memory newExtra){
         newExtra = new bytes(extra.length - 32);
-
         uint256 n = 0;
         for (uint256 i = 32; i < extra.length; i++) {
             newExtra[n] = extra[i];
             n = n + 1;
         }
-
         return newExtra;
     }
 
     function splitExtra(bytes memory extra)
     public
     pure
-    returns (bytes memory newExtra)
-    {
-
+    returns (bytes memory newExtra){
         newExtra = new bytes(32);
-
         uint m = 0;
         for(uint i=0;i<32;i++){
             newExtra[m] = extra[i];
@@ -490,17 +447,11 @@ contract LightNode is UUPSUpgradeable, Initializable {
         return newExtra;
     }
 
-    function _verifyHeader(bytes memory rlpHeader)
+    function _verifyHeader(blockHeader memory bh)
     public
     view
-    returns (
-        bool ret,
-        uint256 removeList,
-        bytes[] memory addedPubKey
-    )
-    {
-        blockHeader memory bh = _decodeHeader(rlpHeader);
-        istanbulExtra memory ist = _decodeExtraData(bh.extraData);
+    returns (bool ret, uint256 removeList, bytes[] memory addedPubKey){
+        istanbulExtra memory ist = bh.extraData;
         bytes memory extraDataPre = splitExtra(bh.extraData);
         bh.extraData = _deleteAgg(ist, extraDataPre);
         bytes memory headerWithoutAgg = _encodeHeader(bh);
@@ -595,8 +546,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _deleteSealAndAgg(istanbulExtra memory ist, bytes memory extraData)
     public
     pure
-    returns (bytes memory newExtra)
-    {
+    returns (bytes memory newExtra){
         bytes[] memory list1 = new bytes[](ist.validators.length);
         bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
         for (uint256 i = 0; i < ist.validators.length; i++) {
@@ -635,8 +585,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _deleteSealAndAggTest(istanbulExtra memory ist, bytes memory extraData)
     public
     pure
-    returns (bytes memory newExtra)
-    {
+    returns (bytes memory newExtra){
         bytes[] memory list1 = new bytes[](ist.validators.length);
         bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
         for (uint256 i = 0; i < ist.validators.length; i++) {
@@ -721,12 +670,8 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function splitSignature(bytes memory sig)
     public
     pure
-    returns (
-        bytes32 r,
-        bytes32 s,
-        uint8 v
-    )
-    {
+    returns
+    (bytes32 r, bytes32 s, uint8 v){
         require(sig.length == 65, "invalid signature length");
         assembly {
             r := mload(add(sig, 32))
@@ -739,8 +684,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _addsuffix(bytes32 hash, uint8 round)
     public
     pure
-    returns (bytes memory)
-    {
+    returns (bytes memory){
         bytes memory result = new bytes(34);
         for (uint256 i = 0; i < 32; i++) {
             result[i] = hash[i];
@@ -754,8 +698,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     function _readRemoveList(uint256 r)
     public
     view
-    returns (uint256[] memory ret, uint8 sum)
-    {
+    returns (uint256[] memory ret, uint8 sum){
         //the function transfer uint to binary.
         sum = 0;
         ret = new uint256[](keyNum);
