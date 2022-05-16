@@ -60,9 +60,24 @@ interface ILightNode {
         txProve prove;
     }
 
-    function proveVerify(proveData memory _proveData) external view returns (bool success, string memory message);
 
-    function save(blockHeader memory bh,bytes memory bits, G2 memory aggPk) external;
+    struct G1 {
+        uint x;
+        uint y;
+    }
 
-    function init(G1 memory sig, uint round) external;
+    struct G2 {
+        uint xr;
+        uint xi;
+        uint yr;
+        uint yi;
+    }
+
+    function verifyProof(proveData memory _proveData, bytes memory aggPk) external view returns (bool success, string memory message);
+
+    //
+    function UpdateBlockHeader(blockHeader memory bh, bytes memory aggPk) external;
+
+    //G1
+    function init(uint _threshold, bytes[] memory _pairKeys, uint[] memory _weights,uint round) external;
 }
