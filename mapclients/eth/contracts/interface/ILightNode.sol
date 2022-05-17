@@ -14,7 +14,7 @@ interface ILightNode {
         uint256 gasLimit;
         uint256 gasUsed;
         uint256 time;
-        istanbulExtra extraData;
+        bytes extraData;
         bytes mixDigest;
         bytes nonce;
         uint256 baseFee;
