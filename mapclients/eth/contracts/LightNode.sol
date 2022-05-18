@@ -14,8 +14,6 @@ interface IVerifyProof {
     pure external returns (bool success);
 }
 
-// import "hardhat/console.sol";
-
 contract LightNode is UUPSUpgradeable, Initializable {
     using RLPReader for bytes;
     using RLPReader for uint256;
@@ -34,7 +32,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
         uint256 gasLimit;
         uint256 gasUsed;
         uint256 time;
-        istanbulExtra extraData;
+        bytes extraData;
         bytes mixDigest;
         bytes nonce;
         uint256 baseFee;
@@ -56,6 +54,12 @@ contract LightNode is UUPSUpgradeable, Initializable {
     struct Log {
         address addr;
         bytes[] topics;
+        bytes data;
+    }
+
+    struct LogInfo {
+        address addr;
+        bytes topic;
         bytes data;
     }
 
@@ -81,24 +85,14 @@ contract LightNode is UUPSUpgradeable, Initializable {
     }
 
 
-    function proveVerify(proveData memory _proveData) external view returns (bool success, string memory message) {
-        (success,message)=getVerifyTrieProof(_proveData);
-        if (!success) {
-            message = "receipt mismatch";
-        }
-
-        bytes32 hash = keccak256(abi.encodePacked(proveData.logs));
-    }
-
-    function save(blockHeader memory bh) external {
-        (
-        bool ret,
-        uint256 removeList,
-        bytes[] memory addedPubKey
-        ) = _verifyHeader(bh);
-        require(ret, "verifyHeader failed");
-        _changeValidators(removeList, addedPubKey);
-    }
+    //    function proveVerify(proveData memory _proveData) external view returns (bool success, string memory message) {
+    //        (success,message)=getVerifyTrieProof(_proveData);
+    //        if (!success) {
+    //            message = "receipt mismatch";
+    //        }
+    //
+    //        bytes32 hash = keccak256(abi.encodePacked(proveData.logs));
+    //    }
 
 
     //LogSwapOut(bytes32,address,address,address,uint256,uint256,uint256)
@@ -140,12 +134,12 @@ contract LightNode is UUPSUpgradeable, Initializable {
     }
 
     /** external function *********************************************************/
-    function save(blockHeader memory bh) external {
+    function save(bytes memory rlpHeader) external {
         (
         bool ret,
         uint256 removeList,
         bytes[] memory addedPubKey
-        ) = _verifyHeader(bh);
+        ) = _verifyHeader(rlpHeader);
         require(ret, "verifyHeader failed");
         _changeValidators(removeList, addedPubKey);
     }
@@ -161,16 +155,124 @@ contract LightNode is UUPSUpgradeable, Initializable {
             return (false, "LightNode: event log not found");
         }
 
-        (success, message) = _verifyTxParams(srcChain, dstChain, _proveData.Tx, lg);
-        if (!success) {
-            return (success, message);
-        }
+        //        (success, message) = _verifyTxParams(srcChain, dstChain, _proveData.Tx, lg);
+        //        if (!success) {
+        //            return (success, message);
+        //        }
 
         (success,message)=getVerifyTrieProof(_proveData);
         if (!success) {
             message = "receipt mismatch";
         }
     }
+
+    function getStatus(bool _tag) public view returns(bytes memory PostStateOrStatus){
+        PostStateOrStatus = abi.encode(_tag);
+    }
+
+//    function _encodeTxReceipt(Log[] memory logs)
+//        public
+//        pure
+//        returns (bytes memory output){
+//            // uint256 logLengtg = logs.length;
+//            //bytes[] memory list = new bytes[](6);
+//
+//            //bytes[] memory listLog = new bytes[](logLengtg);
+//            bytes[] memory listLog = new bytes[](1);
+//
+//            bytes[] memory loglist = new bytes[](3);
+//
+//
+//                loglist[0] = RLPEncode.encodeAddress(logs[0].addr);
+//            //uint256 topicLength = (logs[i].topics).length;
+//            // bytes [] memory topic = new bytes[](topicLength);
+//            // for(uint256 j = 0; j < topicLength; j++ ){
+//            //   topic[j] = RLPEncode.encodeBytes(logs[i].topics[j]);
+//            // }
+//
+//                bytes[] memory loglist1 = new bytes[](logs[0].topics.length);
+//                for(uint256 i =0; i < logs[0].topics.length; i++){
+//                    loglist1[i]  = RLPEncode.encodeBytes(logs[0].topics[i]);
+//                }
+//
+//                loglist[1] = RLPEncode.encodeList(loglist1);
+//
+//                loglist[2] = RLPEncode.encodeBytes(logs[0].data);
+//
+//                bytes memory yy = RLPEncode.encodeList(loglist);
+//
+//                listLog[0] = RLPEncode.encodeBytes(yy);
+//
+//                output= RLPEncode.encodeList(listLog);
+//                //output= RLPEncode.encodeList(loglist);
+//
+//
+//        }
+
+
+    function _decodeExpectedValue(bytes memory rlpBytes)
+    public
+    pure
+    returns (bytes memory output1,uint256 output2,bytes memory output3,Log[] memory logs){
+        RLPReader.RLPItem[] memory i5ls = rlpBytes.toRlpItem().toList();
+       // RLPReader.RLPItem[] memory i5ls = ls[5].toList(); //logs
+        output1 = i5ls[0].toBytes();
+        output2 = i5ls[1].toUint();
+        output3 = i5ls[2].toBytes();
+        //output4 = i5ls[3].toRlpItem().toList();
+        RLPReader.RLPItem[] memory logInfo = i5ls[3].toList();
+
+        uint256 num = logInfo.length;
+        logs = new Log[](num);
+        for (uint256 i = 0; i < num; i++) {
+            RLPReader.RLPItem[] memory l = logInfo[i].toList();
+            logs[i].addr = l[0].toAddress();
+
+            RLPReader.RLPItem[] memory topicls = l[1].toList();
+            uint256 n1 = topicls.length;
+            logs[i].topics = new bytes[](n1);
+            for (uint256 j = 0; j < n1; j++) {
+                logs[i].topics[j] = topicls[j].toBytes();
+            }
+
+            logs[i].data = l[2].toBytes();
+        }
+    }
+
+
+    function getVerifyExpectedValueHash(txLogs memory _txlogs) external pure returns(bytes memory output){
+        bytes[] memory list = new bytes[](4);
+        list[0] = RLPEncode.encodeBytes(_txlogs.PostStateOrStatus);
+        list[1] = RLPEncode.encodeUint(_txlogs.CumulativeGasUsed);
+        list[2] = RLPEncode.encodeBytes(_txlogs.Bloom);
+        bytes[] memory listLog = new bytes[](_txlogs.logs.length);
+
+        bytes[] memory loglist = new bytes[](3);
+
+        for(uint256 j = 0; j < _txlogs.logs.length; j++){
+            loglist[0] = RLPEncode.encodeAddress(_txlogs.logs[j].addr);
+
+            bytes[] memory loglist1 = new bytes[](_txlogs.logs[j].topics.length);
+            for(uint256 i =0; i < _txlogs.logs[j].topics.length; i++){
+                loglist1[i]  = RLPEncode.encodeBytes(_txlogs.logs[j].topics[i]);
+            }
+
+            loglist[1] = RLPEncode.encodeList(loglist1);
+
+            loglist[2] = RLPEncode.encodeBytes(_txlogs.logs[j].data);
+
+            //listLog[0] =  RLPEncode.encodeList(loglist);
+            bytes memory yy = RLPEncode.encodeList(loglist);
+
+            listLog[j] = RLPEncode.encodeBytes(yy);
+
+            //list[3] = new bytes[](_txlogs.logs.length);
+
+        }
+        list[3] = RLPEncode.encodeList(listLog);
+        output = RLPEncode.encodeList(list);
+    }
+
 
     function setVerifyer(address _verify) public {
         verifyProof = IVerifyProof(_verify);
@@ -187,11 +289,33 @@ contract LightNode is UUPSUpgradeable, Initializable {
             message = "success";
         }
     }
+    uint256 CURRENTHIGHT;
+    uint256 COUNCILNUMBER;
+    function UpdateBlockHeader(blockHeader memory bh, bytes memory aggPk) external{
+        require(bh.number - CURRENTHIGHT == COUNCILNUMBER,"ERROR");
+
+
+
+        CURRENTHIGHT = bh.number;
+    }
 
     /** sstore functions *******************************************************/
 
-    function _initFirstBlock(blockHeader memory bh, uint256 epoch) private {
+    //    function _initFirstBlock(bytes memory bh, uint256 epoch) private {
+    //        istanbulExtra memory ist = _decodeExtraData(bh.extraData);
+    //        keyNum = ist.addedPubKey.length;
+    //        // nowNumber = bh.number;
+    //        bytes[] memory keys = new bytes[](keyNum);
+    //        for (uint256 i = 0; i < keyNum; i++) {
+    //            keys[i] = ist.addedPubKey[i];
+    //        }
+    //        _setValidators(keys, epoch);
+    //    }
+
+    function _initFirstBlock(bytes memory firstBlock, uint256 epoch) private {
+        blockHeader memory bh = _decodeHeader(firstBlock);
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
+
         keyNum = ist.addedPubKey.length;
         // nowNumber = bh.number;
         bytes[] memory keys = new bytes[](keyNum);
@@ -246,30 +370,29 @@ contract LightNode is UUPSUpgradeable, Initializable {
 
     /** private functions about header manipulation  ************************************/
 
-    function _decodeTxReceipt(bytes memory rlpBytes)
-    public
-    pure
-    returns (Log[] memory logs){
-        RLPReader.RLPItem[] memory i5ls = rlpBytes.toRlpItem().toList();
-        //RLPReader.RLPItem[] memory i5ls = ls[5].toList(); //logs
-
-        uint256 num = i5ls.length;
-        logs = new Log[](num);
-        for (uint256 i = 0; i < num; i++) {
-            RLPReader.RLPItem[] memory l = i5ls[i].toList();
-            logs[i].addr = l[0].toAddress();
-
-            RLPReader.RLPItem[] memory topicls = l[1].toList();
-            uint256 n1 = topicls.length;
-            logs[i].topics = new bytes[](n1);
-            for (uint256 j = 0; j < n1; j++) {
-                logs[i].topics[j] = topicls[j].toBytes();
-            }
-
-            logs[i].data = l[2].toBytes();
-        }
-    }
-
+//    function _decodeTxReceipt(bytes memory rlpBytes)
+//    public
+//    pure
+//    returns (Log[] memory logs){
+//        RLPReader.RLPItem[] memory i5ls = rlpBytes.toRlpItem().toList();
+//        //RLPReader.RLPItem[] memory i5ls = ls[5].toList(); //logs
+//
+//        uint256 num = i5ls.length;
+//        logs = new Log[](num);
+//        for (uint256 i = 0; i < num; i++) {
+//            RLPReader.RLPItem[] memory l = i5ls[i].toList();
+//            logs[i].addr = l[0].toAddress();
+//
+//            RLPReader.RLPItem[] memory topicls = l[1].toList();
+//            uint256 n1 = topicls.length;
+//            logs[i].topics = new bytes[](n1);
+//            for (uint256 j = 0; j < n1; j++) {
+//                logs[i].topics[j] = topicls[j].toBytes();
+//            }
+//
+//            logs[i].data = l[2].toBytes();
+//        }
+//    }
 
 
     function _queryLog(address coinAddr, Log[] memory logs)
@@ -287,41 +410,41 @@ contract LightNode is UUPSUpgradeable, Initializable {
         }
     }
 
-    function _verifyTxParams(
-        uint256 srcChain,
-        uint256 dstChain,
-        Log memory log
-    ) public pure returns (bool suc, string memory message ) {
-        if (log.topics.length < 4) {
-            return (false, "Topics`s length error");
-        }
-
-        if (txparams.From != address(bytes20((bytes32(log.topics[2])) << 96))) {
-            return (false, "invalid from");
-        }
-
-        if (txparams.To != address(bytes20((bytes32(log.topics[3])) << 96))) {
-            return (false, "invalid to");
-        }
-
-        if (log.data.length < 128) {
-            return (false, "log.Data length cannot be less than 128");
-        }
-
-        if (txparams.Value != uint256(_bytesSlice32(log.data,32))) {
-            return (false, "invalid value");
-        }
-
-        if (srcChain != uint256(_bytesSlice32(log.data, 64))) {
-            return (false, "invalid srcChain");
-        }
-
-        if (dstChain != uint256(_bytesSlice32(log.data, 96))) {
-            return (false, "invalid srcChain");
-        }
-        suc = true;
-        message = "success";
-    }
+    //    function _verifyTxParams(
+    //        uint256 srcChain,
+    //        uint256 dstChain,
+    //        Log memory log
+    //    ) public pure returns (bool suc, string memory message ) {
+    //        if (log.topics.length < 4) {
+    //            return (false, "Topics`s length error");
+    //        }
+    //
+    //        if (txparams.From != address(bytes20((bytes32(log.topics[2])) << 96))) {
+    //            return (false, "invalid from");
+    //        }
+    //
+    //        if (txparams.To != address(bytes20((bytes32(log.topics[3])) << 96))) {
+    //            return (false, "invalid to");
+    //        }
+    //
+    //        if (log.data.length < 128) {
+    //            return (false, "log.Data length cannot be less than 128");
+    //        }
+    //
+    //        if (txparams.Value != uint256(_bytesSlice32(log.data,32))) {
+    //            return (false, "invalid value");
+    //        }
+    //
+    //        if (srcChain != uint256(_bytesSlice32(log.data, 64))) {
+    //            return (false, "invalid srcChain");
+    //        }
+    //
+    //        if (dstChain != uint256(_bytesSlice32(log.data, 96))) {
+    //            return (false, "invalid srcChain");
+    //        }
+    //        suc = true;
+    //        message = "success";
+    //    }
 
     function _bytesSlice32(bytes memory data, uint256 offset)
     public
@@ -447,11 +570,12 @@ contract LightNode is UUPSUpgradeable, Initializable {
         return newExtra;
     }
 
-    function _verifyHeader(blockHeader memory bh)
+    function _verifyHeader(bytes memory rlpHeader)
     public
     view
     returns (bool ret, uint256 removeList, bytes[] memory addedPubKey){
-        istanbulExtra memory ist = bh.extraData;
+        blockHeader memory bh = _decodeHeader(rlpHeader);
+        istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bytes memory extraDataPre = splitExtra(bh.extraData);
         bh.extraData = _deleteAgg(ist, extraDataPre);
         bytes memory headerWithoutAgg = _encodeHeader(bh);
@@ -460,7 +584,6 @@ contract LightNode is UUPSUpgradeable, Initializable {
         bytes memory headerWithoutSealAndAgg = _encodeHeader(bh);
         bytes32 hash2 = keccak256(abi.encodePacked(headerWithoutSealAndAgg));
 
-        //the ecdsa seal signed by proposer
         ret = _verifySign(
             ist.seal,
             keccak256(abi.encodePacked(hash2)),
