@@ -171,24 +171,6 @@ describe("Relayer,LightNode start test", function () {
 
        // console.log(await  lightClient.getVerifyExpectedValue(txLogsData,_expectedValue));
 
-        let topics = [
-            "0x55b6db7dd8522bdf7ec2d1fb141241ed070d807546f1619b46d2e5844576395a",
-            "0x00000000000000000000000005ab928d446d8ce6761e368c8e7be03c3168a9ec",
-            "0x0000000000000000000000008b3be6c4ef99fbcd50934930b9f2b5893de26f98",
-            "0x0000000000000000000000008b3be6c4ef99fbcd50934930b9f2b5893de26f98"]
-
-        let topicInfo = await lightClient.getTopics(topics);
-       // console.log(topicInfo);
-
-        let logInfds = [
-            [
-                "0xb586DC60e9e39F87c9CB8B7D7E30b2f04D40D14c",
-               topicInfo,
-                "0x81165384bf4941eefe0525f9ae2af050f3619e271e1bc27eed26ef878d6bda6f00000000000000000000000000000000000000000000000140b4e9349576800000000000000000000000000000000000000000000000000000000000000058f80000000000000000000000000000000000000000000000000000000000000001"
-            ]
-
-        ]
-        //console.log(logInfds)
         console.log(await lightClient._decodeExpectedValue(_expectedValue));
         //console.log(await  lightClient._encodeTxReceipt(logs));
         console.log(await lightClient.getVerifyExpectedValueHash(txLogsData));

@@ -57,11 +57,6 @@ contract LightNode is UUPSUpgradeable, Initializable {
         bytes data;
     }
 
-    struct LogInfo {
-        address addr;
-        bytes topic;
-        bytes data;
-    }
 
     struct istanbulAggregatedSeal {
         uint256 round;
@@ -262,9 +257,9 @@ contract LightNode is UUPSUpgradeable, Initializable {
             loglist[2] = RLPEncode.encodeBytes(_txlogs.logs[j].data);
 
             //listLog[0] =  RLPEncode.encodeList(loglist);
-            bytes memory yy = RLPEncode.encodeList(loglist);
+            bytes memory logBytes = RLPEncode.encodeList(loglist);
 
-            listLog[j] = RLPEncode.encodeBytes(yy);
+            listLog[j] = RLPEncode.encodeBytes(logBytes);
 
             //list[3] = new bytes[](_txlogs.logs.length);
 
