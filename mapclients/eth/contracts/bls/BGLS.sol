@@ -7,12 +7,21 @@ contract BGLS {
         uint y;
     }
 
+    G1 g1 = G1(1, 2);
+
     struct G2 {
         uint xr;
         uint xi;
         uint yr;
         uint yi;
     }
+
+    G2 g2 = G2(
+        0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed,
+        0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2,
+        0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa,
+        0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b
+    );
 
     function modPow(uint base, uint exponent, uint modulus) internal returns (uint) {
         uint[6] memory input = [32, 32, 32, base, exponent, modulus];
@@ -83,6 +92,34 @@ contract BGLS {
         uint h = uint(keccak256(abi.encodePacked(message))) % order;
         return scalarMultiply(g1, h);
     }
+
+    uint prime = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47;
+    uint order = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
+
+    uint pminus = 21888242871839275222246405745257275088696311157297823662689037894645226208582;
+    uint pplus = 21888242871839275222246405745257275088696311157297823662689037894645226208584;
+
+    //    function hashToG1(uint[] memory b) internal returns (G1 memory) {
+    //        uint x = 0;
+    //        G1 memory res;
+    //        while (true) {
+    //            uint hx = uint(keccak256(abi.encodePacked(b, x))) % prime;
+    //            uint px = (modPow(hx, 3, prime) + 3);
+    //             y^2 = x^3 % p + 3
+    //            if (modPow(px, pminus / 2, prime) == 1) {// determine if px is a quadratic residue, === 1 means yes
+    //                 refer to https://mathworld.wolfram.com/QuadraticResidue.html
+    //                 prime is a special form of 4k+3,
+    //                 where k = 5472060717959818805561601436314318772174077789324455915672259473661306552145
+    //                 then x of x^2 = q (mod p) can be solved with x = q^(k+1) mod p, where k = (p - 3) / 4, k + 1 = (p + 1) / 4
+    //                uint py = modPow(px, pplus / 4, prime);
+    //
+    //                res = uint(keccak256(abi.encodePacked(b, uint(255)))) % 2 == 0 ? G1(hx, py) : G1(hx, prime - py);
+    //                break;
+    //            }
+    //            x++;
+    //        }
+    //        return res;
+    //    }
 
     function checkSignature(bytes memory message, G1 memory sig, G2 memory aggKey) public returns (bool) {
         return pairingCheck(sig, g2, hashToG1(message), aggKey);

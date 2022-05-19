@@ -7,87 +7,86 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./lib/RLPReader.sol";
 import "./lib/RLPEncode.sol";
-//import "./lib/ILightNode.sol";
+import "./interface/ILightNode.sol";
 
 interface IVerifyProof {
     function verifyTrieProof(bytes32 hash, bytes memory _expectedValue, bytes[] memory proofs,bytes memory _key)
     pure external returns (bool success);
 }
 
-contract LightNode is UUPSUpgradeable, Initializable {
+contract LightNode is UUPSUpgradeable, Initializable,ILightNode{
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
 
 
-    struct blockHeader {
-        bytes parentHash;
-        address coinbase;
-        bytes root;
-        bytes txHash;
-        bytes receipHash;
-        bytes bloom;
-        uint256 number;
-        uint256 gasLimit;
-        uint256 gasUsed;
-        uint256 time;
-        bytes extraData;
-        bytes mixDigest;
-        bytes nonce;
-        uint256 baseFee;
+//    struct blockHeader {
+//        bytes parentHash;
+//        address coinbase;
+//        bytes root;
+//        bytes txHash;
+//        bytes receipHash;
+//        bytes bloom;
+//        uint256 number;
+//        uint256 gasLimit;
+//        uint256 gasUsed;
+//        uint256 time;
+//        bytes extraData;
+//        bytes mixDigest;
+//        bytes nonce;
+//        uint256 baseFee;
+//    }
+//
+//    struct txProve{
+//        bytes keyIndex;
+//        bytes[] prove;
+//        bytes expectedValue;
+//    }
+//
+//    struct txLogs{
+//        bytes PostStateOrStatus;
+//        uint CumulativeGasUsed;
+//        bytes Bloom;
+//        Log[] logs;
+//    }
+//
+//    struct Log {
+//        address addr;
+//        bytes[] topics;
+//        bytes data;
+//    }
+//
+//
+//    struct istanbulAggregatedSeal {
+//        uint256 round;
+//        bytes signature;
+//        uint256 bitmap;
+//    }
+//
+//    struct istanbulExtra {
+//        address[] validators;
+//        bytes seal;
+//        istanbulAggregatedSeal aggregatedSeal;
+//        istanbulAggregatedSeal parentAggregatedSeal;
+//        uint256 removeList;
+//        bytes[] addedPubKey;
+//    }
+//
+//    struct proveData {
+//        blockHeader header;
+//        txLogs logs;
+//        txProve prove;
+//    }
+
+
+    function verifyProofData(proveData memory _proveData, bytes memory aggPk) external view returns (bool success, string memory message) {
+        (success,message)=getVerifyTrieProof(_proveData);
+        if (!success) {
+                message = "receipt mismatch";
+        }
+//        bytes32 hash = keccak256(abi.encodePacked(proveData.logs));
     }
-
-    struct txProve{
-        bytes keyIndex;
-        bytes[] prove;
-        bytes expectedValue;
-    }
-
-    struct txLogs{
-        bytes PostStateOrStatus;
-        uint CumulativeGasUsed;
-        bytes Bloom;
-        Log[] logs;
-    }
-
-    struct Log {
-        address addr;
-        bytes[] topics;
-        bytes data;
-    }
-
-
-    struct istanbulAggregatedSeal {
-        uint256 round;
-        bytes signature;
-        uint256 bitmap;
-    }
-
-    struct istanbulExtra {
-        address[] validators;
-        bytes seal;
-        istanbulAggregatedSeal aggregatedSeal;
-        istanbulAggregatedSeal parentAggregatedSeal;
-        uint256 removeList;
-        bytes[] addedPubKey;
-    }
-
-    struct proveData {
-        blockHeader header;
-        txLogs logs;
-        txProve prove;
-    }
-
-
-    //    function proveVerify(proveData memory _proveData) external view returns (bool success, string memory message) {
-    //        (success,message)=getVerifyTrieProof(_proveData);
-    //        if (!success) {
-    //            message = "receipt mismatch";
-    //        }
-    //
-    //        bytes32 hash = keccak256(abi.encodePacked(proveData.logs));
-    //    }
 
 
     //LogSwapOut(bytes32,address,address,address,uint256,uint256,uint256)
@@ -129,6 +128,10 @@ contract LightNode is UUPSUpgradeable, Initializable {
     }
 
     /** external function *********************************************************/
+    function init(uint _threshold, bytes[] memory _pairKeys, uint[] memory _weights,uint round) external{
+
+    }
+
     function save(bytes memory rlpHeader) external {
         (
         bool ret,
@@ -286,7 +289,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     }
     uint256 CURRENTHIGHT;
     uint256 COUNCILNUMBER;
-    function UpdateBlockHeader(blockHeader memory bh, bytes memory aggPk) external{
+    function updateBlockHeader(blockHeader memory bh, bytes memory aggPk) external{
         require(bh.number - CURRENTHIGHT == COUNCILNUMBER,"ERROR");
 
 
