@@ -73,11 +73,11 @@ interface ILightNode {
         uint yi;
     }
 
-    function verifyProofData(proveData memory _proveData, bytes memory aggPk) external view returns (bool success, string memory message);
+    function verifyProofData(proveData memory _proveData, G2 memory aggPk) external view returns (bool success, string memory message);
 
     //
-    function updateBlockHeader(blockHeader memory bh, bytes memory aggPk) external;
+    function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external;
 
     //G1
-    function init(uint _threshold, bytes[] memory _pairKeys, uint[] memory _weights,uint round) external;
+    function init(uint _threshold, G1[] memory _pairKeys, uint[] memory _weights,uint round) external;
 }

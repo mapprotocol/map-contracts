@@ -80,7 +80,7 @@ contract LightNode is UUPSUpgradeable, Initializable,ILightNode{
 //    }
 
 
-    function verifyProofData(proveData memory _proveData, bytes memory aggPk) external view returns (bool success, string memory message) {
+    function verifyProofData(proveData memory _proveData, G2 memory aggPk) external view returns (bool success, string memory message) {
         (success,message)=getVerifyTrieProof(_proveData);
         if (!success) {
                 message = "receipt mismatch";
@@ -128,7 +128,7 @@ contract LightNode is UUPSUpgradeable, Initializable,ILightNode{
     }
 
     /** external function *********************************************************/
-    function init(uint _threshold, bytes[] memory _pairKeys, uint[] memory _weights,uint round) external{
+    function init(uint _threshold, G1[] memory _pairKeys, uint[] memory _weights,uint round) external{
 
     }
 
@@ -289,7 +289,7 @@ contract LightNode is UUPSUpgradeable, Initializable,ILightNode{
     }
     uint256 CURRENTHIGHT;
     uint256 COUNCILNUMBER;
-    function updateBlockHeader(blockHeader memory bh, bytes memory aggPk) external{
+    function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external{
         require(bh.number - CURRENTHIGHT == COUNCILNUMBER,"ERROR");
 
 
