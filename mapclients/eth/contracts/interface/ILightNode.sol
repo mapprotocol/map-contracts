@@ -2,7 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-interface ILightNode {
+import "./IBLSPoint.sol";
+
+interface ILightNode is IBLSPoint {
     struct blockHeader {
         bytes parentHash;
         address coinbase;
@@ -28,7 +30,7 @@ interface ILightNode {
 
     struct txLogs{
         bytes PostStateOrStatus;
-        uint CumulativeGasUsed;
+        uint256 CumulativeGasUsed;
         bytes Bloom;
         Log[] logs;
     }
@@ -60,24 +62,11 @@ interface ILightNode {
         txProve prove;
     }
 
-
-    struct G1 {
-        uint x;
-        uint y;
-    }
-
-    struct G2 {
-        uint xr;
-        uint xi;
-        uint yr;
-        uint yi;
-    }
-
     function verifyProofData(proveData memory _proveData, G2 memory aggPk) external view returns (bool success, string memory message);
 
     //
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external;
 
     //G1
-    function init(uint _threshold, G1[] memory _pairKeys, uint[] memory _weights,uint round) external;
+    function init(uint256 _threshold, G1[] memory _pairKeys, uint256[] memory _weights,uint256 round) external;
 }

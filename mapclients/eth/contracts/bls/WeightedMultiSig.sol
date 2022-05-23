@@ -2,6 +2,10 @@
 pragma solidity >0.8.0;
 
 import "./BGLS.sol";
+import '@openzeppelin/contracts/utils/math/SafeMath.sol';
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "../interface/IBLS.sol";
+
 
 // weights:
 // 100 validator: \sum 67 =  \sum 100 - \sum 33
@@ -9,30 +13,96 @@ import "./BGLS.sol";
 // for i [0, 10), [\sum 0-9, \sum 10-19, ..., \sum 90-99]
 // cryptographic method to reduce gas
 
-contract WeightedMultiSig is BGLS {
-    G1[] public pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
-    uint[] public weights; // voting power
-    uint public threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
-
-    constructor(uint _threshold, G1[] memory _pairKeys, uint[] memory _weights) {
-        setStateInternal(_threshold, _pairKeys, _weights);
+contract WeightedMultiSig is BGLS,IBLS,Ownable {
+    using SafeMath for uint256;
+    struct validator {
+        G1[] pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
+        uint[] weights; // voting power
+        uint256threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
+        uint256epoch;
     }
 
-    function setStateInternal(uint _threshold, G1[] memory _pairKeys, uint[] memory _weights) internal {
+    validator[] public validators;
+
+    uint256public maxValidators = 20;
+
+    constructor() {
+    }
+
+    function setStateInternal(uint256_threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256epoch) external onlyOwner {
         require(_pairKeys.length == _weights.length, 'mismatch arg');
+        uint256id = getValidatorsId(epoch);
+        validator storage v = validators[id];
 
-        for (uint i = 0; i < _pairKeys.length; i++) pairKeys.push(_pairKeys[i]);
-
-        weights = _weights;
-        threshold = _threshold;
-    }
-
-    function isQuorum(bytes memory bits) public view returns (bool) {
-        uint weight = 0;
-        for (uint i = 0; i < weights.length; i++) {
-            if (chkBit(bits, i)) weight += weights[i];
+        for (uint256i = 0; i < _pairKeys.length; i++) {
+            v.pairKeys.push(
+                G1({
+            x : _pairKeys[i].x,
+            y : _pairKeys[i].y
+            }));
+            v.weights.push(_weights[i]);
         }
 
+        v.threshold = _threshold;
+        v.epoch = epoch;
+    }
+
+
+    function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256epoch, bytes memory bits) external onlyOwner {
+        uint256idPre = getValidatorsIdPrve(epoch);
+        validator memory vPre = validators[idPre];
+        if (vPre.weights.length == 0) return;
+
+        uint256id = getValidatorsId(epoch);
+        validator storage v = validators[id];
+        v.epoch = epoch;
+        for (uint256i = vPre.pairKeys.length - 1; i >= 0; i--) {
+            if (chkBit(bits, i)) {
+                v.pairKeys.push(
+                    G1({
+                x : vPre.pairKeys[i].x,
+                y : vPre.pairKeys[i].y
+                }));
+
+                v.weights.push(vPre.weights[i]);
+            }else{
+                v.threshold = v.threshold.sub(vPre.weights[i]);
+            }
+        }
+
+        if (_pairKeysAdd.length > 0) {
+            for (uint256i = 0; i < _pairKeysAdd.length; i++) {
+                v.pairKeys.push(
+                    G1({
+                x : _pairKeysAdd[i].x,
+                y : _pairKeysAdd[i].y
+                }));
+
+                v.weights.push(_weights[i]);
+
+                v.threshold = v.threshold.add(_weights[i]);
+            }
+        }
+    }
+
+    function getValidatorsId(uint256epoch) public view returns (uint){
+        return epoch % maxValidators;
+    }
+
+    function getValidatorsIdPrve(uint256epoch) public view returns (uint){
+        uint256id = getValidatorsId(epoch);
+        if (id == 0) {
+            return maxValidators - 1;
+        } else {
+            return id - 1;
+        }
+    }
+
+    function isQuorum(bytes memory bits, uint[] memory weights, uint256threshold) public view returns (bool) {
+        uint256weight = 0;
+        for (uint256i = 0; i < weights.length; i++) {
+            if (chkBit(bits, i)) weight += weights[i];
+        }
         return weight >= threshold;
     }
 
@@ -52,7 +122,7 @@ contract WeightedMultiSig is BGLS {
     // e((s+t)*g1, g2) = e(g1, g2)^(s+t)
     // e(g1, (s+t)*g2) = e(g1, g2)^(s+t)
     //---------------------------------------------------------------
-    function checkAggPk(bytes memory bits, G2 memory aggPk) public returns (bool) {
+    function checkAggPk(bytes memory bits, G2 memory aggPk, G1[] memory pairKeys) public returns (bool) {
         return pairingCheck(sumPoints(pairKeys, bits), g2, g1, aggPk);
     }
 
@@ -60,8 +130,12 @@ contract WeightedMultiSig is BGLS {
     // how to check aggPk2 is valid --> via checkAggPk
     //
     function checkSig(
-        bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk
+        bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint256epoch
     ) public returns (bool) {
-        return isQuorum(bits) && checkAggPk(bits, aggPk) && checkSignature(message, sig, aggPk);
+        uint256id = getValidatorsId(epoch);
+        validator memory v = validators[id];
+        return isQuorum(bits, v.weights, v.threshold)
+        && checkAggPk(bits, aggPk, v.pairKeys)
+        && checkSignature(message, sig, aggPk);
     }
 }

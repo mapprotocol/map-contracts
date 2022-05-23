@@ -1,22 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >0.8.0;
 
-contract BGLS {
-    struct G1 {
-        uint x;
-        uint y;
-    }
+import "../interface/IBLSPoint.sol";
+
+contract BGLS is IBLSPoint{
 
     struct G1Bytes {
         bytes32 x;
         bytes32 y;
-    }
-
-    struct G2 {
-        uint xr;
-        uint xi;
-        uint yr;
-        uint yi;
     }
 
     struct G2Bytes {
