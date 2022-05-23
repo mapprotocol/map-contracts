@@ -9,5 +9,5 @@ interface IBLS is IBLSPoint {
 
     function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint epoch, bytes memory bits) external;
 
-    function checkSig(bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint epoch) public returns (bool);
+    function checkSig(bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint epoch) external returns (bool);
 }

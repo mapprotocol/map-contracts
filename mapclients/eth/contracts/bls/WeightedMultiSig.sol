@@ -14,27 +14,27 @@ import "../interface/IBLS.sol";
 // cryptographic method to reduce gas
 
 contract WeightedMultiSig is BGLS,IBLS,Ownable {
-    using SafeMath for uint256;
+    using SafeMath for uint;
     struct validator {
         G1[] pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
         uint[] weights; // voting power
-        uint256threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
-        uint256epoch;
+        uint256 threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
+        uint256 epoch;
     }
 
     validator[] public validators;
 
-    uint256public maxValidators = 20;
+    uint256 public maxValidators = 20;
 
     constructor() {
     }
 
-    function setStateInternal(uint256_threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256epoch) external onlyOwner {
+    function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch) external onlyOwner {
         require(_pairKeys.length == _weights.length, 'mismatch arg');
-        uint256id = getValidatorsId(epoch);
+        uint256 id = getValidatorsId(epoch);
         validator storage v = validators[id];
 
-        for (uint256i = 0; i < _pairKeys.length; i++) {
+        for (uint256 i = 0; i < _pairKeys.length; i++) {
             v.pairKeys.push(
                 G1({
             x : _pairKeys[i].x,
@@ -48,15 +48,15 @@ contract WeightedMultiSig is BGLS,IBLS,Ownable {
     }
 
 
-    function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256epoch, bytes memory bits) external onlyOwner {
-        uint256idPre = getValidatorsIdPrve(epoch);
+    function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits) external onlyOwner {
+        uint256 idPre = getValidatorsIdPrve(epoch);
         validator memory vPre = validators[idPre];
         if (vPre.weights.length == 0) return;
 
-        uint256id = getValidatorsId(epoch);
+        uint256 id = getValidatorsId(epoch);
         validator storage v = validators[id];
         v.epoch = epoch;
-        for (uint256i = vPre.pairKeys.length - 1; i >= 0; i--) {
+        for (uint256 i = vPre.pairKeys.length - 1; i >= 0; i--) {
             if (chkBit(bits, i)) {
                 v.pairKeys.push(
                     G1({
@@ -71,7 +71,7 @@ contract WeightedMultiSig is BGLS,IBLS,Ownable {
         }
 
         if (_pairKeysAdd.length > 0) {
-            for (uint256i = 0; i < _pairKeysAdd.length; i++) {
+            for (uint256 i = 0; i < _pairKeysAdd.length; i++) {
                 v.pairKeys.push(
                     G1({
                 x : _pairKeysAdd[i].x,
@@ -85,12 +85,12 @@ contract WeightedMultiSig is BGLS,IBLS,Ownable {
         }
     }
 
-    function getValidatorsId(uint256epoch) public view returns (uint){
+    function getValidatorsId(uint256 epoch) public view returns (uint){
         return epoch % maxValidators;
     }
 
-    function getValidatorsIdPrve(uint256epoch) public view returns (uint){
-        uint256id = getValidatorsId(epoch);
+    function getValidatorsIdPrve(uint256 epoch) public view returns (uint){
+        uint256 id = getValidatorsId(epoch);
         if (id == 0) {
             return maxValidators - 1;
         } else {
@@ -98,9 +98,9 @@ contract WeightedMultiSig is BGLS,IBLS,Ownable {
         }
     }
 
-    function isQuorum(bytes memory bits, uint[] memory weights, uint256threshold) public view returns (bool) {
-        uint256weight = 0;
-        for (uint256i = 0; i < weights.length; i++) {
+    function isQuorum(bytes memory bits, uint[] memory weights, uint256 threshold) public view returns (bool) {
+        uint256 weight = 0;
+        for (uint256 i = 0; i < weights.length; i++) {
             if (chkBit(bits, i)) weight += weights[i];
         }
         return weight >= threshold;
@@ -130,9 +130,9 @@ contract WeightedMultiSig is BGLS,IBLS,Ownable {
     // how to check aggPk2 is valid --> via checkAggPk
     //
     function checkSig(
-        bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint256epoch
-    ) public returns (bool) {
-        uint256id = getValidatorsId(epoch);
+        bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint256 epoch
+    ) external returns (bool) {
+        uint256 id = getValidatorsId(epoch);
         validator memory v = validators[id];
         return isQuorum(bits, v.weights, v.threshold)
         && checkAggPk(bits, aggPk, v.pairKeys)
