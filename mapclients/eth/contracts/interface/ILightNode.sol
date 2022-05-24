@@ -68,5 +68,5 @@ interface ILightNode is IBLSPoint {
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external;
 
     //G1
-    function init(uint256 _threshold, G1[] memory _pairKeys, uint256[] memory _weights,uint256 round) external;
+    function initialize(uint256 _threshold, address[] memory validaters,G1[] memory _pairKeys, uint256[] memory _weights,uint epoch, uint epochSize) external;
 }
