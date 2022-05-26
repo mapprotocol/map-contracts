@@ -31,7 +31,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, WeightedMultiS
     constructor()  {}
 
     /** initialize  **********************************************************/
-    function initialize(uint _threshold, address[]  memory _validatorAddresss, G1[] memory _pairKeys, uint[] memory _weights, uint _epoch, uint _epochSize)
+    function initialize(uint _threshold, address[]  memory _validatorAddresss, G1[] memory _pairKeys,
+        uint[] memory _weights, uint _epoch, uint _epochSize)
     external initializer {
         epochSize = _epochSize;
         validatorAddresss = _validatorAddresss;

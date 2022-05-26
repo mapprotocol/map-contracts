@@ -3,7 +3,7 @@ pragma solidity >0.8.0;
 
 import "../interface/IBLSPoint.sol";
 
-contract BGLS is IBLSPoint{
+contract BlsCode is IBLSPoint{
 
     struct G1Bytes {
         bytes32 x;

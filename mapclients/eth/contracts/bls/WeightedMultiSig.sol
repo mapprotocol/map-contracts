@@ -22,7 +22,7 @@ contract WeightedMultiSig is BGLS,IBLS {
         uint256 epoch;
     }
 
-    validator[] public validators;
+    validator[20] public validators;
 
     uint256 public maxValidators = 20;
 
