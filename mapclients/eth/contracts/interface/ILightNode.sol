@@ -10,7 +10,7 @@ interface ILightNode is IBLSPoint {
         address coinbase;
         bytes root;
         bytes txHash;
-        bytes receipHash;
+        bytes receiptHash;
         bytes bloom;
         uint256 number;
         uint256 gasLimit;
@@ -30,7 +30,7 @@ interface ILightNode is IBLSPoint {
 
     struct txLogs{
         bytes PostStateOrStatus;
-        uint256 CumulativeGasUsed;
+        uint CumulativeGasUsed;
         bytes Bloom;
         Log[] logs;
     }
@@ -42,18 +42,20 @@ interface ILightNode is IBLSPoint {
     }
 
     struct istanbulAggregatedSeal {
-        uint256 round;
-        bytes signature;
         uint256 bitmap;
+        bytes signature;
+        uint256 round;
+
     }
 
     struct istanbulExtra {
         address[] validators;
+        bytes[] addedPubKey;
+        bytes[] addedG1PubKey;
+        uint256 removeList;
         bytes seal;
         istanbulAggregatedSeal aggregatedSeal;
         istanbulAggregatedSeal parentAggregatedSeal;
-        uint256 removeList;
-        bytes[] addedPubKey;
     }
 
     struct proveData {
