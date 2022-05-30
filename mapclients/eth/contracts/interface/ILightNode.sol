@@ -22,20 +22,16 @@ interface ILightNode is IBLSPoint {
         uint256 baseFee;
     }
 
-    struct txProve{
-        bytes keyIndex;
-        bytes[] prove;
-        bytes expectedValue;
+
+    struct txReceipt{
+        uint256  receiptType;
+        bytes   postStateOrStatus;
+        uint256   cumulativeGasUsed;
+        bytes bloom;
+        txLog[] logs;
     }
 
-    struct txLogs{
-        bytes PostStateOrStatus;
-        uint CumulativeGasUsed;
-        bytes Bloom;
-        Log[] logs;
-    }
-
-    struct Log {
+    struct txLog {
         address addr;
         bytes[] topics;
         bytes data;
@@ -58,17 +54,18 @@ interface ILightNode is IBLSPoint {
         istanbulAggregatedSeal parentAggregatedSeal;
     }
 
-    struct proveData {
+    struct receiptProof {
         blockHeader header;
-        txLogs logs;
-        txProve prove;
+        G2 memory aggPk;
+        txReceipt receipt;
+        bytes keyIndex;
+        bytes[] proof;
     }
 
-    function verifyProofData(proveData memory _proveData, G2 memory aggPk) external view returns (bool success, string memory message);
+    function verifyProofData(receiptProof memory _proofData) external view returns (bool success, string memory message);
 
-    //
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external;
 
     //G1
-    function initialize(uint256 _threshold, address[] memory validaters,G1[] memory _pairKeys, uint256[] memory _weights,uint epoch, uint epochSize) external;
+    function initialize(uint256 _threshold, address[] memory validaters, G1[] memory _pairKeys, uint256[] memory _weights,uint epoch, uint epochSize) external;
 }
