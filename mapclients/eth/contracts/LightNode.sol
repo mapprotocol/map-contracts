@@ -11,16 +11,12 @@ import "./interface/ILightNode.sol";
 import "./bls/WeightedMultiSig.sol";
 import "./lib/MPT.sol";
 
-interface IVerifyProof {
-    function verifyTrieProof(bytes32 hash, bytes memory _expectedValue, bytes[] memory proofs,bytes memory _key)
-    pure external returns (bool success);
-}
-
 contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
+    using MPT for MPT.MerkleProof;
 
 
     uint256 public epochSize = 1000;
@@ -46,6 +42,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
             message = "receipt mismatch";
         }
         //todo verify header
+        bytes32 hash;
+        bytes memory headerRlp = _encodeHeader(_receiptProof.header);
+        (success,hash) = _verifyHeader(headerRlp);
+        if (!success) {
+            message = "verifyHeader error";
+        }
+
     }
 
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external {
@@ -56,14 +59,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
     }
 
 
-    function getStatus(bool _tag) public view returns (bytes memory PostStateOrStatus){
-        PostStateOrStatus = abi.encode(_tag);
-    }
-
-
-    function setVerifyer(address _verify) public {
-        verifyProof = IVerifyProof(_verify);
-    }
 
     function getVerifyExpectedValueHash(txReceipt memory _txReceipt) public pure returns(bytes memory output){
 
@@ -106,17 +101,21 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
         output = abi.encodePacked(tip,temp);
     }
 
-    function getVerifyTrieProof(receiptProof memory _receiptProof) public view returns (
+    function getVerifyTrieProof(receiptProof memory _receiptProof) public pure returns (
         bool success, string memory message){
 
         bytes memory expectedValue = getVerifyExpectedValueHash(_receiptProof.receipt);
 
-        success = verifyProof.verifyTrieProof(
-            bytes32(_receiptProof.header.receiptHash),
-            expectedValue,
-            _receiptProof.proof,
-            _receiptProof.keyIndex
-        );
+        MPT.MerkleProof memory mp;
+        mp.expectedRoot =  bytes32(_receiptProof.header.receiptHash);
+        mp.key = _receiptProof.keyIndex;
+        mp.proof = _receiptProof.proof;
+        mp.keyIndex = 0;
+        mp.proofIndex = 0;
+        mp.expectedValue = expectedValue;
+
+        success =MPT.verifyTrieProof(mp);
+
         if (!success) {
             message = "receipt mismatch";
         }else{
@@ -279,11 +278,9 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
         return newExtra;
     }
 
-    function _verifyHeader(bytes memory rlpHeader)
-    public
-    view
-    returns (bool ret, uint256 removeList, bytes[] memory addedPubKey){
-        blockHeader memory bh = _decodeHeader(rlpHeader);
+
+
+    function getHeaderHash(blockHeader memory bh) public pure returns(bytes32){
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bytes memory extraDataPre = splitExtra(bh.extraData);
         bh.extraData = _deleteAgg(ist, extraDataPre);
@@ -292,16 +289,37 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
         bh.extraData = _deleteSealAndAgg(ist, bh.extraData);
         bytes memory headerWithoutSealAndAgg = _encodeHeader(bh);
         bytes32 hash2 = keccak256(abi.encodePacked(headerWithoutSealAndAgg));
+        return keccak256(abi.encodePacked(hash2));
+    }
+
+
+    function _verifyHeader(bytes memory rlpHeader)
+    public
+    pure
+    returns (bool ret, bytes32 headerHash){
+        blockHeader memory bh = _decodeHeader(rlpHeader);
+
+        istanbulExtra memory ist = _decodeExtraData(bh.extraData);
+
+        headerHash = getHeaderHash(bh);
 
         ret = _verifySign(
             ist.seal,
-            keccak256(abi.encodePacked(hash2)),
+                headerHash,
             bh.coinbase
         );
-        if (ret == false) {
-            revert("verifyEscaSign fail");
-        }
     }
+
+    function getPrepareCommittedSeal(blockHeader memory bh, uint8 round)
+    public
+    pure
+    returns (bytes memory result){
+        bytes32 hash = getHeaderHash(bh);
+
+        result = abi.encodePacked(hash,round,bytes1(uint8(2)));
+    }
+
+
 
     function _deleteAgg(istanbulExtra memory ist,bytes memory extraDataPre)
     public
@@ -440,18 +458,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
         }
     }
 
-    function _addsuffix(bytes32 hash, uint8 round)
-    public
-    pure
-    returns (bytes memory){
-        bytes memory result = new bytes(34);
-        for (uint256 i = 0; i < 32; i++) {
-            result[i] = hash[i];
-        }
-        result[32] = bytes1(round);
-        result[33] = bytes1(uint8(2));
-        return result;
-    }
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
