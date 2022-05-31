@@ -40,7 +40,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
         weightedMultisig.setStateInternal(_threshold,_pairKeys,_weights,_epoch);
     }
 
-    function verifyProofData(receiptProof memory _receiptProof) external view returns (bool success, string memory message){
+    function verifyProofData(receiptProof memory _receiptProof) external view returns (bool success, string memory message) {
         (success, message) = getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
@@ -61,14 +61,65 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
     }
 
 
+    function setVerifyer(address _verify) public {
+        verifyProof = IVerifyProof(_verify);
+    }
+
+    function getVerifyExpectedValueHash(txReceipt memory _txReceipt) public pure returns(bytes memory output){
+
+        bytes[] memory list = new bytes[](4);
+        list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
+        list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
+        list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
+
+        bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
+
+        bytes[] memory loglist = new bytes[](3);
+
+        for(uint256 j = 0; j < _txReceipt.logs.length; j++){
+            loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
+
+            bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
+            for(uint256 i =0; i < _txReceipt.logs[j].topics.length; i++){
+                loglist1[i]  = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
+            }
+
+            loglist[1] = RLPEncode.encodeList(loglist1);
+
+            loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
+
+            bytes memory logBytes = RLPEncode.encodeList(loglist);
+
+            listLog[j] = logBytes;
+
+
+        }
+        list[3] = RLPEncode.encodeList(listLog);
+
+        bytes memory  tempType = abi.encode(_txReceipt.receiptType);
+
+        bytes1 tip = tempType[31];
+
+
+        bytes memory temp = RLPEncode.encodeList(list);
+
+        output = abi.encodePacked(tip,temp);
+    }
+
     function getVerifyTrieProof(receiptProof memory _receiptProof) public view returns (
         bool success, string memory message){
-        MPT.MerkleProof memory mProof ;
-        //todo set proof
-        success = MPT.verifyTrieProof(mProof);
+
+        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptProof.receipt);
+
+        success = verifyProof.verifyTrieProof(
+            bytes32(_receiptProof.header.receiptHash),
+            expectedValue,
+            _receiptProof.proof,
+            _receiptProof.keyIndex
+        );
         if (!success) {
             message = "receipt mismatch";
-        } else {
+        }else{
             message = "success";
         }
     }
