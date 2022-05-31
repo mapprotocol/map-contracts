@@ -9,13 +9,14 @@ import "./lib/RLPReader.sol";
 import "./lib/RLPEncode.sol";
 import "./interface/ILightNode.sol";
 import "./bls/WeightedMultiSig.sol";
+import "./lib/MPT.sol";
 
 interface IVerifyProof {
     function verifyTrieProof(bytes32 hash, bytes memory _expectedValue, bytes[] memory proofs,bytes memory _key)
     pure external returns (bool success);
 }
 
-contract LightNode is UUPSUpgradeable, Initializable, ILightNode, WeightedMultiSig{
+contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
@@ -26,7 +27,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, WeightedMultiS
     address[] public validatorAddresss ;
     event validitorsSet(uint256 epoch);
 
-    IVerifyProof verifyProof = IVerifyProof(0x5FbDB2315678afecb367f032d93F642f64180aa3);
+    WeightedMultiSig weightedMultisig;
 
     constructor()  {}
 
@@ -36,11 +37,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, WeightedMultiS
     external initializer {
         epochSize = _epochSize;
         validatorAddresss = _validatorAddresss;
-        setStateInternal(_threshold,_pairKeys,_weights,_epoch);
+        weightedMultisig.setStateInternal(_threshold,_pairKeys,_weights,_epoch);
     }
 
-    function verifyProofData(proveData memory _proveData, G2 memory aggPk) external view returns (bool success, string memory message) {
-        (success, message) = getVerifyTrieProof(_proveData);
+    function verifyProofData(receiptProof memory _receiptProof) external view returns (bool success, string memory message){
+        (success, message) = getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
         }
@@ -51,7 +52,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, WeightedMultiS
         require(bh.number % epochSize == 0, "Header number is error");
 
         //todo verify
-        //checkSig()
+        //weightedMultisig.checkSig()
     }
 
 
@@ -60,15 +61,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, WeightedMultiS
     }
 
 
-    function setVerifyer(address _verify) public {
-        verifyProof = IVerifyProof(_verify);
-    }
-
-    function getVerifyTrieProof(proveData memory _proveData) public view returns (
+    function getVerifyTrieProof(receiptProof memory _receiptProof) public view returns (
         bool success, string memory message){
-
-        success = verifyProof.verifyTrieProof(bytes32(_proveData.header.receiptHash), _proveData.prove.expectedValue,
-            _proveData.prove.prove, _proveData.prove.keyIndex);
+        MPT.MerkleProof memory mProof ;
+        //todo set proof
+        success = MPT.verifyTrieProof(mProof);
         if (!success) {
             message = "receipt mismatch";
         } else {

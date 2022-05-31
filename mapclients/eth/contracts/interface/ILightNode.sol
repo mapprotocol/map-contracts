@@ -56,13 +56,13 @@ interface ILightNode is IBLSPoint {
 
     struct receiptProof {
         blockHeader header;
-        G2 memory aggPk;
+        G2 aggPk;
         txReceipt receipt;
         bytes keyIndex;
         bytes[] proof;
     }
 
-    function verifyProofData(receiptProof memory _proofData) external view returns (bool success, string memory message);
+    function verifyProofData(receiptProof memory _receiptProof) external view returns (bool success, string memory message);
 
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external;
 
