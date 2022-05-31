@@ -24,7 +24,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode{
     event validitorsSet(uint256 epoch);
 
     WeightedMultiSig weightedMultisig;
-     IVerifyProof  verifyProof ;
 
     constructor()  {}
 
