@@ -51,10 +51,25 @@ contract WeightedMultiSig is BGLS,IBLS {
     function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits) public {
         uint256 idPre = getValidatorsIdPrve(epoch);
         validator memory vPre = validators[idPre];
-        if (vPre.weights.length == 0) return;
-
         uint256 id = getValidatorsId(epoch);
         validator storage v = validators[id];
+        if (vPre.weights.length == 0){
+            v.threshold = vPre.threshold;
+
+            for (uint256 i = vPre.pairKeys.length - 1; i >= 0; i--) {
+                v.pairKeys.push(
+                    G1({
+                x : vPre.pairKeys[i].x,
+                y : vPre.pairKeys[i].y
+                }));
+
+                v.weights.push(vPre.weights[i]);
+            }
+
+            v.epoch = epoch;
+            return;
+        }
+
         v.epoch = epoch;
         for (uint256 i = vPre.pairKeys.length - 1; i >= 0; i--) {
             if (chkBit(bits, i)) {

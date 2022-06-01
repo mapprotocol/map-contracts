@@ -62,7 +62,8 @@ interface ILightNode is IBLSPoint {
         bytes[] proof;
     }
 
-    function verifyProofData(receiptProof memory _receiptProof) external view returns (bool success, string memory message);
+
+    function verifyProofData(receiptProof memory _receiptProof) external returns (bool success, string memory message);
 
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external;
 

@@ -69,6 +69,7 @@ contract BGLS is IBLSPoint {
             if iszero(call(not(0), 0x08, 0, input, 0x180, result, 0x20)) {
                 revert(0, 0)
             }
+
         }
         return result[0] == 1;
     }
