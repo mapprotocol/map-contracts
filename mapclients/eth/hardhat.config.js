@@ -181,14 +181,8 @@ module.exports = {
       accounts: accounts
     },
     Map2: {
-      url: `https://poc2-rpc.maplabs.io`,
-      chainId : 22776,
-      accounts: accounts
-    },
-    MapTest: {
-      // url: `https://poc2-rpc.maplabs.io`,
-      url: `http://13.76.138.119:7445`,
-      chainId : 212,
+      url: `http://18.142.54.137:7445`,
+      chainId : 29088,
       accounts: accounts
     },
     Bsc: {
