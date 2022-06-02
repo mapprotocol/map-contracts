@@ -112,9 +112,13 @@ describe("Relayer,LightNode start test", function () {
     it('verifyProofData', async function () {
         // console.log(verifyProofContract.address);
         // console.log(await lightClient.verifyProof());
+        await lightClient.setVerifyer(verifyProofContract.address);
 
         //console.log(await lightClient.verifyProof());
 
+
+        // let statusInfo = await lightClient.getStatus("true");
+        // console.log(statusInfo);
 
 
         console.log(await lightClient.getVerifyTrieProof(provedata));
@@ -240,8 +244,6 @@ describe("Relayer,LightNode start test", function () {
     it('_verifyHeader ', async function () {
         // console.log(headerHash)
         console.log(await lightClient._verifyHeader(headerHash));
-
-        console.log(await lightClient.getPrepareCommittedSeal(header,"10"));
 
     });
 

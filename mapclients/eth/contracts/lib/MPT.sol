@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity >=0.7.0;
 //pragma experimental ABIEncoderV2;
 
@@ -195,6 +196,7 @@ library MPT {
                 shr(rest, mload(add(source, pos)))
             ))
         }
+        return newdata;
     }
 
     function getNibbles(bytes1 b) internal pure returns (bytes1 nibble1, bytes1 nibble2) {

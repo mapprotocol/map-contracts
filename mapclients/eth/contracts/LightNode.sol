@@ -33,13 +33,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     /** initialize  **********************************************************/
     function initialize(uint _threshold, address[]  memory _validatorAddresss, G1[] memory _pairKeys,
         uint[] memory _weights, uint _epoch, uint _epochSize)
-    external initializer {
+    external override initializer {
         epochSize = _epochSize;
         validatorAddresss = _validatorAddresss;
         weightedMultisig.setStateInternal(_threshold, _pairKeys, _weights, _epoch);
     }
 
-    function verifyProofData(receiptProof memory _receiptProof) external returns (bool success, string memory message) {
+    function verifyProofData(receiptProof memory _receiptProof) external override returns (bool success, string memory message) {
         (success, message) = getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
@@ -56,19 +56,19 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         if (!success) {
             message = "bls error";
         }
-        return(success,message);
+        return (success, message);
     }
 
 
     function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) public returns (bool){
-        uint256  epoch = ist.aggregatedSeal.round;
+        uint256 epoch = ist.aggregatedSeal.round;
         bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
         bytes memory bits = abi.encodePacked(ist.aggregatedSeal.bitmap);
         G1  memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
         return weightedMultisig.checkSig(bits, message, sig, aggPk, epoch);
     }
 
-    function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external {
+    function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external override {
         require(bh.number % epochSize == 0, "Header number is error");
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bool success = checkSig(bh, ist, aggPk);
@@ -312,8 +312,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bytes memory extraDataPre = splitExtra(bh.extraData);
         bh.extraData = _deleteAgg(ist, extraDataPre);
-        bytes memory headerWithoutAgg = _encodeHeader(bh);
-        bytes32 hash1 = keccak256(abi.encodePacked(headerWithoutAgg));
+//        bytes memory headerWithoutAgg = _encodeHeader(bh);
+//        bytes32 hash1 = keccak256(abi.encodePacked(headerWithoutAgg));
         bh.extraData = _deleteSealAndAgg(ist, bh.extraData);
         bytes memory headerWithoutSealAndAgg = _encodeHeader(bh);
         bytes32 hash2 = keccak256(abi.encodePacked(headerWithoutSealAndAgg));

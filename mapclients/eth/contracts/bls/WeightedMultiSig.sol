@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
+
 pragma solidity >0.8.0;
 
 import "./BGLS.sol";
@@ -29,7 +30,7 @@ contract WeightedMultiSig is BGLS,IBLS {
     constructor() {
     }
 
-    function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch) public {
+    function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch) public override {
         require(_pairKeys.length == _weights.length, 'mismatch arg');
         uint256 id = getValidatorsId(epoch);
         validator storage v = validators[id];
@@ -48,7 +49,7 @@ contract WeightedMultiSig is BGLS,IBLS {
     }
 
 
-    function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits) public {
+    function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits) public override{
         uint256 idPre = getValidatorsIdPrve(epoch);
         validator memory vPre = validators[idPre];
         uint256 id = getValidatorsId(epoch);
@@ -113,7 +114,7 @@ contract WeightedMultiSig is BGLS,IBLS {
         }
     }
 
-    function isQuorum(bytes memory bits, uint[] memory weights, uint256 threshold) public view returns (bool) {
+    function isQuorum(bytes memory bits, uint[] memory weights, uint256 threshold) public pure returns (bool) {
         uint256 weight = 0;
         for (uint256 i = 0; i < weights.length; i++) {
             if (chkBit(bits, i)) weight += weights[i];
@@ -146,7 +147,7 @@ contract WeightedMultiSig is BGLS,IBLS {
     //
     function checkSig(
         bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint256 epoch
-    ) external returns (bool) {
+    ) external override returns (bool) {
         uint256 id = getValidatorsId(epoch);
         validator memory v = validators[id];
         return isQuorum(bits, v.weights, v.threshold)
