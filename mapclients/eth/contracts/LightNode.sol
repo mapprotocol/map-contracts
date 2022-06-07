@@ -69,7 +69,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external override {
-        require(bh.number % epochSize == 999, "Header number is error");
+        require(bh.number % epochSize == 0, "Header number is error");
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bool success = checkSig(bh, ist, aggPk);
 
