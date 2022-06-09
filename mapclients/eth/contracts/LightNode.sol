@@ -351,8 +351,15 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     pure
     returns (bytes memory result){
         bytes32 hash = getHeaderHash(bh);
-
-        result = abi.encodePacked(hash, round, bytes1(uint8(2)));
+        if (round ==0 ){
+            result = abi.encodePacked(hash, uint8(2));
+        }else if (round >0 && round <= 256){
+            result = abi.encodePacked(hash, uint8(round), uint8(2));
+        }else if (round >0 && round <= 256){
+            result = abi.encodePacked(hash, uint16(round), uint8(2));
+        }else{
+            result = abi.encodePacked(hash, uint24(round), uint8(2));
+        }
     }
 
 
