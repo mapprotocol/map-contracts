@@ -61,10 +61,10 @@ describe('WeightedMultiSig', function () {
 
 
         let g1Hex = [
-            "0x14d44a97d2fc3ea62b6dcf2bd857079bd261993152f11aef5dd001db68b20d2d1ba45f117b6530a7aec45d7d90fd4e15d2a62f62b706eaa115aa801caeee294b",
-            "0x15b7bcf0accf839170a5d4621282edcf14f4a438f8e53abcead5f0528cb91cb1135fd4e82ede1493ab1209af122e1dc186c885cc96d2413cbc09a58163b91eb9",
-            "0x2fd433e93187f6b3d15664ec48073bd73d57c801c4a8bfc1e0e3abd3deefc45619d45ac7ad54df7dda5b8afd6f882c9d9f879dbc6d587f1da5da1751baac729f",
-            "0x1b037f39d9f8e74b608a898249cc3d156ff1f0051026388366b85a84aac43bb4068275cd909e16b29f1b3bc97e91ec0a8b95a11b8a574cbc2c9ea142d26c8a49",
+            "0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f2492b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3",
+            "0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf581ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b",
+            "0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c8121e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869",
+            "0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea60dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"
         ]
 
 
@@ -116,11 +116,17 @@ describe('WeightedMultiSig', function () {
     ///function checkSig(
     //         bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint256 epoch
     //     ) external returns (bool) {
+
+
     it("should check agg sig correctly", async () => {
-        const bits = '0x07'; // 00000111
-        const message = "";
-        const sign = await bc.decodeG1("0x2a6649625d0a5d11b7a075763015324b2b343924cf96a30eb173e3f097f8b9c24fc12a88c84d1a9cd7aa38b9384cd0e38b567405f31189b546f4d0098f0a2d1000");
-        const aggpk = "";
+        const bits = '0x0d'; // 00000111
+        const message = "0x83c6030e8eb07e62c2f66a2afebcdcf0a0687ee96f8bfea7482a6ccc502e252502";
+        const sign = await bc.decodeG1("0x04017fa35d23482fb010423283569b741e611cfb967ee12673805bdecff8919a1c590bd715dbc1f6a8e133983225b571b8db7c349a2405cb15a266bcf1ed09b2");
+
+        const aggpk = ["0x1e765f27b1bc2822f1543fec2a14530db0eb56175e2cd5bc7c6567ef7d605204",
+            "0x10ebefa20bce22d0bce4bba43a151c8eedfed5c6487e98e21907da5384aba903",
+            "0x19933df8221f1532677d57c1bafb9220fa098a4774a482b37c98746d32d25ed3",
+            "0x1e9dcff0a16587d79dd67fc7917cdce9c2813b4e47adc7a1803e121e7cff9995"]
         const epoch = 0;
         assert(await wms.callStatic.checkSig(bits, message, sign, aggpk, epoch));
     });

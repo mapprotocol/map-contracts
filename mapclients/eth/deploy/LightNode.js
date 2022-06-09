@@ -61,11 +61,11 @@ module.exports = async function ({ethers, deployments}) {
 
     let _weights = [1, 1, 1, 1]
 
-    let _threshold = 4;
+    let _threshold = 3;
 
     let _epoch = 0;
 
-    let _epochSize = 4;
+    let _epochSize = 1000;
 
     // function initialize(uint _threshold, address[]  memory _validatorAddresss, G1[] memory _pairKeys,
     //     uint[] memory _weights, uint _epoch, uint _epochSize)
@@ -74,6 +74,10 @@ module.exports = async function ({ethers, deployments}) {
 
     await lightNode.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize);
 
+
+    console.log(await lightNode.getValiditors())
+
+    console.log(await lightNode.getWM())
 }
 
 module.exports.tags = ['LightNode']
