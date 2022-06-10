@@ -120,7 +120,7 @@ contract WeightedMultiSig is BGLS,IBLS {
     // e((s+t)*g1, g2) = e(g1, g2)^(s+t)
     // e(g1, (s+t)*g2) = e(g1, g2)^(s+t)
     //---------------------------------------------------------------
-    function checkAggPk(bytes memory bits, G2 memory aggPk, G1[] memory pairKeys) public returns (bool) {
+    function checkAggPk(bytes memory bits, G2 memory aggPk, G1[] memory pairKeys) public view returns (bool) {
         return pairingCheck(sumPoints(pairKeys, bits), g2, g1, aggPk);
     }
 
@@ -129,7 +129,7 @@ contract WeightedMultiSig is BGLS,IBLS {
     //
     function checkSig(
         bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint256 epoch
-    ) external override returns (bool) {
+    ) external view override returns (bool) {
         uint256 id = getValidatorsId(epoch);
         validator memory v = validators[id];
         return isQuorum(bits, v.weights, v.threshold)

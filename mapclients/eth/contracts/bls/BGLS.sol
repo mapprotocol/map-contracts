@@ -15,25 +15,25 @@ contract BGLS is IBLSPoint {
         0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b
     );
 
-    function modPow(uint base, uint exponent, uint modulus) internal returns (uint) {
+    function modPow(uint base, uint exponent, uint modulus) internal view returns (uint) {
         uint[6] memory input = [32, 32, 32, base, exponent, modulus];
         uint[1] memory result;
+        bool success = false;
         assembly {
-            if iszero(call(not(0), 0x05, 0, input, 0xc0, result, 0x20)) {
-                revert(0, 0)
-            }
+            success := staticcall(gas(), 5, input, 0xc0, result, 0x20)
         }
+        require(success);
         return result[0];
     }
 
-    function addPoints(G1 memory a, G1 memory b) public returns (G1 memory) {
+    function addPoints(G1 memory a, G1 memory b) public view returns (G1 memory) {
         uint[4] memory input = [a.x, a.y, b.x, b.y];
         uint[2] memory result;
+        bool success = false;
         assembly {
-            if iszero(call(not(0), 0x06, 0, input, 0x80, result, 0x40)) {
-                revert(0, 0)
-            }
+            success := staticcall(gas(), 6,input, 0x80, result, 0x40)
         }
+        require(success);
         return G1(result[0], result[1]);
     }
 
@@ -41,7 +41,7 @@ contract BGLS is IBLSPoint {
         return uint(uint8(b[x / 8])) & (uint(1) << (x % 8)) != 0;
     }
 
-    function sumPoints(G1[] memory points, bytes memory indices) public returns (G1 memory) {
+    function sumPoints(G1[] memory points, bytes memory indices) public view  returns (G1 memory) {
         G1 memory acc = G1(0, 0);
         for (uint i = 0; i < points.length; i++) {
             if (chkBit(indices, i)) {
@@ -52,27 +52,26 @@ contract BGLS is IBLSPoint {
     }
 
     // kP
-    function scalarMultiply(G1 memory point, uint scalar) public returns (G1 memory) {
+    function scalarMultiply(G1 memory point, uint scalar) public view returns (G1 memory) {
         uint[3] memory input = [point.x, point.y, scalar];
         uint[2] memory result;
+        bool success = false;
         assembly {
-            if iszero(call(not(0), 0x07, 0, input, 0x60, result, 0x40)) {
-                revert(0, 0)
-            }
+            success := staticcall(gas(), 7, input, 0x60, result, 0x40)
         }
+        require(success);
         return G1(result[0], result[1]);
     }
 
     //returns e(a,x) == e(b,y)
-    function pairingCheck(G1 memory a, G2 memory x, G1 memory b, G2 memory y) public returns (bool) {
+    function pairingCheck(G1 memory a, G2 memory x, G1 memory b, G2 memory y) public view returns (bool) {
         uint[12] memory input = [a.x, a.y, x.xi, x.xr, x.yi, x.yr, b.x, prime - b.y, y.xi, y.xr, y.yi, y.yr];
         uint[1] memory result;
+        bool success = false;
         assembly {
-            if iszero(call(not(0), 0x08, 0, input, 0x180, result, 0x20)) {
-                revert(0, 0)
-            }
-
+            success := staticcall(gas(), 8, input, 0x180, result, 0x20)
         }
+        require(success);
         return result[0] == 1;
     }
 
@@ -81,7 +80,7 @@ contract BGLS is IBLSPoint {
     // which is used in github.com/mapprotocol/atlas
     // https://github.com/mapprotocol/atlas/blob/main/helper/bls/bn256.go#L84-L94
     // todo by long: we might need a better way to hash to G1
-    function hashToG1(bytes memory message) public returns (G1 memory) {
+    function hashToG1(bytes memory message) public view returns (G1 memory) {
         uint h = uint(keccak256(abi.encodePacked(message))) % order;
         return scalarMultiply(g1, h);
     }
@@ -114,7 +113,7 @@ contract BGLS is IBLSPoint {
     //        return res;
     //    }
 
-    function checkSignature(bytes memory message, G1 memory sig, G2 memory aggKey) public returns (bool) {
+    function checkSignature(bytes memory message, G1 memory sig, G2 memory aggKey) public view returns (bool) {
         return pairingCheck(sig, g2, hashToG1(message), aggKey);
     }
 }

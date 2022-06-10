@@ -139,7 +139,7 @@ describe('WeightedMultiSig', function () {
         const _weights = [];
         const epoch = 1;
         //upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
-        assert(await wms.callStatic.upateValidators(_pairKeysAdd,_weights,epoch,bits));
+        assert(await wms.upateValidators(_pairKeysAdd,_weights,epoch,bits));
     });
 
     it("should check updateBlockHeader add", async () => {
@@ -150,7 +150,7 @@ describe('WeightedMultiSig', function () {
         const _weights = [1];
         const epoch = 2;
         //upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
-        assert(await wms.callStatic.upateValidators(_pairKeysAdd,_weights,epoch,bits));
+        assert(await wms.upateValidators(_pairKeysAdd,_weights,epoch,bits));
     });
 
 
@@ -160,6 +160,6 @@ describe('WeightedMultiSig', function () {
         const _weights = [];
         const epoch = 3;
         //upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
-        assert(await wms.callStatic.upateValidators(_pairKeysAdd,_weights,epoch,bits));
+        assert(await wms.upateValidators(_pairKeysAdd,_weights,epoch,bits));
     });
 });

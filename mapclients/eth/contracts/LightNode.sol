@@ -1,39 +1,8 @@
 // SPDX-License-Identifier: MIT
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 pragma solidity ^0.8.0;
 
-//import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./lib/RLPReader.sol";
 import "./lib/RLPEncode.sol";
 import "./interface/ILightNode.sol";
@@ -41,9 +10,7 @@ import "./bls/WeightedMultiSig.sol";
 import "./lib/MPT.sol";
 import "./bls/BlsCode.sol";
 
-import "hardhat/console.sol";
-
-contract LightNode is  Initializable, ILightNode {
+contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
@@ -82,7 +49,6 @@ contract LightNode is  Initializable, ILightNode {
         (success, message) = getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
-            return (success,message);
         }
         //todo verify header
         bytes32 hash;
@@ -90,22 +56,20 @@ contract LightNode is  Initializable, ILightNode {
         (success, hash) = _verifyHeader(headerRlp);
         if (!success) {
             message = "verifyHeader error";
-            return (success,message);
         }
         istanbulExtra memory ist = _decodeExtraData(_receiptProof.header.extraData);
         success = checkSig(_receiptProof.header, ist, _receiptProof.aggPk);
         if (!success) {
             message = "bls error";
-            return (success,message);
         }
         return (success, message);
     }
 
 
-    function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) public returns (bool){
+    function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) public view returns (bool){
         uint256 epoch = (bh.number / epochSize) - 1;
         bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
-        bytes memory bits = abi.encodePacked(uint8(ist.aggregatedSeal.bitmap));
+        bytes memory bits = abi.encodePacked(ist.aggregatedSeal.bitmap);
         G1  memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
         return weightedMultisig.checkSig(bits, message, sig, aggPk, epoch);
     }
@@ -129,60 +93,38 @@ contract LightNode is  Initializable, ILightNode {
             bytes memory bits = abi.encodePacked(ist.removeList);
             uint256 epoch = bh.number / epochSize;
             weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
-
     }
 
 
     function getVerifyExpectedValueHash(txReceipt memory _txReceipt) public pure returns (bytes memory output){
-
         bytes[] memory list = new bytes[](4);
         list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
         list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
         list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
-
         bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
-
         bytes[] memory loglist = new bytes[](3);
 
         for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
             loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-
             bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
             for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
                 loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
             }
-
             loglist[1] = RLPEncode.encodeList(loglist1);
-
-
             loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
-
             bytes memory logBytes = RLPEncode.encodeList(loglist);
-
             listLog[j] = logBytes;
-
-
         }
         list[3] = RLPEncode.encodeList(listLog);
-
-
         bytes memory tempType = abi.encode(_txReceipt.receiptType);
-
         bytes1 tip = tempType[31];
-
-
         bytes memory temp = RLPEncode.encodeList(list);
-
-
         output = abi.encodePacked(tip, temp);
-
     }
 
     function getVerifyTrieProof(receiptProof memory _receiptProof) public pure returns (
         bool success, string memory message){
-
         bytes memory expectedValue = getVerifyExpectedValueHash(_receiptProof.receipt);
-
         MPT.MerkleProof memory mp;
         mp.expectedRoot = bytes32(_receiptProof.header.receiptHash);
         mp.key = _receiptProof.keyIndex;
@@ -190,16 +132,13 @@ contract LightNode is  Initializable, ILightNode {
         mp.keyIndex = 0;
         mp.proofIndex = 0;
         mp.expectedValue = expectedValue;
-
         success = MPT.verifyTrieProof(mp);
-
         if (!success) {
             message = "receipt mismatch";
         } else {
             message = "success";
         }
     }
-
 
     function _bytesSlice32(bytes memory data, uint256 offset)
     public
@@ -402,9 +341,9 @@ contract LightNode is  Initializable, ILightNode {
         bytes32 hash = getBlcokHash(bh);
         if (round ==0 ){
             result = abi.encodePacked(hash, uint8(2));
-        }else if (round >0 && round <= 256){
+        }else if (round >0 && round < 256){
             result = abi.encodePacked(hash, uint8(round), uint8(2));
-        }else if (round >0 && round <= 256){
+        }else if (round >255 && round <65536){
             result = abi.encodePacked(hash, uint16(round), uint8(2));
         }else{
             result = abi.encodePacked(hash, uint24(round), uint8(2));
@@ -580,7 +519,7 @@ contract LightNode is  Initializable, ILightNode {
 
 
     /** UUPS *********************************************************/
-//    function _authorizeUpgrade(address) internal view override {
-//        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
-//    }
+    function _authorizeUpgrade(address) internal view override {
+        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
+    }
 }

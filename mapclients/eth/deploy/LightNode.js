@@ -24,10 +24,10 @@ module.exports = async function ({ethers, deployments}) {
     console.log(lightNode.address)
 
 
-    // await hre.run("verify:verify", {
-    //     address: lightNode.address,
-    //     constructorArguments:[]
-    // });
+    await hre.run("verify:verify", {
+        address: lightNode.address,
+        constructorArguments:[]
+    });
 
 
     let g1Hex = [

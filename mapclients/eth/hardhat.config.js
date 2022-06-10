@@ -191,7 +191,7 @@ module.exports = {
       accounts: accounts
     },
     BscTest: {
-      url: `https://data-seed-prebsc-2-s3.binance.org:8545/`,
+      url: `https://data-seed-prebsc-2-s1.binance.org:8545/`,
       chainId : 97,
       accounts: accounts,
       gasPrice: 11 * 1000000000
@@ -243,6 +243,6 @@ module.exports = {
     timeout: 2000000,
   },
   etherscan: {
-    apiKey: process.env.BSC_SCAN_KEY,
+    apiKey: process.env.ETH_SCAN_KEY,
   },
 }
