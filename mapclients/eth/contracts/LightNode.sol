@@ -69,7 +69,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) public returns (bool){
-        uint256 epoch = bh.number/epochSize;
+        uint256 epoch = (bh.number / epochSize) - 1;
         bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
         bytes memory bits = abi.encodePacked(ist.aggregatedSeal.bitmap);
         G1  memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
@@ -346,11 +346,22 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         );
     }
 
+    function getBlcokHash(blockHeader memory bh) public pure returns (bytes32){
+        istanbulExtra memory ist = _decodeExtraData(bh.extraData);
+        bytes memory extraDataPre = splitExtra(bh.extraData);
+        bh.extraData = _deleteAgg(ist, extraDataPre);
+        bytes memory headerWithoutAgg = _encodeHeader(bh);
+        bytes32 hash1 = keccak256(abi.encodePacked(headerWithoutAgg));
+
+        return hash1;
+
+    }
+
     function getPrepareCommittedSeal(blockHeader memory bh, uint256 round)
     public
     pure
     returns (bytes memory result){
-        bytes32 hash = getHeaderHash(bh);
+        bytes32 hash = getBlcokHash(bh);
         if (round ==0 ){
             result = abi.encodePacked(hash, uint8(2));
         }else if (round >0 && round <= 256){
@@ -372,9 +383,17 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
         for (uint256 i = 0; i < ist.validators.length; i++) {
             list1[i] = RLPEncode.encodeAddress(ist.validators[i]);
-            //
+
+        }
+
+        for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
+
             list2[i] = RLPEncode.encodeBytes(ist.addedPubKey[i]);
-            //
+
+        }
+
+        for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
+
             list3[i] = RLPEncode.encodeBytes(ist.addedG1PubKey[i]);
         }
 
@@ -416,9 +435,17 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
         for (uint256 i = 0; i < ist.validators.length; i++) {
             list1[i] = RLPEncode.encodeAddress(ist.validators[i]);
-            //
+
+        }
+
+        for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
+
             list2[i] = RLPEncode.encodeBytes(ist.addedPubKey[i]);
-            //
+
+        }
+
+        for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
+
             list3[i] = RLPEncode.encodeBytes(ist.addedG1PubKey[i]);
         }
 
