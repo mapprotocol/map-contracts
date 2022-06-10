@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
@@ -322,8 +321,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bytes memory extraDataPre = splitExtra(bh.extraData);
         bh.extraData = _deleteAgg(ist, extraDataPre);
-//                bytes memory headerWithoutAgg = _encodeHeader(bh);
-        //        bytes32 hash1 = keccak256(abi.encodePacked(headerWithoutAgg));
         bh.extraData = _deleteSealAndAgg(ist, bh.extraData);
         bytes memory headerWithoutSealAndAgg = _encodeHeader(bh);
         bytes32 hash2 = keccak256(abi.encodePacked(headerWithoutSealAndAgg));
