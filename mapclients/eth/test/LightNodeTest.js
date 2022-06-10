@@ -18,6 +18,10 @@ describe("Relayer,LightNode start test", function () {
     let lightNodeContractAddress;
 
 
+    let blsCode;
+    let bc;
+
+
      let header =
         [
             '0x55c7e51c72094013140782a4b58a8ce54cf0e269ef40090bed532915ff8bcba3',
@@ -166,7 +170,68 @@ describe("Relayer,LightNode start test", function () {
         logs
     ];
 
-    let g2 = ["0","0","0","0"]
+    let g2 = ["0","0","0","0"];
+
+    let header15960 =
+        [
+            "0x6917f05c21f28c687ce93801e0512f57cc6fc146c2e21e194af55ee6a144b052",
+            "0x7A3a26123DBD9CFeFc1725fe7779580B987251Cb",
+            "0x1163718b8acab33587c12df51ccaee55c646520d1071bf88e2edacad454405a0",
+            "0xa90a8e3ca09f1d755aa791aa19d17d1b2b085993972a85e26d1c5010f71d2fb4",
+            "0x0ecb0225266e6af30504fb96cb36f4889057dc5eb59b4ccb45f3e0f951d35876",
+            "0x00000000000000000000000002000000080000000000000000000000000000000000000000000000000000800000002000010000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000200000400",
+            "15960",
+            "8000000",
+            "24688",
+            "1654668076",
+            "0xd7820304846765746888676f312e31352e36856c696e75780000000000000000f8d3c0c0c080b84125443a64a55ba20e8c22777253b201e4928de07cf4e487ff59504890f5c59d044a7a27bb1916dfdf79996f5898516e455b24a127e341dd16c0b346b3ab7be28c00f8440eb840086ddc5250a0e90364d70c8a8507f2887a040b4beb1df3cda9c885933e1c92e525245d3f5e734be11871f4147b483fea6e4d24c083038c22446655628049da3680f8440fb84017466b7ab808d939cd32c5618ebdccb58d6b6c92677fa9d7a9856561871aba2e23b62b9251c50d6d781cb52ead9330dfdb3e56035dc9269ea364e04b8f6891d180",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000",
+            "100000000000"
+        ];
+
+    let aggPk15960 =
+        [
+            "0x152bb6d9b41151a2f6774afe12450ae2760f571009246a1408f9e0e5012a18d7",
+            "0x028120ae77c88dfa049c595d69f6186be11a2187cebbf04f2a1d2fde8691dfb4",
+            "0x1419a80b2f032c886f02b0a0565e90746a8d5921ea5b755f887737b20f687246",
+            "0x13a77b0eb9ddf3e6b6d2fa165a02695015a29f26b6298ceb2bdcd73f991e7c92"
+        ];
+
+    let logs15960 =
+        [
+            [
+                "0xF0623c7C418eE84F33e5fAF5840ca3a6D1ec113D",
+                [
+                    "0x4fed921c0dd94ef52307d954f2459b84c049f5c348455dcdd9d1b5d653f9c94c",
+                    "0x000000000000000000000000f855a761f9182c4b22a04753681a1f6324ed3449",
+                    "0x000000000000000000000000f855a761f9182c4b22a04753681a1f6324ed3449",
+                    "0x0000000000000000000000000000000000000000000000000000000000000064"
+                ],
+                "0x"
+            ]
+        ];
+
+    let receipt15960 =
+        [
+            "2",
+            "0x01",
+            "24688",
+            "0x00000000000000000000000002000000080000000000000000000000000000000000000000000000000000800000002000010000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000200000400",
+            logs15960
+        ];
+
+    let provedata15960 =
+        [
+            header15960,
+            aggPk15960,
+            receipt15960,
+            "0x00",
+            [
+                "0xf901b1822080b901ab02f901a701826070b9010000000000000000000000000002000000080000000000000000000000000000000000000000000000000000800000002000010000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000200000400f89ef89c94f0623c7c418ee84f33e5faf5840ca3a6d1ec113df884a04fed921c0dd94ef52307d954f2459b84c049f5c348455dcdd9d1b5d653f9c94ca0000000000000000000000000f855a761f9182c4b22a04753681a1f6324ed3449a0000000000000000000000000f855a761f9182c4b22a04753681a1f6324ed3449a0000000000000000000000000000000000000000000000000000000000000006480"
+            ]
+
+        ];
 
     let provedata =
         [
@@ -181,6 +246,25 @@ describe("Relayer,LightNode start test", function () {
 
 
         ];
+    let receiptTest = [
+        "2",
+        "0x01",
+        "24688",
+        "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000400000000000000000800000000000000000000000000000000000001000000000000000000000000000000000000000000002000000000000000000000000200000000000000000020002000000000000000000000000000000000000000000000004000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000400",
+        [
+            [
+                "0xca3D958f3c164353a27633d3a4b93Ccda969f2AF",
+                [
+                    "0x4fed921c0dd94ef52307d954f2459b84c049f5c348455dcdd9d1b5d653f9c94c",
+                    "0x0000000000000000000000005907d676af9c39ed62d49de8099d8eb8af1f654b",
+                    "0x0000000000000000000000005907d676af9c39ed62d49de8099d8eb8af1f654b",
+                    "0x0000000000000000000000000000000000000000000000000000000000000078"
+                ],
+                "0x"
+            ]
+        ]
+    ]
+
 
 
 
@@ -215,6 +299,52 @@ describe("Relayer,LightNode start test", function () {
 
     });
 
+    it('initialize ', async function () {
+        let g1Hex = [
+            "0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f2492b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3",
+            "0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf581ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b",
+            "0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c8121e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869",
+            "0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea60dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"
+        ]
+
+        blsCode = await ethers.getContractFactory("BlsCode");
+        bc = await blsCode.deploy();
+        await bc.deployed();
+
+        const g0 = await bc.decodeG1(g1Hex[0]);
+        const g1 = await bc.decodeG1(g1Hex[1]);
+        const g2 = await bc.decodeG1(g1Hex[2]);
+        const g3 = await bc.decodeG1(g1Hex[3]);
+        g1List = [
+            g0,
+            g1,
+            g2,
+            g3,
+        ]
+
+        let addresss = [
+            "0xb4e1BC0856f70A55764FD6B3f8dD27F2162108E9",
+            "0x7A3a26123DBD9CFeFc1725fe7779580B987251Cb",
+            "0x7607c9cdd733d8cDA0A644839Ec2bAc5Fa180eD4",
+            "0x65b3FEe569Bf82FF148bddEd9c3793FB685f9333"
+        ]
+        let _weights = [1, 1, 1, 1]
+
+        let _threshold = 3;
+
+        let _epoch = 17;
+
+        let _epochSize = 1000;
+
+
+        // console.log(_threshold,addresss,g1List,_weights,_epoch,_epochSize)
+
+        await lightClient.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize);
+
+        // console.log(await  lightClient.getValidator("0"));
+    });
+
+
 
     it('verifyProofData', async function () {
         // console.log(verifyProofContract.address);
@@ -226,9 +356,10 @@ describe("Relayer,LightNode start test", function () {
 
         // let statusInfo = await lightClient.getStatus("true");
         // console.log(statusInfo);
+        console.log(await lightClient.getVerifyExpectedValueHash(receiptTest));
 
+       // console.log(await lightClient.verifyProofData(provedata15960));
 
-        console.log(await lightClient.getVerifyTrieProof(provedata));
 
 
 
@@ -244,13 +375,19 @@ describe("Relayer,LightNode start test", function () {
     });
 
     it('_decodeExtraData', async function () {
-        headerHash = await lightClient._encodeHeader(header1);
+        headerHash = await lightClient._encodeHeader(header18);
         let headerInfo = await lightClient._decodeHeader(headerHash);
-        console.log(headerInfo);
+        //console.log(headerInfo);
         extra = await lightClient._decodeExtraData(headerInfo.extraData);
-        console.log(extra);
+        //console.log(extra);
 
-        console.log(await lightClient.getPrepareCommittedSeal(header1, extra.aggregatedSeal.round));
+        console.log(await lightClient.getPrepareCommittedSeal(header18, extra.aggregatedSeal.round));
+
+        console.log(await lightClient.callStatic.checkSig(
+            header18,
+            extra,
+            aggPK18
+        ));
 
         //let extraDataPre = await lightClient.splitExtra(headerInfo.extraData);
         // console.log(extraDataPre);
@@ -354,6 +491,21 @@ describe("Relayer,LightNode start test", function () {
     it('_verifyHeader ', async function () {
         // console.log(headerHash)
         console.log(await lightClient._verifyHeader(headerHash));
+
+    });
+
+    it('updateBlockHeader', async function () {
+
+        //console.log(await lightClient.weightedMultisig());
+
+        await lightClient.updateBlockHeader(header18,aggPK18);
+
+        await lightClient.updateBlockHeader(header19,aggPK19);
+
+        // console.log(await  lightClient.getValidator("1"));
+
+        //console.log(await lightClient.getBits("13"))
+
 
     });
 

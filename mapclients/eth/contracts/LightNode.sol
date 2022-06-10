@@ -1,7 +1,37 @@
 // SPDX-License-Identifier: MIT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+//import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./lib/RLPReader.sol";
@@ -11,7 +41,9 @@ import "./bls/WeightedMultiSig.sol";
 import "./lib/MPT.sol";
 import "./bls/BlsCode.sol";
 
-contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
+import "hardhat/console.sol";
+
+contract LightNode is  Initializable, ILightNode {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
@@ -50,6 +82,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         (success, message) = getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
+            return (success,message);
         }
         //todo verify header
         bytes32 hash;
@@ -57,11 +90,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         (success, hash) = _verifyHeader(headerRlp);
         if (!success) {
             message = "verifyHeader error";
+            return (success,message);
         }
         istanbulExtra memory ist = _decodeExtraData(_receiptProof.header.extraData);
         success = checkSig(_receiptProof.header, ist, _receiptProof.aggPk);
         if (!success) {
             message = "bls error";
+            return (success,message);
         }
         return (success, message);
     }
@@ -70,7 +105,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) public returns (bool){
         uint256 epoch = (bh.number / epochSize) - 1;
         bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
-        bytes memory bits = abi.encodePacked(ist.aggregatedSeal.bitmap);
+        bytes memory bits = abi.encodePacked(uint8(ist.aggregatedSeal.bitmap));
         G1  memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
         return weightedMultisig.checkSig(bits, message, sig, aggPk, epoch);
     }
@@ -80,7 +115,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bool success = checkSig(bh, ist, aggPk);
 
-        if (success) {
+        require (success,"checkSig error") ;
             //upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
             uint256 len = ist.addedG1PubKey.length;
             G1[] memory _pairKeysAdd = new G1[](len);
@@ -94,7 +129,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             bytes memory bits = abi.encodePacked(ist.removeList);
             uint256 epoch = bh.number / epochSize;
             weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
-        }
+
     }
 
 
@@ -119,6 +154,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
             loglist[1] = RLPEncode.encodeList(loglist1);
 
+
             loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
 
             bytes memory logBytes = RLPEncode.encodeList(loglist);
@@ -129,6 +165,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         }
         list[3] = RLPEncode.encodeList(listLog);
 
+
         bytes memory tempType = abi.encode(_txReceipt.receiptType);
 
         bytes1 tip = tempType[31];
@@ -136,7 +173,9 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
         bytes memory temp = RLPEncode.encodeList(list);
 
+
         output = abi.encodePacked(tip, temp);
+
     }
 
     function getVerifyTrieProof(receiptProof memory _receiptProof) public pure returns (
@@ -541,7 +580,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     /** UUPS *********************************************************/
-    function _authorizeUpgrade(address) internal view override {
-        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
-    }
+//    function _authorizeUpgrade(address) internal view override {
+//        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
+//    }
 }
