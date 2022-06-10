@@ -137,10 +137,10 @@ describe("Relayer,LightNode start test", function () {
     });
 
     it('_decodeExtraData', async function () {
-        //let headerInfo = await lightClient._decodeHeader(headerHash);
-        //console.log(headerInfo);
-        //extra = await lightClient._decodeExtraData(headerInfo.extraData);
-        // console.log(extra);
+        let headerInfo = await lightClient._decodeHeader(headerHash);
+        console.log(headerInfo);
+        extra = await lightClient._decodeExtraData(headerInfo.extraData);
+        console.log(extra);
 
         //let extraDataPre = await lightClient.splitExtra(headerInfo.extraData);
         // console.log(extraDataPre);

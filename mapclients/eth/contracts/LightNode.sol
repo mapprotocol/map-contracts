@@ -86,12 +86,14 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             uint256 len = ist.addedG1PubKey.length;
             G1[] memory _pairKeysAdd = new G1[](len);
             uint256[] memory _weights = new uint256[](len);
-            bytes memory bits = abi.encodePacked(ist.aggregatedSeal.bitmap);
-            uint256 epoch = bh.number / epochSize;
-            for (uint256 i = 0; i < len; i++) {
-                _weights[i] = 1;
-                _pairKeysAdd[i] = blsCode.decodeG1(ist.addedG1PubKey[i]);
+            if (len > 0){
+                for (uint256 i = 0; i < len; i++) {
+                    _weights[i] = 1;
+                    _pairKeysAdd[i] = blsCode.decodeG1(ist.addedG1PubKey[i]);
+                }
             }
+            bytes memory bits = abi.encodePacked(ist.removeList);
+            uint256 epoch = bh.number / epochSize;
             weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
         }
     }

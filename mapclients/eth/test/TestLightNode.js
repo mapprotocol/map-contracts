@@ -130,4 +130,19 @@ describe('WeightedMultiSig', function () {
         const epoch = 0;
         assert(await wms.callStatic.checkSig(bits, message, sign, aggpk, epoch));
     });
+
+
+
+    it("should check updateBlockHeader", async () => {
+        const bits = '0x0d'; // 00000111
+        const message = "0x83c6030e8eb07e62c2f66a2afebcdcf0a0687ee96f8bfea7482a6ccc502e252502";
+        const sign = await bc.decodeG1("0x04017fa35d23482fb010423283569b741e611cfb967ee12673805bdecff8919a1c590bd715dbc1f6a8e133983225b571b8db7c349a2405cb15a266bcf1ed09b2");
+
+        const aggpk = ["0x1e765f27b1bc2822f1543fec2a14530db0eb56175e2cd5bc7c6567ef7d605204",
+            "0x10ebefa20bce22d0bce4bba43a151c8eedfed5c6487e98e21907da5384aba903",
+            "0x19933df8221f1532677d57c1bafb9220fa098a4774a482b37c98746d32d25ed3",
+            "0x1e9dcff0a16587d79dd67fc7917cdce9c2813b4e47adc7a1803e121e7cff9995"]
+        const epoch = 0;
+        assert(await wms.callStatic.checkSig(bits, message, sign, aggpk, epoch));
+    });
 });

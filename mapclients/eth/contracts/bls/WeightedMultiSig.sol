@@ -54,35 +54,17 @@ contract WeightedMultiSig is BGLS,IBLS {
         validator memory vPre = validators[idPre];
         uint256 id = getValidatorsId(epoch);
         validator storage v = validators[id];
-        if (vPre.weights.length == 0){
-            v.threshold = vPre.threshold;
-
-            for (uint256 i = vPre.pairKeys.length - 1; i >= 0; i--) {
-                v.pairKeys.push(
-                    G1({
-                x : vPre.pairKeys[i].x,
-                y : vPre.pairKeys[i].y
-                }));
-
-                v.weights.push(vPre.weights[i]);
-            }
-
-            v.epoch = epoch;
-            return;
-        }
-
         v.epoch = epoch;
-        for (uint256 i = vPre.pairKeys.length - 1; i >= 0; i--) {
-            if (chkBit(bits, i)) {
+        uint _weight = 0;
+        for (uint256 i = 0; i < vPre.pairKeys.length; i++) {
+            if (!chkBit(bits, i)) {
                 v.pairKeys.push(
                     G1({
                 x : vPre.pairKeys[i].x,
                 y : vPre.pairKeys[i].y
                 }));
-
                 v.weights.push(vPre.weights[i]);
-            }else{
-                v.threshold = v.threshold.sub(vPre.weights[i]);
+                _weight = _weight + vPre.weights[i];
             }
         }
 
@@ -93,12 +75,11 @@ contract WeightedMultiSig is BGLS,IBLS {
                 x : _pairKeysAdd[i].x,
                 y : _pairKeysAdd[i].y
                 }));
-
                 v.weights.push(_weights[i]);
-
-                v.threshold = v.threshold.add(_weights[i]);
+                _weight = _weight + _weights[i];
             }
         }
+        v.threshold = _weight*2/3;
     }
 
     function getValidatorsId(uint256 epoch) public view returns (uint){
