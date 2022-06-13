@@ -1,15 +1,23 @@
-use crate::istanbul::istanbul_filtered_header;
-use crate::serialization::rlp::{
-    big_int_to_rlp_compat_bytes, rlp_list_field_from_bytes, rlp_to_big_int,
-};
+use crate::serialization::rlp::{big_int_to_rlp_compat_bytes, rlp_list_field_from_bytes, rlp_to_big_int, };
 use crate::slice_as_array_ref;
 use crate::traits::{DefaultFrom, FromBytes, FromRlp, ToRlp};
-use crate::types::istanbul::ISTANBUL_EXTRA_VANITY_LENGTH;
+use crate::types::{istanbul::ISTANBUL_EXTRA_VANITY_LENGTH, istanbul::istanbul_filtered_header, errors::Kind};
 use num_bigint::BigInt as Integer;
-use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
-use near_sdk::env::keccak256;
-use near_sdk::serde::{Serialize, ser::{Serializer}, Deserialize, de::{Deserializer, self}};
-use crate::types::errors::Kind;
+use rlp::{
+    Decodable,
+    DecoderError,
+    Encodable,
+    Rlp,
+    RlpStream
+};
+use near_sdk::{
+    env::keccak256,
+    serde::Serialize,
+    serde::ser::Serializer,
+    serde::Deserialize,
+    serde::de::Deserializer,
+    serde::de
+};
 
 /// HASH_LENGTH represents the number of bytes used in a header hash
 pub const HASH_LENGTH: usize = 32;
@@ -35,24 +43,6 @@ pub type Bloom = [u8; BLOOM_BYTE_LENGTH];
 /// Nonce represents a 64 bit nonce
 pub type Nonce = [u8; NONCE_LENGTH];
 
-
-/*
-bytes parentHash;
-        address coinbase;
-        bytes root;
-        bytes txHash;
-        bytes receipHash;
-        bytes bloom;
-        uint256 number;
-        uint256 gasLimit;
-        uint256 gasUsed;
-        uint256 time;
-        bytes extraData;
-        bytes mixDigest;
-        bytes nonce;
-        uint256 baseFee;
- */
-
 /// Header contains block metadata in Celo Blockchain
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(crate = "near_sdk::serde", rename_all = "camelCase")]
@@ -61,23 +51,18 @@ pub struct Header {
     pub parent_hash: Hash,
 
     #[serde(with = "crate::serialization::bytes::hexstring")]
-    #[serde(rename = "miner")]
     pub coinbase: Address,
 
     #[serde(with = "crate::serialization::bytes::hexstring")]
-    #[serde(rename = "stateRoot")]
     pub root: Hash,
 
     #[serde(with = "crate::serialization::bytes::hexstring")]
-    #[serde(rename = "transactionsRoot")]
     pub tx_hash: Hash,
 
     #[serde(with = "crate::serialization::bytes::hexstring")]
-    #[serde(rename = "receiptsRoot")]
     pub receipt_hash: Hash,
 
     #[serde(with = "crate::serialization::bytes::hexstring")]
-    #[serde(rename = "logsBloom")]
     pub bloom: Bloom,
 
     #[serde(with = "crate::serialization::bytes::hexbigint")]
@@ -89,12 +74,10 @@ pub struct Header {
     #[serde(with = "crate::serialization::bytes::hexbigint")]
     pub gas_used: Integer,
 
-    #[serde(rename = "timestamp")]
     #[serde(with = "crate::serialization::bytes::hexbigint")]
     pub time: Integer,
 
     #[serde(with = "crate::serialization::bytes::hexstring")]
-    #[serde(rename = "extraData")]
     pub extra: Vec<u8>,
 
     #[serde(with = "crate::serialization::bytes::hexstring")]
@@ -261,13 +244,13 @@ fn rlp_hash(header: &Header) -> Result<Hash, Kind> {
     Ok(slice_as_array_ref!(&digest[..HASH_LENGTH], HASH_LENGTH)?.to_owned())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
-    use near_sdk::serde_json;
     use super::*;
+    use near_sdk::serde_json;
 
-    const HEADER_WITH_EMPTY_EXTRA: &str = "f901a6a07285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7948888f1f195afa192cfee860698584c030f4c9db1a0ecc60e00b3fe5ce9f6e1a10e5469764daf51f1fe93c22ec3f9a7583a80357217a0d35d334d87c0cc0a202e3756bf81fae08b1575f286c7ee7a3f8df4f0f3afc55da056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421b901000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001825208845c47775c80";
-
+    const HEADER_WITH_EMPTY_EXTRA: &str = "f901d2a07285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7948888f1f195afa192cfee860698584c030f4c9db1a0ecc60e00b3fe5ce9f6e1a10e5469764daf51f1fe93c22ec3f9a7583a80357217a0d35d334d87c0cc0a202e3756bf81fae08b1575f286c7ee7a3f8df4f0f3afc55da056e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421b90100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000180825208845c47775c80a0000000000000000000000000000000000000000000000000000000000000000088000000000000000080";
     const IST_EXTRA: &str = "0000000000000000000000000000000000000000000000000000000000000000f89af8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b440b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0";
 
     #[test]
@@ -325,9 +308,10 @@ mod tests {
 
     #[test]
     fn generates_valid_header_hash() {
+        // testing_env!(get_context(false));
         for (extra_bytes, hash_str) in vec![(
             IST_EXTRA,
-            "5c012c65d46edfbfca86a426da5111c51114b75577fec9b82161d3e05d83b723",
+            "8c524cf5bde7ab394b0bced0d31685467c5df090f68584174e1807c57f2df33c",
         )]
             .iter()
         {
@@ -335,6 +319,7 @@ mod tests {
                 .unwrap()
                 .to_owned();
             let mut header = Header::new();
+
             header.extra = hex::decode(&extra_bytes).unwrap();
 
             // for istanbul consensus

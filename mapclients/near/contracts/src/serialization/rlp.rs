@@ -33,8 +33,6 @@ pub fn rlp_to_big_int(rlp: &Rlp, index: usize) -> Result<Integer, DecoderError> 
 }
 
 pub fn big_int_to_rlp_compat_bytes(val: &Integer) -> Vec<u8> {
-    // BigInt library returns vec![0] for zero value where
-    // the celo blockchain expects empty vector
     if val.is_zero() {
         Vec::new()
     } else {

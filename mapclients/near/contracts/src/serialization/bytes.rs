@@ -32,37 +32,6 @@ pub(crate) mod hexstring {
     }
 }
 
-// pub(crate) mod hexnum {
-//     use num;
-//     use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
-//
-//     /// Deserialize string into T
-//     pub(crate) fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-//     where
-//         D: Deserializer<'de>,
-//         T: num::traits::Num,
-//         <T as num::Num>::FromStrRadixErr: std::fmt::Display,
-//     {
-//         let s: &str = Deserialize::deserialize(deserializer)?;
-//         if s.len() <= 2 || !s.starts_with("0x") {
-//             return Err(D::Error::custom(format!(
-//                 "hex string should start with '0x', got: {}",
-//                 s
-//             )));
-//         }
-//         T::from_str_radix(&s[2..], 16).map_err(D::Error::custom)
-//     }
-//
-//     /// Serialize from T into string
-//     pub(crate) fn serialize<S, T>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: Serializer,
-//         T: std::fmt::LowerHex,
-//     {
-//         format!("0x{:x}", value).serialize(serializer)
-//     }
-// }
-//
 pub(crate) mod hexbigint {
     use num::Num;
     use num_bigint::BigInt as Integer;
