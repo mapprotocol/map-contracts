@@ -31,10 +31,10 @@ module.exports = async function ({ethers, deployments}) {
 
 
     let g1Hex = [
-        "0x14d44a97d2fc3ea62b6dcf2bd857079bd261993152f11aef5dd001db68b20d2d1ba45f117b6530a7aec45d7d90fd4e15d2a62f62b706eaa115aa801caeee294b",
-        "0x15b7bcf0accf839170a5d4621282edcf14f4a438f8e53abcead5f0528cb91cb1135fd4e82ede1493ab1209af122e1dc186c885cc96d2413cbc09a58163b91eb9",
-        "0x2fd433e93187f6b3d15664ec48073bd73d57c801c4a8bfc1e0e3abd3deefc45619d45ac7ad54df7dda5b8afd6f882c9d9f879dbc6d587f1da5da1751baac729f",
-        "0x1b037f39d9f8e74b608a898249cc3d156ff1f0051026388366b85a84aac43bb4068275cd909e16b29f1b3bc97e91ec0a8b95a11b8a574cbc2c9ea142d26c8a49",
+        "0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f2492b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3",
+        "0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf581ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b",
+        "0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c8121e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869",
+        "0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea60dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"
     ]
 
     let blsCode = await hre.ethers.getContractFactory("BlsCode");
@@ -53,10 +53,10 @@ module.exports = async function ({ethers, deployments}) {
     ]
 
     let addresss = [
-        "0x1c0eDab88dbb72B119039c4d14b1663525b3aC15",
-        "0x16FdBcAC4D4Cc24DCa47B9b80f58155a551ca2aF",
-        "0x2dC45799000ab08E60b7441c36fCC74060Ccbe11",
-        "0x6C5938B49bACDe73a8Db7C3A7DA208846898BFf5"
+        "0xb4e1BC0856f70A55764FD6B3f8dD27F2162108E9",
+        "0x7A3a26123DBD9CFeFc1725fe7779580B987251Cb",
+        "0x7607c9cdd733d8cDA0A644839Ec2bAc5Fa180eD4",
+        "0x65b3FEe569Bf82FF148bddEd9c3793FB685f9333"
     ]
 
     let _weights = [1, 1, 1, 1]

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
 
-
 pragma solidity >=0.7.1;
 
 /**
@@ -191,12 +190,13 @@ library RLPEncode {
             dest += 32;
             src += 32;
         }
-
-        uint256 mask = 256**(32 - len) - 1;
-        assembly {
-            let srcpart := and(mload(src), not(mask))
-            let destpart := and(mload(dest), mask)
-            mstore(dest, or(destpart, srcpart))
+        if (len > 0) {
+            uint256 mask = 256**(32 - len) - 1;
+            assembly {
+                let srcpart := and(mload(src), not(mask))
+                let destpart := and(mload(dest), mask)
+                mstore(dest, or(destpart, srcpart))
+            }
         }
     }
 
