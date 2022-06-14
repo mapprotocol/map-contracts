@@ -22,17 +22,9 @@ pub struct ReceiptProof {
     pub key_index: Vec<u8>,
     pub proof: Vec<ProofEntry>,
 }
-// #[derive(Serialize, Deserialize, Clone, Debug)]
-// #[serde(crate = "near_sdk::serde")]
-// pub struct ProofEntry {
-//     #[serde(with = "crate::serialization::bytes::hexstring")]
-//     pub entry: Vec<u8>,
-// }
 
 #[derive(Clone, Debug)]
 pub struct ProofEntry (Vec<u8>);
-// type ProofEntry = Vec<u8>;
-
 
 impl Serialize for ProofEntry {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
@@ -133,19 +125,6 @@ impl Encodable for LogEntry {
         s.append(&self.data);
     }
 }
-
-// impl Serialize for Hash2 {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-//         let data = self.0;
-//         crate::serialization::bytes::hexstring::serialize(&data, serializer)
-//     }
-// }
-//
-// impl Deserialize for Hash2 {
-//     fn deserialize<'de, D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-//         todo!()
-//     }
-// }
 
 pub fn verify_trie_proof(expected_root: Hash, key: Vec<u8>, proof: Vec<ProofEntry>) -> Vec<u8> {
     let mut actual_key = vec![];

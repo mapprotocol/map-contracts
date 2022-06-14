@@ -24,9 +24,8 @@ use crate::types::proof::{ReceiptProof, verify_trie_proof};
 
 const ECDSA_SIG_LENGTH: usize = 65;
 const ECDSA_REGISTER: u64 = 2;
+const MAX_RECORD: u64 = 20;
 
-// add the following attributes to prepare your code for serialization and invocation on the blockchain
-// More built-in Rust attributes here: https://doc.rust-lang.org/reference/attributes.html#built-in-attributes-index
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct MapLightClient {
@@ -34,14 +33,20 @@ pub struct MapLightClient {
     epoch_size: u64,
 }
 
-#[derive(Default, BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct Validators {
     threshold: u128,
-    pair_keys: Vec<G1>,
-    weights: Vec<u128>,
-    addresses: Vec<Address>,
     epoch: u64,
+    validator_list: Vec<Validator>,
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, Debug)]
+#[serde(crate = "near_sdk::serde")]
+struct Validator {
+    g1_pub_key: G1,
+    weight: u128,
+    address: Address,
 }
 
 #[near_bindgen]
@@ -51,16 +56,24 @@ impl MapLightClient {
                pair_keys: Vec<G1>,
                addresses: Vec<Address>,
                weights: Vec<u128>, epoch: u64, epoch_size: u64) -> Self {
+        assert!(!Self::initialized(), "Already initialized");
         assert_eq!(pair_keys.len(), addresses.len(), "lengths of pair keys and addresses are not equal");
         assert_eq!(pair_keys.len(), weights.len(), "lengths of pair keys and weights are not equal");
+
+        let mut validator_list = Vec::new();
+        for (i, key) in pair_keys.into_iter().enumerate() {
+            validator_list.push(Validator {
+                g1_pub_key: key,
+                weight: weights[i],
+                address: addresses[i],
+            })
+        }
 
         let mut val_records = UnorderedMap::new(b"v".to_vec());
         val_records.insert(&epoch, &Validators {
             threshold,
-            pair_keys,
-            weights,
-            addresses,
             epoch,
+            validator_list,
         });
 
         Self {
@@ -69,23 +82,8 @@ impl MapLightClient {
         }
     }
 
-    #[init]
-    pub fn new1(threshold: u128, epoch: u64, epoch_size: u64) -> Self {
-        log!("threshold {} epoch {} epoch_size {}", threshold, epoch, epoch_size);
-
-        let mut val_records = UnorderedMap::new(b"v".to_vec());
-        val_records.insert(&epoch, &Validators {
-            threshold,
-            pair_keys: vec![],
-            weights: vec![],
-            addresses: vec![],
-            epoch,
-        });
-
-        Self {
-            val_records,
-            epoch_size,
-        }
+    pub fn initialized() -> bool {
+        env::state_read::<MapLightClient>().is_some()
     }
 
     pub fn update_block_header(&mut self, header: &Header, agg_pk: G2) {
@@ -97,21 +95,13 @@ impl MapLightClient {
         // check ecdsa and bls signature
         let epoch = get_epoch_number(header.number.to_u64().unwrap(), self.epoch_size as u64);
         let validators = &self.val_records.get(&epoch).unwrap();
-        self.verify_signatures(header, agg_pk, &extra, validators);
+        self.verify_signatures(header, agg_pk, &extra, &validators);
 
         // update validators' pair keys
         self.update_next_validators(validators, &mut extra, epoch + 1);
     }
 
-    pub fn get_proof_data(&self, receipt_proof: ReceiptProof) {
-        log!("receipt: {:?}", receipt_proof.receipt);
-        log!("proof: {:?}", receipt_proof.proof);
-        log!("header: {:?}", receipt_proof.header);
-        log!("agg_pk: {:?}", receipt_proof.agg_pk);
-        log!("key_index: {:?}", receipt_proof.key_index);
-    }
-
-    pub fn verify_proof_data(& self, receipt_proof: ReceiptProof) {
+    pub fn verify_proof_data(&self, receipt_proof: ReceiptProof) {
         let header = &receipt_proof.header;
         let extra = IstanbulExtra::from_rlp(&header.extra).unwrap();
 
@@ -129,9 +119,13 @@ impl MapLightClient {
         assert_eq!(hex::encode(receipt_data), hex::encode(data), "receipt data is not equal to the value in trie");
     }
 
-    fn verify_signatures(& self, header: &Header, agg_pk: G2, extra: &IstanbulExtra, validators: &Validators) {
+    fn verify_signatures(&self, header: &Header, agg_pk: G2, extra: &IstanbulExtra, validators: &Validators) {
+        let addresses = validators.validator_list
+            .iter()
+            .map(|x| x.address)
+            .collect();
         // check ecdsa signature
-        self.verify_ecdsa_signature(header, &extra.seal, validators.addresses.as_ref());
+        self.verify_ecdsa_signature(header, &extra.seal, &addresses);
 
         // check agg seal
         self.verify_aggregated_seal(header, &extra, validators, &agg_pk);
@@ -159,7 +153,7 @@ impl MapLightClient {
         return weight >= threshold;
     }
 
-    pub fn verify_ecdsa_signature(&self, header: &Header, signature: &Vec<u8>, addresses: &Vec<Address>) {
+    fn verify_ecdsa_signature(&self, header: &Header, signature: &Vec<u8>, addresses: &Vec<Address>) {
         assert_eq!(ECDSA_SIG_LENGTH, signature.len(), "invalid ecdsa signature length");
 
         let res: Vec<Address> = addresses.iter().filter(|x| x.as_slice() == header.coinbase.as_slice()).cloned().collect();
@@ -171,12 +165,12 @@ impl MapLightClient {
 
         unsafe {
             res = near_sys::ecrecover(header_hash.len() as _,
-                                header_hash.as_ptr() as _,
-                                (signature.len() - 1) as _,
-                                signature.as_ptr() as _,
-                                *v as _,
-                                0,
-                                ECDSA_REGISTER);
+                                      header_hash.as_ptr() as _,
+                                      (signature.len() - 1) as _,
+                                      signature.as_ptr() as _,
+                                      *v as _,
+                                      0,
+                                      ECDSA_REGISTER);
         }
 
         let res = env::read_register(ECDSA_REGISTER).expect(REGISTER_EXPECTED_ERR);
@@ -186,50 +180,57 @@ impl MapLightClient {
         assert_eq!(&header.coinbase, &pub_key_hash[12..], "ecdsa signer is not correct");
     }
 
-    pub fn verify_aggregated_seal(&self, header: &Header, extra: &IstanbulExtra, validators: &Validators, agg_g2_pk: &G2) {
-        assert!(self.is_quorum_default_wight(&extra.aggregated_seal.bitmap, &validators.pair_keys, validators.threshold), "threshold is not satisfied");
+    fn verify_aggregated_seal(&self, header: &Header, extra: &IstanbulExtra, validators: &Validators, agg_g2_pk: &G2) {
+        let pair_keys = validators.validator_list
+            .iter()
+            .map(|x| x.g1_pub_key)
+            .collect();
+        assert!(self.is_quorum_default_wight(&extra.aggregated_seal.bitmap, &pair_keys, validators.threshold), "threshold is not satisfied");
 
-        assert!(check_aggregated_g2_pub_key(&validators.pair_keys, &extra.aggregated_seal.bitmap, agg_g2_pk), "check g2 pub key failed");
+        assert!(check_aggregated_g2_pub_key(&pair_keys, &extra.aggregated_seal.bitmap, agg_g2_pk), "check g2 pub key failed");
 
         let header_hash = header.hash().unwrap();
         assert!(check_sealed_signature(&extra.aggregated_seal, &header_hash, agg_g2_pk), "check sealed signature failed")
     }
 
-    // TODO: weight update
     fn update_next_validators(&mut self, validators: &Validators, extra: &mut IstanbulExtra, epoch: u64) {
-        let mut pair_keys: Vec<G1> = validators.pair_keys
+        let mut validator_list: Vec<Validator> = validators.validator_list
             .iter()
             .enumerate()
             .filter(|(i, _)| !extra.removed_validators.bit(*i as _))
             .map(|(_, v)| *v)
             .collect();
 
-        let mut added_pair_keys: Vec<G1> = extra.added_g1_public_keys
+        let mut added_validators: Vec<Validator> = extra.added_g1_public_keys
             .iter()
-            .map(|k| G1::from_slice(k).unwrap())
+            .zip(extra.added_validators.iter())
+            .map(|(g1_key, address)| Validator {
+                g1_pub_key: G1::from_slice(g1_key).unwrap(),
+                // TODO: update later?
+                weight: 1,
+                address: *address,
+            })
             .collect();
 
-        pair_keys.append(&mut added_pair_keys);
+        validator_list.append(&mut added_validators);
 
-        let mut addresses: Vec<Address> = validators.addresses
+        let total_weight :u128 = validator_list
             .iter()
-            .enumerate()
-            .filter(|(i, _)| !extra.removed_validators.bit(*i as _))
-            .map(|(_, v)| *v)
-            .collect();
-
-        addresses.append(&mut extra.added_validators);
+            .map(|x| x.weight)
+            .sum();
 
         let next_validators = Validators {
-            pair_keys,
-            addresses,
             epoch,
-            weights: validators.weights.clone(),
-            threshold: validators.threshold,
+            validator_list,
+            threshold: total_weight - total_weight / 3,
         };
 
+        log!("epoch {} validators: {:?}", epoch, next_validators);
+
         self.val_records.insert(&epoch, &next_validators);
-        let last_epoch = epoch - 1;
-        self.val_records.remove(&last_epoch);
+        if epoch >= MAX_RECORD {
+            let epoch_to_remove = epoch - MAX_RECORD;
+            self.val_records.remove(&epoch_to_remove);
+        }
     }
 }
