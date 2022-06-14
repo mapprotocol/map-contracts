@@ -13,10 +13,7 @@ use rlp::{
 use near_sdk::{
     env::keccak256,
     serde::Serialize,
-    serde::ser::Serializer,
     serde::Deserialize,
-    serde::de::Deserializer,
-    serde::de
 };
 
 /// HASH_LENGTH represents the number of bytes used in a header hash
@@ -135,7 +132,7 @@ impl Header {
 
 impl FromRlp for Header {
     fn from_rlp(bytes: &[u8]) -> Result<Self, Kind> {
-        rlp::decode(&bytes).map_err(|e| Kind::RlpDecodeError)
+        rlp::decode(&bytes).map_err(|_e| Kind::RlpDecodeError)
     }
 }
 

@@ -1,22 +1,14 @@
 use std::convert::TryFrom;
-use std::ops::{MulAssign, Neg, Sub};
-use std::str::FromStr;
+use std::ops::Sub;
 use near_sdk::env;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::serde::{Serialize, ser::{Serializer}, Deserialize, de::{Deserializer, self}};
+use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::serde_json;
-use near_sys::panic;
-use num::range;
-use crate::Kind;
-use crate::types::istanbul::{IstanbulExtra, IstanbulAggregatedSeal, IstanbulMsg, G1_PUBLIC_KEY_LENGTH};
-use crate::types::header::{Header, Hash};
-use num_bigint::{BigInt as Integer, BigInt, Sign};
+use crate::types::istanbul::{IstanbulAggregatedSeal, IstanbulMsg, G1_PUBLIC_KEY_LENGTH};
+use crate::types::header::Hash;
+use num_bigint::{BigInt as Integer, Sign};
 use num_traits::{Num, One};
-use crate::Validators;
-use crate::serialization::bytes::hexstring;
-use crate::serialization::rlp::{
-    big_int_to_rlp_compat_bytes, rlp_field_from_bytes, rlp_to_big_int,
-};
+use crate::serialization::rlp::big_int_to_rlp_compat_bytes;
 
 
 const ALT_BN128_REGISTER: u64 = 1;
@@ -111,7 +103,7 @@ pub fn sum_points<'a>(points: &'a Vec<G1>, bitmap: &'a Integer) -> Result<G1, &'
         .iter()
         .enumerate()
         .filter(|(i, _)| bitmap.bit(*i as _))
-        .map(|(k, v)| [&[0], to_le_bytes(&v.x).as_ref(), to_le_bytes(&v.y).as_ref()].concat())
+        .map(|(_, v)| [&[0], to_le_bytes(&v.x).as_ref(), to_le_bytes(&v.y).as_ref()].concat())
         .collect();
 
     if filtered.len() == 0 {

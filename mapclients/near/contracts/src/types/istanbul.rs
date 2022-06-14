@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use crate::types::errors::{ Kind};
 use crate::serialization::rlp::{
     big_int_to_rlp_compat_bytes, rlp_field_from_bytes, rlp_to_big_int,
@@ -8,7 +7,7 @@ use crate::traits::{DefaultFrom, FromBytes};
 use crate::types::header::Address;
 use num_bigint::BigInt as Integer;
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
-use near_sdk::serde::{Serialize, ser::{Serializer}, Deserialize, de::{Deserializer, self}};
+use near_sdk::serde::{Serialize, Deserialize};
 
 /// PUBLIC_KEY_LENGTH represents the number of bytes used to represent BLS public key
 pub const PUBLIC_KEY_LENGTH: usize = 128;
@@ -128,7 +127,7 @@ impl IstanbulExtra {
         }
 
         rlp::decode(&bytes[ISTANBUL_EXTRA_VANITY_LENGTH..])
-            .map_err(|e| Kind::RlpDecodeError)
+            .map_err(|_e| Kind::RlpDecodeError)
     }
 
     pub fn to_rlp(&self, vanity: &IstanbulExtraVanity) -> Vec<u8> {

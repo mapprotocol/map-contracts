@@ -1,6 +1,3 @@
-use std::ops::Add;
-use std::thread::sleep;
-use std::time::Duration;
 // macro allowing us to convert human readable units to workspace units.
 use near_units::parse_near;
 
@@ -8,7 +5,7 @@ use near_units::parse_near;
 use serde_json::json;
 
 // Additional convenient imports that allows workspaces to function readily.
-use workspaces::{prelude::*, Worker, DevNetwork, Contract};
+use workspaces::{prelude::*, Worker, Contract};
 use workspaces::network::Sandbox;
 
 const MAP_CLIENT_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/map_light_client.wasm";
@@ -45,9 +42,6 @@ secp256k1 pub key:  0x040bfff54b4427902673b815426d0fbc375d613d252fa7865452f91f15
 secp256k1 address:  0xD762eD84dB64848366E74Ce43742C1960Ba62304
  */
 
-const ADDRESSES: [[i32; 20]; 4] = [[144, 141, 15, 218, 234, 239, 187, 32, 155, 220, 181, 64, 194, 137, 30, 117, 97, 97, 84, 179], [235, 240, 233, 251, 198, 33, 15, 25, 157, 28, 52, 242, 65, 139, 100, 18, 158, 127, 247, 138], [143, 24, 147, 56, 145, 42, 198, 154, 183, 118, 49, 138, 50, 173, 116, 115, 115, 26, 149, 95], [215, 98, 237, 132, 219, 100, 132, 131, 102, 231, 76, 228, 55, 66, 193, 150, 11, 166, 35, 4]];
-
-
 #[tokio::test]
 async fn test_initialize() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
@@ -67,12 +61,29 @@ async fn test_initialize() -> anyhow::Result<()> {
         .call(&worker, "new")
         .args_json(json!({
             "threshold": 1,
-            "pair_keys":[{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                {"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                {"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
-                {"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"}],
-            "addresses":ADDRESSES,
-            "weights":[1, 1, 1, 1],
+            "validators":
+                [
+                    {
+                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
+                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
+                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
+                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
+                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
+                        "weight": 1,
+                    },
+                ],
             "epoch":1,
             "epoch_size":1000,
         }))?
@@ -104,12 +115,29 @@ async fn test_single_seal() -> anyhow::Result<()> {
         .call(&worker, "new")
         .args_json(json!({
             "threshold": 1,
-            "pair_keys":[{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                {"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                {"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
-                {"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"}],
-            "addresses":ADDRESSES,
-            "weights":[1, 1, 1, 1],
+            "validators":
+                [
+                    {
+                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
+                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
+                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
+                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
+                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
+                        "weight": 1,
+                    },
+                ],
             "epoch":1,
             "epoch_size":1000,
         }))?
@@ -161,12 +189,29 @@ async fn test_multi_seal() -> anyhow::Result<()> {
         .call(&worker, "new")
         .args_json(json!({
             "threshold": 1,
-            "pair_keys":[{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                {"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                {"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
-                {"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"}],
-            "addresses":ADDRESSES,
-            "weights":[1, 1, 1, 1],
+            "validators":
+                [
+                    {
+                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
+                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
+                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
+                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
+                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
+                        "weight": 1,
+                    },
+                ],
             "epoch":1,
             "epoch_size":1000,
         }))?
@@ -218,12 +263,29 @@ async fn test_verify_proof_single_receipt() -> anyhow::Result<()> {
         .call(&worker, "new")
         .args_json(json!({
             "threshold": 1,
-            "pair_keys":[{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                {"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                {"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
-                {"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"}],
-            "addresses":ADDRESSES,
-            "weights":[1, 1, 1, 1],
+            "validators":
+                [
+                    {
+                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
+                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
+                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
+                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
+                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
+                        "weight": 1,
+                    },
+                ],
             "epoch":1,
             "epoch_size":1000,
         }))?
@@ -279,6 +341,8 @@ async fn test_verify_proof_single_receipt() -> anyhow::Result<()> {
         .transact()
         .await?;
 
+    assert!(res.is_success());
+
     Ok(())
 }
 
@@ -290,12 +354,29 @@ async fn test_verify_proof_multi_receipt() -> anyhow::Result<()> {
         .call(&worker, "new")
         .args_json(json!({
             "threshold": 1,
-            "pair_keys":[{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                {"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                {"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
-                {"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"}],
-            "addresses":ADDRESSES,
-            "weights":[1, 1, 1, 1],
+            "validators":
+                [
+                    {
+                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
+                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
+                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
+                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
+                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
+                        "weight": 1,
+                    },
+                ],
             "epoch":1,
             "epoch_size":1000,
         }))?
@@ -366,10 +447,19 @@ async fn test_update_validator() -> anyhow::Result<()> {
         .call(&worker, "new")
         .args_json(json!({
             "threshold": 1,
-            "pair_keys":[{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                {"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"}],
-            "addresses":[[144, 141, 15, 218, 234, 239, 187, 32, 155, 220, 181, 64, 194, 137, 30, 117, 97, 97, 84, 179], [235, 240, 233, 251, 198, 33, 15, 25, 157, 28, 52, 242, 65, 139, 100, 18, 158, 127, 247, 138]],
-            "weights":[1, 1],
+            "validators":
+                [
+                    {
+                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
+                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
+                        "weight": 1,
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
+                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
+                        "weight": 1,
+                    },
+                ],
             "epoch":1,
             "epoch_size":1000,
         }))?
@@ -458,6 +548,8 @@ async fn test_update_validator() -> anyhow::Result<()> {
         .gas(300_000_000_000_000)
         .transact()
         .await?;
+
+    assert!(res.is_success());
 
     Ok(())
 }

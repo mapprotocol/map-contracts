@@ -1,16 +1,9 @@
-use std::borrow::BorrowMut;
-use std::io::Read;
 use hex::FromHex;
 use crate::crypto::G2;
 use rlp::{Rlp, Encodable, RlpStream};
 use crate::types::header::{Header, Address, Bloom, Hash};
-use near_sdk::serde::{Serialize, ser::{Serializer}, Deserialize, de::{Deserializer, self}};
+use near_sdk::serde::{Serialize, ser::{Serializer}, Deserialize, de::Deserializer};
 use near_sdk::serde::de::Error;
-use num_bigint::BigInt as Integer;
-use crate::{FromBytes, Kind};
-use crate::serialization::rlp::{
-    big_int_to_rlp_compat_bytes, rlp_field_from_bytes, rlp_to_big_int,
-};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -38,14 +31,15 @@ impl Serialize for ProofEntry {
 }
 
 impl<'de> Deserialize<'de> for ProofEntry {
-    fn deserialize< D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-        let s: &str = Deserialize::deserialize(deserializer)?;
-        if s.len() <= 2 || !s.starts_with("0x") {
-            return Ok(ProofEntry{0: Vec::new()});
+    fn deserialize< D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where D: Deserializer<'de> {
+        let s = <String as Deserialize>::deserialize(deserializer)?;
+        if  !s.starts_with("0x") {
+            return Err(Error::custom("should start with 0x"));
         }
 
-        // FIXME: map error
-        let data = Vec::from_hex(&s[2..]).unwrap();
+        let data = Vec::from_hex(&s[2..]).map_err(|err| {
+            Error::custom(err.to_string())
+        })?;
         Ok(ProofEntry{0: data})
     }
 }
