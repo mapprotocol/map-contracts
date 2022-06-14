@@ -57,6 +57,10 @@ contract WeightedMultiSig is BGLS,IBLS {
         validator storage v = validators[id];
         v.epoch = epoch;
         uint _weight = 0;
+        if (v.pairKeys.length >0){
+            delete(v.weights);
+            delete(v.pairKeys);
+        }
         for (uint256 i = 0; i < vPre.pairKeys.length; i++) {
             if (!chkBit(bits, i)) {
                 v.pairKeys.push(
