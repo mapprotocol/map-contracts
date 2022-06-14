@@ -84,7 +84,7 @@ contract WeightedMultiSig is BGLS,IBLS {
                 _weight = _weight + _weights[i];
             }
         }
-        v.threshold = _weight*2/3;
+        v.threshold = _weight - _weight/3;
     }
 
     function getValidatorsId(uint256 epoch) public view returns (uint){
@@ -105,7 +105,7 @@ contract WeightedMultiSig is BGLS,IBLS {
         for (uint256 i = 0; i < weights.length; i++) {
             if (chkBit(bits, i)) weight += weights[i];
         }
-        return weight > threshold;
+        return weight >= threshold;
     }
 
     //---------------------------------------------------------------
