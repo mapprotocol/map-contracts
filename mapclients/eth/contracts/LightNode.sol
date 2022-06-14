@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
@@ -45,17 +46,18 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         return(address(weightedMultisig));
     }
 
-    function verifyProofData(receiptProof memory _receiptProof) external override returns (bool success, string memory message) {
+    function verifyProofData(receiptProof memory _receiptProof) external view override returns (bool success, string memory message) {
         (success, message) = getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
+            return (success,message);
         }
-        //todo verify header
         bytes32 hash;
         bytes memory headerRlp = _encodeHeader(_receiptProof.header);
         (success, hash) = _verifyHeader(headerRlp);
         if (!success) {
             message = "verifyHeader error";
+            return (success,message);
         }
         istanbulExtra memory ist = _decodeExtraData(_receiptProof.header.extraData);
         success = checkSig(_receiptProof.header, ist, _receiptProof.aggPk);
@@ -69,7 +71,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) public view returns (bool){
         uint256 epoch = (bh.number / epochSize) - 1;
         bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
-        bytes memory bits = abi.encodePacked(ist.aggregatedSeal.bitmap);
+        bytes memory bits = abi.encodePacked(uint8(ist.aggregatedSeal.bitmap));
         G1  memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
         return weightedMultisig.checkSig(bits, message, sig, aggPk, epoch);
     }
