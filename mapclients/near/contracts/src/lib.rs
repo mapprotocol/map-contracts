@@ -5,27 +5,23 @@ mod serialization;
 mod crypto;
 mod macros;
 mod traits;
-mod istanbul;
 
 use std::ops::Add;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen, PanicOnDefault};
+use near_sdk::{env, log, near_bindgen, PanicOnDefault};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::serde::{Serialize, ser::{Serializer}, Deserialize, de::{Deserializer, self}};
 use uint::construct_uint;
-use crypto::{G1, G2, check_bit, sum_points, REGISTER_EXPECTED_ERR};
-use crate::types::{istanbul::IstanbulExtra, header::Header};
+use crypto::{G1, G2, sum_points, REGISTER_EXPECTED_ERR};
+use crate::types::{istanbul::IstanbulExtra, istanbul::get_epoch_number, header::Header};
 use crate::types::{errors::Kind, header::Address};
 use num::cast::ToPrimitive;
 use num_bigint::BigInt as Integer;
 use crate::crypto::{check_aggregated_g2_pub_key, check_sealed_signature};
-use crate::istanbul::get_epoch_number;
+use crate::traits::FromBytes;
 use crate::types::header::{Bloom, Hash};
 use crate::types::proof::{ReceiptProof, verify_trie_proof};
 
-near_sdk::setup_alloc!();
-
-const VALIDATOR_RECORD: usize = 20;
 const ECDSA_SIG_LENGTH: usize = 65;
 const ECDSA_REGISTER: u64 = 2;
 
@@ -51,7 +47,10 @@ pub struct Validators {
 #[near_bindgen]
 impl MapLightClient {
     #[init]
-    pub fn init(threshold: u128, pair_keys: Vec<G1>, addresses: Vec<Address>, weights: Vec<u128>, epoch: u64, epoch_size: u64) -> MapLightClient {
+    pub fn new(threshold: u128,
+               pair_keys: Vec<G1>,
+               addresses: Vec<Address>,
+               weights: Vec<u128>, epoch: u64, epoch_size: u64) -> Self {
         assert_eq!(pair_keys.len(), addresses.len(), "lengths of pair keys and addresses are not equal");
         assert_eq!(pair_keys.len(), weights.len(), "lengths of pair keys and weights are not equal");
 
@@ -64,7 +63,26 @@ impl MapLightClient {
             epoch,
         });
 
-        MapLightClient {
+        Self {
+            val_records,
+            epoch_size,
+        }
+    }
+
+    #[init]
+    pub fn new1(threshold: u128, epoch: u64, epoch_size: u64) -> Self {
+        log!("threshold {} epoch {} epoch_size {}", threshold, epoch, epoch_size);
+
+        let mut val_records = UnorderedMap::new(b"v".to_vec());
+        val_records.insert(&epoch, &Validators {
+            threshold,
+            pair_keys: vec![],
+            weights: vec![],
+            addresses: vec![],
+            epoch,
+        });
+
+        Self {
             val_records,
             epoch_size,
         }
@@ -85,9 +103,17 @@ impl MapLightClient {
         self.update_next_validators(validators, &mut extra, epoch + 1);
     }
 
-    pub fn verify_proof_data(&mut self, receipt_proof: ReceiptProof) {
+    pub fn get_proof_data(&self, receipt_proof: ReceiptProof) {
+        log!("receipt: {:?}", receipt_proof.receipt);
+        log!("proof: {:?}", receipt_proof.proof);
+        log!("header: {:?}", receipt_proof.header);
+        log!("agg_pk: {:?}", receipt_proof.agg_pk);
+        log!("key_index: {:?}", receipt_proof.key_index);
+    }
+
+    pub fn verify_proof_data(& self, receipt_proof: ReceiptProof) {
         let header = &receipt_proof.header;
-        let mut extra = IstanbulExtra::from_rlp(&header.extra).unwrap();
+        let extra = IstanbulExtra::from_rlp(&header.extra).unwrap();
 
         // check ecdsa and bls signature
         let epoch = get_epoch_number(header.number.to_u64().unwrap(), self.epoch_size as u64);
@@ -99,10 +125,11 @@ impl MapLightClient {
             verify_trie_proof(header.receipt_hash, receipt_proof.key_index, receipt_proof.proof);
 
         let receipt_data = receipt_proof.receipt.encode_index();
-        assert_eq!(receipt_data, data, "receipt data is not equal to the value in trie");
+
+        assert_eq!(hex::encode(receipt_data), hex::encode(data), "receipt data is not equal to the value in trie");
     }
 
-    fn verify_signatures(&mut self, header: &Header, agg_pk: G2, extra: &IstanbulExtra, validators: &Validators) {
+    fn verify_signatures(& self, header: &Header, agg_pk: G2, extra: &IstanbulExtra, validators: &Validators) {
         // check ecdsa signature
         self.verify_ecdsa_signature(header, &extra.seal, validators.addresses.as_ref());
 
@@ -121,6 +148,16 @@ impl MapLightClient {
         return weight >= threshold;
     }
 
+    fn is_quorum_default_wight(&self, bitmap: &Integer, pair_keys: &Vec<G1>, threshold: u128) -> bool {
+        let mut weight = 0;
+        for (i, _) in pair_keys.iter().enumerate() {
+            if bitmap.bit(i as u64) {
+                weight += 1;
+            }
+        }
+
+        return weight >= threshold;
+    }
 
     pub fn verify_ecdsa_signature(&self, header: &Header, signature: &Vec<u8>, addresses: &Vec<Address>) {
         assert_eq!(ECDSA_SIG_LENGTH, signature.len(), "invalid ecdsa signature length");
@@ -130,11 +167,12 @@ impl MapLightClient {
 
         let v = signature.last().unwrap();
         let header_hash = header.hash_without_seal().unwrap();
+        let mut res = 0;
 
         unsafe {
-            near_sys::ecrecover(header_hash.len() as _,
+            res = near_sys::ecrecover(header_hash.len() as _,
                                 header_hash.as_ptr() as _,
-                                signature.len() as _,
+                                (signature.len() - 1) as _,
                                 signature.as_ptr() as _,
                                 *v as _,
                                 0,
@@ -149,7 +187,7 @@ impl MapLightClient {
     }
 
     pub fn verify_aggregated_seal(&self, header: &Header, extra: &IstanbulExtra, validators: &Validators, agg_g2_pk: &G2) {
-        assert!(self.is_quorum(&extra.aggregated_seal.bitmap, &validators.weights, validators.threshold), "threshold is not satisfied");
+        assert!(self.is_quorum_default_wight(&extra.aggregated_seal.bitmap, &validators.pair_keys, validators.threshold), "threshold is not satisfied");
 
         assert!(check_aggregated_g2_pub_key(&validators.pair_keys, &extra.aggregated_seal.bitmap, agg_g2_pk), "check g2 pub key failed");
 
@@ -157,6 +195,7 @@ impl MapLightClient {
         assert!(check_sealed_signature(&extra.aggregated_seal, &header_hash, agg_g2_pk), "check sealed signature failed")
     }
 
+    // TODO: weight update
     fn update_next_validators(&mut self, validators: &Validators, extra: &mut IstanbulExtra, epoch: u64) {
         let mut pair_keys: Vec<G1> = validators.pair_keys
             .iter()
@@ -192,45 +231,5 @@ impl MapLightClient {
         self.val_records.insert(&epoch, &next_validators);
         let last_epoch = epoch - 1;
         self.val_records.remove(&last_epoch);
-    }
-}
-
-
-/*
- * the rest of this file sets up unit tests
- * to run these, the command will be:
- * cargo test --package rust-counter-tutorial -- --nocapture
- * Note: 'rust-counter-tutorial' comes from cargo.toml's 'name' key
- */
-
-// use the attribute below for unit tests
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use near_sdk::MockedBlockchain;
-    use near_sdk::{testing_env, VMContext};
-
-    // part of writing unit tests is setting up a mock context
-    // in this example, this is only needed for env::log in the contract
-    // this is also a useful list to peek at when wondering what's available in env::*
-    fn get_context(input: Vec<u8>, is_view: bool) -> VMContext {
-        VMContext {
-            current_account_id: "alice.testnet".to_string(),
-            signer_account_id: "robert.testnet".to_string(),
-            signer_account_pk: vec![0, 1, 2],
-            predecessor_account_id: "jane.testnet".to_string(),
-            input,
-            block_index: 0,
-            block_timestamp: 0,
-            account_balance: 0,
-            account_locked_balance: 0,
-            storage_usage: 0,
-            attached_deposit: 0,
-            prepaid_gas: 10u64.pow(18),
-            random_seed: vec![0, 1, 2],
-            is_view,
-            output_data_receivers: vec![],
-            epoch_height: 19,
-        }
     }
 }
