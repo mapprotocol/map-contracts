@@ -105,7 +105,7 @@ contract WeightedMultiSig is BGLS,IBLS {
         for (uint256 i = 0; i < weights.length; i++) {
             if (chkBit(bits, i)) weight += weights[i];
         }
-        return weight >= threshold;
+        return weight > threshold;
     }
 
     //---------------------------------------------------------------
