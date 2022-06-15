@@ -695,7 +695,7 @@ describe("Relayer,LightNode start test", function () {
         //
         // await lightClient.updateBlockHeader(header1,aggPK1);
         //
-        // await lightClient.updateBlockHeader(header3,aggPK3);
+         await lightClient.updateBlockHeader(header3,aggPK3);
         //
         // await lightClient.updateBlockHeader(header2,aggPK2);
         //
@@ -705,7 +705,7 @@ describe("Relayer,LightNode start test", function () {
         // await lightClient.updateBlockHeader(header22,aggPK22);
  //       await lightClient.updateBlockHeader(header22,aggPK22);
 
-        //     console.log(await lightClient.callStatic.verifyProofData(provedata4108));
+        console.log(await lightClient.callStatic.verifyProofData(provedata4108));
 
         //       await lightClient.updateBlockHeader(header2,aggPK2);
 
