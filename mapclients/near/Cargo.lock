@@ -1283,6 +1283,7 @@ name = "near"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "map-light-client",
  "near-sdk",
  "near-units",
  "serde_json",

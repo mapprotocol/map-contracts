@@ -9,6 +9,7 @@ use serde_json::json;
 // Additional convenient imports that allows workspaces to function readily.
 use workspaces::{prelude::*, Worker, Contract};
 use workspaces::network::Sandbox;
+use map_light_client::{EpochRecord, Validator};
 
 const MAP_CLIENT_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/map_light_client.wasm";
 const NEAR_SANDBOX_BIN_PATH: &str = "NEAR_SANDBOX_BIN_PATH";
@@ -622,6 +623,121 @@ async fn test_validator_remove_add() -> anyhow::Result<()> {
         .await?;
 
     assert!(res.is_success(), "update_block_header should succeed");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_next_block_header_epoch() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let epoch :u64 = contract
+        .call(&worker, "next_block_header_epoch")
+        .view()
+        .await?
+        .json()?;
+
+    let exp_epoch = init_args["epoch"].as_u64().unwrap();
+    assert_eq!(exp_epoch, epoch, "next_block_header_epoch get unexpected result");
+
+    let header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk
+        }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "update_block_header failed");
+
+    let epoch :u64 = contract
+        .call(&worker, "next_block_header_epoch")
+        .args_json({})?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?
+        .json()?;
+
+    assert_eq!(exp_epoch + 1, epoch, "next_block_header_epoch get unexpected result");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_epoch_size() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let epoch_size :u64 = contract
+        .call(&worker, "get_epoch_size")
+        .view()
+        .await?
+        .json()?;
+
+    let exp_epoch_size = init_args["epoch_size"].as_u64().unwrap();
+    assert_eq!(exp_epoch_size, epoch_size, "get_epoch_size get unexpected result");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_validators_for_epoch() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 1
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_some(), "epoch 1 should have record");
+    let record = recordOpt.unwrap();
+    let validators = &init_args["validators"];
+    assert_eq!(3, record.threshold, "threshold check failed");
+    assert_eq!(1, record.epoch, "epoch check failed");
+
+    println!("validators:{:?}", validators);
+
+    for (i, validator) in record.validators.iter().enumerate() {
+        let val_exp: Validator = serde_json::from_str(validators[i].to_string().as_str()).unwrap();
+        assert_eq!(val_exp, *validator, "validator check failed");
+    }
 
     Ok(())
 }

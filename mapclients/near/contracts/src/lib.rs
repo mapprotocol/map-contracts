@@ -6,7 +6,6 @@ mod crypto;
 mod macros;
 mod traits;
 
-use std::fmt::format;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::{env, log, near_bindgen, PanicOnDefault};
 use near_sdk::collections::UnorderedMap;
@@ -35,12 +34,12 @@ pub struct MapLightClient {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct EpochRecord {
-    threshold: u128,
-    epoch: u64,
-    validators: Vec<Validator>,
+    pub threshold: u128,
+    pub epoch: u64,
+    pub validators: Vec<Validator>,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
 pub struct Validator {
     g1_pub_key: G1,
@@ -111,6 +110,18 @@ impl MapLightClient {
         let receipt_data = receipt_proof.receipt.encode_index();
 
         assert_eq!(hex::encode(receipt_data), hex::encode(data), "receipt data is not equal to the value in trie");
+    }
+
+    pub fn next_block_header_epoch(&self) -> u64 {
+        return self.next_epoch
+    }
+
+    pub fn get_epoch_size(&self) -> u64 {
+        return self.epoch_size
+    }
+
+    pub fn get_record_for_epoch(&self, epoch: u64) -> Option<EpochRecord> {
+        return self.epoch_records.get(&epoch)
     }
 
     fn verify_signatures(&self, header: &Header, agg_pk: G2, extra: &IstanbulExtra, epoch_record: &EpochRecord) {
