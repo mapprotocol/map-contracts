@@ -72,7 +72,7 @@ describe('WeightedMultiSig', function () {
         const g1 = await bc.decodeG1(g1Hex[1]);
         const g2 = await bc.decodeG1(g1Hex[2]);
         const g3 = await bc.decodeG1(g1Hex[3]);
-        console.log(g1)
+        // console.log(g1)
         g1List = [
             g0,
             g1,
@@ -88,7 +88,7 @@ describe('WeightedMultiSig', function () {
         wms = await WeightedMultiSig.deploy();
         let wmsc = await wms.deployed();
         //function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch) public
-        console.log(wmsc.address);
+        //console.log(wmsc.address);
         await wms.setStateInternal(threshold, g1List, weights, 0)
 
     });
