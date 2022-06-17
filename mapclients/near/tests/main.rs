@@ -1,3 +1,5 @@
+use std::fs;
+use std::ops::Index;
 // macro allowing us to convert human readable units to workspace units.
 use near_units::parse_near;
 
@@ -7,6 +9,7 @@ use serde_json::json;
 // Additional convenient imports that allows workspaces to function readily.
 use workspaces::{prelude::*, Worker, Contract};
 use workspaces::network::Sandbox;
+use map_light_client::{EpochRecord, Validator};
 
 const MAP_CLIENT_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/map_light_client.wasm";
 const NEAR_SANDBOX_BIN_PATH: &str = "NEAR_SANDBOX_BIN_PATH";
@@ -42,6 +45,70 @@ secp256k1 pub key:  0x040bfff54b4427902673b815426d0fbc375d613d252fa7865452f91f15
 secp256k1 address:  0xD762eD84dB64848366E74Ce43742C1960Ba62304
  */
 
+const INIT_VALUE: &str = r#"{
+            "threshold": 3,
+            "validators":
+                [
+                    {
+                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
+                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
+                        "weight": 1
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
+                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
+                        "weight": 1
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
+                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
+                        "weight": 1
+                    },
+                    {
+                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
+                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
+                        "weight": 1
+                    }
+                ],
+            "epoch":1,
+            "epoch_size":1000
+        }"#;
+
+const HEADER_0_012: &str = r#"{
+                "parentHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7",
+                "coinbase":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
+                "root":"0xecc60e00b3fe5ce9f6e1a10e5469764daf51f1fe93c22ec3f9a7583a80357217",
+                "txHash":"0xd35d334d87c0cc0a202e3756bf81fae08b1575f286c7ee7a3f8df4f0f3afc55d",
+                "receiptHash":"0x209e5a7f764f4adb03b2799a8ba555694806cd4d8f593776e263fd90f0630f42",
+                "bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "number":"0x3e8",
+                "gasLimit":"0x0",
+                "gasUsed":"0x5208",
+                "time":"0x5c47775c",
+                "extra":"0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841abb150fcf44735d6df641c0b3f29f3a6b5088542031734e70ab48beec303aaff4e0a56372af7774be1df2240916de4b329dd747b38b53e258ff79af6ac93f3d901f84407b840262c29d794b767971c4bad1d409a12f1aefeea93c1a08a6d50585e90f6497c5105810086251448d011d7010b4c97f82756ff7c0d3e4b82f59b725971972c685d01c3808080",
+                "minDigest":"0x0000000000000000000000000000000000000000000000000000000000000000",
+                "nonce":"0x0000000000000000",
+                "baseFee":"0x0"
+            }"#;
+const AGG_PK_012: &str = r#"{
+               "xi": "0x20e9a44d0a1efeb2d64bc51a487b938070a93985b02b43620360fc97239b2fbc",
+                "xr": "0x12c716655a20451e8ad32df8244e203c8fee447d910af1c3b0da9a3f36b8ef8a",
+                "yi": "0x2ce0db8fa40ea88590efad6a39cb8e944f81485be32dbd59946da3cc4d5de8c3",
+                "yr": "0x11f69118a10952fb9800d0272b5ad4b8e36649843380cd043589df944956dfb8"
+            }"#;
+const AGG_PK_12: &str = r#"{
+               "xi": "0x0739d7e0990d4462404afb7abeebf0c3f93f49affc75eaa8b7cbb03e60f49b9d",
+                "xr": "0x1e1bc6b9ebe8c412975d78b8681d294579ab4c248058657952b9661101de0cd2",
+                "yi": "0x2d826142d06bdfeaaf66dec55a4b0b52b1384ab889928ff63a43b5ced40737ed",
+                "yr": "0x257f8e942ad9cf3569cc43f4ea39b2a7b2fe2f0e4cc1992f9a1d3d5dc3658ef5"
+            }"#;
+const AGG_PK_01: &str = r#"{
+               "xi": "0x0e9462421703b53a5112487313ac2c1a48c886453190c57b445b622afe918aeb",
+                "xr": "0x1d65a1b84c31d19a0596dc5df68a8ee3bff4640ba973bc90ea91333196116891",
+                "yi": "0x05f3fae8626e70a4efe32383f3dc72b8c268ee04e6f0aadd61114a1d9e1d7869",
+                "yr": "0x1f361674d6ecd3a8b689cdcda430e7df580d478d87795f0bfb71f7d660667f2d"
+            }"#;
+
 #[tokio::test]
 async fn test_initialize() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
@@ -57,36 +124,10 @@ async fn test_initialize() -> anyhow::Result<()> {
     let result: bool = res.json()?;
     assert!(!result, "contract should not be initialized");
 
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
     let res = contract
         .call(&worker, "new")
-        .args_json(json!({
-            "threshold": 1,
-            "validators":
-                [
-                    {
-                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
-                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
-                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
-                        "weight": 1,
-                    },
-                ],
-            "epoch":1,
-            "epoch_size":1000,
-        }))?
+        .args_json(json!(init_args))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
@@ -108,69 +149,26 @@ async fn test_initialize() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn test_single_seal() -> anyhow::Result<()> {
+async fn test_update_block_header() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
     let res = contract
         .call(&worker, "new")
-        .args_json(json!({
-            "threshold": 1,
-            "validators":
-                [
-                    {
-                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
-                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
-                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
-                        "weight": 1,
-                    },
-                ],
-            "epoch":1,
-            "epoch_size":1000,
-        }))?
+        .args_json(json!(init_args))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
 
     assert!(res.is_success(), "new contract failed");
 
+    let header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
     let res = contract
         .call(&worker, "update_block_header")
         .args_json(json!({
-            "header": {
-                "parentHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7",
-                "coinbase":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                "root":"0xecc60e00b3fe5ce9f6e1a10e5469764daf51f1fe93c22ec3f9a7583a80357217",
-                "txHash":"0xd35d334d87c0cc0a202e3756bf81fae08b1575f286c7ee7a3f8df4f0f3afc55d",
-                "receiptHash":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
-                "bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-                "number":"0x3e8",
-                "gasLimit":"0x0",
-                "gasUsed":"0x5208",
-                "time":"0x5c47775c",
-                "extra":"0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841f60b76e90a3d7c0e2d0ab778d579f5a4c7c416a9d53fb30544fe2372a3f9e582319c64345609868e0021ae757fa0e5e354f862d5d6815a18ba0d0efb1e7290cf01f84401b84025dc03734306e5fa8a09f53a920e1a728748b36ebb391463c257deee0b5a033a0f9d570179b6ba38bf5309d64b39236eeda2710370cff2dd61319a9f945ffce301c3808080",
-                "minDigest":"0x0000000000000000000000000000000000000000000000000000000000000000",
-                "nonce":"0x0000000000000000",
-                "baseFee":"0x0"
-            },
-            "agg_pk":{"xr":"0x2e4114565378770ff9b81cc4488bbe93ba4dfaadf7a54c088560397588c1ab7c",
-                "xi":"0x2d692ebfd5b28f869cf87b12688504f1fd2194ad68d0bcbdde5f03ec45e98ef8",
-                "yr":"0x0eeabadcda0e475fcc4274349bdabdbf3c3855cc37548e2ebf7b0314436bee29",
-            "yi":"0x0de7dc40658ca64443100d757e9236555e7e1929edc3f398fa508ab5926bf151"}
-,
+            "header": header,
+            "agg_pk": agg_pk
         }))?
         .gas(300_000_000_000_000)
         .transact()
@@ -182,75 +180,177 @@ async fn test_single_seal() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn test_multi_seal() -> anyhow::Result<()> {
+async fn test_update_block_header_bad_number() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
     let res = contract
         .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
+    header["number"] = json!("0x3e9");
+    let res = contract
+        .call(&worker, "update_block_header")
         .args_json(json!({
-            "threshold": 1,
-            "validators":
-                [
-                    {
-                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
-                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
-                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
-                        "weight": 1,
-                    },
-                ],
-            "epoch":1,
-            "epoch_size":1000,
+            "header": header,
+            "agg_pk": agg_pk
+        }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+
+    assert!(res.is_err(), "update_block_header should fail");
+    assert!(res.err().unwrap().to_string().contains("Header number is incorrect"), "unexpected failure reason");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_update_block_header_bad_epoch() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk
         }))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
 
-    assert!(res.is_success());
+    assert!(res.is_success(), "update_block_header should succeed");
 
     let res = contract
         .call(&worker, "update_block_header")
         .args_json(json!({
-            "header": {
-                "parentHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7",
-                "coinbase":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                "root":"0xecc60e00b3fe5ce9f6e1a10e5469764daf51f1fe93c22ec3f9a7583a80357217",
-                "txHash":"0xd35d334d87c0cc0a202e3756bf81fae08b1575f286c7ee7a3f8df4f0f3afc55d",
-                "receiptHash":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
-                "bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-                "number":"0x3e8",
-                "gasLimit":"0x0",
-                "gasUsed":"0x5208",
-                "time":"0x5c47775c",
-                "extra":"0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841f60b76e90a3d7c0e2d0ab778d579f5a4c7c416a9d53fb30544fe2372a3f9e582319c64345609868e0021ae757fa0e5e354f862d5d6815a18ba0d0efb1e7290cf01f84405b840017015df78ea9aa0f55ea747c7278b4faef217c4a177db50589220366075f35313bb98a03294ad47f1ddd7c6f6f16306b6c7a487e4f476afe299d4107cbad2da01c3808080",
-                "minDigest":"0x0000000000000000000000000000000000000000000000000000000000000000",
-                "nonce":"0x0000000000000000",
-                "baseFee":"0x0"
-            },
-            "agg_pk":{"xr":"0x2dcc118d53d5790ec010a462d95b4e7d2d51fde235cb9565a91322fe46dbfea9",
-                "xi":"0x1ff1837f18fa67897e1bf2819456e0b032b634185fc6c90b6f5dbb3f9cc56779",
-                "yr":"0x1b8a5c40b7b0ce6876a5eeb1c9825446cf9b10ad623de5a2f6117b8d306ac3ae",
-            "yi":"0x198351362909074ab792fe6c51efc3f4cb392a05d9bc218bf390eca0b64f87e6"}
-,
+            "header": header,
+            "agg_pk": agg_pk
         }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+
+    assert!(res.is_err(), "update_block_header should fail");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_update_block_bad_ecdsa_signer() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
 
-    assert!(res.is_success(), "update_block_header failed");
+    assert!(res.is_success(), "new contract failed");
+
+    let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
+    // use extra with ecdsa signature signed by another validator
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841b166f38dd2c80eaf82c185ae6fbfb3c4ad34eb24e784e2277f9427540b9d066804868983df05e962c72cc43e3f865a0d4e36eeef08ac4a5dcea2d286ba79540e01f84407b84006772298021df72315132405e180c495c7d010e4ed5cf633de743c38fd4a17b21b7f1a608e9b71925a8daae486eb103292a00a4e12f344b2312974dc773b644101c3808080");
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk
+        }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+
+    assert!(res.is_err(), "update_block_header should fail");
+    assert!(res.err().unwrap().to_string().contains("ecdsa signer is not correct"), "unexpected failure reason");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_update_block_bad_threshold() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_01).unwrap();
+    // use extra with agg seal signed by validator 01
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841abb150fcf44735d6df641c0b3f29f3a6b5088542031734e70ab48beec303aaff4e0a56372af7774be1df2240916de4b329dd747b38b53e258ff79af6ac93f3d901f84403b8401a55b4a158281a57b587072ef196e0482c445a2b0942ad1349b1b221416a53be1c0eb2b4c284c49c8ebed1bb3eb52a3bc56bab4d3da12ecd6860c7920eb9c20e01c3808080");
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk
+        }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+
+    assert!(res.is_err(), "update_block_header should fail");
+    assert!(res.err().unwrap().to_string().contains("threshold is not satisfied"), "unexpected failure reason");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_update_block_bad_agg_pk() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_01).unwrap();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk
+        }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+
+    assert!(res.is_err(), "update_block_header should fail");
+    assert!(res.err().unwrap().to_string().contains("check g2 pub key failed"), "unexpected failure reason");
 
     Ok(())
 }
@@ -259,69 +359,26 @@ async fn test_multi_seal() -> anyhow::Result<()> {
 async fn test_verify_proof_single_receipt() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
     let res = contract
         .call(&worker, "new")
-        .args_json(json!({
-            "threshold": 1,
-            "validators":
-                [
-                    {
-                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
-                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
-                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
-                        "weight": 1,
-                    },
-                ],
-            "epoch":1,
-            "epoch_size":1000,
-        }))?
+        .args_json(json!(init_args))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
 
     assert!(res.is_success());
 
+    let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
+    header["receiptHash"] = json!("0xc502fb6c3ccb075c3e4425885ce26c3b00dba0cf86f4016abcc375eb79dedfab");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b84151bcd0f46fa9ec5d0d8ba37741e6336b7bf3c4de7077121f86f36c007690a5fe21db3dc88866bfd4a7455242f7ad7bf5e8484c5376d7495aac7b7c07b8ebfe2f00f84407b8401a32291646f4bc327b2d75cd670c5c523653a3aa70c82501d6c95feb4c9000e322791113b87d7a09043516e40cf22abeb20066e57918e32ab7d62973f47c375001c3808080");
     let res = contract
         .call(&worker, "verify_proof_data")
         .args_json(json!({
             "receipt_proof" : {
-            "header": {
-                "parentHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7",
-                "coinbase":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                "root":"0xecc60e00b3fe5ce9f6e1a10e5469764daf51f1fe93c22ec3f9a7583a80357217",
-                "txHash":"0xd35d334d87c0cc0a202e3756bf81fae08b1575f286c7ee7a3f8df4f0f3afc55d",
-                "receiptHash":"0xc502fb6c3ccb075c3e4425885ce26c3b00dba0cf86f4016abcc375eb79dedfab",
-                "bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-                "number":"0x3e8",
-                "gasLimit":"0x0",
-                "gasUsed":"0x5208",
-                "time":"0x5c47775c",
-                "extra":"0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841c908b835bd729c65c3c0c1b4759012e0250c708fc01d3db5fe5956eabee32a1616fbc4d8be4e34f8aee5b22b3f34d31b86b6ccdc2b96994a175a1cca0df5b04e00f84405b840089913a78d8821992d579aa1183faab3952a582bde9b4f99b390c5480e29f83d18679b5036c7c4c2da70e4f1c9e4002faacc7b65a92da4464eeaad8618075d8b01c3808080",
-                "minDigest":"0x0000000000000000000000000000000000000000000000000000000000000000",
-                "nonce":"0x0000000000000000",
-                "baseFee":"0x0"
-            },
-
-            "agg_pk":{
-                    "xr":"0x2dcc118d53d5790ec010a462d95b4e7d2d51fde235cb9565a91322fe46dbfea9",
-                    "xi":"0x1ff1837f18fa67897e1bf2819456e0b032b634185fc6c90b6f5dbb3f9cc56779",
-                    "yr":"0x1b8a5c40b7b0ce6876a5eeb1c9825446cf9b10ad623de5a2f6117b8d306ac3ae",
-                    "yi":"0x198351362909074ab792fe6c51efc3f4cb392a05d9bc218bf390eca0b64f87e6"
-                },
+            "header": header,
+            "agg_pk": agg_pk,
             "receipt": {
                     "receipt_type": 1,
                     "post_state_or_status": "0x00",
@@ -350,69 +407,23 @@ async fn test_verify_proof_single_receipt() -> anyhow::Result<()> {
 async fn test_verify_proof_multi_receipt() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
     let res = contract
         .call(&worker, "new")
-        .args_json(json!({
-            "threshold": 1,
-            "validators":
-                [
-                    {
-                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x06123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d9686","y":"0x1958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448"},
-                        "address":"0x8f189338912AC69AB776318A32Ad7473731a955F",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a53","y":"0x1c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff"},
-                        "address":"0xD762eD84dB64848366E74Ce43742C1960Ba62304",
-                        "weight": 1,
-                    },
-                ],
-            "epoch":1,
-            "epoch_size":1000,
-        }))?
+        .args_json(json!(init_args))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
-
     assert!(res.is_success());
 
+    let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
     let res = contract
         .call(&worker, "verify_proof_data")
         .args_json(json!({
             "receipt_proof" : {
-            "header": {
-                "parentHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7",
-                "coinbase":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                "root":"0xecc60e00b3fe5ce9f6e1a10e5469764daf51f1fe93c22ec3f9a7583a80357217",
-                "txHash":"0xd35d334d87c0cc0a202e3756bf81fae08b1575f286c7ee7a3f8df4f0f3afc55d",
-                "receiptHash":"0x209e5a7f764f4adb03b2799a8ba555694806cd4d8f593776e263fd90f0630f42",
-                "bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-                "number":"0x3e8",
-                "gasLimit":"0x0",
-                "gasUsed":"0x5208",
-                "time":"0x5c47775c",
-                "extra":"0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b84114257672f5280ba50f7fbbdfb53332225a7aa3521fd886dbc22a205e4b93c46b38baa3cfbb12c0aa8839c9bb89c6a280c135a3f9d39d6056d389e465c8022d2f00f84405b8402f4bac1701d21cdda7bd1542d751840057404c4f16d0fe46cde7a4047b31a52002607ca88462f0c3cc84d523dfe8fbe0a608a7baac648f20a0c3fc55683672ec01c3808080",
-                "minDigest":"0x0000000000000000000000000000000000000000000000000000000000000000",
-                "nonce":"0x0000000000000000",
-                "baseFee":"0x0"
-            },
-
-            "agg_pk":{
-                    "xr":"0x2dcc118d53d5790ec010a462d95b4e7d2d51fde235cb9565a91322fe46dbfea9",
-                    "xi":"0x1ff1837f18fa67897e1bf2819456e0b032b634185fc6c90b6f5dbb3f9cc56779",
-                    "yr":"0x1b8a5c40b7b0ce6876a5eeb1c9825446cf9b10ad623de5a2f6117b8d306ac3ae",
-                    "yi":"0x198351362909074ab792fe6c51efc3f4cb392a05d9bc218bf390eca0b64f87e6"
-                },
+            "header": header,
+            "agg_pk":agg_pk,
             "receipt": {
                     "receipt_type": 1,
                     "post_state_or_status": "0x01",
@@ -440,60 +451,27 @@ async fn test_verify_proof_multi_receipt() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn test_update_validator() -> anyhow::Result<()> {
+async fn test_validator_remove_01() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
     let res = contract
         .call(&worker, "new")
-        .args_json(json!({
-            "threshold": 1,
-            "validators":
-                [
-                    {
-                        "g1_pub_key":{"x":"0x285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae","y":"0x218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e3"},
-                        "address":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                        "weight": 1,
-                    },
-                    {
-                        "g1_pub_key":{"x":"0x0d570979e84f504247c0ab6c1bc98967a300192132707a6d144cce74d77ab11a","y":"0x28feb22d09573a136a1ae43f0329f77be54968035d7b29161de64068b52fa0fb"},
-                        "address":"0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A",
-                        "weight": 1,
-                    },
-                ],
-            "epoch":1,
-            "epoch_size":1000,
-        }))?
+        .args_json(json!(init_args))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
-
     assert!(res.is_success());
 
+    let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
+    // remove validator 0
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b84028e45d0dc6167e5db2aed90517e162eae66bb68ca701b15a17173f92eeaadda810320ba7313ad99cdefb70e90347a7b55472f9cca8fe47b663d218bc01433ef701c3808080");
     let res = contract
         .call(&worker, "update_block_header")
         .args_json(json!({
-            "header": {
-                "parentHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7",
-                "coinbase":"0x908D0FDaEAEFbb209BDcb540C2891e75616154b3",
-                "root":"0xecc60e00b3fe5ce9f6e1a10e5469764daf51f1fe93c22ec3f9a7583a80357217",
-                "txHash":"0xd35d334d87c0cc0a202e3756bf81fae08b1575f286c7ee7a3f8df4f0f3afc55d",
-                "receiptHash":"0x209e5a7f764f4adb03b2799a8ba555694806cd4d8f593776e263fd90f0630f42",
-                "bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-                "number":"0x3e8",
-                "gasLimit":"0x0",
-                "gasUsed":"0x5208",
-                "time":"0x5c47775c",
-                "extra":"0x0000000000000000000000000000000000000000000000000000000000000000f90246ea948f189338912ac69ab776318a32ad7473731a955f94d762ed84db64848366e74ce43742c1960ba62304f90104b8801041c19ccd878527886aff2e70a2f07db76c3fa3155823677abb551bd480a5f329b1f7ea9a3aa75613faf865f960acad8e04bb661a8b8e87e48d172c83fd4c2b2255c47c8e92e5329ee42033153f8c9750ab5042f6d89f27add64e0d5fba36c623789ad2fdcbc68dd30d19c33ec60cde4d431411aa7ec754038c2fa8ffb41db4b8801b9fe96534980d89088570afeb7c6d1bb7db8c72df20e8f6a4ab2f4fde12e68609ce26b976e80794470dd62ed18e9a5402f3f0382aac051ac03f40478dc40a8d297b4dcc2c5edf9accd55a726bff6dd646adac58220c0f51dd0d0c7a66ffab870a1f48d542f5c97d9b6049d4a49f408612d6d1ce811bae95c68573cdc1ba648bf884b84006123bea2fdc5ca96f7b3810d7abb489bd04fa3db73487e82261bb0a768d96861958a18770f574432dd56665f8214ee885780c00de9e47f8a20e7b7075fa2448b840055c69baeedb58db6e1467eb7d1d51347ffe8bc9e30be2cf8638d8bf9b9b9a531c13d30bd973eabbc38c87b8ca3a846db126fcf62bfebe8516ca0b26f959b9ff03b84176f1ac2b6f21b886e461e350daae7a210146648b509c20f89dfd864837719065482e157aaf0f293cb5c0545a0a7b8e1f07204b78a8e588cf61b3a408331843f701f84403b84022e5c56c17a435a6dc1e209a24f924aefa002fc4090b6be770948d4d024c789a028546da7ac99665279d5c56271e8b95e842b6829620d11934f07529d77faca501c3808080",
-                "minDigest":"0x0000000000000000000000000000000000000000000000000000000000000000",
-                "nonce":"0x0000000000000000",
-                "baseFee":"0x0"
-            },
-            "agg_pk":{"xr":"0x1d65a1b84c31d19a0596dc5df68a8ee3bff4640ba973bc90ea91333196116891",
-                "xi":"0x0e9462421703b53a5112487313ac2c1a48c886453190c57b445b622afe918aeb",
-                "yr":"0x1f361674d6ecd3a8b689cdcda430e7df580d478d87795f0bfb71f7d660667f2d",
-            "yi":"0x05f3fae8626e70a4efe32383f3dc72b8c268ee04e6f0aadd61114a1d9e1d7869"}
-,
-        }))?
+            "header": header,
+            "agg_pk": agg_pk }))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
@@ -501,55 +479,410 @@ async fn test_update_validator() -> anyhow::Result<()> {
     assert!(res.is_success(), "update_block_header failed");
     println!("logs {:?}", res.logs());
 
+    header["number"] = json!("0x7d0");
+    // use agg seal signed by validator 1 and 2, but ecdsa signed by validator 0
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b8417865a77a9d1cbe9ed0e38806cb06c469514f4f2cc9fecd38e7e5cb7787b8694534a65cb0a9377e5935131acbc34a94076e0a746f9f4887983e244b573cfdff4401f84406b84020d8e519b3df674ac821de4a8de5a3e27a0b0a6c4ef17a3f302c5ed98c3c2eef28d02b4f4c01beaeecbb061d91f21cb4851c0ee77727dbb51e509521b9f1ae5d01c3808080");
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_12).unwrap();
     let res = contract
-        .call(&worker, "verify_proof_data")
+        .call(&worker, "update_block_header")
         .args_json(json!({
-            "receipt_proof" : {
-            "header": {
-                "parentHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7",
-                "coinbase":"0x8f189338912AC69AB776318A32Ad7473731a955F",
-                "root":"0xecc60e00b3fe5ce9f6e1a10e5469764daf51f1fe93c22ec3f9a7583a80357217",
-                "txHash":"0xd35d334d87c0cc0a202e3756bf81fae08b1575f286c7ee7a3f8df4f0f3afc55d",
-                "receiptHash":"0x209e5a7f764f4adb03b2799a8ba555694806cd4d8f593776e263fd90f0630f42",
-                "bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-                "number":"0x3e9",
-                "gasLimit":"0x0",
-                "gasUsed":"0x5208",
-                "time":"0x5c47775c",
-                "extra":"0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b8415d9312ecd7547f03857a3358f35426c6c0adecc5652377c36a29ce45e88b88963fb4f6eba99cd89cda2dbedeb38d75797bbdb64c812f29eb2cef9920c23fe50200f84403b84025e6813c1ba4544d239cab3fc9e95e36c8d436107df4f2af810464dd93bb3da622dc1e367325e47a0b44ce9395de1a5b9ac75094189507d23efcb822e9c4612301c3808080",
-                "minDigest":"0x0000000000000000000000000000000000000000000000000000000000000000",
-                "nonce":"0x0000000000000000",
-                "baseFee":"0x0"
-            },
+            "header": header,
+            "agg_pk": agg_pk }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
 
-            "agg_pk":{
-                    "xr":"0x15cacb62d19336598f911c221f88f1ed9cb8a5db0965ca9e31b8afd7d3c77110",
-                    "xi":"0x19753182114d613a0d534f17bc85ddd5788527ba475f75f0345c65519324550d",
-                    "yr":"0x0e161212c7671b043c527950c79c5f64dcb501e16e72102935acb8605e06088d",
-                    "yi":"0x1d324298ff9410992ce58563dcb0d87236452d9976c569c5251119512bb64381"
-                },
-            "receipt": {
-                    "receipt_type": 1,
-                    "post_state_or_status": "0x01",
-                    "cumulative_gas_used": 2000,
-                    "bloom": "0x01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-                    "logs": [{
-                        "address": "0x0100000000000000000000000000000000000000",
-                        "topics": ["0x0000000000000000000000000000000000000000000000000000000000000001", "0x000000000000000000000000000000000000000000000000000000000000000a"],
-                        "data": "0x01"}]
-            },
-                "key_index":"0x01",
-                "proof":["0xf851a0141842b8380e7bf9240f0d0e46856a2675b85df570e95bdceec55b495629d4ca80808080808080a0a0a3ab578877d4702cfb44ffa01ae96b2365aacbe55715c8d6222174233dd6208080808080808080",
-                "0xf85180a01ee4849328db1b6425ffeb9c54f70604fa6e855a7d0d55a0471645e14ab7cae9a0275c5d8aa15b6a2f8b17619ce74fbf1bc92d11f0bae44f226b14dde1a603e25a8080808080808080808080808080",
-                "0xf9016d20b9016901f90165018207d0b9010001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f85cf85a940100000000000000000000000000000000000000f842a00000000000000000000000000000000000000000000000000000000000000001a0000000000000000000000000000000000000000000000000000000000000000a01"]
-        }
-,
+    assert!(res.is_err(), "update_block_header should fail");
+    assert!(res.err().unwrap().to_string().contains("the header's coinbase is not in validators"), "unexpected failure reason");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_validator_remove_02() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    assert!(res.is_success());
+
+    let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
+    // remove validator 0
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b84028e45d0dc6167e5db2aed90517e162eae66bb68ca701b15a17173f92eeaadda810320ba7313ad99cdefb70e90347a7b55472f9cca8fe47b663d218bc01433ef701c3808080");
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "update_block_header failed");
+    println!("logs {:?}", res.logs());
+
+    header["number"] = json!("0x7d0");
+    header["coinbase"] = json!("0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A");
+    // use agg seal signed by validator 1 and 2, and ecdsa signed by validator 1
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b8415bc867a42c6c2db1b8a5e0d809903be9eb3d6b8435cb7d5cb373aa4755ba6b5a42c0ba3ec97b3b527eb6fa7659dc3ee05ba0b3f2ecd976aa51ea048b1fc480b000f84403b840121fc9c9d9dc5742b0d4b6fa26007a232e4f5ca407035741d8c964745bf9dd4a29fa3f4a508ee9eafa8543a473b61650ff5a8d98b020d63513daa1e7df4b5a6001c3808080");
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_12).unwrap();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "update_block_header should succeed");
+
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_validator_remove_add() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    assert!(res.is_success());
+
+    let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
+    // remove validator 0
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b84028e45d0dc6167e5db2aed90517e162eae66bb68ca701b15a17173f92eeaadda810320ba7313ad99cdefb70e90347a7b55472f9cca8fe47b663d218bc01433ef701c3808080");
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "update_block_header failed");
+    println!("logs {:?}", res.logs());
+
+    header["number"] = json!("0x7d0");
+    header["coinbase"] = json!("0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A");
+    // use agg seal signed by validator 1 and 2, ecdsa signed by validator 1, and add validator 0 back
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f9016cd594908d0fdaeaefbb209bdcb540c2891e75616154b3f882b8802d692ebfd5b28f869cf87b12688504f1fd2194ad68d0bcbdde5f03ec45e98ef82e4114565378770ff9b81cc4488bbe93ba4dfaadf7a54c088560397588c1ab7c0de7dc40658ca64443100d757e9236555e7e1929edc3f398fa508ab5926bf1510eeabadcda0e475fcc4274349bdabdbf3c3855cc37548e2ebf7b0314436bee29f842b840285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e380b841bbc844fe92738c7ba8f2840a1cd95413a5630edf9d3b8985c6a7aff390e8b64f43e67a6640217a0af86cf1162f67d3e363e483e0afcff94d44dee170bcaed5d400f84403b8400fac2e71b35a6c1e4a4ef8e9c5bfc9816f910e69d736db21da38fcc798b6dfbf1abd32c9ea55d0c33a52179d6e202201beb3b3e0556b797ec11970a82227149301c3808080");
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_12).unwrap();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "update_block_header should succeed");
+    println!("logs {:?}", res.logs());
+
+    header["number"] = json!("0xbb8");
+    // use agg seal signed by validator 1 and 2, and ecdsa signed by validator 1
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b8418f5825e9457a87e3a31ae7f25d46a5f9d6c33825738692dbc521dd47b36b2d8b2c80caad3e284a153d666a03005556a389379792fc9d99355aadbf49e73c3a2400f84406b8401f646b2bc9fe13cb7da308b06eb45b56ee277113b0803cb44e96b48f21eede8f199d6137fee9b5493a34c3acae3add7da337039b1a2d438bc17023943d6a325401c3808080");
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_12).unwrap();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+
+    assert!(res.is_err(), "update_block_header should fail");
+    assert!(res.err().unwrap().to_string().contains("threshold is not satisfied"), "get unexpected error");
+
+    // use agg seal signed by validator 0, 1 and 2, and ecdsa signed by validator 0
+    header["coinbase"] = json!("0x908D0FDaEAEFbb209BDcb540C2891e75616154b3");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841903f61c9fa76fbd761e4a6ed2b86b4e9c1944f5ca7fb90cf91f40b8a1621adfd401a2147b83e32489d05449ad4f41bbcbd76a8fd987231f0ce2e4ebeb096dff500f8440bb8402f1dc01d96f11bd515e6003a61cca36f86be9fef5f39ed71f488c9b526e89bab1a2c7fea45ee55cf39388c46e12996f4f3891346634f90843377e8137e8993e001c3808080");
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "update_block_header should succeed");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_next_block_header_epoch() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let epoch :u64 = contract
+        .call(&worker, "next_block_header_epoch")
+        .view()
+        .await?
+        .json()?;
+
+    let exp_epoch = init_args["epoch"].as_u64().unwrap();
+    assert_eq!(exp_epoch, epoch, "next_block_header_epoch get unexpected result");
+
+    let header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
+    let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!({
+            "header": header,
+            "agg_pk": agg_pk
         }))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
 
-    assert!(res.is_success());
+    assert!(res.is_success(), "update_block_header failed");
+
+    let epoch :u64 = contract
+        .call(&worker, "next_block_header_epoch")
+        .args_json({})?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?
+        .json()?;
+
+    assert_eq!(exp_epoch + 1, epoch, "next_block_header_epoch get unexpected result");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_epoch_size() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let epoch_size :u64 = contract
+        .call(&worker, "get_epoch_size")
+        .view()
+        .await?
+        .json()?;
+
+    let exp_epoch_size = init_args["epoch_size"].as_u64().unwrap();
+    assert_eq!(exp_epoch_size, epoch_size, "get_epoch_size get unexpected result");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_get_validators_for_epoch() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 1
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_some(), "epoch 1 should have record");
+    let record = recordOpt.unwrap();
+    let validators = &init_args["validators"];
+    assert_eq!(3, record.threshold, "threshold check failed");
+    assert_eq!(1, record.epoch, "epoch check failed");
+
+    println!("validators:{:?}", validators);
+
+    for (i, validator) in record.validators.iter().enumerate() {
+        let val_exp: Validator = serde_json::from_str(validators[i].to_string().as_str()).unwrap();
+        assert_eq!(val_exp, *validator, "validator check failed");
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_update_validator_for_20_epochs() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let file = fs::File::open("./tests/data/init_value.json").unwrap();
+    let init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "init contract failed!");
+
+    let file = fs::File::open("./tests/data/headers.json").unwrap();
+    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    let mut block = 1000;
+    while block <= 20000 {
+        let value = headers[block.to_string()].clone();
+        let res = contract
+            .call(&worker, "update_block_header")
+            .args_json(json!(value))?
+            .gas(300_000_000_000_000)
+            .transact()
+            .await?;
+
+        println!("logs {:?}", res.logs());
+        assert!(res.is_success(), "update_block_header {} failed", block);
+
+        block += 1000;
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_verify_proof_in_diff_epochs() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let file = fs::File::open("./tests/data/init_value.json").unwrap();
+    let init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "init contract failed!");
+
+    let file = fs::File::open("./tests/data/headers.json").unwrap();
+    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    let mut block = 1000;
+    while block <= 3000 {
+        let value = headers[block.to_string()].clone();
+        let res = contract
+            .call(&worker, "update_block_header")
+            .args_json(json!( value))?
+            .gas(300_000_000_000_000)
+            .transact()
+            .await?;
+
+        println!("logs {:?}", res.logs());
+        assert!(res.is_success(), "update_block_header {} failed", block);
+
+        block += 1000;
+    }
+
+    let file = fs::File::open("./tests/data/proof.json").unwrap();
+    let proofs: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    let res = contract
+        .call(&worker, "verify_proof_data")
+        .args_json(json!({"receipt_proof": proofs["2568"]}))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    println!("logs {:?}", res.logs());
+    assert!(res.is_success(), "verify_proof_data for block 2568 failed");
+
+    let res = contract
+        .call(&worker, "verify_proof_data")
+        .args_json(json!({"receipt_proof": proofs["4108"]}))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+
+    assert!(res.is_err(), "verify_proof_data for block 4108 should fail");
+
+    while block <= 5000 {
+        let value = headers[block.to_string()].clone();
+        let res = contract
+            .call(&worker, "update_block_header")
+            .args_json(json!( value))?
+            .gas(300_000_000_000_000)
+            .transact()
+            .await?;
+
+        println!("logs {:?}", res.logs());
+        assert!(res.is_success(), "update_block_header {} failed", block);
+
+        block += 1000;
+    }
+
+    let res = contract
+        .call(&worker, "verify_proof_data")
+        .args_json(json!({"receipt_proof": proofs["4108"]}))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    println!("logs {:?}", res.logs());
+    assert!(res.is_success(), "verify_proof_data for block 4108 should success");
+
+    Ok(())
+}
+
+async fn prepare_data() -> anyhow::Result<()> {
+    let file = fs::File::open("./tests/data/updateHeader.json").unwrap();
+    let mut json: serde_json::Value = serde_json::from_reader(file).unwrap();
+    println!("json value: {}", json["1000"]);
+
+    let mut i = 1000;
+    while i <= 20000 {
+        let block = i.to_string();
+        json[&block]["header"]["number"] = json!(format!("0x{:x}", i));
+
+        let time_str = json[&block]["header"]["time"].as_str().unwrap();
+        let time: u64 = time_str[1..].parse().unwrap();
+        json[&block]["header"]["time"] = json!(format!("0x{:x}", time));
+
+        println!("number: {}, time: {}", &json[&block]["header"]["number"], &json[&block]["header"]["time"]);
+        i += 1000;
+    }
+
+    let file = fs::File::create("./tests/data/headers.json").unwrap();
+    serde_json::to_writer(file, &json).unwrap();
 
     Ok(())
 }

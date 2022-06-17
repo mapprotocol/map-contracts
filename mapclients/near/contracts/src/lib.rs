@@ -9,6 +9,7 @@ mod traits;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::{env, log, near_bindgen, PanicOnDefault};
 use near_sdk::collections::UnorderedMap;
+use near_sdk::env::keccak256;
 use near_sdk::serde::{Serialize, Deserialize};
 use crypto::{G1, G2, REGISTER_EXPECTED_ERR};
 use crate::types::{istanbul::IstanbulExtra, istanbul::get_epoch_number, header::Header};
@@ -27,17 +28,18 @@ const MAX_RECORD: u64 = 20;
 pub struct MapLightClient {
     epoch_records: UnorderedMap<u64, EpochRecord>,
     epoch_size: u64,
+    next_epoch: u64,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct EpochRecord {
-    threshold: u128,
-    epoch: u64,
-    validators: Vec<Validator>,
+    pub threshold: u128,
+    pub epoch: u64,
+    pub validators: Vec<Validator>,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
 pub struct Validator {
     g1_pub_key: G1,
@@ -66,6 +68,7 @@ impl MapLightClient {
         Self {
             epoch_records: val_records,
             epoch_size,
+            next_epoch: epoch
         }
     }
 
@@ -77,15 +80,18 @@ impl MapLightClient {
         let block_num = header.number.to_u64().unwrap();
         assert_eq!(0, block_num % self.epoch_size, "Header number is incorrect");
 
-        let mut extra = IstanbulExtra::from_rlp(&header.extra).unwrap();
-
         // check ecdsa and bls signature
-        let epoch = get_epoch_number(header.number.to_u64().unwrap(), self.epoch_size as u64);
+        let epoch = get_epoch_number(block_num, self.epoch_size as u64);
+        assert_eq!(self.next_epoch, epoch, "block epoch doesn't match expected next epoch");
+
+        let mut extra = IstanbulExtra::from_rlp(&header.extra).unwrap();
         let cur_epoch_record = &self.epoch_records.get(&epoch).unwrap();
         self.verify_signatures(header, agg_pk, &extra, cur_epoch_record);
 
         // update validators' pair keys
         self.update_next_validators(cur_epoch_record, &mut extra);
+
+        self.next_epoch += 1;
     }
 
     pub fn verify_proof_data(&self, receipt_proof: ReceiptProof) {
@@ -104,6 +110,18 @@ impl MapLightClient {
         let receipt_data = receipt_proof.receipt.encode_index();
 
         assert_eq!(hex::encode(receipt_data), hex::encode(data), "receipt data is not equal to the value in trie");
+    }
+
+    pub fn next_block_header_epoch(&self) -> u64 {
+        return self.next_epoch
+    }
+
+    pub fn get_epoch_size(&self) -> u64 {
+        return self.epoch_size
+    }
+
+    pub fn get_record_for_epoch(&self, epoch: u64) -> Option<EpochRecord> {
+        return self.epoch_records.get(&epoch)
     }
 
     fn verify_signatures(&self, header: &Header, agg_pk: G2, extra: &IstanbulExtra, epoch_record: &EpochRecord) {
@@ -148,11 +166,12 @@ impl MapLightClient {
 
         let v = signature.last().unwrap();
         let header_hash = header.hash_without_seal().unwrap();
-        let res ;
+        let hash = keccak256(header_hash.as_slice());
+        let res;
 
         unsafe {
-            res = near_sys::ecrecover(header_hash.len() as _,
-                                      header_hash.as_ptr() as _,
+            res = near_sys::ecrecover(hash.len() as _,
+                                      hash.as_ptr() as _,
                                       (signature.len() - 1) as _,
                                       signature.as_ptr() as _,
                                       *v as _,
@@ -208,7 +227,7 @@ impl MapLightClient {
             .map(|x| x.weight)
             .sum();
 
-        let next_epoch = cur_epoch_record.epoch+1;
+        let next_epoch = cur_epoch_record.epoch + 1;
 
         let next_epoch_record = EpochRecord {
             epoch: next_epoch,
@@ -216,7 +235,11 @@ impl MapLightClient {
             threshold: total_weight - total_weight / 3,
         };
 
-        log!("epoch {} validators: {:?}", next_epoch, next_epoch_record);
+        log!("epoch {} validators: remove: {}, add: {:?}, total: {:?}",
+            next_epoch,
+            extra.removed_validators,
+            added_validators,
+            next_epoch_record);
 
         self.epoch_records.insert(&next_epoch, &next_epoch_record);
         if next_epoch >= MAX_RECORD {
