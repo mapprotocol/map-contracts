@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity >=0.7.0;
 //pragma experimental ABIEncoderV2;
 
 import "./RLPReader.sol";
+import "hardhat/console.sol";
 
 /*
     Documentation:
@@ -27,6 +29,7 @@ library MPT {
         MerkleProof memory data
     ) pure internal returns (bool)
     {
+//        console.log("console.log");
         bytes memory node = data.proof[data.proofIndex];
         RLPReader.Iterator memory dec = RLPReader.toRlpItem(node).iterator();
 
@@ -100,8 +103,8 @@ library MPT {
         if (prefix == 2) {
             // leaf even
             uint256 length = nodekey.length - 1;
-            bytes memory actualKey = sliceTransform(nodekey, 33, length, false);
-            bytes memory restKey = sliceTransform(data.key, 32 + data.keyIndex, length, false);
+            bytes memory actualKey = sliceTransform(nodekey, 1, length, false);
+            bytes memory restKey = sliceTransform(data.key, data.keyIndex, length, false);
             if (keccak256(data.expectedValue) == keccak256(nodevalue)) {
                 if (keccak256(actualKey) == keccak256(restKey)) return true;
                 if (keccak256(expandKeyEven(actualKey)) == keccak256(restKey)) return true;
@@ -109,8 +112,8 @@ library MPT {
         }
         else if (prefix == 3) {
             // leaf odd
-            bytes memory actualKey = sliceTransform(nodekey, 32, nodekey.length, true);
-            bytes memory restKey = sliceTransform(data.key, 32 + data.keyIndex, data.key.length - data.keyIndex, false);
+            bytes memory actualKey = sliceTransform(nodekey, 0, nodekey.length, true);
+            bytes memory restKey = sliceTransform(data.key, data.keyIndex, data.key.length - data.keyIndex, false);
             if (keccak256(data.expectedValue) == keccak256(nodevalue)) {
                 if (keccak256(actualKey) == keccak256(restKey)) return true;
                 if (keccak256(expandKeyOdd(actualKey)) == keccak256(restKey)) return true;
@@ -119,8 +122,8 @@ library MPT {
         else if (prefix == 0) {
             // extension even
             uint256 extensionLength = nodekey.length - 1;
-            bytes memory shared_nibbles = sliceTransform(nodekey, 33, extensionLength, false);
-            bytes memory restKey = sliceTransform(data.key, 32 + data.keyIndex, extensionLength, false);
+            bytes memory shared_nibbles = sliceTransform(nodekey, 1, extensionLength, false);
+            bytes memory restKey = sliceTransform(data.key, data.keyIndex, extensionLength, false);
             if (
                 keccak256(shared_nibbles) == keccak256(restKey) ||
                 keccak256(expandKeyEven(shared_nibbles)) == keccak256(restKey)
@@ -135,8 +138,8 @@ library MPT {
         else if (prefix == 1) {
             // extension odd
             uint256 extensionLength = nodekey.length;
-            bytes memory shared_nibbles = sliceTransform(nodekey, 32, extensionLength, true);
-            bytes memory restKey = sliceTransform(data.key, 32 + data.keyIndex, extensionLength, false);
+            bytes memory shared_nibbles = sliceTransform(nodekey, 0, extensionLength, true);
+            bytes memory restKey = sliceTransform(data.key, data.keyIndex, extensionLength, false);
             if (
                 keccak256(shared_nibbles) == keccak256(restKey) ||
                 keccak256(expandKeyEven(shared_nibbles)) == keccak256(restKey)
