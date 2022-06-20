@@ -18,10 +18,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     using RLPReader for RLPReader.Iterator;
     using MPT for MPT.MerkleProof;
 
-
+    uint version = 1;
     uint256 public epochSize = 1000;
     address[] public validatorAddresss;
-
+    uint256 public headerHeight = 0;
     event validitorsSet(uint256 epoch);
 
     WeightedMultiSig public weightedMultisig = new WeightedMultiSig();
@@ -38,26 +38,26 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         weightedMultisig.setStateInternal(_threshold, _pairKeys, _weights, _epoch);
     }
 
-    function getValiditors() public view returns(uint){
+    function getValiditors() public view returns (uint){
         return weightedMultisig.maxValidators();
     }
 
-    function getWM() public view returns(address){
-        return(address(weightedMultisig));
+    function getWM() public view returns (address){
+        return (address(weightedMultisig));
     }
 
     function verifyProofData(receiptProof memory _receiptProof) external view override returns (bool success, string memory message) {
         (success, message) = getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
-            return (success,message);
+            return (success, message);
         }
         bytes32 hash;
         bytes memory headerRlp = _encodeHeader(_receiptProof.header);
         (success, hash) = _verifyHeader(headerRlp);
         if (!success) {
             message = "verifyHeader error";
-            return (success,message);
+            return (success, message);
         }
         istanbulExtra memory ist = _decodeExtraData(_receiptProof.header.extraData);
         success = checkSig(_receiptProof.header, ist, _receiptProof.aggPk);
@@ -78,23 +78,25 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external override {
         require(bh.number % epochSize == 0, "Header number is error");
+        require(bh.number > headerHeight,"Header is have");
+        headerHeight = bh.number;
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bool success = checkSig(bh, ist, aggPk);
 
-        require (success,"checkSig error") ;
-            //upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
-            uint256 len = ist.addedG1PubKey.length;
-            G1[] memory _pairKeysAdd = new G1[](len);
-            uint256[] memory _weights = new uint256[](len);
-            if (len > 0){
-                for (uint256 i = 0; i < len; i++) {
-                    _weights[i] = 1;
-                    _pairKeysAdd[i] = blsCode.decodeG1(ist.addedG1PubKey[i]);
-                }
+        require(success, "checkSig error");
+        //upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
+        uint256 len = ist.addedG1PubKey.length;
+        G1[] memory _pairKeysAdd = new G1[](len);
+        uint256[] memory _weights = new uint256[](len);
+        if (len > 0) {
+            for (uint256 i = 0; i < len; i++) {
+                _weights[i] = 1;
+                _pairKeysAdd[i] = blsCode.decodeG1(ist.addedG1PubKey[i]);
             }
-            bytes memory bits = abi.encodePacked(ist.removeList);
-            uint256 epoch = bh.number / epochSize;
-            weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
+        }
+        bytes memory bits = abi.encodePacked(ist.removeList);
+        uint256 epoch = bh.number / epochSize;
+        weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 
 
@@ -341,13 +343,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     pure
     returns (bytes memory result){
         bytes32 hash = getBlcokHash(bh);
-        if (round ==0 ){
+        if (round == 0) {
             result = abi.encodePacked(hash, uint8(2));
-        }else if (round >0 && round < 256){
+        } else if (round > 0 && round < 256) {
             result = abi.encodePacked(hash, uint8(round), uint8(2));
-        }else if (round >255 && round <65536){
+        } else if (round > 255 && round < 65536) {
             result = abi.encodePacked(hash, uint16(round), uint8(2));
-        }else{
+        } else {
             result = abi.encodePacked(hash, uint24(round), uint8(2));
         }
     }

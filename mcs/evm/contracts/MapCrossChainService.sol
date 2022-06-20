@@ -17,7 +17,7 @@ import "./interface/IFeeCenter.sol";
 import "./utils/TransferHelper.sol";
 import "./interface/IMCS.sol";
 
-contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,IMCS {
+contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable, IMCS {
     using SafeMath for uint;
     uint public nonce;
 
@@ -93,8 +93,13 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         return authToken[token];
     }
 
-    function transferIn(uint fromChain, bytes receiptProof) external;
-    function transferOut(address toContract, uint toChain, bytes data) external;
+    function transferIn(uint fromChain, bytes receiptProof) external whenNotPaused {
+
+    }
+
+    function transferOut(address toContract, uint toChain, bytes data) external whenNotPaused {
+
+    }
 
 
     function transferOutToken(address token, bytes toAddress, uint amount, uint toChain) external whenNotPaused {
@@ -184,6 +189,19 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     function _bytesToAddress(bytes memory bys) internal pure returns (address addr){
         assembly {
             addr := mload(add(bys, 20))
+        }
+    }
+
+    function _addressToBytes(address a) internal pure returns (bytes memory b) {
+        assembly {
+            let m := mload(0x40)
+            a := and(a, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+            mstore(
+            add(m, 20),
+            xor(0x140000000000000000000000000000000000000000, a)
+            )
+            mstore(0x40, add(m, 52))
+            b := m
         }
     }
 

@@ -170,6 +170,11 @@ module.exports = {
       chainId : 1,
       accounts: accounts
     },
+    sepolia: {
+      url: `https://rpc.sepolia.org`,
+      chainId : 11155111,
+      accounts: accounts
+    },
     Ropsten: {
       url: `https://ropsten.infura.io/v3/` + INFURA_KEY,
       chainId : 3,
