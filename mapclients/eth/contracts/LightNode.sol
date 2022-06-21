@@ -22,6 +22,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     uint256 public epochSize = 1000;
     address[] public validatorAddresss;
     uint256 public headerHeight = 0;
+
     event validitorsSet(uint256 epoch);
 
     WeightedMultiSig public weightedMultisig = new WeightedMultiSig();
@@ -69,16 +70,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) public view returns (bool){
-        uint256 epoch = (bh.number / epochSize) - 1;
+        uint256 epoch = getEpochNumber(bh.number);
         bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
         bytes memory bits = abi.encodePacked(uint8(ist.aggregatedSeal.bitmap));
-        G1  memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
+        G1 memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
         return weightedMultisig.checkSig(bits, message, sig, aggPk, epoch);
     }
 
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external override {
         require(bh.number % epochSize == 0, "Header number is error");
-        require(bh.number > headerHeight,"Header is have");
+        require(bh.number > headerHeight, "Header is have");
         headerHeight = bh.number;
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bool success = checkSig(bh, ist, aggPk);
@@ -95,7 +96,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             }
         }
         bytes memory bits = abi.encodePacked(ist.removeList);
-        uint256 epoch = bh.number / epochSize;
+        uint256 epoch = getEpochNumber(bh.number) + 1;
         weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 
@@ -185,33 +186,19 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     returns (bytes memory output){
         bytes[] memory list = new bytes[](14);
         list[0] = RLPEncode.encodeBytes(bh.parentHash);
-
         list[1] = RLPEncode.encodeAddress(bh.coinbase);
-
         list[2] = RLPEncode.encodeBytes(bh.root);
-
         list[3] = RLPEncode.encodeBytes(bh.txHash);
-
         list[4] = RLPEncode.encodeBytes(bh.receiptHash);
-
         list[5] = RLPEncode.encodeBytes(bh.bloom);
-
         list[6] = RLPEncode.encodeUint(bh.number);
-
         list[7] = RLPEncode.encodeUint(bh.gasLimit);
-
         list[8] = RLPEncode.encodeUint(bh.gasUsed);
-
         list[9] = RLPEncode.encodeUint(bh.time);
-
         list[10] = RLPEncode.encodeBytes(bh.extraData);
-
         list[11] = RLPEncode.encodeBytes(bh.mixDigest);
-
         list[12] = RLPEncode.encodeBytes(bh.nonce);
-
         list[13] = RLPEncode.encodeUint(bh.baseFee);
-
         output = RLPEncode.encodeList(list);
     }
 
@@ -519,6 +506,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             s := mload(add(sig, 64))
             v := byte(0, mload(add(sig, 96)))
         }
+    }
+
+    function getEpochNumber(uint256 blockNumber) internal pure returns (uint256){
+        if (blockNumber % epochSize == 0) {
+            return blockNumber / epochSize;
+        }
+        return blockNumber / epochSize + 1;
     }
 
 

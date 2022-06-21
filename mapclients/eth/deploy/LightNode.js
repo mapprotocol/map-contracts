@@ -24,10 +24,10 @@ module.exports = async function ({ethers, deployments}) {
     console.log(lightNode.address)
 
 
-    // await hre.run("verify:verify", {
-    //     address: lightNode.address,
-    //     constructorArguments:[]
-    // });
+    await hre.run("verify:verify", {
+        address: lightNode.address,
+        constructorArguments:[]
+    });
 
 
     let g1Hex = [
@@ -63,7 +63,7 @@ module.exports = async function ({ethers, deployments}) {
 
     let _threshold = 3;
 
-    let _epoch = 0;
+    let _epoch = 1;
 
     let _epochSize = 1000;
 
@@ -72,7 +72,7 @@ module.exports = async function ({ethers, deployments}) {
 
     console.log(_threshold,addresss,g1List,_weights,_epoch,_epochSize)
 
-    await lightNode.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize);
+    // await lightNode.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize);
 
 
     console.log(await lightNode.getValiditors())
