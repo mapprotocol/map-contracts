@@ -28,7 +28,7 @@ const MAX_RECORD: u64 = 20;
 pub struct MapLightClient {
     epoch_records: UnorderedMap<u64, EpochRecord>,
     epoch_size: u64,
-    next_epoch: u64,
+    header_height: u64,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
@@ -68,7 +68,7 @@ impl MapLightClient {
         Self {
             epoch_records: val_records,
             epoch_size,
-            next_epoch: epoch
+            header_height: (epoch - 1) * epoch_size
         }
     }
 
@@ -78,12 +78,11 @@ impl MapLightClient {
 
     pub fn update_block_header(&mut self, header: &Header, agg_pk: G2) {
         let block_num = header.number.to_u64().unwrap();
-        assert_eq!(0, block_num % self.epoch_size, "Header number is incorrect");
+        let block_exp = self.header_height + self.epoch_size;
+        assert_eq!(block_exp, block_num, "block header height is incorrect");
 
         // check ecdsa and bls signature
         let epoch = get_epoch_number(block_num, self.epoch_size as u64);
-        assert_eq!(self.next_epoch, epoch, "block epoch doesn't match expected next epoch");
-
         let mut extra = IstanbulExtra::from_rlp(&header.extra).unwrap();
         let cur_epoch_record = &self.epoch_records.get(&epoch).unwrap();
         self.verify_signatures(header, agg_pk, &extra, cur_epoch_record);
@@ -91,7 +90,7 @@ impl MapLightClient {
         // update validators' pair keys
         self.update_next_validators(cur_epoch_record, &mut extra);
 
-        self.next_epoch += 1;
+        self.header_height = block_num;
     }
 
     pub fn verify_proof_data(&self, receipt_proof: ReceiptProof) {
@@ -112,8 +111,8 @@ impl MapLightClient {
         assert_eq!(hex::encode(receipt_data), hex::encode(data), "receipt data is not equal to the value in trie");
     }
 
-    pub fn next_block_header_epoch(&self) -> u64 {
-        return self.next_epoch
+    pub fn get_header_height(&self) -> u64 {
+        return self.header_height
     }
 
     pub fn get_epoch_size(&self) -> u64 {

@@ -207,7 +207,7 @@ async fn test_update_block_header_bad_number() -> anyhow::Result<()> {
         .await;
 
     assert!(res.is_err(), "update_block_header should fail");
-    assert!(res.err().unwrap().to_string().contains("Header number is incorrect"), "unexpected failure reason");
+    assert!(res.err().unwrap().to_string().contains("block header height is incorrect"), "unexpected failure reason");
 
     Ok(())
 }
@@ -628,7 +628,7 @@ async fn test_validator_remove_add() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn test_next_block_header_epoch() -> anyhow::Result<()> {
+async fn test_get_header_height() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
     let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
@@ -641,14 +641,15 @@ async fn test_next_block_header_epoch() -> anyhow::Result<()> {
 
     assert!(res.is_success(), "new contract failed");
 
-    let epoch :u64 = contract
-        .call(&worker, "next_block_header_epoch")
+    let height :u64 = contract
+        .call(&worker, "get_header_height")
         .view()
         .await?
         .json()?;
 
-    let exp_epoch = init_args["epoch"].as_u64().unwrap();
-    assert_eq!(exp_epoch, epoch, "next_block_header_epoch get unexpected result");
+    let epoch = init_args["epoch"].as_u64().unwrap();
+    let epoch_size = init_args["epoch_size"].as_u64().unwrap();
+    assert_eq!(epoch_size * (epoch - 1), height, "get_header_height get unexpected result");
 
     let header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
@@ -664,15 +665,17 @@ async fn test_next_block_header_epoch() -> anyhow::Result<()> {
 
     assert!(res.is_success(), "update_block_header failed");
 
-    let epoch :u64 = contract
-        .call(&worker, "next_block_header_epoch")
+    let height :u64 = contract
+        .call(&worker, "get_header_height")
         .args_json({})?
         .gas(300_000_000_000_000)
         .transact()
         .await?
         .json()?;
 
-    assert_eq!(exp_epoch + 1, epoch, "next_block_header_epoch get unexpected result");
+    let height_no_prefix = header["number"].as_str().unwrap().trim_start_matches("0x");
+    let exp_height :u64 = u64::from_str_radix(height_no_prefix, 16).unwrap();
+    assert_eq!(exp_height, height, "get_header_height get unexpected result");
 
     Ok(())
 }
