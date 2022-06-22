@@ -33,21 +33,33 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     /** initialize  **********************************************************/
     function initialize(uint _threshold, address[]  memory _validatorAddresss, G1[] memory _pairKeys,
         uint[] memory _weights, uint _epoch, uint _epochSize)
-    external override initializer {
+    external
+    override
+    initializer {
         epochSize = _epochSize;
         validatorAddresss = _validatorAddresss;
         weightedMultisig.setStateInternal(_threshold, _pairKeys, _weights, _epoch);
     }
 
-    function getValiditors() public view returns (uint){
+    function getValiditors()
+    public
+    view
+    returns (uint){
         return weightedMultisig.maxValidators();
     }
 
-    function getWM() public view returns (address){
+    function getWM()
+    public
+    view
+    returns (address){
         return (address(weightedMultisig));
     }
 
-    function verifyProofData(receiptProof memory _receiptProof) external view override returns (bool success, string memory message) {
+    function verifyProofData(receiptProof memory _receiptProof)
+    external
+    view
+    override
+    returns (bool success, string memory message) {
         (success, message) = getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
@@ -69,7 +81,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
 
-    function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) public view returns (bool){
+    function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk)
+    public
+    view
+    returns (bool){
         uint256 epoch = getEpochNumber(bh.number);
         bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
         bytes memory bits = abi.encodePacked(uint8(ist.aggregatedSeal.bitmap));
@@ -77,15 +92,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         return weightedMultisig.checkSig(bits, message, sig, aggPk, epoch);
     }
 
-    function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external override {
+    function updateBlockHeader(blockHeader memory bh, G2 memory aggPk)
+    external
+    override
+    {
         require(bh.number % epochSize == 0, "Header number is error");
         require(bh.number > headerHeight, "Header is have");
         headerHeight = bh.number;
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bool success = checkSig(bh, ist, aggPk);
-
         require(success, "checkSig error");
-        //upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
         uint256 len = ist.addedG1PubKey.length;
         G1[] memory _pairKeysAdd = new G1[](len);
         uint256[] memory _weights = new uint256[](len);
@@ -101,14 +117,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
 
-    function getVerifyExpectedValueHash(txReceipt memory _txReceipt) public pure returns (bytes memory output){
+    function getVerifyExpectedValueHash(txReceipt memory _txReceipt)
+    public
+    pure
+    returns (bytes memory output){
         bytes[] memory list = new bytes[](4);
         list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
         list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
         list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
         bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
         bytes[] memory loglist = new bytes[](3);
-
         for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
             loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
             bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
@@ -127,7 +145,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         output = abi.encodePacked(tip, temp);
     }
 
-    function getVerifyTrieProof(receiptProof memory _receiptProof) public pure returns (
+    function getVerifyTrieProof(receiptProof memory _receiptProof)
+    public
+    pure
+    returns (
         bool success, string memory message){
         bytes memory expectedValue = getVerifyExpectedValueHash(_receiptProof.receipt);
         MPT.MerkleProof memory mp;
@@ -145,16 +166,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         }
     }
 
-    function _bytesSlice32(bytes memory data, uint256 offset)
-    public
-    pure
-    returns (uint256 slice){
-        bytes memory tmp = new bytes(32);
-        for (uint256 i = 0; i < 32; i++) {
-            tmp[i] = data[offset + i];
-        }
-        slice = uint256(bytes32(tmp));
-    }
 
     function _decodeHeader(bytes memory rlpBytes)
     public
@@ -215,29 +226,24 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         RLPReader.RLPItem memory item4 = ls[4];
         RLPReader.RLPItem memory item5 = ls[5];
         RLPReader.RLPItem memory item6 = ls[6];
-
         address[] memory validatorTemp = new address[](item0.length);
         bytes[] memory addedPubKeyTemp = new bytes[](item1.length);
         bytes[] memory addedG1PubKeyTemp = new bytes[](item2.length);
-
         if (item0.length > 0) {
             for (uint256 i = 0; i < item0.length; i++) {
                 validatorTemp[i] = item0[i].toAddress();
             }
         }
-
         if (item1.length > 0) {
             for (uint256 j = 0; j < item1.length; j++) {
                 addedPubKeyTemp[j] = item1[j].toBytes();
             }
         }
-
         if (item2.length > 0) {
             for (uint256 k = 0; k < item2.length; k++) {
                 addedG1PubKeyTemp[k] = item2[k].toBytes();
             }
         }
-
         ist = istanbulExtra({
         validators : validatorTemp,
         addedPubKey : addedPubKeyTemp,
@@ -286,7 +292,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
 
-    function getHeaderHash(blockHeader memory bh) public pure returns (bytes32){
+    function getHeaderHash(blockHeader memory bh)
+    public
+    pure
+    returns (bytes32){
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bytes memory extraDataPre = splitExtra(bh.extraData);
         bh.extraData = _deleteAgg(ist, extraDataPre);
@@ -302,11 +311,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     pure
     returns (bool ret, bytes32 headerHash){
         blockHeader memory bh = _decodeHeader(rlpHeader);
-
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
-
         headerHash = getHeaderHash(bh);
-
         ret = _verifySign(
             ist.seal,
             headerHash,
@@ -314,15 +320,15 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         );
     }
 
-    function getBlcokHash(blockHeader memory bh) public pure returns (bytes32){
+    function getBlcokHash(blockHeader memory bh)
+    public
+    pure
+    returns (bytes32){
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
         bytes memory extraDataPre = splitExtra(bh.extraData);
         bh.extraData = _deleteAgg(ist, extraDataPre);
         bytes memory headerWithoutAgg = _encodeHeader(bh);
-        bytes32 hash1 = keccak256(abi.encodePacked(headerWithoutAgg));
-
-        return hash1;
-
+        return keccak256(abi.encodePacked(headerWithoutAgg));
     }
 
     function getPrepareCommittedSeal(blockHeader memory bh, uint256 round)
@@ -351,30 +357,19 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
         for (uint256 i = 0; i < ist.validators.length; i++) {
             list1[i] = RLPEncode.encodeAddress(ist.validators[i]);
-
         }
-
         for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
-
             list2[i] = RLPEncode.encodeBytes(ist.addedPubKey[i]);
-
         }
-
         for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
-
             list3[i] = RLPEncode.encodeBytes(ist.addedG1PubKey[i]);
         }
-
         bytes[] memory list = new bytes[](7);
         list[0] = RLPEncode.encodeList(list1);
-        //
         list[1] = RLPEncode.encodeList(list2);
-        //
         list[2] = RLPEncode.encodeList(list3);
         list[3] = RLPEncode.encodeUint(ist.removeList);
-        //
         list[4] = RLPEncode.encodeBytes(ist.seal);
-        //
         list[5] = new bytes(4);
         list[5][0] = bytes1(uint8(195));
         list[5][1] = bytes1(uint8(128));
@@ -403,32 +398,20 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
         for (uint256 i = 0; i < ist.validators.length; i++) {
             list1[i] = RLPEncode.encodeAddress(ist.validators[i]);
-
         }
-
         for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
-
             list2[i] = RLPEncode.encodeBytes(ist.addedPubKey[i]);
-
         }
-
         for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
-
             list3[i] = RLPEncode.encodeBytes(ist.addedG1PubKey[i]);
         }
-
         bytes[] memory list = new bytes[](7);
         list[0] = RLPEncode.encodeList(list1);
-        //
         list[1] = RLPEncode.encodeList(list2);
-        //
         list[2] = RLPEncode.encodeList(list3);
-        //
         list[3] = RLPEncode.encodeUint(ist.removeList);
-        //
         list[4] = new bytes(1);
         list[4][0] = bytes1(uint8(128));
-        //
         list[5] = new bytes(4);
         list[5][0] = bytes1(uint8(195));
         list[5][1] = bytes1(uint8(128));
@@ -440,24 +423,17 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             ist.parentAggregatedSeal.round
         );
         bytes memory b = RLPEncode.encodeList(list);
-
-
         newExtra = abi.encodePacked(bytes32(rlpHeader), b);
     }
 
 
-    function _encodeAggregatedSeal(
-        uint256 bitmap,
-        bytes memory signature,
-        uint256 round
-    ) public pure returns (bytes memory output) {
+    function _encodeAggregatedSeal(uint256 bitmap, bytes memory signature, uint256 round)
+    public
+    pure
+    returns (bytes memory output) {
         bytes memory output1 = RLPEncode.encodeUint(bitmap);
-
         bytes memory output2 = RLPEncode.encodeBytes(signature);
-
         bytes memory output3 = RLPEncode.encodeUint(round);
-
-
         bytes[] memory list = new bytes[](3);
         list[0] = output1;
         list[1] = output2;
@@ -465,31 +441,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         output = RLPEncode.encodeList(list);
     }
 
-    function _encodeSealHash(
-        uint256 bitmap,
-        bytes memory signature,
-        address round
-    ) public pure returns (bytes memory output) {
-        bytes memory output1 = RLPEncode.encodeUint(bitmap);
-
-        bytes memory output2 = RLPEncode.encodeBytes(signature);
-
-        bytes memory output3 = RLPEncode.encodeAddress(round);
-
-
-        bytes[] memory list = new bytes[](3);
-        list[0] = output1;
-        list[1] = output2;
-        list[2] = output3;
-        output = RLPEncode.encodeList(list);
-    }
-
-    function _verifySign(
-        bytes memory seal,
-        bytes32 hash,
-        address coinbase
-    ) public pure returns (bool) {
-
+    function _verifySign(bytes memory seal, bytes32 hash, address coinbase)
+    public
+    pure
+    returns (bool) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(seal);
         v = v + 27;
         return coinbase == ecrecover(hash, v, r, s);
@@ -508,16 +463,21 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         }
     }
 
-    function getEpochNumber(uint256 blockNumber) internal pure returns (uint256){
+    function getEpochNumber(uint256 blockNumber)
+    internal
+    view
+    returns (uint256){
         if (blockNumber % epochSize == 0) {
             return blockNumber / epochSize;
         }
         return blockNumber / epochSize + 1;
     }
 
-
     /** UUPS *********************************************************/
-    function _authorizeUpgrade(address) internal view override {
+    function _authorizeUpgrade(address)
+    internal
+    view
+    override {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 }

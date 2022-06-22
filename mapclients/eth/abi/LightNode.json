@@ -66,30 +66,6 @@
     "inputs": [
       {
         "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      },
-      {
-        "internalType": "uint256",
-        "name": "offset",
-        "type": "uint256"
-      }
-    ],
-    "name": "_bytesSlice32",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "slice",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes",
         "name": "extraData",
         "type": "bytes"
       }
@@ -567,35 +543,6 @@
       }
     ],
     "name": "_encodeHeader",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "output",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "bitmap",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "signature",
-        "type": "bytes"
-      },
-      {
-        "internalType": "address",
-        "name": "round",
-        "type": "address"
-      }
-    ],
-    "name": "_encodeSealHash",
     "outputs": [
       {
         "internalType": "bytes",

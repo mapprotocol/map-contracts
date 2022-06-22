@@ -49,7 +49,9 @@ contract WeightedMultiSig is BGLS,IBLS {
     }
 
 
-    function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits) public override{
+    function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
+    public
+    override{
         uint256 idPre = getValidatorsIdPrve(epoch);
         validator memory vPre = validators[idPre];
         uint256 id = getValidatorsId(epoch);
@@ -86,11 +88,17 @@ contract WeightedMultiSig is BGLS,IBLS {
         v.threshold = _weight - _weight/3;
     }
 
-    function getValidatorsId(uint256 epoch) public view returns (uint){
+    function getValidatorsId(uint256 epoch)
+    public
+    view
+    returns (uint){
         return epoch % maxValidators;
     }
 
-    function getValidatorsIdPrve(uint256 epoch) public view returns (uint){
+    function getValidatorsIdPrve(uint256 epoch)
+    public
+    view
+    returns (uint){
         uint256 id = getValidatorsId(epoch);
         if (id == 0) {
             return maxValidators - 1;
@@ -99,7 +107,10 @@ contract WeightedMultiSig is BGLS,IBLS {
         }
     }
 
-    function isQuorum(bytes memory bits, uint[] memory weights, uint256 threshold) public pure returns (bool) {
+    function isQuorum(bytes memory bits, uint[] memory weights, uint256 threshold)
+    public
+    pure
+    returns (bool) {
         uint256 weight = 0;
         for (uint256 i = 0; i < weights.length; i++) {
             if (chkBit(bits, i)) weight += weights[i];
@@ -123,16 +134,21 @@ contract WeightedMultiSig is BGLS,IBLS {
     // e((s+t)*g1, g2) = e(g1, g2)^(s+t)
     // e(g1, (s+t)*g2) = e(g1, g2)^(s+t)
     //---------------------------------------------------------------
-    function checkAggPk(bytes memory bits, G2 memory aggPk, G1[] memory pairKeys) public view returns (bool) {
+    function checkAggPk(bytes memory bits, G2 memory aggPk, G1[] memory pairKeys)
+    public
+    view
+    returns (bool) {
         return pairingCheck(sumPoints(pairKeys, bits), g2, g1, aggPk);
     }
 
     // aggPk2, sig1 --> in contract: check aggPk2 is valid with bits by summing points in G2
     // how to check aggPk2 is valid --> via checkAggPk
     //
-    function checkSig(
-        bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint256 epoch
-    ) external view override returns (bool) {
+    function checkSig(bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint256 epoch)
+    external
+    view
+    override
+    returns (bool) {
         uint256 id = getValidatorsId(epoch);
         validator memory v = validators[id];
         return isQuorum(bits, v.weights, v.threshold)
