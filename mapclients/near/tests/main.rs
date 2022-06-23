@@ -641,7 +641,7 @@ async fn test_get_header_height() -> anyhow::Result<()> {
 
     assert!(res.is_success(), "new contract failed");
 
-    let height :u64 = contract
+    let height: u64 = contract
         .call(&worker, "get_header_height")
         .view()
         .await?
@@ -665,7 +665,7 @@ async fn test_get_header_height() -> anyhow::Result<()> {
 
     assert!(res.is_success(), "update_block_header failed");
 
-    let height :u64 = contract
+    let height: u64 = contract
         .call(&worker, "get_header_height")
         .args_json({})?
         .gas(300_000_000_000_000)
@@ -674,7 +674,7 @@ async fn test_get_header_height() -> anyhow::Result<()> {
         .json()?;
 
     let height_no_prefix = header["number"].as_str().unwrap().trim_start_matches("0x");
-    let exp_height :u64 = u64::from_str_radix(height_no_prefix, 16).unwrap();
+    let exp_height: u64 = u64::from_str_radix(height_no_prefix, 16).unwrap();
     assert_eq!(exp_height, height, "get_header_height get unexpected result");
 
     Ok(())
@@ -694,7 +694,7 @@ async fn test_get_epoch_size() -> anyhow::Result<()> {
 
     assert!(res.is_success(), "new contract failed");
 
-    let epoch_size :u64 = contract
+    let epoch_size: u64 = contract
         .call(&worker, "get_epoch_size")
         .view()
         .await?
@@ -783,6 +783,109 @@ async fn test_update_validator_for_20_epochs() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn test_update_validator_for_21_epochs() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let validators = r#"[{"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"},
+{"g1_pub_key":{"x":"0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58","y":"0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"},"weight":1,"address":"0x7a3a26123dbd9cfefc1725fe7779580b987251cb"},
+{"g1_pub_key":{"x":"0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812","y":"0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"},"weight":1,"address":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"},
+{"g1_pub_key":{"x":"0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6","y":"0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"},"weight":1,"address":"0x65b3fee569bf82ff148bdded9c3793fb685f9333"},
+{"g1_pub_key":{"x":"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a","y":"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"},"weight":1,"address":"0x98efa292822eb7b3045c491e8ae4e82b3b1ac005"},
+{"g1_pub_key":{"x":"0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d","y":"0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"},"weight":1,"address":"0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"}]
+"#;
+    let file = fs::File::open("./tests/data/init_value.json").unwrap();
+    let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
+    init_args["validators"] = serde_json::from_str(validators).unwrap();
+    init_args["epoch"] = json!(180);
+    init_args["threshold"] = json!(4);
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "init contract failed!");
+
+    let file = fs::File::open("./tests/data/headers.json").unwrap();
+    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    let mut block = 180000;
+    while block <= 200000 {
+        let value = headers[block.to_string()].clone();
+        let res = contract
+            .call(&worker, "update_block_header")
+            .args_json(json!(value))?
+            .gas(300_000_000_000_000)
+            .transact()
+            .await?;
+
+        println!("logs {:?}", res.logs());
+        assert!(res.is_success(), "update_block_header {} failed", block);
+
+        block += 1000;
+    }
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 180
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_none(), "epoch 180 should have no record");
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 181
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_none(), "epoch 181 should have  no record");
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 182
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_some(), "epoch 182 should have record");
+
+    let record = recordOpt.unwrap();
+    let validators = &init_args["validators"].as_array().unwrap();
+    assert_eq!(4, record.threshold, "threshold check failed");
+    assert_eq!(182, record.epoch, "epoch check failed");
+    assert_eq!(validators.len(), record.validators.len(), "no validator should be added/removed");
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 201
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_some(), "epoch 201 should have record");
+
+    let record = recordOpt.unwrap();
+    let validators = &init_args["validators"].as_array().unwrap();
+    assert_eq!(4, record.threshold, "threshold check failed");
+    assert_eq!(201, record.epoch, "epoch check failed");
+    assert_eq!(validators.len() - 1, record.validators.len(), "one validator should be removed");
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_verify_proof_in_diff_epochs() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
@@ -866,6 +969,271 @@ async fn test_verify_proof_in_diff_epochs() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[tokio::test]
+async fn test_add_validator() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let file = fs::File::open("./tests/data/init_value.json").unwrap();
+    let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
+    init_args["epoch"] = json!(124);
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "init contract failed!");
+
+    let file = fs::File::open("./tests/data/headers.json").unwrap();
+    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    let header = headers["124000"].clone();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!(header))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    println!("logs {:?}", res.logs());
+    assert!(res.is_success(), "update_block_header 124000 failed");
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 125
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_some(), "epoch 125 should have record");
+    let record = recordOpt.unwrap();
+    let validators = &init_args["validators"].as_array().unwrap();
+    assert_eq!(4, record.threshold, "threshold check failed");
+    assert_eq!(125, record.epoch, "epoch check failed");
+    assert_eq!(validators.len() + 1, record.validators.len(), "one validator should be added");
+
+
+    let header = headers["125000"].clone();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!(header))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    println!("logs {:?}", res.logs());
+    assert!(res.is_success(), "update_block_header 125000 failed");
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 126
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_some(), "epoch 126 should have record");
+    let record = recordOpt.unwrap();
+    let validators = &init_args["validators"].as_array().unwrap();
+    assert_eq!(4, record.threshold, "threshold check failed");
+    assert_eq!(126, record.epoch, "epoch check failed");
+    assert_eq!(validators.len() + 2, record.validators.len(), "one validator should be added");
+
+    for validator in record.validators.iter() {
+        println!("{}", serde_json::to_string(validator).unwrap())
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_remove_validator() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let validators = r#"[{"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"},
+{"g1_pub_key":{"x":"0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58","y":"0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"},"weight":1,"address":"0x7a3a26123dbd9cfefc1725fe7779580b987251cb"},
+{"g1_pub_key":{"x":"0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812","y":"0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"},"weight":1,"address":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"},
+{"g1_pub_key":{"x":"0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6","y":"0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"},"weight":1,"address":"0x65b3fee569bf82ff148bdded9c3793fb685f9333"},
+{"g1_pub_key":{"x":"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a","y":"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"},"weight":1,"address":"0x98efa292822eb7b3045c491e8ae4e82b3b1ac005"},
+{"g1_pub_key":{"x":"0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d","y":"0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"},"weight":1,"address":"0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"}]
+"#;
+    let file = fs::File::open("./tests/data/init_value.json").unwrap();
+    let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
+    init_args["epoch"] = json!(190);
+    init_args["validators"] = serde_json::from_str(validators).unwrap();
+    init_args["threshold"] = json!(4);
+    println!("validators:{}", init_args["validators"]);
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "init contract failed!");
+
+    let file = fs::File::open("./tests/data/headers.json").unwrap();
+    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    let header = headers["190000"].clone();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!(header))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    println!("logs {:?}", res.logs());
+    assert!(res.is_success(), "update_block_header 190000 failed");
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 191
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_some(), "epoch 191 should have record");
+    let record = recordOpt.unwrap();
+    let validators = &init_args["validators"].as_array().unwrap();
+    assert_eq!(4, record.threshold, "threshold check failed");
+    assert_eq!(191, record.epoch, "epoch check failed");
+    assert_eq!(validators.len() - 1, record.validators.len(), "one validator should be removed");
+
+    for validator in record.validators.iter() {
+        println!("{}", serde_json::to_string(validator).unwrap())
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_verify_proof_after_add_remove_validators() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let validators = r#"[
+    {"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"},
+    {"g1_pub_key":{"x":"0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58","y":"0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"},"weight":1,"address":"0x7a3a26123dbd9cfefc1725fe7779580b987251cb"},
+    {"g1_pub_key":{"x":"0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812","y":"0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"},"weight":1,"address":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"},
+    {"g1_pub_key":{"x":"0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6","y":"0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"},"weight":1,"address":"0x65b3fee569bf82ff148bdded9c3793fb685f9333"},
+    {"g1_pub_key":{"x":"0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d","y":"0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"},"weight":1,"address":"0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"}
+]"#;
+    let file = fs::File::open("./tests/data/init_value.json").unwrap();
+    let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
+    init_args["epoch"] = json!(203);
+    init_args["validators"] = serde_json::from_str(validators).unwrap();
+    println!("validators:{}", init_args["validators"]);
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "init contract failed!");
+
+    let file = fs::File::open("./tests/data/proof.json").unwrap();
+    let proofs: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    let res = contract
+        .call(&worker, "verify_proof_data")
+        .args_json(json!({"receipt_proof": proofs["202351"]}))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    println!("logs {:?}", res.logs());
+    assert!(res.is_success(), "verify_proof_data on block 202351 failed");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_verify_proof_after_validators_changed() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let validators = r#"{"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"}
+{"g1_pub_key":{"x":"0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58","y":"0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"},"weight":1,"address":"0x7a3a26123dbd9cfefc1725fe7779580b987251cb"}
+{"g1_pub_key":{"x":"0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812","y":"0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"},"weight":1,"address":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"}
+{"g1_pub_key":{"x":"0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6","y":"0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"},"weight":1,"address":"0x65b3fee569bf82ff148bdded9c3793fb685f9333"}
+{"g1_pub_key":{"x":"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a","y":"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"},"weight":1,"address":"0x98efa292822eb7b3045c491e8ae4e82b3b1ac005"}
+{"g1_pub_key":{"x":"0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d","y":"0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"},"weight":1,"address":"0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"}
+"#;
+
+    let file = fs::File::open("./tests/data/init_value.json").unwrap();
+    let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
+    init_args["epoch"] = json!(203);
+    init_args["validators"] = json!(validators);
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "init contract failed!");
+
+    let file = fs::File::open("./tests/data/headers.json").unwrap();
+    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    let header = headers["124000"].clone();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!(header))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    println!("logs {:?}", res.logs());
+    assert!(res.is_success(), "update_block_header 124000 failed");
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 125
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_some(), "epoch 125 should have record");
+    let record = recordOpt.unwrap();
+    let validators = &init_args["validators"].as_array().unwrap();
+    assert_eq!(4, record.threshold, "threshold check failed");
+    assert_eq!(125, record.epoch, "epoch check failed");
+    assert_eq!(validators.len() + 1, record.validators.len(), "one validator should be added");
+
+
+    let header = headers["125000"].clone();
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!(header))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    println!("logs {:?}", res.logs());
+    assert!(res.is_success(), "update_block_header 125000 failed");
+
+    let recordOpt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 126
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(recordOpt.is_some(), "epoch 126 should have record");
+    let record = recordOpt.unwrap();
+    let validators = &init_args["validators"].as_array().unwrap();
+    assert_eq!(4, record.threshold, "threshold check failed");
+    assert_eq!(126, record.epoch, "epoch check failed");
+    assert_eq!(validators.len() + 2, record.validators.len(), "one validator should be added");
+
+    Ok(())
+}
+
 async fn prepare_data() -> anyhow::Result<()> {
     let file = fs::File::open("./tests/data/updateHeader.json").unwrap();
     let mut json: serde_json::Value = serde_json::from_reader(file).unwrap();
@@ -875,13 +1243,11 @@ async fn prepare_data() -> anyhow::Result<()> {
     while i <= 20000 {
         let block = i.to_string();
         json[&block]["header"]["number"] = json!(format!("0x{:x}", i));
-
         let time_str = json[&block]["header"]["time"].as_str().unwrap();
         let time: u64 = time_str[1..].parse().unwrap();
         json[&block]["header"]["time"] = json!(format!("0x{:x}", time));
 
         println!("number: {}, time: {}", &json[&block]["header"]["number"], &json[&block]["header"]["time"]);
-        i += 1000;
     }
 
     let file = fs::File::create("./tests/data/headers.json").unwrap();

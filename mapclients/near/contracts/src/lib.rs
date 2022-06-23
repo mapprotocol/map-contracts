@@ -237,7 +237,7 @@ impl MapLightClient {
         log!("epoch {} validators: remove: {}, add: {:?}, total: {:?}",
             next_epoch,
             extra.removed_validators,
-            added_validators,
+            extra.added_validators,
             next_epoch_record);
 
         self.epoch_records.insert(&next_epoch, &next_epoch_record);
