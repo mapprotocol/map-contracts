@@ -76,9 +76,16 @@ impl G1 {
         let prime = Integer::from_bytes_be(Sign::Plus, hex::decode(PRIME).unwrap().as_slice());
         let neg_y = prime.sub(&y);
 
+        let mut neg_y_bytes = neg_y.to_signed_bytes_be();
+        let mut empty_vec:Vec<u8> = vec![0; 32 - neg_y_bytes.len()];
+        if neg_y_bytes.len() < 32 {
+            empty_vec.append(&mut neg_y_bytes);
+            neg_y_bytes = empty_vec;
+        }
+
         Self {
             x: self.x,
-            y: <[u8; 32]>::try_from(neg_y.to_signed_bytes_be()).unwrap()
+            y: <[u8; 32]>::try_from(neg_y_bytes).unwrap()
         }
     }
 }

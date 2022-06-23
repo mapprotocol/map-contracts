@@ -180,6 +180,38 @@ async fn test_update_block_header() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn test_update_block_header_38000() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let file = fs::File::open("./tests/data/init_value.json").unwrap();
+    let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
+    init_args["epoch"] = json!(38);
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "init contract failed!");
+
+    let file = fs::File::open("./tests/data/headers.json").unwrap();
+    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    let res = contract
+        .call(&worker, "update_block_header")
+        .args_json(json!(headers["38000"]))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    println!("logs {:?}", res.logs());
+    assert!(res.is_success(), "update_block_header 38000 failed");
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_update_block_header_bad_number() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
