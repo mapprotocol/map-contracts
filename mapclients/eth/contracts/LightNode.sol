@@ -112,14 +112,14 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
                 _pairKeysAdd[i] = blsCode.decodeG1(ist.addedG1PubKey[i]);
             }
         }
-        bytes memory bits = abi.encode(uint8(ist.removeList));
+        bytes memory bits = abi.encodePacked(uint8(ist.removeList));
         uint256 epoch = getEpochNumber(bh.number) + 1;
         weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 
 
     function getVerifyExpectedValueHash(txReceipt memory _txReceipt)
-    public
+    private
     pure
     returns (bytes memory output){
         bytes[] memory list = new bytes[](4);
@@ -147,7 +147,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function getVerifyTrieProof(receiptProof memory _receiptProof)
-    public
+    private
     pure
     returns (
         bool success, string memory message){
@@ -169,7 +169,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     function _decodeHeader(bytes memory rlpBytes)
-    public
+    private
     pure
     returns (blockHeader memory bh){
         RLPReader.RLPItem[] memory ls = rlpBytes.toRlpItem().toList();
@@ -193,7 +193,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     function _encodeHeader(blockHeader memory bh)
-    public
+    private
     pure
     returns (bytes memory output){
         bytes[] memory list = new bytes[](14);
@@ -215,7 +215,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function _decodeExtraData(bytes memory extraData)
-    public
+    private
     pure
     returns (istanbulExtra memory ist){
         bytes memory decodeBytes = _splitExtra(extraData);
@@ -267,7 +267,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     function _splitExtra(bytes memory extra)
-    public
+    private
     pure
     returns (bytes memory newExtra){
         newExtra = new bytes(extra.length - 32);
@@ -294,7 +294,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     function getHeaderHash(blockHeader memory bh)
-    public
+    private
     pure
     returns (bytes32){
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
@@ -308,7 +308,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     function _verifyHeader(bytes memory rlpHeader)
-    public
+    private
     pure
     returns (bool ret, bytes32 headerHash){
         blockHeader memory bh = _decodeHeader(rlpHeader);
@@ -322,7 +322,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function getBlcokHash(blockHeader memory bh)
-    public
+    private
     pure
     returns (bytes32){
         istanbulExtra memory ist = _decodeExtraData(bh.extraData);
@@ -333,7 +333,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function getPrepareCommittedSeal(blockHeader memory bh, uint256 round)
-    public
+    private
     pure
     returns (bytes memory result){
         bytes32 hash = getBlcokHash(bh);
@@ -348,11 +348,14 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         }
     }
 
-    function getLengthenBytes(uint256 num) public pure returns (bytes memory){
-        bytes result;
+    function getLengthenBytes(uint256 num)
+    public
+    pure
+    returns (bytes memory){
+        bytes memory result;
         if (num < 256){
             result = abi.encodePacked(uint8(num));
-        } else if (round < 65536) {
+        } else if (num < 65536) {
             result = abi.encodePacked(uint16(num));
         } else {
             result = abi.encodePacked(uint24(num));
@@ -362,7 +365,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     function _deleteAgg(istanbulExtra memory ist, bytes memory extraDataPre)
-    public
+    private
     pure
     returns (bytes memory newExtra){
         bytes[] memory list1 = new bytes[](ist.validators.length);
@@ -403,7 +406,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     function _deleteSealAndAgg(istanbulExtra memory ist, bytes memory rlpHeader)
-    public
+    private
     pure
     returns (bytes memory newExtra){
         bytes[] memory list1 = new bytes[](ist.validators.length);
@@ -441,7 +444,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
 
     function _encodeAggregatedSeal(uint256 bitmap, bytes memory signature, uint256 round)
-    public
+    private
     pure
     returns (bytes memory output) {
         bytes memory output1 = RLPEncode.encodeUint(bitmap);
@@ -455,7 +458,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function _verifySign(bytes memory seal, bytes32 hash, address coinbase)
-    public
+    private
     pure
     returns (bool) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(seal);
@@ -464,7 +467,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function splitSignature(bytes memory sig)
-    public
+    private
     pure
     returns
     (bytes32 r, bytes32 s, uint8 v){
