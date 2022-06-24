@@ -72,12 +72,12 @@ module.exports = async function ({ethers, deployments}) {
 
     console.log(_threshold,addresss,g1List,_weights,_epoch,_epochSize)
 
-    // await lightNode.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize);
-
+    await lightNode.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize);
 
     console.log(await lightNode.getValiditors())
 
     console.log(await lightNode.getWM())
+
 }
 
 module.exports.tags = ['LightNode']

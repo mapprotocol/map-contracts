@@ -6,6 +6,7 @@ import "./BGLS.sol";
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interface/IBLS.sol";
+import "hardhat/console.sol";
 
 
 // weights:
@@ -30,6 +31,10 @@ contract WeightedMultiSig is BGLS,IBLS {
     constructor() {
     }
 
+    function getValidator(uint id ) public view returns(G1[] memory){
+        return validators[id].pairKeys;
+    }
+
     function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch) public override {
         require(_pairKeys.length == _weights.length, 'mismatch arg');
         uint256 id = getValidatorsId(epoch);
@@ -52,6 +57,7 @@ contract WeightedMultiSig is BGLS,IBLS {
     function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
     public
     override{
+        console.logBytes(bits);
         uint256 idPre = getValidatorsIdPrve(epoch);
         validator memory vPre = validators[idPre];
         uint256 id = getValidatorsId(epoch);
@@ -62,8 +68,10 @@ contract WeightedMultiSig is BGLS,IBLS {
             delete(v.weights);
             delete(v.pairKeys);
         }
+        console.logUint(vPre.pairKeys.length);
         for (uint256 i = 0; i < vPre.pairKeys.length; i++) {
             if (!chkBit(bits, i)) {
+                console.logBool(!chkBit(bits, i));
                 v.pairKeys.push(
                     G1({
                 x : vPre.pairKeys[i].x,

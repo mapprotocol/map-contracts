@@ -28,6 +28,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     WeightedMultiSig public weightedMultisig = new WeightedMultiSig();
     BlsCode blsCode = new BlsCode();
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor()  {}
 
     /** initialize  **********************************************************/
@@ -87,7 +88,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     returns (bool){
         uint256 epoch = getEpochNumber(bh.number);
         bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
-        bytes memory bits = abi.encodePacked(uint8(ist.aggregatedSeal.bitmap));
+        bytes memory bits = abi.encodePacked(getLengthenBytes(ist.aggregatedSeal.bitmap));
         G1 memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
         return weightedMultisig.checkSig(bits, message, sig, aggPk, epoch);
     }
@@ -111,7 +112,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
                 _pairKeysAdd[i] = blsCode.decodeG1(ist.addedG1PubKey[i]);
             }
         }
-        bytes memory bits = abi.encodePacked(ist.removeList);
+        bytes memory bits = abi.encode(uint8(ist.removeList));
         uint256 epoch = getEpochNumber(bh.number) + 1;
         weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
@@ -338,13 +339,25 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         bytes32 hash = getBlcokHash(bh);
         if (round == 0) {
             result = abi.encodePacked(hash, uint8(2));
-        } else if (round > 0 && round < 256) {
+        } else if (round < 256) {
             result = abi.encodePacked(hash, uint8(round), uint8(2));
-        } else if (round > 255 && round < 65536) {
+        } else if (round < 65536) {
             result = abi.encodePacked(hash, uint16(round), uint8(2));
         } else {
             result = abi.encodePacked(hash, uint24(round), uint8(2));
         }
+    }
+
+    function getLengthenBytes(uint256 num) public pure returns (bytes memory){
+        bytes result;
+        if (num < 256){
+            result = abi.encodePacked(uint8(num));
+        } else if (round < 65536) {
+            result = abi.encodePacked(uint16(num));
+        } else {
+            result = abi.encodePacked(uint24(num));
+        }
+        return result;
     }
 
 
@@ -472,6 +485,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         }
         return blockNumber / epochSize + 1;
     }
+
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address)
