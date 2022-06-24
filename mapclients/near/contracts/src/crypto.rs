@@ -6,7 +6,7 @@ use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::serde_json;
 use crate::types::istanbul::{IstanbulAggregatedSeal, IstanbulMsg, G1_PUBLIC_KEY_LENGTH};
 use crate::types::header::Hash;
-use num_bigint::{BigInt as Integer, Sign};
+use num_bigint::{BigInt as Integer, BigInt, Sign};
 use num_traits::{Num, One};
 use crate::serialization::rlp::big_int_to_rlp_compat_bytes;
 
@@ -72,21 +72,32 @@ impl G1 {
     }
 
     pub fn neg(&self) -> Self {
-        let y = Integer::from_bytes_be(Sign::Plus,self.y.as_slice());
+        let y = Integer::from_bytes_be(Sign::Plus, self.y.as_slice());
         let prime = Integer::from_bytes_be(Sign::Plus, hex::decode(PRIME).unwrap().as_slice());
         let neg_y = prime.sub(&y);
 
-        let mut neg_y_bytes = neg_y.to_signed_bytes_be();
-        let mut empty_vec:Vec<u8> = vec![0; 32 - neg_y_bytes.len()];
-        if neg_y_bytes.len() < 32 {
-            empty_vec.append(&mut neg_y_bytes);
-            neg_y_bytes = empty_vec;
-        }
+        let mut neg_y_bytes = integer_to_vec_32(&neg_y, true);
 
         Self {
             x: self.x,
-            y: <[u8; 32]>::try_from(neg_y_bytes).unwrap()
+            y: <[u8; 32]>::try_from(neg_y_bytes).unwrap(),
         }
+    }
+}
+
+fn integer_to_vec_32(i: &BigInt, be: bool) -> Vec<u8> {
+    let mut bytes: Vec<u8> = if be { i.to_signed_bytes_be() } else { i.to_signed_bytes_le() };
+    if bytes.len() < 32 {
+        let mut res: Vec<u8> = vec![0; 32 - bytes.len()];
+        if be {
+            res.append(&mut bytes);
+            res
+        } else {
+            bytes.append(&mut res);
+            bytes
+        }
+    } else {
+        bytes
     }
 }
 
@@ -172,7 +183,7 @@ fn hash_to_g1(msg: Vec<u8>) -> G1 {
     let buf: Vec<u8> = [
         &to_le_bytes(&g1.x),
         &to_le_bytes(&g1.y),
-        scalar.to_signed_bytes_le() .as_slice()].concat();
+        integer_to_vec_32(&scalar, false).as_slice()].concat();
 
     unsafe {
         near_sys::alt_bn128_g1_multiexp(buf.len() as _, buf.as_ptr() as _, ALT_BN128_REGISTER);
