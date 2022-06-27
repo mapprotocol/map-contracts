@@ -11,7 +11,7 @@ import "./interface/IWeightedMultiSig.sol";
 import "./bls/BlsCode.sol";
 import "./lib/MPT.sol";
 
-contract LightNode is Initializable, ILightNode {
+contract LightNode is UUPSUpgradeable,Initializable, ILightNode {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
@@ -490,10 +490,10 @@ contract LightNode is Initializable, ILightNode {
     }
 
     /** UUPS *********************************************************/
-//    function _authorizeUpgrade(address)
-//    internal
-//    view
-//    override {
-//        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
-//    }
+    function _authorizeUpgrade(address)
+    internal
+    view
+    override {
+        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
+    }
 }
