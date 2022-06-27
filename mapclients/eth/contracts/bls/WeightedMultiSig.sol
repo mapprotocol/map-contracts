@@ -6,8 +6,6 @@ import "./BGLS.sol";
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interface/IBLS.sol";
-import "hardhat/console.sol";
-
 
 // weights:
 // 100 validator: \sum 67 =  \sum 100 - \sum 33
@@ -15,7 +13,7 @@ import "hardhat/console.sol";
 // for i [0, 10), [\sum 0-9, \sum 10-19, ..., \sum 90-99]
 // cryptographic method to reduce gas
 
-contract WeightedMultiSig is BGLS,IBLS {
+contract WeightedMultiSig is BGLS,IBLS,Ownable {
     using SafeMath for uint;
     struct validator {
         G1[] pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
@@ -35,7 +33,11 @@ contract WeightedMultiSig is BGLS,IBLS {
         return validators[id].pairKeys;
     }
 
-    function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch) public override {
+    function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch)
+    public
+    override
+    onlyOwner
+    {
         require(_pairKeys.length == _weights.length, 'mismatch arg');
         uint256 id = getValidatorsId(epoch);
         validator storage v = validators[id];
@@ -56,8 +58,9 @@ contract WeightedMultiSig is BGLS,IBLS {
 
     function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
     public
-    override{
-        console.logBytes(bits);
+    override
+    onlyOwner
+    {
         uint256 idPre = getValidatorsIdPrve(epoch);
         validator memory vPre = validators[idPre];
         uint256 id = getValidatorsId(epoch);
@@ -68,10 +71,9 @@ contract WeightedMultiSig is BGLS,IBLS {
             delete(v.weights);
             delete(v.pairKeys);
         }
-        console.logUint(vPre.pairKeys.length);
+
         for (uint256 i = 0; i < vPre.pairKeys.length; i++) {
             if (!chkBit(bits, i)) {
-                console.logBool(!chkBit(bits, i));
                 v.pairKeys.push(
                     G1({
                 x : vPre.pairKeys[i].x,

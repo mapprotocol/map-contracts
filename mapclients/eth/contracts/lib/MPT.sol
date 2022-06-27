@@ -4,7 +4,6 @@ pragma solidity >=0.7.0;
 //pragma experimental ABIEncoderV2;
 
 import "./RLPReader.sol";
-import "hardhat/console.sol";
 
 /*
     Documentation:
@@ -29,7 +28,6 @@ library MPT {
         MerkleProof memory data
     ) pure internal returns (bool)
     {
-//        console.log("console.log");
         bytes memory node = data.proof[data.proofIndex];
         RLPReader.Iterator memory dec = RLPReader.toRlpItem(node).iterator();
 

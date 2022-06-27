@@ -7,11 +7,11 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./lib/RLPReader.sol";
 import "./lib/RLPEncode.sol";
 import "./interface/ILightNode.sol";
-import "./bls/WeightedMultiSig.sol";
-import "./lib/MPT.sol";
+import "./interface/IWeightedMultiSig.sol";
 import "./bls/BlsCode.sol";
+import "./lib/MPT.sol";
 
-contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
+contract LightNode is Initializable, ILightNode {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
@@ -25,11 +25,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
     event validitorsSet(uint256 epoch);
 
-    WeightedMultiSig public weightedMultisig = new WeightedMultiSig();
+    IWeightedMultiSig public weightedMultisig;
     BlsCode blsCode = new BlsCode();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor()  {}
+    constructor(address _weightedMultisig)  {
+        weightedMultisig = IWeightedMultiSig(_weightedMultisig);
+    }
 
     /** initialize  **********************************************************/
     function initialize(uint _threshold, address[]  memory _validatorAddresss, G1[] memory _pairKeys,
@@ -61,7 +63,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     view
     override
     returns (bool success, string memory message) {
-        (success, message) = getVerifyTrieProof(_receiptProof);
+        (success, message) =getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
             return (success, message);
@@ -80,7 +82,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         }
         return (success, message);
     }
-
 
     function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk)
     public
@@ -117,55 +118,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 
-
-    function getVerifyExpectedValueHash(txReceipt memory _txReceipt)
-    private
-    pure
-    returns (bytes memory output){
-        bytes[] memory list = new bytes[](4);
-        list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
-        list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
-        list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
-        bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
-        bytes[] memory loglist = new bytes[](3);
-        for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
-            loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
-            for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
-            }
-            loglist[1] = RLPEncode.encodeList(loglist1);
-            loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
-            bytes memory logBytes = RLPEncode.encodeList(loglist);
-            listLog[j] = logBytes;
-        }
-        list[3] = RLPEncode.encodeList(listLog);
-        bytes memory tempType = abi.encode(_txReceipt.receiptType);
-        bytes1 tip = tempType[31];
-        bytes memory temp = RLPEncode.encodeList(list);
-        output = abi.encodePacked(tip, temp);
-    }
-
-    function getVerifyTrieProof(receiptProof memory _receiptProof)
-    private
-    pure
-    returns (
-        bool success, string memory message){
-        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptProof.receipt);
-        MPT.MerkleProof memory mp;
-        mp.expectedRoot = bytes32(_receiptProof.header.receiptHash);
-        mp.key = _receiptProof.keyIndex;
-        mp.proof = _receiptProof.proof;
-        mp.keyIndex = 0;
-        mp.proofIndex = 0;
-        mp.expectedValue = expectedValue;
-        success = MPT.verifyTrieProof(mp);
-        if (!success) {
-            message = "receipt mismatch";
-        } else {
-            message = "success";
-        }
-    }
 
 
     function _decodeHeader(bytes memory rlpBytes)
@@ -292,6 +244,54 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         return newExtra;
     }
 
+
+    function getVerifyTrieProof(receiptProof memory _receiptProof)
+    private
+    pure
+    returns (bool success, string memory message){
+        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptProof.receipt);
+        MPT.MerkleProof memory mp;
+        mp.expectedRoot = bytes32(_receiptProof.header.receiptHash);
+        mp.key = _receiptProof.keyIndex;
+        mp.proof = _receiptProof.proof;
+        mp.keyIndex = 0;
+        mp.proofIndex = 0;
+        mp.expectedValue = expectedValue;
+        success = MPT.verifyTrieProof(mp);
+        if (!success) {
+            message = "receipt mismatch";
+        } else {
+            message = "success";
+        }
+    }
+
+    function getVerifyExpectedValueHash(txReceipt memory _txReceipt)
+    private
+    pure
+    returns (bytes memory output){
+        bytes[] memory list = new bytes[](4);
+        list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
+        list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
+        list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
+        bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
+        bytes[] memory loglist = new bytes[](3);
+        for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
+            loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
+            bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
+            for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
+                loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
+            }
+            loglist[1] = RLPEncode.encodeList(loglist1);
+            loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
+            bytes memory logBytes = RLPEncode.encodeList(loglist);
+            listLog[j] = logBytes;
+        }
+        list[3] = RLPEncode.encodeList(listLog);
+        bytes memory tempType = abi.encode(_txReceipt.receiptType);
+        bytes1 tip = tempType[31];
+        bytes memory temp = RLPEncode.encodeList(list);
+        output = abi.encodePacked(tip, temp);
+    }
 
     function getHeaderHash(blockHeader memory bh)
     private
@@ -489,12 +489,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         return blockNumber / epochSize + 1;
     }
 
-
     /** UUPS *********************************************************/
-    function _authorizeUpgrade(address)
-    internal
-    view
-    override {
-        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
-    }
+//    function _authorizeUpgrade(address)
+//    internal
+//    view
+//    override {
+//        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
+//    }
 }

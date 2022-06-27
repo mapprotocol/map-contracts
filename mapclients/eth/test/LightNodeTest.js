@@ -4,20 +4,46 @@ require("solidity-coverage");
 
 describe("LightNode start test", function () {
 
+    let owner;
+
     let lightClient;
     let lightNodeContract;
     let lightNodeContractAddress;
+
+    let MultiSigClient;
+    let multiSigClient;
+    let multiSigContract;
+    let multiSigContractAddress;
+    
 
     let blsCode;
     let bc;
 
     let g1List;
 
+    beforeEach(async function () {
+
+        owner = await ethers.getSigners();
+
+
+    });
+
+
+    it("deploy WeightedMultiSig",async function () {
+        MultiSigClient = await ethers.getContractFactory("WeightedMultiSig");
+        multiSigClient = await MultiSigClient.deploy();
+        multiSigContract = await multiSigClient.deployed()
+        multiSigContractAddress = multiSigContract.address;
+    });
+
+
     it("deploy LightNode",async function () {
         const LightClient = await ethers.getContractFactory("LightNode");
-        lightClient = await LightClient.deploy();
+        lightClient = await LightClient.deploy(multiSigContractAddress);
         lightNodeContract = await lightClient.deployed()
         lightNodeContractAddress = lightNodeContract.address;
+
+        await multiSigClient.transferOwnership(lightNodeContractAddress);
     });
 
     it('initialize ', async function () {
@@ -99,14 +125,22 @@ describe("LightNode start test", function () {
     let blsCodeDelete;
     let bcDelete;
 
+    it("deploy LightNode",async function () {
+        MultiSigClient = await ethers.getContractFactory("WeightedMultiSig");
+        multiSigClient = await MultiSigClient.deploy();
+        multiSigContract = await multiSigClient.deployed()
+        multiSigContractAddress = multiSigContract.address;
+    });
 
     it('delete deploy', async function () {
 
         LightClientDelete = await ethers.getContractFactory("LightNode");
-        lightClientDelete = await LightClientDelete.deploy();
+        lightClientDelete = await LightClientDelete.deploy(multiSigContractAddress);
         lightNodeContractDelete = await lightClientDelete.deployed()
         lightNodeContractDeleteAddress = lightNodeContractDelete.address;
         console.log(lightNodeContractDeleteAddress);
+
+        await multiSigClient.transferOwnership(lightNodeContractDeleteAddress);
 
 
         blsCodeDelete = await ethers.getContractFactory("BlsCode");
@@ -171,14 +205,22 @@ describe("LightNode start test", function () {
 
     });
 
+    it("deploy LightNode",async function () {
+        MultiSigClient = await ethers.getContractFactory("WeightedMultiSig");
+        multiSigClient = await MultiSigClient.deploy();
+        multiSigContract = await multiSigClient.deployed()
+        multiSigContractAddress = multiSigContract.address;
+    });
+
     it('verifyProofData deploy', async function () {
 
         LightClientDelete = await ethers.getContractFactory("LightNode");
-        lightClientDelete = await LightClientDelete.deploy();
+        lightClientDelete = await LightClientDelete.deploy(multiSigContractAddress);
         lightNodeContractDelete = await lightClientDelete.deployed()
         lightNodeContractDeleteAddress = lightNodeContractDelete.address;
         console.log(lightNodeContractDeleteAddress);
 
+        await multiSigClient.transferOwnership(lightNodeContractDeleteAddress);
 
         blsCodeDelete = await ethers.getContractFactory("BlsCode");
         bcDelete = await blsCodeDelete.deploy();
