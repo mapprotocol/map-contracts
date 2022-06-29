@@ -1,14 +1,53 @@
 [
   {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
         "internalType": "address",
-        "name": "_weightedMultisig",
+        "name": "previousAdmin",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "newAdmin",
         "type": "address"
       }
     ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
+    "name": "AdminChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "beacon",
+        "type": "address"
+      }
+    ],
+    "name": "BeaconUpgraded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "implementation",
+        "type": "address"
+      }
+    ],
+    "name": "Upgraded",
+    "type": "event"
   },
   {
     "anonymous": false,
@@ -28,154 +67,83 @@
       {
         "components": [
           {
-            "internalType": "bytes",
-            "name": "parentHash",
-            "type": "bytes"
-          },
-          {
-            "internalType": "address",
-            "name": "coinbase",
-            "type": "address"
-          },
-          {
-            "internalType": "bytes",
-            "name": "root",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "txHash",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "receiptHash",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "bloom",
-            "type": "bytes"
-          },
-          {
             "internalType": "uint256",
-            "name": "number",
+            "name": "x",
             "type": "uint256"
           },
           {
             "internalType": "uint256",
-            "name": "gasLimit",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "gasUsed",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "time",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bytes",
-            "name": "extraData",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "mixDigest",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "nonce",
-            "type": "bytes"
-          },
-          {
-            "internalType": "uint256",
-            "name": "baseFee",
+            "name": "y",
             "type": "uint256"
           }
         ],
-        "internalType": "struct ILightNodePoint.blockHeader",
-        "name": "bh",
+        "internalType": "struct IBLSPoint.G1",
+        "name": "a",
         "type": "tuple"
       },
       {
         "components": [
           {
-            "internalType": "address[]",
-            "name": "validators",
-            "type": "address[]"
-          },
-          {
-            "internalType": "bytes[]",
-            "name": "addedPubKey",
-            "type": "bytes[]"
-          },
-          {
-            "internalType": "bytes[]",
-            "name": "addedG1PubKey",
-            "type": "bytes[]"
-          },
-          {
             "internalType": "uint256",
-            "name": "removeList",
+            "name": "x",
             "type": "uint256"
           },
           {
-            "internalType": "bytes",
-            "name": "seal",
-            "type": "bytes"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "bitmap",
-                "type": "uint256"
-              },
-              {
-                "internalType": "bytes",
-                "name": "signature",
-                "type": "bytes"
-              },
-              {
-                "internalType": "uint256",
-                "name": "round",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct ILightNodePoint.istanbulAggregatedSeal",
-            "name": "aggregatedSeal",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "bitmap",
-                "type": "uint256"
-              },
-              {
-                "internalType": "bytes",
-                "name": "signature",
-                "type": "bytes"
-              },
-              {
-                "internalType": "uint256",
-                "name": "round",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct ILightNodePoint.istanbulAggregatedSeal",
-            "name": "parentAggregatedSeal",
-            "type": "tuple"
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
           }
         ],
-        "internalType": "struct ILightNodePoint.istanbulExtra",
-        "name": "ist",
+        "internalType": "struct IBLSPoint.G1",
+        "name": "b",
+        "type": "tuple"
+      }
+    ],
+    "name": "addPoints",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "x",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G1",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "message",
+        "type": "bytes"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "x",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G1",
+        "name": "sig",
         "type": "tuple"
       },
       {
@@ -202,11 +170,11 @@
           }
         ],
         "internalType": "struct IBLSPoint.G2",
-        "name": "aggPk",
+        "name": "aggKey",
         "type": "tuple"
       }
     ],
-    "name": "checkSig",
+    "name": "checkSignature",
     "outputs": [
       {
         "internalType": "bool",
@@ -234,19 +202,31 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "num",
+        "name": "id",
         "type": "uint256"
       }
     ],
-    "name": "getLengthenBytes",
+    "name": "getValidator",
     "outputs": [
       {
-        "internalType": "bytes",
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "x",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G1[]",
         "name": "",
-        "type": "bytes"
+        "type": "tuple[]"
       }
     ],
-    "stateMutability": "pure",
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -263,13 +243,31 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "getWM",
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "message",
+        "type": "bytes"
+      }
+    ],
+    "name": "hashToG1",
     "outputs": [
       {
-        "internalType": "address",
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "x",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G1",
         "name": "",
-        "type": "address"
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",
@@ -331,6 +329,11 @@
         "internalType": "uint256",
         "name": "_epochSize",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_verifyTool",
+        "type": "address"
       }
     ],
     "name": "initialize",
@@ -339,22 +342,214 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "bytes",
-        "name": "extra",
-        "type": "bytes"
-      }
-    ],
-    "name": "splitExtra",
+    "inputs": [],
+    "name": "maxValidators",
     "outputs": [
       {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "x",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G1",
+        "name": "a",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "xr",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "xi",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "yr",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "yi",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G2",
+        "name": "x",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "x",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G1",
+        "name": "b",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "xr",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "xi",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "yr",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "yi",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G2",
+        "name": "y",
+        "type": "tuple"
+      }
+    ],
+    "name": "pairingCheck",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "x",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G1",
+        "name": "point",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint256",
+        "name": "scalar",
+        "type": "uint256"
+      }
+    ],
+    "name": "scalarMultiply",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "x",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G1",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "x",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G1[]",
+        "name": "points",
+        "type": "tuple[]"
+      },
+      {
         "internalType": "bytes",
-        "name": "newExtra",
+        "name": "indices",
         "type": "bytes"
       }
     ],
-    "stateMutability": "pure",
+    "name": "sumPoints",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "x",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "y",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IBLSPoint.G1",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -472,6 +667,37 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "newImplementation",
+        "type": "address"
+      }
+    ],
+    "name": "upgradeTo",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newImplementation",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "upgradeToAndCall",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
@@ -483,6 +709,30 @@
         "internalType": "address",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "validators",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "threshold",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "epoch",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -672,6 +922,11 @@
         "internalType": "string",
         "name": "message",
         "type": "string"
+      },
+      {
+        "internalType": "bytes",
+        "name": "logsHash",
+        "type": "bytes"
       }
     ],
     "stateMutability": "view",
@@ -679,10 +934,10 @@
   },
   {
     "inputs": [],
-    "name": "weightedMultisig",
+    "name": "verifyTool",
     "outputs": [
       {
-        "internalType": "contract IWeightedMultiSig",
+        "internalType": "contract IVerifyTool",
         "name": "",
         "type": "address"
       }

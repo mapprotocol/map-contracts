@@ -4,95 +4,97 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "./lib/RLPReader.sol";
-import "./lib/RLPEncode.sol";
 import "./interface/ILightNode.sol";
 import "./interface/IWeightedMultiSig.sol";
 import "./bls/BlsCode.sol";
-import "./lib/MPT.sol";
+import "./bls/BGLS.sol";
+import "./interface/IVerifyTool.sol";
 
-contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
-    using RLPReader for bytes;
-    using RLPReader for uint256;
-    using RLPReader for RLPReader.RLPItem;
-    using RLPReader for RLPReader.Iterator;
-    using MPT for MPT.MerkleProof;
 
-    uint version = 1;
+contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
+
+    uint256 public maxValidators = 20;
+
     uint256 public epochSize = 1000;
-    address[] public validatorAddresss;
+
     uint256 public headerHeight = 0;
+
+    address[] public validatorAddresss;
+
+    validator[20] public validators;
+
+    IVerifyTool public verifyTool;
+
+    BlsCode blsCode = new BlsCode();
+
+    struct validator {
+        G1[] pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
+        uint[] weights; // voting power
+        uint256 threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
+        uint256 epoch;
+    }
 
     event validitorsSet(uint256 epoch);
 
-    IWeightedMultiSig public weightedMultisig;
-    BlsCode blsCode = new BlsCode();
-
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address _weightedMultisig)  {
-        weightedMultisig = IWeightedMultiSig(_weightedMultisig);
-    }
+    constructor()  {}
 
     /** initialize  **********************************************************/
-    function initialize(uint _threshold, address[]  memory _validatorAddresss, G1[] memory _pairKeys,
-        uint[] memory _weights, uint _epoch, uint _epochSize)
+    function initialize(
+        uint _threshold,
+        address[]  memory _validatorAddresss,
+        G1[] memory _pairKeys,
+        uint[] memory _weights,
+        uint _epoch,
+        uint _epochSize,
+        address _verifyTool)
     external
     override
     initializer {
         epochSize = _epochSize;
         validatorAddresss = _validatorAddresss;
-        weightedMultisig.setStateInternal(_threshold, _pairKeys, _weights, _epoch);
+        setStateInternal(_threshold, _pairKeys, _weights, _epoch);
+        verifyTool = IVerifyTool(_verifyTool);
+    }
+
+    function getValidator(uint id )
+    public
+    view
+    returns(G1[] memory){
+        return validators[id].pairKeys;
     }
 
     function getValiditors()
     public
     view
-    returns (uint){
-        return weightedMultisig.maxValidators();
-    }
-
-    function getWM()
-    public
-    view
-    returns (address){
-        return (address(weightedMultisig));
+    returns (uint256){
+        return maxValidators;
     }
 
     function verifyProofData(receiptProof memory _receiptProof)
     external
     view
     override
-    returns (bool success, string memory message, txLog[] memory logs) {
-        (success, message) = getVerifyTrieProof(_receiptProof);
-        logs = _receiptProof.receipt.logs;
+    returns (bool success, string memory message,bytes memory logsHash) {
+        logsHash = verifyTool.encodeTxLog(_receiptProof.receipt.logs);
+        (success, message) =verifyTool.getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
-            return (success, message, logs);
+            return (success, message,logsHash);
         }
         bytes32 hash;
-        bytes memory headerRlp = _encodeHeader(_receiptProof.header);
-        (success, hash) = _verifyHeader(headerRlp);
+        bytes memory headerRlp = verifyTool.encodeHeader(_receiptProof.header);
+        (success, hash) = verifyTool.verifyHeader(headerRlp);
         if (!success) {
             message = "verifyHeader error";
-            return (success, message, logs);
+            return (success, message,logsHash);
         }
-        istanbulExtra memory ist = _decodeExtraData(_receiptProof.header.extraData);
+        istanbulExtra memory ist = verifyTool.decodeExtraData(_receiptProof.header.extraData);
         success = checkSig(_receiptProof.header, ist, _receiptProof.aggPk);
         if (!success) {
             message = "bls error";
         }
-        return (success, message, logs);
-    }
-
-    function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk)
-    public
-    view
-    returns (bool){
-        uint256 epoch = getEpochNumber(bh.number);
-        bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
-        bytes memory bits = abi.encodePacked(getLengthenBytes(ist.aggregatedSeal.bitmap));
-        G1 memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
-        return weightedMultisig.checkSig(bits, message, sig, aggPk, epoch);
+        return (success, message,logsHash);
     }
 
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk)
@@ -102,7 +104,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         require(bh.number % epochSize == 0, "Header number is error");
         require(bh.number > headerHeight, "Header is have");
         headerHeight = bh.number;
-        istanbulExtra memory ist = _decodeExtraData(bh.extraData);
+        istanbulExtra memory ist = verifyTool.decodeExtraData(bh.extraData);
         bool success = checkSig(bh, ist, aggPk);
         require(success, "checkSig error");
         uint256 len = ist.addedG1PubKey.length;
@@ -116,227 +118,138 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         }
         bytes memory bits = abi.encodePacked(uint8(ist.removeList));
         uint256 epoch = getEpochNumber(bh.number) + 1;
-        weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
+        upateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 
-
-    function _decodeHeader(bytes memory rlpBytes)
-    private
-    pure
-    returns (blockHeader memory bh){
-        RLPReader.RLPItem[] memory ls = rlpBytes.toRlpItem().toList();
-        bh = blockHeader({
-        parentHash : ls[0].toBytes(),
-        coinbase : ls[1].toAddress(),
-        root : ls[2].toBytes(),
-        txHash : ls[3].toBytes(),
-        receiptHash : ls[4].toBytes(),
-        number : ls[6].toUint(),
-        extraData : ls[10].toBytes(),
-        bloom : ls[5].toBytes(),
-        gasLimit : ls[7].toUint(),
-        gasUsed : ls[8].toUint(),
-        time : ls[9].toUint(),
-        mixDigest : ls[11].toBytes(),
-        nonce : ls[12].toBytes(),
-        baseFee : ls[13].toUint()
-        });
+    function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk)
+    internal
+    view
+    returns (bool){
+        uint256 epoch = getEpochNumber(bh.number);
+        bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
+        bytes memory bits = abi.encodePacked(getLengthenBytes(ist.aggregatedSeal.bitmap));
+        G1 memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
+        return checkSigTag(bits, message, sig, aggPk, epoch);
     }
 
+    function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch)
+    internal
+    {
+        require(_pairKeys.length == _weights.length, 'mismatch arg');
+        uint256 id = getValidatorsId(epoch);
+        validator storage v = validators[id];
 
-    function _encodeHeader(blockHeader memory bh)
-    private
-    pure
-    returns (bytes memory output){
-        bytes[] memory list = new bytes[](14);
-        list[0] = RLPEncode.encodeBytes(bh.parentHash);
-        list[1] = RLPEncode.encodeAddress(bh.coinbase);
-        list[2] = RLPEncode.encodeBytes(bh.root);
-        list[3] = RLPEncode.encodeBytes(bh.txHash);
-        list[4] = RLPEncode.encodeBytes(bh.receiptHash);
-        list[5] = RLPEncode.encodeBytes(bh.bloom);
-        list[6] = RLPEncode.encodeUint(bh.number);
-        list[7] = RLPEncode.encodeUint(bh.gasLimit);
-        list[8] = RLPEncode.encodeUint(bh.gasUsed);
-        list[9] = RLPEncode.encodeUint(bh.time);
-        list[10] = RLPEncode.encodeBytes(bh.extraData);
-        list[11] = RLPEncode.encodeBytes(bh.mixDigest);
-        list[12] = RLPEncode.encodeBytes(bh.nonce);
-        list[13] = RLPEncode.encodeUint(bh.baseFee);
-        output = RLPEncode.encodeList(list);
+        for (uint256 i = 0; i < _pairKeys.length; i++) {
+            v.pairKeys.push(
+                G1({
+            x : _pairKeys[i].x,
+            y : _pairKeys[i].y
+            }));
+            v.weights.push(_weights[i]);
+        }
+
+        v.threshold = _threshold;
+        v.epoch = epoch;
     }
 
-    function _decodeExtraData(bytes memory extraData)
-    private
-    pure
-    returns (istanbulExtra memory ist){
-        bytes memory decodeBytes = _splitExtra(extraData);
-        RLPReader.RLPItem[] memory ls = decodeBytes.toRlpItem().toList();
-        RLPReader.RLPItem[] memory item0 = ls[0].toList();
-        RLPReader.RLPItem[] memory item1 = ls[1].toList();
-        RLPReader.RLPItem[] memory item2 = ls[2].toList();
-        RLPReader.RLPItem memory item3 = ls[3];
-        RLPReader.RLPItem memory item4 = ls[4];
-        RLPReader.RLPItem memory item5 = ls[5];
-        RLPReader.RLPItem memory item6 = ls[6];
-        address[] memory validatorTemp = new address[](item0.length);
-        bytes[] memory addedPubKeyTemp = new bytes[](item1.length);
-        bytes[] memory addedG1PubKeyTemp = new bytes[](item2.length);
-        if (item0.length > 0) {
-            for (uint256 i = 0; i < item0.length; i++) {
-                validatorTemp[i] = item0[i].toAddress();
+    function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
+    internal
+    {
+        uint256 idPre = getValidatorsIdPrve(epoch);
+        validator memory vPre = validators[idPre];
+        uint256 id = getValidatorsId(epoch);
+        validator storage v = validators[id];
+        v.epoch = epoch;
+        uint _weight = 0;
+        if (v.pairKeys.length >0){
+            delete(v.weights);
+            delete(v.pairKeys);
+        }
+
+        for (uint256 i = 0; i < vPre.pairKeys.length; i++) {
+            if (!chkBit(bits, i)) {
+                v.pairKeys.push(
+                    G1({
+                x : vPre.pairKeys[i].x,
+                y : vPre.pairKeys[i].y
+                }));
+                v.weights.push(vPre.weights[i]);
+                _weight = _weight + vPre.weights[i];
             }
         }
-        if (item1.length > 0) {
-            for (uint256 j = 0; j < item1.length; j++) {
-                addedPubKeyTemp[j] = item1[j].toBytes();
+
+        if (_pairKeysAdd.length > 0) {
+            for (uint256 i = 0; i < _pairKeysAdd.length; i++) {
+                v.pairKeys.push(
+                    G1({
+                x : _pairKeysAdd[i].x,
+                y : _pairKeysAdd[i].y
+                }));
+                v.weights.push(_weights[i]);
+                _weight = _weight + _weights[i];
             }
         }
-        if (item2.length > 0) {
-            for (uint256 k = 0; k < item2.length; k++) {
-                addedG1PubKeyTemp[k] = item2[k].toBytes();
-            }
-        }
-        ist = istanbulExtra({
-        validators : validatorTemp,
-        addedPubKey : addedPubKeyTemp,
-        addedG1PubKey : addedG1PubKeyTemp,
-        removeList : item3.toUint(),
-        seal : item4.toBytes(),
-        aggregatedSeal : istanbulAggregatedSeal({
-        bitmap : item5.toList()[0].toUint(),
-        signature : item5.toList()[1].toBytes(),
-        round : item5.toList()[2].toUint()
-        }),
-        parentAggregatedSeal : istanbulAggregatedSeal({
-        bitmap : item6.toList()[0].toUint(),
-        signature : item6.toList()[1].toBytes(),
-        round : item6.toList()[2].toUint()
-        })
-        });
-
+        v.threshold = _weight - _weight/3;
     }
 
 
-    function _splitExtra(bytes memory extra)
-    private
-    pure
-    returns (bytes memory newExtra){
-        newExtra = new bytes(extra.length - 32);
-        uint256 n = 0;
-        for (uint256 i = 32; i < extra.length; i++) {
-            newExtra[n] = extra[i];
-            n = n + 1;
-        }
-        return newExtra;
+    function getValidatorsId(uint256 epoch)
+    internal
+    view
+    returns (uint){
+        return epoch % maxValidators;
     }
 
-    function splitExtra(bytes memory extra)
-    public
-    pure
-    returns (bytes memory newExtra){
-        newExtra = new bytes(32);
-        uint m = 0;
-        for (uint i = 0; i < 32; i++) {
-            newExtra[m] = extra[i];
-            m = m + 1;
-        }
-        return newExtra;
-    }
-
-
-    function getVerifyTrieProof(receiptProof memory _receiptProof)
-    private
-    pure
-    returns (bool success, string memory message){
-        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptProof.receipt);
-        MPT.MerkleProof memory mp;
-        mp.expectedRoot = bytes32(_receiptProof.header.receiptHash);
-        mp.key = _receiptProof.keyIndex;
-        mp.proof = _receiptProof.proof;
-        mp.keyIndex = 0;
-        mp.proofIndex = 0;
-        mp.expectedValue = expectedValue;
-        success = MPT.verifyTrieProof(mp);
-        if (!success) {
-            message = "receipt mismatch";
+    function getValidatorsIdPrve(uint256 epoch)
+    internal
+    view
+    returns (uint){
+        uint256 id = getValidatorsId(epoch);
+        if (id == 0) {
+            return maxValidators - 1;
         } else {
-            message = "success";
+            return id - 1;
         }
     }
 
-    function getVerifyExpectedValueHash(txReceipt memory _txReceipt)
-    private
+    function isQuorum(bytes memory bits, uint[] memory weights, uint256 threshold)
+    internal
     pure
-    returns (bytes memory output){
-        bytes[] memory list = new bytes[](4);
-        list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
-        list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
-        list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
-        bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
-        bytes[] memory loglist = new bytes[](3);
-        for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
-            loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
-            for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
-            }
-            loglist[1] = RLPEncode.encodeList(loglist1);
-            loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
-            bytes memory logBytes = RLPEncode.encodeList(loglist);
-            listLog[j] = logBytes;
+    returns (bool) {
+        uint256 weight = 0;
+        for (uint256 i = 0; i < weights.length; i++) {
+            if (chkBit(bits, i)) weight += weights[i];
         }
-        list[3] = RLPEncode.encodeList(listLog);
-        bytes memory tempType = abi.encode(_txReceipt.receiptType);
-        bytes1 tip = tempType[31];
-        bytes memory temp = RLPEncode.encodeList(list);
-        output = abi.encodePacked(tip, temp);
+        return weight >= threshold;
     }
 
-    function getHeaderHash(blockHeader memory bh)
-    private
-    pure
-    returns (bytes32){
-        istanbulExtra memory ist = _decodeExtraData(bh.extraData);
-        bytes memory extraDataPre = splitExtra(bh.extraData);
-        bh.extraData = _deleteAgg(ist, extraDataPre);
-        bh.extraData = _deleteSealAndAgg(ist, bh.extraData);
-        bytes memory headerWithoutSealAndAgg = _encodeHeader(bh);
-        bytes32 hash2 = keccak256(abi.encodePacked(headerWithoutSealAndAgg));
-        return keccak256(abi.encodePacked(hash2));
+    function checkAggPk(bytes memory bits, G2 memory aggPk, G1[] memory pairKeys)
+    internal
+    view
+    returns (bool) {
+        return pairingCheck(sumPoints(pairKeys, bits), g2, g1, aggPk);
     }
 
-
-    function _verifyHeader(bytes memory rlpHeader)
-    private
-    pure
-    returns (bool ret, bytes32 headerHash){
-        blockHeader memory bh = _decodeHeader(rlpHeader);
-        istanbulExtra memory ist = _decodeExtraData(bh.extraData);
-        headerHash = getHeaderHash(bh);
-        ret = _verifySign(
-            ist.seal,
-            headerHash,
-            bh.coinbase
-        );
+    // aggPk2, sig1 --> in contract: check aggPk2 is valid with bits by summing points in G2
+    // how to check aggPk2 is valid --> via checkAggPk
+    //
+    function checkSigTag(bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint256 epoch)
+    internal
+    view
+    returns (bool) {
+        uint256 id = getValidatorsId(epoch);
+        validator memory v = validators[id];
+        return isQuorum(bits, v.weights, v.threshold)
+        && checkAggPk(bits, aggPk, v.pairKeys)
+        && checkSignature(message, sig, aggPk);
     }
 
-    function getBlcokHash(blockHeader memory bh)
-    private
-    pure
-    returns (bytes32){
-        istanbulExtra memory ist = _decodeExtraData(bh.extraData);
-        bytes memory extraDataPre = splitExtra(bh.extraData);
-        bh.extraData = _deleteAgg(ist, extraDataPre);
-        bytes memory headerWithoutAgg = _encodeHeader(bh);
-        return keccak256(abi.encodePacked(headerWithoutAgg));
-    }
 
     function getPrepareCommittedSeal(blockHeader memory bh, uint256 round)
-    private
-    pure
+    internal
+    view
     returns (bytes memory result){
-        bytes32 hash = getBlcokHash(bh);
+        bytes32 hash = verifyTool.getBlcokHash(bh);
         if (round == 0) {
             result = abi.encodePacked(hash, uint8(2));
         } else if (round < 256) {
@@ -349,11 +262,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function getLengthenBytes(uint256 num)
-    public
+    internal
     pure
     returns (bytes memory){
         bytes memory result;
-        if (num < 256) {
+        if (num < 256){
             result = abi.encodePacked(uint8(num));
         } else if (num < 65536) {
             result = abi.encodePacked(uint16(num));
@@ -363,121 +276,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         return result;
     }
 
-
-    function _deleteAgg(istanbulExtra memory ist, bytes memory extraDataPre)
-    private
-    pure
-    returns (bytes memory newExtra){
-        bytes[] memory list1 = new bytes[](ist.validators.length);
-        bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
-        bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
-        for (uint256 i = 0; i < ist.validators.length; i++) {
-            list1[i] = RLPEncode.encodeAddress(ist.validators[i]);
-        }
-        for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
-            list2[i] = RLPEncode.encodeBytes(ist.addedPubKey[i]);
-        }
-        for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
-            list3[i] = RLPEncode.encodeBytes(ist.addedG1PubKey[i]);
-        }
-        bytes[] memory list = new bytes[](7);
-        list[0] = RLPEncode.encodeList(list1);
-        list[1] = RLPEncode.encodeList(list2);
-        list[2] = RLPEncode.encodeList(list3);
-        list[3] = RLPEncode.encodeUint(ist.removeList);
-        list[4] = RLPEncode.encodeBytes(ist.seal);
-        list[5] = new bytes(4);
-        list[5][0] = bytes1(uint8(195));
-        list[5][1] = bytes1(uint8(128));
-        list[5][2] = bytes1(uint8(128));
-        list[5][3] = bytes1(uint8(128));
-        list[6] = _encodeAggregatedSeal(ist.parentAggregatedSeal.bitmap, ist.parentAggregatedSeal.signature, ist.parentAggregatedSeal.round);
-        bytes memory b = RLPEncode.encodeList(list);
-        bytes memory output = new bytes(b.length + 32);
-        for (uint i = 0; i < b.length + 32; i++) {
-            if (i < 32) {
-                output[i] = extraDataPre[i];
-            } else {
-                output[i] = b[i - 32];
-            }
-        }
-        newExtra = output;
-    }
-
-
-    function _deleteSealAndAgg(istanbulExtra memory ist, bytes memory rlpHeader)
-    private
-    pure
-    returns (bytes memory newExtra){
-        bytes[] memory list1 = new bytes[](ist.validators.length);
-        bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
-        bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
-        for (uint256 i = 0; i < ist.validators.length; i++) {
-            list1[i] = RLPEncode.encodeAddress(ist.validators[i]);
-        }
-        for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
-            list2[i] = RLPEncode.encodeBytes(ist.addedPubKey[i]);
-        }
-        for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
-            list3[i] = RLPEncode.encodeBytes(ist.addedG1PubKey[i]);
-        }
-        bytes[] memory list = new bytes[](7);
-        list[0] = RLPEncode.encodeList(list1);
-        list[1] = RLPEncode.encodeList(list2);
-        list[2] = RLPEncode.encodeList(list3);
-        list[3] = RLPEncode.encodeUint(ist.removeList);
-        list[4] = new bytes(1);
-        list[4][0] = bytes1(uint8(128));
-        list[5] = new bytes(4);
-        list[5][0] = bytes1(uint8(195));
-        list[5][1] = bytes1(uint8(128));
-        list[5][2] = bytes1(uint8(128));
-        list[5][3] = bytes1(uint8(128));
-        list[6] = _encodeAggregatedSeal(
-            ist.parentAggregatedSeal.bitmap,
-            ist.parentAggregatedSeal.signature,
-            ist.parentAggregatedSeal.round
-        );
-        bytes memory b = RLPEncode.encodeList(list);
-        newExtra = abi.encodePacked(bytes32(rlpHeader), b);
-    }
-
-
-    function _encodeAggregatedSeal(uint256 bitmap, bytes memory signature, uint256 round)
-    private
-    pure
-    returns (bytes memory output) {
-        bytes memory output1 = RLPEncode.encodeUint(bitmap);
-        bytes memory output2 = RLPEncode.encodeBytes(signature);
-        bytes memory output3 = RLPEncode.encodeUint(round);
-        bytes[] memory list = new bytes[](3);
-        list[0] = output1;
-        list[1] = output2;
-        list[2] = output3;
-        output = RLPEncode.encodeList(list);
-    }
-
-    function _verifySign(bytes memory seal, bytes32 hash, address coinbase)
-    private
-    pure
-    returns (bool) {
-        (bytes32 r, bytes32 s, uint8 v) = splitSignature(seal);
-        v = v + 27;
-        return coinbase == ecrecover(hash, v, r, s);
-    }
-
-    function splitSignature(bytes memory sig)
-    private
-    pure
-    returns
-    (bytes32 r, bytes32 s, uint8 v){
-        require(sig.length == 65, "invalid signature length");
-        assembly {
-            r := mload(add(sig, 32))
-            s := mload(add(sig, 64))
-            v := byte(0, mload(add(sig, 96)))
-        }
-    }
 
     function getEpochNumber(uint256 blockNumber)
     internal

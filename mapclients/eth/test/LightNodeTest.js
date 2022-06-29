@@ -10,11 +10,11 @@ describe("LightNode start test", function () {
     let lightNodeContract;
     let lightNodeContractAddress;
 
-    let MultiSigClient;
-    let multiSigClient;
-    let multiSigContract;
-    let multiSigContractAddress;
-    
+    let VerifyToolClient;
+    let verifyToolClient;
+    let verifyToolContract;
+    let verifyToolContractAddress;
+
 
     let blsCode;
     let bc;
@@ -28,22 +28,21 @@ describe("LightNode start test", function () {
 
     });
 
-
-    it("deploy WeightedMultiSig",async function () {
-        MultiSigClient = await ethers.getContractFactory("WeightedMultiSig");
-        multiSigClient = await MultiSigClient.deploy();
-        multiSigContract = await multiSigClient.deployed()
-        multiSigContractAddress = multiSigContract.address;
+    it("deploy VerifyTool",async function () {
+        VerifyToolClient = await ethers.getContractFactory("VerifyTool");
+        verifyToolClient = await VerifyToolClient.deploy();
+        verifyToolContract = await verifyToolClient.deployed()
+        verifyToolContractAddress = verifyToolContract.address;
     });
+
 
 
     it("deploy LightNode",async function () {
         const LightClient = await ethers.getContractFactory("LightNode");
-        lightClient = await LightClient.deploy(multiSigContractAddress);
+        lightClient = await LightClient.deploy();
         lightNodeContract = await lightClient.deployed()
         lightNodeContractAddress = lightNodeContract.address;
 
-        await multiSigClient.transferOwnership(lightNodeContractAddress);
     });
 
     it('initialize ', async function () {
@@ -83,10 +82,8 @@ describe("LightNode start test", function () {
 
         let _epochSize = 1000;
 
-        await lightClient.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize);
+        await lightClient.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize,verifyToolContractAddress);
     });
-
-
 
 
 
@@ -94,9 +91,6 @@ describe("LightNode start test", function () {
 
         await lightClient.updateBlockHeader(proofs.header123,proofs.aggpk123);
 
-        let wmAddress = await lightClient.getWM()
-
-        console.log(wmAddress);
 
         console.log(await lightClient.getValiditors());
 
@@ -125,23 +119,14 @@ describe("LightNode start test", function () {
     let blsCodeDelete;
     let bcDelete;
 
-    it("deploy LightNode",async function () {
-        MultiSigClient = await ethers.getContractFactory("WeightedMultiSig");
-        multiSigClient = await MultiSigClient.deploy();
-        multiSigContract = await multiSigClient.deployed()
-        multiSigContractAddress = multiSigContract.address;
-    });
 
     it('delete deploy', async function () {
 
         LightClientDelete = await ethers.getContractFactory("LightNode");
-        lightClientDelete = await LightClientDelete.deploy(multiSigContractAddress);
+        lightClientDelete = await LightClientDelete.deploy();
         lightNodeContractDelete = await lightClientDelete.deployed()
         lightNodeContractDeleteAddress = lightNodeContractDelete.address;
         console.log(lightNodeContractDeleteAddress);
-
-        await multiSigClient.transferOwnership(lightNodeContractDeleteAddress);
-
 
         blsCodeDelete = await ethers.getContractFactory("BlsCode");
         bcDelete = await blsCodeDelete.deploy();
@@ -190,11 +175,7 @@ describe("LightNode start test", function () {
 
         let _epochSize = 1000;
 
-        await lightClientDelete.initialize(_threshold, addresss, g1ListDelete, _weights, _epoch, _epochSize);
-
-        let wmAddressDelete = await lightClientDelete.getWM()
-
-        console.log("newAddress:" + wmAddressDelete);
+        await lightClientDelete.initialize(_threshold, addresss, g1ListDelete, _weights, _epoch, _epochSize,verifyToolContractAddress);
 
 
         await lightClientDelete.updateBlockHeader(proofs.header189,proofs.aggpk189);
@@ -205,22 +186,14 @@ describe("LightNode start test", function () {
 
     });
 
-    it("deploy LightNode",async function () {
-        MultiSigClient = await ethers.getContractFactory("WeightedMultiSig");
-        multiSigClient = await MultiSigClient.deploy();
-        multiSigContract = await multiSigClient.deployed()
-        multiSigContractAddress = multiSigContract.address;
-    });
 
     it('verifyProofData deploy', async function () {
 
         LightClientDelete = await ethers.getContractFactory("LightNode");
-        lightClientDelete = await LightClientDelete.deploy(multiSigContractAddress);
+        lightClientDelete = await LightClientDelete.deploy();
         lightNodeContractDelete = await lightClientDelete.deployed()
         lightNodeContractDeleteAddress = lightNodeContractDelete.address;
         console.log(lightNodeContractDeleteAddress);
-
-        await multiSigClient.transferOwnership(lightNodeContractDeleteAddress);
 
         blsCodeDelete = await ethers.getContractFactory("BlsCode");
         bcDelete = await blsCodeDelete.deploy();
@@ -265,9 +238,7 @@ describe("LightNode start test", function () {
 
         let _epochSize = 1000;
 
-        await lightClientDelete.initialize(_threshold, addresss, g1ListDelete, _weights, _epoch, _epochSize);
-
-
+        await lightClientDelete.initialize(_threshold, addresss, g1ListDelete, _weights, _epoch, _epochSize,verifyToolContractAddress);
 
         console.log(await lightClientDelete.callStatic.verifyProofData(proofs.provedata202351));
     });

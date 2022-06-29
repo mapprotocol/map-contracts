@@ -42,6 +42,11 @@
         "internalType": "uint256",
         "name": "epochSize",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "verifyTool",
+        "type": "address"
       }
     ],
     "name": "initialize",
@@ -347,26 +352,9 @@
         "type": "string"
       },
       {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "addr",
-            "type": "address"
-          },
-          {
-            "internalType": "bytes[]",
-            "name": "topics",
-            "type": "bytes[]"
-          },
-          {
-            "internalType": "bytes",
-            "name": "data",
-            "type": "bytes"
-          }
-        ],
-        "internalType": "struct ILightNodePoint.txLog[]",
-        "name": "logs",
-        "type": "tuple[]"
+        "internalType": "bytes",
+        "name": "logsHash",
+        "type": "bytes"
       }
     ],
     "stateMutability": "nonpayable",
