@@ -11,7 +11,7 @@ import "./interface/IWeightedMultiSig.sol";
 import "./bls/BlsCode.sol";
 import "./lib/MPT.sol";
 
-contract LightNode is UUPSUpgradeable,Initializable, ILightNode {
+contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
@@ -62,25 +62,26 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode {
     external
     view
     override
-    returns (bool success, string memory message) {
-        (success, message) =getVerifyTrieProof(_receiptProof);
+    returns (bool success, string memory message, txLog[] memory logs) {
+        (success, message) = getVerifyTrieProof(_receiptProof);
+        logs = _receiptProof.receipt.logs;
         if (!success) {
             message = "receipt mismatch";
-            return (success, message);
+            return (success, message, logs);
         }
         bytes32 hash;
         bytes memory headerRlp = _encodeHeader(_receiptProof.header);
         (success, hash) = _verifyHeader(headerRlp);
         if (!success) {
             message = "verifyHeader error";
-            return (success, message);
+            return (success, message, logs);
         }
         istanbulExtra memory ist = _decodeExtraData(_receiptProof.header.extraData);
         success = checkSig(_receiptProof.header, ist, _receiptProof.aggPk);
         if (!success) {
             message = "bls error";
         }
-        return (success, message);
+        return (success, message, logs);
     }
 
     function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk)
@@ -117,7 +118,6 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode {
         uint256 epoch = getEpochNumber(bh.number) + 1;
         weightedMultisig.upateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
-
 
 
     function _decodeHeader(bytes memory rlpBytes)
@@ -353,7 +353,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode {
     pure
     returns (bytes memory){
         bytes memory result;
-        if (num < 256){
+        if (num < 256) {
             result = abi.encodePacked(uint8(num));
         } else if (num < 65536) {
             result = abi.encodePacked(uint16(num));

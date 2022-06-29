@@ -345,6 +345,28 @@
         "internalType": "string",
         "name": "message",
         "type": "string"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "addr",
+            "type": "address"
+          },
+          {
+            "internalType": "bytes[]",
+            "name": "topics",
+            "type": "bytes[]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct ILightNodePoint.txLog[]",
+        "name": "logs",
+        "type": "tuple[]"
       }
     ],
     "stateMutability": "nonpayable",

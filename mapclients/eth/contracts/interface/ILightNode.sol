@@ -8,7 +8,7 @@ interface ILightNode is ILightNodePoint{
 
     //Verify the validity of the transaction according to the header, receipt, and aggPk
     //The interface will be updated later to return logs
-    function verifyProofData(receiptProof memory _receiptProof) external returns (bool success, string memory message);
+    function verifyProofData(receiptProof memory _receiptProof) external returns (bool success, string memory message, txLog[] memory logs);
 
     //Validate headers and update validation members
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external;

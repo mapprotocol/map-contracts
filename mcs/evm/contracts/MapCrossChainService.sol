@@ -36,10 +36,17 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
 
     mapping(address => bool) public authToken;
 
-    event mapTransferOut(address indexed token, address indexed from, bytes indexed to,
-        bytes32 orderId, uint amount, uint fromChain, uint toChain);
-    event mapTransferIn(address indexed token, address indexed from, bytes indexed to,
-        bytes32 orderId, uint amount, uint fromChain, uint toChain);
+
+    event mapTransferOut(address indexed token, address indexed from, bytes32 indexed orderId,
+        uint fromChain, uint toChain,bytes to, uint amount);
+    event mapTransferIn(address indexed token, address indexed from, bytes32 indexed orderId,
+        uint fromChain, uint toChain,bytes to, uint amount);
+
+    event mapTransferOutData(bytes indexed toContract, address indexed from, bytes32 indexed orderId,
+        uint fromChain, uint toChain, bytes data);
+    event mapTransferInData(bytes indexed toContract, address indexed from, bytes32 indexed orderId,
+        uint fromChain, uint toChain, bytes data);
+
     event mapTokenRegister(bytes32 tokenID, address token);
     event mapDepositOut(address indexed token, address indexed from, bytes indexed to,
         bytes32 orderId, uint amount);
