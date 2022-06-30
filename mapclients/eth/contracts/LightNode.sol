@@ -14,17 +14,12 @@ import "./interface/IVerifyTool.sol";
 contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
 
     uint256 public maxValidators = 20;
-
     uint256 public epochSize = 1000;
-
     uint256 public headerHeight = 0;
-
     address[] public validatorAddresss;
-
-    validator[20] public validators;
+    validator[maxValidators] public validators;
 
     IVerifyTool public verifyTool;
-
     BlsCode blsCode = new BlsCode();
 
     struct validator {
