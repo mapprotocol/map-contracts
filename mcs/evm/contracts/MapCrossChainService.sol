@@ -67,13 +67,13 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     bytes32 mapTransferOutTopic = keccak256(bytes('mapTransferOut(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
     //    bytes mapTransferInTopic = keccak256(bytes('mapTransferIn(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
 
-    function initialize(address _wToken, address _mapToken, address lightNode) public initializer {
+    function initialize(address _wToken, address _mapToken, address _lightNode) public initializer {
         uint _chainId;
         assembly {_chainId := chainid()}
         selfChainId = _chainId;
         wToken = _wToken;
         mapToken = IERC20(_mapToken);
-        lightNode = ILightNode(lightNode);
+        lightNode = ILightNode(_lightNode);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
     }

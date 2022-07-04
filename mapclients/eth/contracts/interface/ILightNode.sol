@@ -17,11 +17,17 @@ interface ILightNode is ILightNodePoint{
 
     //Initialize the first validator
     function initialize(
+        //The total weight of votes
         uint256 _threshold,
+        //committee members
         address[] memory validaters,
+        //G1 public key corresponding to the committee member
         G1[] memory _pairKeys,
+        //Weights corresponding to committee members
         uint256[] memory _weights,
+        //number of committees
         uint epoch,
+        //The number of blocks corresponding to each committee
         uint epochSize,
         address verifyTool)
     external;
