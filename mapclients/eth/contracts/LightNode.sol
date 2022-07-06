@@ -66,11 +66,12 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         return maxValidators;
     }
 
-    function verifyProofData(receiptProof memory _receiptProof)
+    function verifyProofData(bytes memory _receiptProof)
     external
     view
     override
     returns (bool success, string memory message,bytes memory logsHash) {
+        receiptProof memory _receiptProof = abi.decode(_receiptProofBytes,(receiptProof));
         logsHash = verifyTool.encodeTxLog(_receiptProof.receipt.logs);
         (success, message) =verifyTool.getVerifyTrieProof(_receiptProof);
         if (!success) {

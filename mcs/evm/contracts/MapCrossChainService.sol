@@ -39,15 +39,16 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     mapping(bytes32 => bool) orderList;
 
     uint public chainGasFees;
-
     mapping(address => bool) public authToken;
+
+    //Can storage tokens be cross-chain?
+    mapping(address => mapping(uint => bool)) canBridgeToken;
 
     struct txLog {
         address addr;
         bytes[] topics;
         bytes data;
     }
-
 
     event mapTransferOut(address indexed token, address indexed from, bytes32 indexed orderId,
         uint fromChain, uint toChain, bytes to, uint amount, bytes toChainToken);
@@ -127,7 +128,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
             txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
             if (topic == mapTransferOutTopic) {
-//                address token = abi.decode(log.topics[1], (address));
+                //                address token = abi.decode(log.topics[1], (address));
                 address from = abi.decode(log.topics[2], (address));
                 bytes32 orderId = abi.decode(log.topics[3], (bytes32));
                 (uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
