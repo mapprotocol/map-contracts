@@ -1175,7 +1175,7 @@ async fn test_remove_validator() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn test_verify_proof_after_add_remove_validators() -> anyhow::Result<()> {
+async fn test_verify_proof_after_add_remove_validators_001() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
     let validators = r#"[
@@ -1215,21 +1215,21 @@ async fn test_verify_proof_after_add_remove_validators() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn test_verify_proof_after_validators_changed() -> anyhow::Result<()> {
+async fn test_verify_proof_after_add_remove_validators_002() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
-    let validators = r#"{"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"}
-{"g1_pub_key":{"x":"0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58","y":"0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"},"weight":1,"address":"0x7a3a26123dbd9cfefc1725fe7779580b987251cb"}
-{"g1_pub_key":{"x":"0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812","y":"0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"},"weight":1,"address":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"}
-{"g1_pub_key":{"x":"0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6","y":"0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"},"weight":1,"address":"0x65b3fee569bf82ff148bdded9c3793fb685f9333"}
-{"g1_pub_key":{"x":"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a","y":"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"},"weight":1,"address":"0x98efa292822eb7b3045c491e8ae4e82b3b1ac005"}
-{"g1_pub_key":{"x":"0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d","y":"0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"},"weight":1,"address":"0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"}
-"#;
-
+    let validators = r#"[
+    {"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"},
+    {"g1_pub_key":{"x":"0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58","y":"0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"},"weight":1,"address":"0x7a3a26123dbd9cfefc1725fe7779580b987251cb"},
+    {"g1_pub_key":{"x":"0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812","y":"0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"},"weight":1,"address":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"},
+    {"g1_pub_key":{"x":"0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6","y":"0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"},"weight":1,"address":"0x65b3fee569bf82ff148bdded9c3793fb685f9333"},
+    {"g1_pub_key":{"x":"0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d","y":"0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"},"weight":1,"address":"0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"}
+]"#;
     let file = fs::File::open("./tests/data/init_value.json").unwrap();
     let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
-    init_args["epoch"] = json!(203);
-    init_args["validators"] = json!(validators);
+    init_args["epoch"] = json!(450);
+    init_args["validators"] = serde_json::from_str(validators).unwrap();
+    println!("validators:{}", init_args["validators"]);
     let res = contract
         .call(&worker, "new")
         .args_json(json!(init_args))?
@@ -1239,61 +1239,17 @@ async fn test_verify_proof_after_validators_changed() -> anyhow::Result<()> {
 
     assert!(res.is_success(), "init contract failed!");
 
-    let file = fs::File::open("./tests/data/headers.json").unwrap();
-    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
+    let file = fs::File::open("./tests/data/proof.json").unwrap();
+    let proofs: serde_json::Value = serde_json::from_reader(file).unwrap();
 
-    let header = headers["124000"].clone();
     let res = contract
-        .call(&worker, "update_block_header")
-        .args_json(json!(header))?
+        .call(&worker, "verify_proof_data")
+        .args_json(json!({"receipt_proof": proofs["449308"]}))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
     println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "update_block_header 124000 failed");
-
-    let recordOpt: Option<EpochRecord> = contract
-        .call(&worker, "get_record_for_epoch")
-        .args_json(json!({
-            "epoch": 125
-        }))?
-        .view()
-        .await?
-        .json()?;
-
-    assert!(recordOpt.is_some(), "epoch 125 should have record");
-    let record = recordOpt.unwrap();
-    let validators = &init_args["validators"].as_array().unwrap();
-    assert_eq!(4, record.threshold, "threshold check failed");
-    assert_eq!(125, record.epoch, "epoch check failed");
-    assert_eq!(validators.len() + 1, record.validators.len(), "one validator should be added");
-
-
-    let header = headers["125000"].clone();
-    let res = contract
-        .call(&worker, "update_block_header")
-        .args_json(json!(header))?
-        .gas(300_000_000_000_000)
-        .transact()
-        .await?;
-    println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "update_block_header 125000 failed");
-
-    let recordOpt: Option<EpochRecord> = contract
-        .call(&worker, "get_record_for_epoch")
-        .args_json(json!({
-            "epoch": 126
-        }))?
-        .view()
-        .await?
-        .json()?;
-
-    assert!(recordOpt.is_some(), "epoch 126 should have record");
-    let record = recordOpt.unwrap();
-    let validators = &init_args["validators"].as_array().unwrap();
-    assert_eq!(4, record.threshold, "threshold check failed");
-    assert_eq!(126, record.epoch, "epoch check failed");
-    assert_eq!(validators.len() + 2, record.validators.len(), "one validator should be added");
+    assert!(res.is_success(), "verify_proof_data on block 449308 failed");
 
     Ok(())
 }
@@ -1321,7 +1277,7 @@ async fn prepare_data() -> anyhow::Result<()> {
 }
 
 async fn deploy_contract() -> anyhow::Result<(Worker<Sandbox>, Contract)> {
-    // std::env::set_var(NEAR_SANDBOX_BIN_PATH, "/Users/rong/Projects/near/nearcore/target/debug/neard-sandbox");
+    std::env::set_var(NEAR_SANDBOX_BIN_PATH, "/Users/rong/Projects/near/nearcore/target/debug/neard-sandbox");
     std::env::var(NEAR_SANDBOX_BIN_PATH).expect("environment variable NEAR_SANDBOX_BIN_PATH should be set");
 
     let worker = workspaces::sandbox().await?;

@@ -13,7 +13,7 @@ use near_sdk::{env, log, near_bindgen, PanicOnDefault};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::env::keccak256;
 use near_sdk::serde::{Serialize, Deserialize};
-use crypto::{G1, G2, REGISTER_EXPECTED_ERR};
+pub use crypto::{G1, G2, REGISTER_EXPECTED_ERR};
 use crate::types::{istanbul::IstanbulExtra, istanbul::get_epoch_number, header::Header};
 use crate::types::header::Address;
 use num::cast::ToPrimitive;
