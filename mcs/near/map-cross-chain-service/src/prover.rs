@@ -1,15 +1,13 @@
 use std::convert::From;
-
-use eth_types::*;
 use ethabi::{Event, EventParam, Hash, Log, ParamType, RawLog, Token};
 use ethabi::param_type::Writer;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, ext_contract};
-use near_sdk::serde::{Serialize, Deserialize};
+use near_sdk::ext_contract;
 use tiny_keccak::Keccak;
-use map_light_client::{proof::ReceiptProof, header::Header};
-use map_light_client::proof::LogEntry;
-use map_light_client::header::Hash as MapHash;
+use map_light_client::{
+    proof::ReceiptProof,
+    proof::LogEntry,
+    header::Hash as MapHash
+};
 
 pub type Address = [u8; 20];
 
@@ -24,6 +22,7 @@ pub fn validate_eth_address(address: String) -> Address {
 #[ext_contract(ext_map_light_client)]
 pub trait MapLightClient {
     fn verify_proof_data(&self, receipt_proof: ReceiptProof);
+    fn test(&self) -> bool;
 }
 
 pub type EthEventParams = Vec<(String, ParamType, bool)>;
