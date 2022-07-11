@@ -18,13 +18,19 @@ import "./interface/IFeeCenter.sol";
 import "./interface/IVault.sol";
 import "./utils/TransferHelper.sol";
 import "./interface/IMCSRelay.sol";
+import "./utils/RLPReader.sol";
+import "./interface/ILightNode.sol";
+
 
 contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Pausable, IMCSRelay {
     using SafeMath for uint;
+    using RLPReader for bytes;
+    using RLPReader for RLPReader.RLPItem;
 
     uint public nonce;
 
     IERC20 public mapToken;
+    ILightNode public lightNode;
     address public wToken;          // native wrapped token
 
     uint public selfChainId;
@@ -44,6 +50,12 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     mapping(uint => mapping(address => uint)) public vaultBalance;
 
+    struct txLog {
+        address addr;
+        bytes[] topics;
+        bytes data;
+    }
+
     IFeeCenter public feeCenter;
 
     event mapTransferOut(address indexed token, address indexed from, bytes32 indexed orderId,
@@ -55,12 +67,16 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     event mapDepositIn(address indexed token, address indexed from, address indexed to,
         bytes32 orderId, uint amount, uint fromChain);
 
-    function initialize(address _wToken, address _mapToken) public initializer {
+    bytes32 mapTransferOutTopic = keccak256(bytes('mapTransferOut(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
+    //    bytes mapTransferInTopic = keccak256(bytes('mapTransferIn(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
+
+    function initialize(address _wToken, address _mapToken,address _lightNode) public initializer {
         uint _chainId;
         assembly {_chainId := chainid()}
         selfChainId = _chainId;
         wToken = _wToken;
         mapToken = IERC20(_mapToken);
+        lightNode = ILightNode(_lightNode);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
     }
@@ -156,8 +172,25 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         return feeCenter.getTokenFee(toChainId, token, amount);
     }
 
-    function transferIn(uint fromChain, bytes memory receiptProof) external override{
+    function transferIn(uint , bytes memory receiptProof) external override{
+        (bool sucess,string memory message,bytes memory logArray) = lightNode.verifyProofData(receiptProof);
+        require(sucess, message);
+        txLog[] memory logs = decodeTxLog(logArray);
 
+        for (uint i = 0; i < logs.length; i++) {
+            txLog memory log = logs[i];
+            bytes32 topic = abi.decode(log.topics[0], (bytes32));
+            if (topic == mapTransferOutTopic) {
+                //                address token = abi.decode(log.topics[1], (address));
+                address from = abi.decode(log.topics[2], (address));
+                bytes32 orderId = abi.decode(log.topics[3], (bytes32));
+                (uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
+                = abi.decode(log.data, (uint, uint, bytes, uint, bytes));
+                address token = _bytesToAddress(toChainToken);
+                address payable toAddress = payable(_bytesToAddress(to));
+                _transferIn(token,from, toAddress, amount, orderId, fromChain, toChain);
+            }
+        }
     }
 
     function transferOut(address toContract, uint toChain, bytes memory data) external override{
@@ -192,8 +225,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         emit mapTransferOut(address(0),  msg.sender,orderId, selfChainId, toChainId, to, outAmount, _addressToBytes(address(0)));
     }
 
-    function transferIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) nonReentrant whenNotPaused {
+    function _transferIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
+    internal checkOrder(orderId) nonReentrant whenNotPaused {
         uint fee = getChainFee(toChain, token, amount);
         uint outAmount = amount.sub(fee);
         if (toChain == selfChainId) {
@@ -248,21 +281,29 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
     function _bytesToAddress(bytes memory bys) internal pure returns (address addr){
-        assembly {
-            addr := mload(add(bys, 20))
-        }
+        return abi.decode(bys,(address));
     }
 
     function _addressToBytes(address a) internal pure returns (bytes memory b) {
-        assembly {
-            let m := mload(0x40)
-            a := and(a, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-            mstore(
-            add(m, 20),
-            xor(0x140000000000000000000000000000000000000000, a)
-            )
-            mstore(0x40, add(m, 52))
-            b := m
+        return abi.encodePacked(a);
+    }
+
+    function decodeTxLog(bytes memory logsHash)
+    internal
+    pure
+    returns (txLog[] memory _txLogs){
+        RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
+        _txLogs = new txLog[](ls.length);
+        for (uint256 i = 0; i < ls.length; i++) {
+            bytes[] memory topic = new bytes[](ls[i].toList()[1].toList().length);
+            for (uint256 j = 0; j < ls[i].toList()[1].toList().length; j++) {
+                topic[j] = ls[i].toList()[1].toList()[j].toBytes();
+            }
+            _txLogs[i] = txLog({
+            addr : ls[i].toList()[0].toAddress(),
+            topics : topic,
+            data : ls[i].toList()[2].toBytes()
+            });
         }
     }
 

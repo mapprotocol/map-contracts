@@ -216,22 +216,11 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     }
 
     function _bytesToAddress(bytes memory bys) internal pure returns (address addr){
-        assembly {
-            addr := mload(add(bys, 20))
-        }
+        return abi.decode(bys,(address));
     }
 
     function _addressToBytes(address a) internal pure returns (bytes memory b) {
-        assembly {
-            let m := mload(0x40)
-            a := and(a, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-            mstore(
-            add(m, 20),
-            xor(0x140000000000000000000000000000000000000000, a)
-            )
-            mstore(0x40, add(m, 52))
-            b := m
-        }
+        return abi.encodePacked(a);
     }
 
     function decodeTxLog(bytes memory logsHash)
