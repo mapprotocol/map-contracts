@@ -129,7 +129,7 @@ contract LightNode is ILightNode {
     //     (success, logs) = _verifyProofData(proofBlockHeight, borshData);
     // }
 
-    //0x6b762347da2181c6a77c7bfd09bcce16127298b8a9f215b070cc4acbedfb4c33
+    
     function updateBlockHeader(bytes memory _blackHeader) external override {
         require(initialized == 2, "Contract is not initialized");
         Borsh.Data memory borsh = Borsh.from(_blackHeader);
