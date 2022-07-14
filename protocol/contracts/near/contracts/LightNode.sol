@@ -28,9 +28,6 @@ contract LightNode is ILightNode {
 
     mapping(uint256 => bytes32) public blockHashes_;
     mapping(uint256 => bytes32) public blockMerkleRoots_;
-    // mapping(bytes32 => bool) public usedEvents_;
-
-    NearDecoder.Signature[MAX_BLOCK_PRODUCERS] public untrustedSignatures;
 
     bytes public nearProofProducerAccount_;
 
@@ -41,16 +38,8 @@ contract LightNode is ILightNode {
 
     constructor() {}
 
-    function initialize(
-        // address admin_,
-        // uint256 pausedFlags_,
-        bytes memory nearProofProducerAccount
-    ) public {
+    function initialize(bytes memory nearProofProducerAccount) public {
         require(initialized == 0, "already initialized");
-
-        // admin = admin_;
-
-        // paused = pausedFlags_;
 
         initialized = 1;
 
@@ -113,23 +102,9 @@ contract LightNode is ILightNode {
         );
         Borsh.Data memory borshData = Borsh.from(proofs);
 
-        // uint256 proofBlockHeight = uint256(borshData.decodeU256());
-
         (success, logs) = _verifyProofData(proofBlockHeight, borshData);
     }
 
-    // function verifyProofData(
-    //     bytes memory _receiptProof,
-    //     uint256 proofBlockHeight
-    // ) external returns (bool success, bytes memory logs) {
-    //     Borsh.Data memory borshData = Borsh.from(_receiptProof);
-
-    //     //  uint256 proofBlockHeight = uint256(borshData.decodeU256());
-
-    //     (success, logs) = _verifyProofData(proofBlockHeight, borshData);
-    // }
-
-    
     function updateBlockHeader(bytes memory _blackHeader) external override {
         require(initialized == 2, "Contract is not initialized");
         Borsh.Data memory borsh = Borsh.from(_blackHeader);
@@ -217,11 +192,8 @@ contract LightNode is ILightNode {
                         ),
                         "Invalid Signature"
                     );
-
-                    //  untrustedSignatures[i] = approval.signature;
                 }
             }
-            // nextHash = nearBlock.next_hash;
             curHeight = nearBlock.inner_lite.height;
             blockHashes_[curHeight] = nearBlock.hash;
             blockMerkleRoots_[curHeight] = nearBlock
@@ -271,7 +243,7 @@ contract LightNode is ILightNode {
     function _verifyProofData(
         uint256 proofBlockHeight,
         Borsh.Data memory borshData
-    ) public  view returns (bool success, bytes memory logs) {
+    ) public view returns (bool success, bytes memory logs) {
         ProofDecoder.ExecutionStatus memory result = parseAndConsumeProof(
             borshData,
             proofBlockHeight
@@ -285,10 +257,7 @@ contract LightNode is ILightNode {
     function parseAndConsumeProof(
         Borsh.Data memory borshData,
         uint256 proofBlockHeight
-    ) internal         view returns (ProofDecoder.ExecutionStatus memory result) {
-        // Unpack the proof and extract the execution outcome.
-        // Borsh.Data memory borshData = Borsh.from(proofData);
-
+    ) internal view returns (ProofDecoder.ExecutionStatus memory result) {
         ProofDecoder.FullOutcomeProof memory fullOutcomeProof = borshData
             .decodeFullOutcomeProof();
         borshData.done();
@@ -297,15 +266,6 @@ contract LightNode is ILightNode {
             proveOutcome(fullOutcomeProof, proofBlockHeight),
             "Proof should be valid"
         );
-
-        // bytes32 receiptId = fullOutcomeProof
-        //     .outcome_proof
-        //     .outcome_with_id
-        //     .outcome
-        //     .receipt_ids[0];
-
-        // require(!usedEvents_[receiptId], "The burn event cannot be reused");
-        // usedEvents_[receiptId] = true;
 
         require(
             keccak256(
@@ -325,11 +285,6 @@ contract LightNode is ILightNode {
         ProofDecoder.FullOutcomeProof memory fullOutcomeProof,
         uint256 blockHeight
     ) internal view returns (bool) {
-        // Borsh.Data memory borshData = Borsh.from(proofData);
-        // ProofDecoder.FullOutcomeProof memory fullOutcomeProof = borshData
-        //     .decodeFullOutcomeProof();
-        // borshData.done();
-
         bytes32 hash = _computeRoot(
             fullOutcomeProof.outcome_proof.outcome_with_id.hash,
             fullOutcomeProof.outcome_proof.proof

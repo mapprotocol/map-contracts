@@ -2,8 +2,6 @@ require("@nomicfoundation/hardhat-toolbox");
 
 const { MNEMONIC } = process.env;
 
-console.log(MNEMONIC);
-
 module.exports = {
   solidity: "0.8.4",
   networks: {
@@ -15,7 +13,7 @@ module.exports = {
     map_test: {
       chainId: 212,
       url: process.env.ROPSTEN_URL || "http://18.142.54.137:7445",
-      accounts: { mnemonic: "mnemonic"},
+      accounts: { mnemonic: ""},
     },
   },
   gasReporter: {

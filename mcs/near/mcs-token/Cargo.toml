@@ -6,21 +6,13 @@ edition = "2018"
 publish = false
 
 [lib]
-crate-type = ["cdylib", "rlib"]
-
-[profile.release]
-codegen-units = 1
-# Tell `rustc` to optimize for small code size.
-opt-level = "z"
-lto = true
-debug = false
-panic = "abort"
-overflow-checks = true
+crate-type = ["cdylib"]
 
 [dependencies]
-near-sdk = { git = "https://github.com/near/near-sdk-rs", rev = "613adcab6322e4f830efb4d5bde2a810ae642158" }
-near-contract-standards = { git = "https://github.com/near/near-sdk-rs", rev = "613adcab6322e4f830efb4d5bde2a810ae642158" }
-admin-controlled = { git = "https://github.com/near/rainbow-bridge", rev = "9ffb08e6613788096f26636f695b4c7e5fa5b261" }
+near-sdk = "4.0.0"
+#near-sdk = { git = "https://github.com/near/near-sdk-rs", rev = "613adcab6322e4f830efb4d5bde2a810ae642158" }
+near-contract-standards = "4.0.0"
+admin-controlled = { path="../admin-controlled" }
 
 [features]
 default = ["migrate_icon"]

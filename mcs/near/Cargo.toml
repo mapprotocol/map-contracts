@@ -6,18 +6,18 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dev-dependencies]
 anyhow = "1.0"
-near-sdk = "4.0.0"
 #near-sdk = { git = "https://github.com/near/near-sdk-rs", rev = "613adcab6322e4f830efb4d5bde2a810ae642158" }
-#near-units = "*"
+near-sdk = "4.0.0"
+near-units = "0.2.0"
 serde_json = "1.0"
-tokio = { version = "1.18.2", features = ["full"] }
+tokio = { version = "1.14", features = ["full"] }
 workspaces = { git = "https://github.com/near/workspaces-rs", rev = "810c21032ef77b845ff507383e029d7d38586a2f" }
-map-light-client = { path = "contracts"}
+map-light-client = { path = "../../mapclients/near/contracts"}
+mcs = { path = "./map-cross-chain-service"}
 
 [profile.release]
 codegen-units = 1
-# Tell `rustc` to optimize for small code size.
-opt-level = "z"
+opt-level = "s"
 lto = true
 debug = false
 panic = "abort"
@@ -25,5 +25,8 @@ overflow-checks = true
 
 [workspace]
 members = [
-    "contracts",
+    "map-cross-chain-service",
+    "mcs-token",
+    "admin-controlled",
+    "eth-types"
 ]

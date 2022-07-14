@@ -1,17 +1,18 @@
 [package]
-name = "contracts"
+name = "mcs"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
-near-sdk = { git = "https://github.com/near/near-sdk-rs", rev = "613adcab6322e4f830efb4d5bde2a810ae642158" }
-eth-types =  { git = "https://github.com/near/rainbow-bridge", rev = "9ffb08e6613788096f26636f695b4c7e5fa5b261" }
-near-contract-standards = { git = "https://github.com/near/near-sdk-rs", rev = "613adcab6322e4f830efb4d5bde2a810ae642158" }
-admin-controlled = { git = "https://github.com/near/rainbow-bridge", rev = "9ffb08e6613788096f26636f695b4c7e5fa5b261" }
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
+near-sdk = "4.0.0"
+eth-types =  { path="../eth-types" }
+near-contract-standards = "4.0.0"
+admin-controlled = { path="../admin-controlled" }
 uint = { version = "0.8.3", default-features = false }
 rlp = "0.4.2"
 hex = "0.4.2"
@@ -20,3 +21,4 @@ map-light-client = {path="../../../mapclients/near/contracts"}
 tiny-keccak = "1.4.0"
 num-bigint = { version = "0.4", default-features = false }
 num = { version = "0.3", default-features = false }
+serde_json = "*"
