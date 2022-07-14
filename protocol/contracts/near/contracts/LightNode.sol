@@ -375,7 +375,6 @@ contract LightNode is ILightNode {
 
     function getEcopKeys(uint256 id) public view returns (bytes32[100] memory) {
         bytes32[100] memory keys = epochs[id].keys;
-
         return keys;
     }
 }
