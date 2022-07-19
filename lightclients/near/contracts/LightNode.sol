@@ -2,55 +2,74 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interface/ILightNode.sol";
 import "./lib/Borsh.sol";
 import "./lib/NearDecoder.sol";
 import "./lib/ProofDecoder.sol";
 import "./lib/Ed25519Verify.sol";
 
-contract LightNode is ILightNode {
+contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     using Borsh for Borsh.Data;
     using NearDecoder for Borsh.Data;
     using ProofDecoder for Borsh.Data;
-    address public owner;
-    uint256 public initialized;
+                                           
+    bytes32 private constant zero_byte32 = 0x0000000000000000000000000000000000000000000000000000000000000000;
+
+    bool public setFirstBlock;
     uint256 constant MAX_BLOCK_PRODUCERS = 100;
+
     struct Epoch {
-        bytes32 epochId;
+        // bytes32 epochId;
+        bool init;
         uint256 numBPs;
         bytes32[MAX_BLOCK_PRODUCERS] keys;
         bytes32[MAX_BLOCK_PRODUCERS / 2] packedStakes;
         uint256 stakeThreshold;
     }
-    Epoch[3] public epochs;
-    uint256 public curEpoch;
+
+    mapping(bytes32 => Epoch) public epochs;
+
+    bytes32 public curEpoch;
     uint256 public curHeight;
-
-    mapping(uint256 => bytes32) public blockHashes_;
-    mapping(uint256 => bytes32) public blockMerkleRoots_;
-
     bytes public nearProofProducerAccount_;
 
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == _getAdmin(), "lightnode :: only admin");
         _;
     }
 
+    event SetNearProofProducerAccount(bytes nearProofProducerAccount);
+
+    event UpdateBlockHeader(bytes32 indexed epochId, uint256 blockHeight);
+
+    //  event SetBlockProducers(bytes32[100] keys);
+
     constructor() {}
 
-    function initialize(bytes memory nearProofProducerAccount) public {
-        require(initialized == 0, "already initialized");
-
-        initialized = 1;
-
-        owner = msg.sender;
+    function initialize(bytes memory nearProofProducerAccount)
+        public
+        initializer
+    {
+        _changeAdmin(msg.sender);
 
         nearProofProducerAccount_ = nearProofProducerAccount;
+
+        emit SetNearProofProducerAccount(nearProofProducerAccount);
+    }
+
+    function setNearProofProducerAccount_(bytes memory nearProofProducerAccount)
+        public
+        onlyOwner
+    {
+        nearProofProducerAccount_ = nearProofProducerAccount;
+        emit SetNearProofProducerAccount(nearProofProducerAccount);
     }
 
     function initWithValidators(bytes memory data) public onlyOwner {
         require(
-            initialized == 1 && epochs[0].numBPs == 0,
+            !setFirstBlock && epochs[zero_byte32].numBPs == 0,
             "Wrong initialization stage"
         );
 
@@ -59,16 +78,18 @@ contract LightNode is ILightNode {
             .decodeBlockProducers();
         borsh.done();
 
-        setBlockProducers(initialValidators, epochs[0]);
+        Epoch storage epoch = epochs[zero_byte32];
+
+        setBlockProducers(initialValidators, epoch);
     }
 
     // The second part of the initialization -- setting the current head.
     function initWithBlock(bytes memory data) public onlyOwner {
         require(
-            initialized == 1 && epochs[0].numBPs != 0,
+            !setFirstBlock && epochs[zero_byte32].numBPs != 0,
             "Wrong initialization stage"
         );
-        initialized = 2;
+        setFirstBlock = true;
 
         Borsh.Data memory borsh = Borsh.from(data);
         NearDecoder.LightClientBlock memory nearBlock = borsh
@@ -81,13 +102,28 @@ contract LightNode is ILightNode {
         );
 
         curHeight = nearBlock.inner_lite.height;
-        epochs[0].epochId = nearBlock.inner_lite.epoch_id;
-        epochs[1].epochId = nearBlock.inner_lite.next_epoch_id;
-        blockHashes_[nearBlock.inner_lite.height] = nearBlock.hash;
-        blockMerkleRoots_[nearBlock.inner_lite.height] = nearBlock
-            .inner_lite
-            .block_merkle_root;
-        setBlockProducers(nearBlock.next_bps.blockProducers, epochs[1]);
+
+        Epoch storage epoch = epochs[nearBlock.inner_lite.epoch_id];
+
+        epoch.numBPs = epochs[zero_byte32].numBPs;
+
+        epoch.keys = epochs[zero_byte32].keys;
+
+        epoch.packedStakes = epochs[zero_byte32].packedStakes;
+
+        epoch.stakeThreshold = epochs[zero_byte32].stakeThreshold;
+
+        epoch.init = true;
+
+        //   delete epochs[zero_byte32];
+
+        curEpoch = nearBlock.inner_lite.epoch_id;
+
+        Epoch storage next = epochs[nearBlock.inner_lite.next_epoch_id];
+
+        next.init = true;
+
+        setBlockProducers(nearBlock.next_bps.blockProducers, next);
     }
 
     function verifyProofData(bytes memory _receiptProof)
@@ -96,18 +132,33 @@ contract LightNode is ILightNode {
         override
         returns (bool success, bytes memory logs)
     {
-        (uint256 proofBlockHeight, bytes memory proofs) = abi.decode(
+        (bytes memory _blackHeader, bytes memory proofs) = abi.decode(
             _receiptProof,
-            (uint256, bytes)
+            (bytes, bytes)
         );
-        Borsh.Data memory borshData = Borsh.from(proofs);
 
-        (success, logs) = _verifyProofData(proofBlockHeight, borshData);
+        Borsh.Data memory borsh = Borsh.from(_blackHeader);
+        NearDecoder.LightClientBlock memory nearBlock = borsh
+            .decodeLightClientBlock();
+        borsh.done();
+
+        (bool result, string memory reason) = checkBlockHeader(nearBlock);
+
+        if (!result) {
+            success = false;
+            logs = bytes(reason);
+        } else {
+            Borsh.Data memory borshData = Borsh.from(proofs);
+            (success, logs) = _verifyProofData(
+                nearBlock.inner_lite.block_merkle_root,
+                borshData
+            );
+        }
     }
 
-    function updateBlockHeader(bytes memory _blackHeader) external override {
-        require(initialized == 2, "Contract is not initialized");
-        Borsh.Data memory borsh = Borsh.from(_blackHeader);
+    function updateBlockHeader(bytes memory _blockHeader) external override {
+        require(setFirstBlock, "Contract is not initialized");
+        Borsh.Data memory borsh = Borsh.from(_blockHeader);
         NearDecoder.LightClientBlock memory nearBlock = borsh
             .decodeLightClientBlock();
         borsh.done();
@@ -121,45 +172,11 @@ contract LightNode is ILightNode {
 
             // Check that the new block is from the same epoch as the current one, or from the next one.
             bool fromNextEpoch;
-            if (nearBlock.inner_lite.epoch_id == epochs[curEpoch].epochId) {
+            if (nearBlock.inner_lite.epoch_id == curEpoch) {
                 fromNextEpoch = false;
-            } else if (
-                nearBlock.inner_lite.epoch_id ==
-                epochs[(curEpoch + 1) % 3].epochId
-            ) {
-                fromNextEpoch = true;
             } else {
-                revert("Epoch id of the block is not valid");
+                fromNextEpoch = true;
             }
-
-            // Check that the new block is signed by more than 2/3 of the validators.
-            Epoch storage thisEpoch = epochs[
-                fromNextEpoch ? (curEpoch + 1) % 3 : curEpoch
-            ];
-            // Last block in the epoch might contain extra approvals that light client can ignore.
-            require(
-                nearBlock.approvals_after_next.length >= thisEpoch.numBPs,
-                "Approval list is too short"
-            );
-            // The sum of uint128 values cannot overflow.
-            uint256 votedFor = 0;
-            for (
-                (uint256 i, uint256 cnt) = (0, thisEpoch.numBPs);
-                i != cnt;
-                ++i
-            ) {
-                bytes32 stakes = thisEpoch.packedStakes[i >> 1];
-                if (nearBlock.approvals_after_next[i].some) {
-                    votedFor += uint128(bytes16(stakes));
-                }
-                if (++i == cnt) {
-                    break;
-                }
-                if (nearBlock.approvals_after_next[i].some) {
-                    votedFor += uint128(uint256(stakes));
-                }
-            }
-            require(votedFor > thisEpoch.stakeThreshold, "Too few approvals");
 
             // If the block is from the next epoch, make sure that next_bps is supplied and has a correct hash.
             if (fromNextEpoch) {
@@ -174,38 +191,82 @@ contract LightNode is ILightNode {
                 );
             }
 
-            for (
-                (uint256 i, uint256 cnt) = (0, thisEpoch.numBPs);
-                i < cnt;
-                i++
-            ) {
-                NearDecoder.OptionalSignature memory approval = nearBlock
-                    .approvals_after_next[i];
-                if (approval.some) {
-                    require(
-                        Ed25519Verify.checkBlockProducerSignatureInHead(
-                            thisEpoch.keys[i],
-                            approval.signature.r,
-                            approval.signature.s,
-                            nearBlock.next_hash,
-                            nearBlock.inner_lite.height
-                        ),
-                        "Invalid Signature"
-                    );
-                }
-            }
+            (bool result, string memory reason) = checkBlockHeader(nearBlock);
+
+            require(result, reason);
+
             curHeight = nearBlock.inner_lite.height;
-            blockHashes_[curHeight] = nearBlock.hash;
-            blockMerkleRoots_[curHeight] = nearBlock
-                .inner_lite
-                .block_merkle_root;
+
             if (fromNextEpoch) {
-                Epoch storage nextEpoch = epochs[(curEpoch + 2) % 3];
-                nextEpoch.epochId = nearBlock.inner_lite.next_epoch_id;
+                curEpoch = nearBlock.inner_lite.epoch_id;
+                Epoch storage nextEpoch = epochs[
+                    nearBlock.inner_lite.next_epoch_id
+                ];
+                nextEpoch.init = true;
                 setBlockProducers(nearBlock.next_bps.blockProducers, nextEpoch);
-                curEpoch = (curEpoch + 1) % 3;
+            }
+
+            emit UpdateBlockHeader(curEpoch, curHeight);
+        }
+    }
+
+    function headerHeight() external view override returns (uint256) {
+        return curHeight;
+    }
+
+    function checkBlockHeader(NearDecoder.LightClientBlock memory nearBlock)
+        internal
+        view
+        returns (bool, string memory)
+    {
+        // Check that the new block is signed by more than 2/3 of the validators.
+        Epoch storage thisEpoch = epochs[nearBlock.inner_lite.epoch_id];
+
+        if (!thisEpoch.init) {
+            return (false, "not init epoch");
+        }
+        // Last block in the epoch might contain extra approvals that light client can ignore.
+        if (nearBlock.approvals_after_next.length < thisEpoch.numBPs) {
+            return (false, "Approval list is too short");
+        }
+
+        // The sum of uint128 values cannot overflow.
+        uint256 votedFor = 0;
+        for ((uint256 i, uint256 cnt) = (0, thisEpoch.numBPs); i != cnt; ++i) {
+            bytes32 stakes = thisEpoch.packedStakes[i >> 1];
+            if (nearBlock.approvals_after_next[i].some) {
+                votedFor += uint128(bytes16(stakes));
+            }
+            if (++i == cnt) {
+                break;
+            }
+            if (nearBlock.approvals_after_next[i].some) {
+                votedFor += uint128(uint256(stakes));
             }
         }
+
+        if (votedFor <= thisEpoch.stakeThreshold) {
+            return (false, "Too few approvals");
+        }
+
+        for ((uint256 i, uint256 cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
+            NearDecoder.OptionalSignature memory approval = nearBlock
+                .approvals_after_next[i];
+            if (approval.some) {
+                bool check = Ed25519Verify.checkBlockProducerSignatureInHead(
+                    thisEpoch.keys[i],
+                    approval.signature.r,
+                    approval.signature.s,
+                    nearBlock.next_hash,
+                    nearBlock.inner_lite.height
+                );
+                if (!check) {
+                    return (false, "Invalid Signature");
+                }
+            }
+        }
+
+        return (true, "");
     }
 
     function setBlockProducers(
@@ -238,15 +299,17 @@ contract LightNode is ILightNode {
             }
             epoch.stakeThreshold = (totalStake * 2) / 3;
         }
+
+        //    emit SetBlockProducers(epoch.keys);
     }
 
     function _verifyProofData(
-        uint256 proofBlockHeight,
+        bytes32 block_merkle_root,
         Borsh.Data memory borshData
     ) public view returns (bool success, bytes memory logs) {
         ProofDecoder.ExecutionStatus memory result = parseAndConsumeProof(
             borshData,
-            proofBlockHeight
+            block_merkle_root
         );
 
         success = (!result.failed && !result.unknown);
@@ -256,14 +319,14 @@ contract LightNode is ILightNode {
 
     function parseAndConsumeProof(
         Borsh.Data memory borshData,
-        uint256 proofBlockHeight
+        bytes32 block_merkle_root
     ) internal view returns (ProofDecoder.ExecutionStatus memory result) {
         ProofDecoder.FullOutcomeProof memory fullOutcomeProof = borshData
             .decodeFullOutcomeProof();
         borshData.done();
 
         require(
-            proveOutcome(fullOutcomeProof, proofBlockHeight),
+            proveOutcome(fullOutcomeProof, block_merkle_root),
             "Proof should be valid"
         );
 
@@ -283,8 +346,8 @@ contract LightNode is ILightNode {
 
     function proveOutcome(
         ProofDecoder.FullOutcomeProof memory fullOutcomeProof,
-        uint256 blockHeight
-    ) internal view returns (bool) {
+        bytes32 block_merkle_root
+    ) internal pure returns (bool) {
         bytes32 hash = _computeRoot(
             fullOutcomeProof.outcome_proof.outcome_with_id.hash,
             fullOutcomeProof.outcome_proof.proof
@@ -299,13 +362,11 @@ contract LightNode is ILightNode {
             "NearProver: outcome merkle proof is not valid"
         );
 
-        bytes32 expectedBlockMerkleRoot = blockMerkleRoots_[blockHeight];
-
         require(
             _computeRoot(
                 fullOutcomeProof.block_header_lite.hash,
                 fullOutcomeProof.block_proof
-            ) == expectedBlockMerkleRoot,
+            ) == block_merkle_root,
             "NearProver: block proof is not valid"
         );
 
@@ -328,8 +389,28 @@ contract LightNode is ILightNode {
         }
     }
 
-    function getEcopKeys(uint256 id) public view returns (bytes32[100] memory) {
+    function getEcopKeys(bytes32 id) public view returns (bytes32[100] memory) {
         bytes32[100] memory keys = epochs[id].keys;
+
         return keys;
+    }
+
+    /** UUPS *********************************************************/
+    function _authorizeUpgrade(address) internal view override {
+        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
+    }
+
+    function changeAdmin(address _admin) public onlyOwner {
+        require(_admin != address(0), "zero address");
+
+        _changeAdmin(_admin);
+    }
+
+    function getAdmin() external view returns (address) {
+        return _getAdmin();
+    }
+
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
     }
 }

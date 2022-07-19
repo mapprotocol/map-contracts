@@ -1,85 +1,150 @@
 const {
-  time,
   loadFixture,
 } = require("@nomicfoundation/hardhat-network-helpers");
-const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 const { borshify, borshifyInitialValidators, borshifyOutcomeProof } = require('./utils/borsh');
 const hre = require("hardhat");
 const bs58 = require('bs58');
 const { ethers } = require("hardhat");
 const { promisify } = require('util');
-const sleep = promisify(setTimeout);
 
 
-let nearProofProducerAccount_ = "0x6175726f7261";
+let initData = '0x439fab91000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000066175726f72610000000000000000000000000000000000000000000000000000';
 
 describe("lightNode", function () {
 
   async function deployLightNode() {
-    let [wallet] = await ethers.getSigners();
+      let [wallet] = await hre.ethers.getSigners();
 
-    const LightNode = await ethers.getContractFactory("LightNode");
-    const lightNode = await LightNode.connect(wallet).deploy();
-    await lightNode.deployed();
+      const LightNode = await hre.ethers.getContractFactory("LightNode");
+      const lightNode = await LightNode.connect(wallet).deploy();
+      await lightNode.deployed();
 
-    await lightNode.initialize(nearProofProducerAccount_);
-
-    return lightNode;
+      const LightNodeProxy = await hre.ethers.getContractFactory("LightNodeProxy");
+      const lightNodeProxy = await LightNodeProxy.connect(wallet).deploy(lightNode.address, initData);
+      await lightNodeProxy.deployed();
+      const proxy =  LightNode.attach(lightNodeProxy.address);
+      return proxy
   }
 
   describe("Deployment", function () {
 
 
-    it("initWithValidators must owner", async function () {
+      it("initWithValidators must owner", async function () {
 
-      let [wallet, other] = await ethers.getSigners();
+          let [wallet, other] = await ethers.getSigners();
 
-      let lightNode = await loadFixture(deployLightNode);
+          let lightNode = await loadFixture(deployLightNode);
 
-      let block120998 = borshify(require('./data/block_120998.json'));
+          let block = borshify(require('./data/block.json'));
 
-      let validators = borshifyInitialValidators(require('./data/block_120998.json').next_bps);
+          let validators = borshifyInitialValidators(require('./data/validators.json').next_bps);
 
-      await expect(lightNode.connect(other).initWithValidators(validators)).to.be.reverted;
+          await expect(lightNode.connect(other).initWithValidators(validators)).to.be.reverted;
 
-    });
-
-
-    it("initWithBlock must owner", async function () {
-
-      let [wallet, other] = await ethers.getSigners();
-
-      let lightNode = await loadFixture(deployLightNode);
-
-      let block120998 = borshify(require('./data/block_120998.json'));
-
-      let validators = borshifyInitialValidators(require('./data/block_120998.json').next_bps);
-
-      await lightNode.connect(wallet).initWithValidators(validators);
-
-      await expect(lightNode.connect(other).initWithBlock(block120998)).to.be.reverted;
-
-    });
-
-    it("should be ok", async function () {
-
-      let [wallet] = await ethers.getSigners();
-
-      let lightNode = await loadFixture(deployLightNode);
-
-      let block120998 = borshify(require('./data/block_120998.json'));
-
-      let validators = borshifyInitialValidators(require('./data/block_120998.json').next_bps);
-
-      await lightNode.connect(wallet).initWithValidators(validators);
-
-      await lightNode.connect(wallet).initWithBlock(block120998);
-
-      expect(await lightNode.blockHashes_(120998)).to.be.equal('0x1a7a07b5eee1f4d8d7e47864d533143972f858464bacdc698774d167fb1b40e6');
+      });
 
 
-    });
+      it("initWithBlock must owner", async function () {
+
+          let [wallet, other] = await ethers.getSigners();
+
+          let lightNode = await loadFixture(deployLightNode);
+
+          let block = borshify(require('./data/block.json'));
+
+          let validators = borshifyInitialValidators(require('./data/validators.json').next_bps);
+
+          await lightNode.connect(wallet).initWithValidators(validators);
+
+          await expect(lightNode.connect(other).initWithBlock(block)).to.be.reverted;
+
+      });
+
+      it("init should be ok", async function () {
+
+          let [wallet] = await ethers.getSigners();
+
+          let lightNode = await loadFixture(deployLightNode);
+
+          let block = borshify(require('./data/block.json'));
+
+          let validators = borshifyInitialValidators(require('./data/validators.json').next_bps);
+
+          await lightNode.connect(wallet).initWithValidators(validators);
+
+          await lightNode.connect(wallet).initWithBlock(block);
+
+          expect(await lightNode.curHeight()).to.be.equal(70164717);
+
+      });
+
+      it("Implementation upgradle must admin", async function () {
+
+          let [wallet,other] = await ethers.getSigners();
+
+          let lightNode = await loadFixture(deployLightNode);
+
+          let admin = await lightNode.getAdmin();
+
+          expect(admin).to.not.eq(other.address);
+
+          const LightNode = await hre.ethers.getContractFactory("LightNode");
+          const newImplement = await LightNode.connect(wallet).deploy();
+          await newImplement.deployed();
+
+          await expect(lightNode.connect(other).upgradeTo(newImplement.address)).to.be.revertedWith('LightNode: only Admin can upgrade');
+
+      });
+
+
+      
+      it("Implementation upgradle ok", async function () {
+
+          let [wallet,other] = await ethers.getSigners();
+
+          let lightNode = await loadFixture(deployLightNode);
+
+          let admin = await lightNode.getAdmin();
+
+          expect(admin).to.not.eq(other.address);
+
+          const LightNode = await hre.ethers.getContractFactory("LightNode");
+          const newImplement = await LightNode.connect(wallet).deploy();
+          await newImplement.deployed();
+          
+          let oldImplement = await lightNode.getImplementation();
+
+          expect(oldImplement).to.not.eq(newImplement.address);
+
+          await lightNode.connect(wallet).upgradeTo(newImplement.address);
+
+          expect(await lightNode.getImplementation()).to.eq(newImplement.address);
+
+      });
+
+
+      it("change admin ", async function () {
+
+          let [wallet,other] = await ethers.getSigners();
+
+          let lightNode = await loadFixture(deployLightNode);
+
+          let admin = await lightNode.getAdmin();
+
+          expect(admin).to.eq(wallet.address);
+
+         await expect(lightNode.connect(other).changeAdmin(other.address)).to.be.revertedWith("lightnode :: only admin");
+
+         await expect(lightNode.connect(wallet).changeAdmin(ethers.constants.AddressZero)).to.be.revertedWith("zero address");
+
+         await lightNode.connect(wallet).changeAdmin(other.address);
+
+         expect(await lightNode.getAdmin()).to.eq(other.address);
+
+      });
+
+
 
 
   });

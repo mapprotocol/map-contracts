@@ -3,7 +3,11 @@ require("@nomicfoundation/hardhat-toolbox");
 const { MNEMONIC } = process.env;
 
 module.exports = {
-  solidity: "0.8.4",
+  solidity: {
+		compilers: [
+			{ version: "0.8.4", settings: { optimizer: { enabled: true, runs: 200 } } },
+		],
+	},
   networks: {
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
