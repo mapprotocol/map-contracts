@@ -97,13 +97,14 @@ describe("LightNode start test", function () {
 
         await lightClient.updateBlockHeader(proofs.header126,proofs.aggpk126);
 
-        console.log(await lightClient.callStatic.verifyProofData(proofs.provedata2568));
 
-        console.log(await lightClient.callStatic.verifyProofData(proofs.provedata4108));
-        console.log(await lightClient.callStatic.verifyProofData(proofs.provedataTestProof));
-        console.log(await lightClient.callStatic.verifyProofData(proofs.provedataTestHeader));
-        console.log(await lightClient.callStatic.verifyProofData(proofs.provedataTestSig));
-        console.log(await lightClient.callStatic.verifyProofData(proofs.provedata55342));
+        console.log(await lightClient.callStatic.verifyProofData(await lightClient.getBytes(proofs.provedata2568)));
+
+        console.log(await lightClient.callStatic.verifyProofData( await lightClient.getBytes(proofs.provedata4108)));
+        console.log(await lightClient.callStatic.verifyProofData(await lightClient.getBytes(proofs.provedataTestProof)));
+        console.log(await lightClient.callStatic.verifyProofData(await lightClient.getBytes(proofs.provedataTestHeader)));
+        console.log(await lightClient.callStatic.verifyProofData(await lightClient.getBytes(proofs.provedataTestSig)));
+        console.log(await lightClient.callStatic.verifyProofData(await lightClient.getBytes(proofs.provedata55342)));
 
     });
 
@@ -237,7 +238,7 @@ describe("LightNode start test", function () {
 
         await lightClientDelete.initialize(_threshold, addresss, g1ListDelete, _weights, _epoch, _epochSize,verifyToolContractAddress);
 
-        console.log(await lightClientDelete.callStatic.verifyProofData(proofs.provedata202351));
+        console.log(await lightClientDelete.callStatic.verifyProofData(await lightClient.getBytes(proofs.provedata202351)));
     });
 
 
