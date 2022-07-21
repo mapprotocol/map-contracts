@@ -22,10 +22,7 @@ describe("LightNode start test", function () {
     let g1List;
 
     beforeEach(async function () {
-
         owner = await ethers.getSigners();
-
-
     });
 
     it("deploy VerifyTool",async function () {

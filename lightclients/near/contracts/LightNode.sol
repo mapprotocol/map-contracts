@@ -137,7 +137,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             (bytes, bytes)
         );
 
-        Borsh.Data memory borsh = Borsh.from(_blackHeader);
+        Borsh.Data memory borsh = Borsh.from(_blockHeader);
         NearDecoder.LightClientBlock memory nearBlock = borsh
             .decodeLightClientBlock();
         borsh.done();

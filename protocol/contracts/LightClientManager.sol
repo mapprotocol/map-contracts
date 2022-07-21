@@ -17,10 +17,10 @@ contract LightClientManager is ILightClientManager,Role {
         lightClientContract[_chainId] = _contract;
     }
 
-    function updateBlockHeader(uint256 _chainId, bytes memory _blackHeader) external override {
+    function updateBlockHeader(uint256 _chainId, bytes memory _blockHeader) external override {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
-        lightNode.updateBlockHeader(_blackHeader);
+        lightNode.updateBlockHeader(_blockHeader);
     }
 
     function verifyProofData(uint _chainId, bytes memory _receiptProof) external view override returns (bool success, bytes memory logs) {

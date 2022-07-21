@@ -217,6 +217,11 @@ module.exports = {
       chainId : 19330,
       accounts: accounts
     },
+    MapTestNew: {
+      url: `http://18.142.54.137:7445/`,
+      chainId : 212,
+      accounts: accounts
+    },
   },
   solidity: {
     compilers: [
