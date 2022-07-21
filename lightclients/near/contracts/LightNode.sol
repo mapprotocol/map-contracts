@@ -132,7 +132,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         override
         returns (bool success, bytes memory logs)
     {
-        (bytes memory _blackHeader, bytes memory proofs) = abi.decode(
+        (bytes memory _blockHeader, bytes memory proofs) = abi.decode(
             _receiptProof,
             (bytes, bytes)
         );
