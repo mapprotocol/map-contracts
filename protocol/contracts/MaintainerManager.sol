@@ -19,8 +19,9 @@ contract MaintainerManager is Role {
 
     // Info of each pool.
     struct PoolInfo {
-        uint256 lastRewardBlock;  // Last block number that MAP distribution occurs.
         uint256 accMapsPerShare; // Accumulated MAPs per share, times 1e23. See below.
+        uint256 awards;
+        uint256 lastAwards;
         uint256 allStake;
     }
 
@@ -29,10 +30,6 @@ contract MaintainerManager is Role {
     PoolInfo public pool;
     // Info of each user that stakes Maps tokens.
     mapping (address => UserInfo) public userInfo;
-    // The block number when MAP mining starts.
-    uint256 public startBlock;
-    // The block number when MAP mining ends.
-    uint256 public bonusEndBlock;
     //while list
     mapping(address =>bool) public whiteList;
 
@@ -41,51 +38,41 @@ contract MaintainerManager is Role {
     event EmergencyWithdraw(address indexed user, uint256 amount);
     event WhiteList(address indexed user, uint256 tag);
 
-    constructor(
-        uint256 _startBlock,
-        uint256 _bonusEndBlock) {
-
-        startBlock = _startBlock;
-        bonusEndBlock = _bonusEndBlock;
+    constructor() {
 
         // staking pool
         pool = PoolInfo({
-        lastRewardBlock: startBlock,
         accMapsPerShare: 0,
+        awards:0,
+        lastAwards:0,
         allStake:0
         });
+    }
+
+    receive() external payable {}
+
+    function addAward(uint _award) external{
+        pool.awards += _award;
+        updatePool();
     }
 
     // View function to see pending Reward on frontend.
     function pendingReward(address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_user];
-        uint256 accCakePerShare = pool.accMapsPerShare;
-        if (block.number > pool.lastRewardBlock && pool.allStake != 0) {
-            uint256 cakeReward = address(this).balance.sub(pool.allStake);
-            accCakePerShare = accCakePerShare.add(cakeReward.mul(1e12).div(pool.allStake));
+        uint256 accMapPerShare = pool.accMapsPerShare;
+        if (pool.allStake != 0) {
+            accMapPerShare = accMapPerShare.add(pool.awards.sub(pool.lastAwards).mul(1e12).div(pool.allStake));
         }
-        return user.amount.mul(accCakePerShare).div(1e12).sub(user.rewardDebt);
+        return user.amount.mul(accMapPerShare).div(1e12).sub(user.rewardDebt);
     }
 
     // Update reward variables of the given pool to be up-to-date.
     function updatePool() public {
-        if (block.number <= pool.lastRewardBlock) {
-            return;
+        if (pool.awards > 0){
+            pool.accMapsPerShare = pool.accMapsPerShare.add(pool.awards.sub(pool.lastAwards).mul(1e12).div(pool.allStake));
+            pool.lastAwards = pool.awards;
         }
-        if (pool.allStake == 0) {
-            pool.lastRewardBlock = block.number;
-            return;
-        }
-        uint256 cakeReward = address(this).balance.sub(pool.allStake);
-        pool.accMapsPerShare = pool.accMapsPerShare.add(cakeReward.mul(1e12).div(pool.allStake));
-        pool.lastRewardBlock = block.number;
     }
-
-    // Update reward variables for all pools. Be careful of gas spending!
-    function massUpdatePools() public {
-        updatePool();
-    }
-
 
     function deposit() public payable {
         require(whiteList[msg.sender],"only whitelist");
@@ -99,6 +86,7 @@ contract MaintainerManager is Role {
         }
         if(msg.value > 0) {
             user.amount = user.amount.add(msg.value);
+            pool.allStake = pool.allStake.add(msg.value);
         }
         user.rewardDebt = user.amount.mul(pool.accMapsPerShare).div(1e12);
         emit Deposit(msg.sender, msg.value);
@@ -133,10 +121,6 @@ contract MaintainerManager is Role {
     function emergencyRewardWithdraw(uint256 _amount) public onlyManager {
         require(_amount < address(this).balance.sub(pool.allStake), 'not enough token');
         payable(msg.sender).transfer(_amount);
-    }
-
-    function setBonusEndBlock(uint _block) external onlyManager{
-        bonusEndBlock = _block;
     }
 
     function addWhiteList(address _address) external onlyManager{

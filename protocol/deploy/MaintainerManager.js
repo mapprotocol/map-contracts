@@ -14,7 +14,7 @@ module.exports = async function ({ethers, deployments}) {
 
     await deploy('MaintainerManager', {
         from: deployer.address,
-        args: ["0","10000000000"],
+        args: [],
         log: true,
         contract: 'MaintainerManager',
     })
@@ -23,7 +23,10 @@ module.exports = async function ({ethers, deployments}) {
 
     console.log(MaintainerManager.address)
 
-
+    await hre.run("verify:verify", {
+        address: MaintainerManager.address,
+        constructorArguments:[]
+    });
 
 }
 
