@@ -17,7 +17,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     uint256 public epochSize = 1000;
     uint256 public headerHeight = 0;
     address[] public validatorAddresss;
-    validator[maxValidators] public validators;
+    validator[20] public validators;
 
     IVerifyTool public verifyTool;
     BlsCode blsCode = new BlsCode();
@@ -66,7 +66,11 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         return maxValidators;
     }
 
-    function verifyProofData(bytes memory _receiptProof)
+    function getBytes(receiptProof memory _receiptProof) public view returns(bytes memory){
+        return abi.encode(_receiptProof);
+    }
+
+    function verifyProofData(bytes memory _receiptProofBytes)
     external
     view
     override
