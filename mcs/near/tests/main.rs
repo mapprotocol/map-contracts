@@ -11,8 +11,8 @@ use near_units::parse_near;
 use serde_json::json;
 
 // Additional convenient imports that allows workspaces to function readily.
-use workspaces::{prelude::*, Worker, Contract, AccountId};
-use workspaces::network::Sandbox;
+use workspaces::{prelude::*, Worker, Contract, AccountId, Account, Network};
+use workspaces::network::{Sandbox, Testnet};
 use workspaces::operations::CallTransaction;
 use workspaces::result::CallExecutionDetails;
 use map_light_client::{EpochRecord, Validator};
@@ -697,7 +697,7 @@ async fn deploy_and_init_ft(worker: &Worker<Sandbox>) -> anyhow::Result<Contract
 }
 
 
-async fn deploy_and_init_mcs(worker: &Worker<Sandbox>, map_light_client: String, map_bridge_address: String, wrapped_token: String) -> anyhow::Result<Contract> {
+async fn deploy_and_init_mcs(worker: &Worker<impl Network>, map_light_client: String, map_bridge_address: String, wrapped_token: String) -> anyhow::Result<Contract> {
     let contract = worker.dev_deploy(&std::fs::read(MCS_WASM_FILEPATH)?).await?;
     println!("deploy mcs contract id: {:?}", contract.id());
 
@@ -717,9 +717,9 @@ async fn deploy_and_init_mcs(worker: &Worker<Sandbox>, map_light_client: String,
     Ok(contract)
 }
 
-async fn deploy_and_init_light_client(worker: &Worker<Sandbox>) -> anyhow::Result<Contract> {
+async fn deploy_and_init_light_client(worker: &Worker<impl Network>) -> anyhow::Result<Contract> {
     let contract = worker.dev_deploy(&std::fs::read(MAP_CLIENT_WASM_FILEPATH)?).await?;
-    println!("deploy light client contract id: {:?}", contract.id());
+    println!("deploy map light client contract id: {:?}", contract.id());
 
     let validators = r#"[
     {"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"},
@@ -746,7 +746,7 @@ async fn deploy_and_init_light_client(worker: &Worker<Sandbox>) -> anyhow::Resul
 }
 
 async fn init_worker() -> anyhow::Result<Worker<Sandbox>> {
-    std::env::set_var(NEAR_SANDBOX_BIN_PATH, "/Users/rong/Projects/near/nearcore/target/debug/neard-sandbox");
+    // std::env::set_var(NEAR_SANDBOX_BIN_PATH, "/Users/rong/Projects/near/nearcore/target/debug/neard-sandbox");
     std::env::var(NEAR_SANDBOX_BIN_PATH).expect("environment variable NEAR_SANDBOX_BIN_PATH should be set");
 
     let worker = workspaces::sandbox().await?;

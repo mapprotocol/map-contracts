@@ -1,0 +1,47 @@
+{
+    "threshold": 3,
+    "epoch": 450,
+    "epoch_size": 1000,
+    "validators": [
+        {
+            "g1_pub_key": {
+                "x": "0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249",
+                "y": "0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"
+            },
+            "weight": 1,
+            "address": "0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"
+        },
+        {
+            "g1_pub_key": {
+                "x": "0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58",
+                "y": "0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"
+            },
+            "weight": 1,
+            "address": "0x7a3a26123dbd9cfefc1725fe7779580b987251cb"
+        },
+        {
+            "g1_pub_key": {
+                "x": "0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812",
+                "y": "0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"
+            },
+            "weight": 1,
+            "address": "0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"
+        },
+        {
+            "g1_pub_key": {
+                "x": "0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6",
+                "y": "0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"
+            },
+            "weight": 1,
+            "address": "0x65b3fee569bf82ff148bdded9c3793fb685f9333"
+        },
+        {
+            "g1_pub_key": {
+                "x": "0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d",
+                "y": "0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"
+            },
+            "weight": 1,
+            "address": "0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"
+        }
+    ]
+}

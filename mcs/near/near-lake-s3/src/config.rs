@@ -29,6 +29,7 @@ pub struct Env {
     pub(crate) redis_url: String,
     pub(crate) pub_channel: String,
     pub(crate) mcs: String,
+    pub(crate) test: bool,
 }
 
 pub fn init_tracing() {
@@ -43,14 +44,23 @@ pub fn init_tracing() {
 pub async fn init_lake_config() -> LakeConfig {
     let mut current_height = PROJECT_CONFIG.start_block_height;
     if PROJECT_CONFIG.start_block_height_from_cache {
-        current_height = get_synced_block_height().await;
+        current_height = get_synced_block_height().await + 1;
     }
 
-    LakeConfigBuilder::default()
-        .mainnet()
-        .start_block_height(current_height)
-        .build()
-        .expect("failed to start block height")
+    tracing::info!(target: INDEXER,"start stream from block {}", current_height);
+    if PROJECT_CONFIG.test {
+        LakeConfigBuilder::default()
+            .testnet()
+            .start_block_height(current_height)
+            .build()
+            .expect("failed to start block height")
+    } else {
+        LakeConfigBuilder::default()
+            .mainnet()
+            .start_block_height(current_height)
+            .build()
+            .expect("failed to start block height")
+    }
 }
 
 pub fn init_env_config() -> Env {
@@ -74,6 +84,10 @@ pub fn init_env_config() -> Env {
         redis_url: env::var("REDIS_URL").unwrap(),
         pub_channel: env::var("PUB_CHANNEL").unwrap(),
         mcs: env::var("MCS").unwrap(),
+        test: env::var("TEST")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap(),
     }
 }
 

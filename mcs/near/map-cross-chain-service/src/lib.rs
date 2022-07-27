@@ -123,8 +123,8 @@ pub struct MapCrossChainService {
     /// Balance required to register a new account in the MCSToken
     pub mcs_storage_transfer_in_required: Balance,
     // Wrap token for near
+    // mainnet: wrap.near, testnet:wrap.testnet
     pub wrapped_token: String,
-    // wrap.near for mainnet
     // Near chain id
     // FIXME: get from env?
     pub near_chain_id: u128,
@@ -143,6 +143,7 @@ pub trait ExtMapCrossChainService {
 
     fn finish_transfer_out(
         &self,
+        #[serializer(borsh)]
         event: TransferOutEvent,
     );
 }
@@ -464,10 +465,11 @@ impl MapCrossChainService {
     #[payable]
     pub fn finish_transfer_out(
         &mut self,
+        #[serializer(borsh)]
         event: TransferOutEvent,
     ) {
         assert_eq!(PromiseResult::Successful(vec![]), env::promise_result(0), "get result from cross contract");
-        log!("finish_transfer_out: {}", event);
+        log!("transfer out: {}", event);
     }
 
     #[payable]
@@ -489,7 +491,7 @@ impl MapCrossChainService {
             amount,
         };
 
-        log!("deposit_out_native: {}", event);
+        log!("deposit out: {}", event);
     }
 
     #[payable]
@@ -732,7 +734,7 @@ impl FungibleTokenReceiver for MapCrossChainService {
                 to_chain_token: "".to_string(),
                 amount: amount.0,
             };
-            log!("{}", event);
+            log!("transfer out: {}", event);
         } else if transfer_msg.typ == 1 {
             assert!(self.valid_fungible_token_out(&token, MAP_CHAIN_ID)
                         || self.valid_mcs_token_out(&token, MAP_CHAIN_ID),
@@ -750,9 +752,9 @@ impl FungibleTokenReceiver for MapCrossChainService {
                 token,
                 amount: amount.0,
             };
-            log!("{}", event);
+            log!("deposit out: {}", event);
         } else {
-            env::panic_str(format!("transfer msg typ {} is not supported", transfer_msg.typ).as_ref());
+            panic_str(format!("transfer msg typ {} is not supported", transfer_msg.typ).as_ref());
         }
 
         PromiseOrValue::Value(U128::from(0))
@@ -823,7 +825,7 @@ mod tests {
     }
 
     fn wrap_token() -> String {
-        "wrap.near".to_string()
+        "wrap.testnet".to_string()
     }
 
     fn mcs_token() -> (String, String) {

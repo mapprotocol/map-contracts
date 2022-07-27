@@ -3,6 +3,7 @@ use ethabi::{ParamType, Token};
 use near_sdk::{AccountId, Balance, CryptoHash};
 use near_sdk::serde::{Serialize, Deserialize};
 use map_light_client::proof::LogEntry;
+use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 
 /// Data that was emitted by the Ethereum Locked event.
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
@@ -94,12 +95,12 @@ impl std::fmt::Display for MapTransferOutEvent {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug, BorshSerialize, BorshDeserialize)]
+// #[serde(crate = "near_sdk::serde")]
 pub struct TransferOutEvent {
     pub token: String,
     pub from: String,
-    #[serde(with = "crate::bytes::hexstring")]
+    // #[serde(with = "crate::bytes::hexstring")]
     pub order_id: CryptoHash,
     pub from_chain: u128,
     pub to_chain: u128,
@@ -110,24 +111,22 @@ pub struct TransferOutEvent {
 
 impl std::fmt::Display for TransferOutEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", serde_json::to_string(self).unwrap())
+        write!(f, "{}", hex::encode(borsh::to_vec(self).unwrap()))
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug, BorshSerialize, BorshDeserialize)]
 pub struct DepositOutEvent {
     pub token: String,
     pub from: String,
     pub to: String,
-    #[serde(with = "crate::bytes::hexstring")]
     pub order_id: CryptoHash,
     pub amount: u128,
 }
 
 impl std::fmt::Display for DepositOutEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", serde_json::to_string(self).unwrap())
+        write!(f, "{}", hex::encode(self.try_to_vec().unwrap()))
     }
 }
 
@@ -152,6 +151,26 @@ mod tests {
         let data = event_data.to_log_entry_data();
         let result = MapTransferOutEvent::from_log_entry_data(&data);
         // assert_eq!(result, event_data);
+    }
+
+    #[test]
+    fn test_event_serialize() {
+        let event_data = TransferOutEvent {
+            token: "6b175474e89094c44da98b954eedeac495271d0f".to_string(),
+            from: "00005474e89094c44da98b954eedeac495271d0f".to_string(),
+            to: "123".to_string(),
+            amount: 1000,
+            from_chain: 0,
+            to_chain: 0,
+            to_chain_token: "".to_string(),
+            order_id: [1; 32],
+        };
+        // assert_eq!(result, event_data);
+        let data = "1f0000006d63735f746f6b656e5f302e6d63732e70616e646172722e746573746e65740f00000070616e646172722e746573746e6574445c15cde59e54edb751d2c91f3a241e87f7eaad794d78d867f5a85ec37cc0cf5341454e000000000000000000000000010000000000000000000000000000002a0000003078373630376339636464373333643863646130613634343833396563326261633566613138306564346400000000000000000000000000000000000000";
+        let event = hex::decode(data).unwrap();
+        let result:TransferOutEvent = TransferOutEvent::try_from_slice(&event).unwrap();
+        println!("{}, {}, {}, {}, {}, {}, {}, {}",
+                 result.token, result.from, result.to, result.amount, result.from_chain, result.to_chain, result.to_chain_token, hex::encode(&result.order_id));
     }
 
     #[test]
