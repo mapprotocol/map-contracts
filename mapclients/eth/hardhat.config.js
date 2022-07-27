@@ -187,7 +187,7 @@ module.exports = {
     },
     Map2: {
       url: `http://18.142.54.137:7445`,
-      chainId : 29088,
+      chainId : 212,
       accounts: accounts
     },
     Bsc: {

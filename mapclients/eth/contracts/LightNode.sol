@@ -13,9 +13,9 @@ import "./interface/IVerifyTool.sol";
 
 contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
 
-    uint256 public maxValidators = 20;
-    uint256 public epochSize = 1000;
-    uint256 public headerHeight = 0;
+    uint256 public maxValidators;
+    uint256 public epochSize;
+    uint256 public headerHeight;
     address[] public validatorAddresss;
     validator[20] public validators;
 
@@ -33,6 +33,11 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     event MapUpdateValidators(G1[] _pairKeysAdd, uint[] _weights, uint256 epoch, bytes bits);
 
 
+    modifier onlyOwner() {
+        require(msg.sender == _getAdmin(), "lightnode :: only admin");
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor()  {}
 
@@ -48,6 +53,10 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     external
     override
     initializer {
+        _changeAdmin(msg.sender);
+        maxValidators = 20;
+        epochSize = 1000;
+        headerHeight = 0;
         epochSize = _epochSize;
         validatorAddresss = _validatorAddresss;
         setStateInternal(_threshold, _pairKeys, _weights, _epoch);
@@ -298,4 +307,19 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     override {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
+
+    function changeAdmin(address _admin) public onlyOwner {
+        require(_admin != address(0), "zero address");
+
+        _changeAdmin(_admin);
+    }
+
+    function getAdmin() external view returns (address) {
+        return _getAdmin();
+    }
+
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
+    }
+
 }
