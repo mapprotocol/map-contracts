@@ -28,5 +28,6 @@ members = [
     "map-cross-chain-service",
     "mcs-token",
     "admin-controlled",
-    "eth-types"
+    "eth-types",
+    "near-lake-s3"
 ]
