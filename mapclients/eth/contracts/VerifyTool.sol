@@ -37,7 +37,7 @@ contract VerifyTool is ILightNodePoint {
 
     function decodeHeader(bytes memory rlpBytes)
     public
-    view
+    pure
     returns (blockHeader memory bh){
         RLPReader.RLPItem[] memory ls = rlpBytes.toRlpItem().toList();
         bh = blockHeader({
@@ -61,7 +61,7 @@ contract VerifyTool is ILightNodePoint {
 
     function encodeHeader(blockHeader memory bh)
     public
-    view
+    pure
     returns (bytes memory output){
         bytes[] memory list = new bytes[](14);
         list[0] = RLPEncode.encodeBytes(bh.parentHash);
@@ -83,7 +83,7 @@ contract VerifyTool is ILightNodePoint {
 
     function decodeExtraData(bytes memory extraData)
     public
-    view
+    pure
     returns (istanbulExtra memory ist){
         bytes memory decodeBytes = splitExtra(extraData);
         RLPReader.RLPItem[] memory ls = decodeBytes.toRlpItem().toList();
@@ -134,7 +134,7 @@ contract VerifyTool is ILightNodePoint {
 
     function encodeTxLog(txLog[] memory _txLogs)
     public
-    view
+    pure
     returns (bytes memory output){
         bytes[] memory listLog = new bytes[](_txLogs.length);
         bytes[] memory loglist = new bytes[](3);
@@ -154,7 +154,7 @@ contract VerifyTool is ILightNodePoint {
 
     function decodeTxLog(bytes memory logsHash)
     public
-    view
+    pure
     returns (txLog[] memory _txLogs){
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
          _txLogs = new txLog[](ls.length);
@@ -173,7 +173,7 @@ contract VerifyTool is ILightNodePoint {
 
     function getBlcokHash(blockHeader memory bh)
     public
-    view
+    pure
     returns (bytes32){
         istanbulExtra memory ist = decodeExtraData(bh.extraData);
         bytes memory extraDataPre = splitExtra32(bh.extraData);
@@ -184,7 +184,7 @@ contract VerifyTool is ILightNodePoint {
 
     function verifyHeader(bytes memory rlpHeader)
     public
-    view
+    pure
     returns (bool ret, bytes32 headerHash){
         blockHeader memory bh = decodeHeader(rlpHeader);
         istanbulExtra memory ist = decodeExtraData(bh.extraData);
@@ -255,7 +255,7 @@ contract VerifyTool is ILightNodePoint {
 
     function getHeaderHash(blockHeader memory bh)
     public
-    view
+    pure
     returns (bytes32){
         istanbulExtra memory ist = decodeExtraData(bh.extraData);
         bytes memory extraDataPre = splitExtra32(bh.extraData);
@@ -269,7 +269,7 @@ contract VerifyTool is ILightNodePoint {
 
     function deleteAgg(istanbulExtra memory ist, bytes memory extraDataPre)
     internal
-    view
+    pure
     returns (bytes memory newExtra){
         bytes[] memory list1 = new bytes[](ist.validators.length);
         bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
@@ -310,7 +310,7 @@ contract VerifyTool is ILightNodePoint {
 
     function deleteSealAndAgg(istanbulExtra memory ist, bytes memory rlpHeader)
     internal
-    view
+    pure
     returns (bytes memory newExtra){
         bytes[] memory list1 = new bytes[](ist.validators.length);
         bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
@@ -348,7 +348,7 @@ contract VerifyTool is ILightNodePoint {
 
     function encodeAggregatedSeal(uint256 bitmap, bytes memory signature, uint256 round)
     internal
-    view
+    pure
     returns (bytes memory output) {
         bytes memory output1 = RLPEncode.encodeUint(bitmap);
         bytes memory output2 = RLPEncode.encodeBytes(signature);
@@ -362,7 +362,7 @@ contract VerifyTool is ILightNodePoint {
 
     function verifySign(bytes memory seal, bytes32 hash, address coinbase)
     internal
-    view
+    pure
     returns (bool) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(seal);
         v = v + 27;
@@ -371,7 +371,7 @@ contract VerifyTool is ILightNodePoint {
 
     function splitSignature(bytes memory sig)
     internal
-    view
+    pure
     returns
     (bytes32 r, bytes32 s, uint8 v){
         require(sig.length == 65, "invalid signature length");

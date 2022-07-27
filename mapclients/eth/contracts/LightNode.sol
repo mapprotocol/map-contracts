@@ -29,7 +29,9 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         uint256 epoch;
     }
 
-    event validitorsSet(uint256 epoch);
+    event mapInitializeValidators(uint256 _threshold, G1[] _pairKeys, uint[] _weights, uint256 epoch);
+    event MapUpdateValidators(G1[] _pairKeysAdd, uint[] _weights, uint256 epoch, bytes bits);
+
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor()  {}
@@ -50,6 +52,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         validatorAddresss = _validatorAddresss;
         setStateInternal(_threshold, _pairKeys, _weights, _epoch);
         verifyTool = IVerifyTool(_verifyTool);
+        emit mapInitializeValidators(_threshold, _pairKeys, _weights, _epoch);
     }
 
     function getValidator(uint id )
@@ -66,7 +69,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         return maxValidators;
     }
 
-    function getBytes(receiptProof memory _receiptProof) public view returns(bytes memory){
+    function getBytes(receiptProof memory _receiptProof) public pure returns(bytes memory){
         return abi.encode(_receiptProof);
     }
 
@@ -118,7 +121,8 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         }
         bytes memory bits = abi.encodePacked(uint8(ist.removeList));
         uint256 epoch = getEpochNumber(bh.number) + 1;
-        upateValidators(_pairKeysAdd, _weights, epoch, bits);
+        updateValidators(_pairKeysAdd, _weights, epoch, bits);
+        emit MapUpdateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 
     function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk)
@@ -152,7 +156,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         v.epoch = epoch;
     }
 
-    function upateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
+    function updateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
     internal
     {
         uint256 idPre = getValidatorsIdPrve(epoch);
