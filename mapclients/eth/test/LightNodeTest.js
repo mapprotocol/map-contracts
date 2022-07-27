@@ -1,10 +1,12 @@
 const { ethers } = require("hardhat");
 const proofs = require('./data');
+const {expect} = require('chai');
 require("solidity-coverage");
 
 describe("LightNode start test", function () {
 
     let owner;
+    let addr1;
 
     let lightClient;
     let lightNodeContract;
@@ -21,16 +23,22 @@ describe("LightNode start test", function () {
 
     let g1List;
 
-    beforeEach(async function () {
-        owner = await ethers.getSigners();
-    });
+    let datInit;
 
-    it("deploy VerifyTool",async function () {
+    beforeEach(async function () {
+       [owner,addr1]  = await ethers.getSigners();
         VerifyToolClient = await ethers.getContractFactory("VerifyTool");
         verifyToolClient = await VerifyToolClient.deploy();
         verifyToolContract = await verifyToolClient.deployed()
         verifyToolContractAddress = verifyToolContract.address;
     });
+
+    // it("deploy VerifyTool",async function () {
+    //     VerifyToolClient = await ethers.getContractFactory("VerifyTool");
+    //     verifyToolClient = await VerifyToolClient.deploy();
+    //     verifyToolContract = await verifyToolClient.deployed()
+    //     verifyToolContractAddress = verifyToolContract.address;
+    // });
 
 
 
@@ -79,7 +87,8 @@ describe("LightNode start test", function () {
 
         let _epochSize = 1000;
 
-        await lightClient.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize,verifyToolContractAddress);
+       let data =  await lightClient.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize,verifyToolContractAddress);
+       datInit = data.data;
     });
 
 
@@ -116,6 +125,8 @@ describe("LightNode start test", function () {
 
     let blsCodeDelete;
     let bcDelete;
+
+
 
 
     it('delete deploy', async function () {
@@ -241,5 +252,33 @@ describe("LightNode start test", function () {
         console.log(await lightClientDelete.callStatic.verifyProofData(await lightClient.getBytes(proofs.provedata202351)));
     });
 
+    it('_authorizeUpgrade test', async function () {
 
+        const LightClientP = await ethers.getContractFactory("LightNode");
+        let lightClientP = await LightClientP.deploy();
+        await lightClientP.deployed()
+        console.log("lightClientP:",lightClientP.address);
+
+        const LightClientP1 = await ethers.getContractFactory("LightNode");
+        let lightClientP1 = await LightClientP1.deploy();
+        await lightClientP1.deployed()
+        console.log("lightClientP1:",lightClientP1.address);
+
+        const LightProxyClient = await ethers.getContractFactory("LightNodeProxy");
+        let lightProxyClient = await LightProxyClient.deploy(lightClientP.address,proofs.initDate);
+        await lightProxyClient.deployed()
+
+        let proxy = LightClientP.attach(lightProxyClient.address);
+
+        await  proxy.upgradeTo(lightClientP1.address);
+
+        expect(await proxy.getImplementation()).to.equal(lightClientP1.address);
+
+        await proxy.changeAdmin(addr1.address);
+
+        expect(await proxy.getAdmin()).to.equal(addr1.address);
+
+        await proxy.connect(addr1).upgradeTo(lightClientP.address);
+
+    });
 });
