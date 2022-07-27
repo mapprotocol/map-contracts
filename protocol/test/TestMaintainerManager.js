@@ -2,7 +2,9 @@ const hre = require('hardhat');
 const {chai} = require('chai');
 const {ethers} = require('hardhat');
 const {BigNumber} = require("ethers");
-const expect = chai.expect;
+const {assert} = require('chai');
+
+// const expect = chai.expect;
 
 
 describe('MaintainerManager', function () {
@@ -18,25 +20,44 @@ describe('MaintainerManager', function () {
 
         let signers = await ethers.getSigners();
         this.deployer = signers[0];
-        this.user1 = signers[1];
+        user1 = signers[1];
     });
 
 
     it("should verify maximum quorum", async () => {
         await mm.addWhiteList(this.deployer.address); // 1111
+        console.log(await mm.getAllAwards());
+
+        assert.equal(await mm.getAllAwards(),0);
+
         await mm.deposit({value:"1"});
-        await mm.addAward("1");
-        console.log(mm.pendingReward(this.deployer.address));
 
-        await mm.addAward("10");
-        console.log(await mm.pendingReward(this.deployer.address));
+        await mm.save({value:"1"});
 
-        await mm.addWhiteList(this.user1.address);
-        await mm.connect(this.user1).deposit({value:"1"});
-        console.log(await mm.pendingReward(this.user1.address));
-        await mm.addAward("2")
-        console.log(await mm.pendingReward(this.deployer.address));
-        console.log(await mm.pendingReward(this.user1.address));
+        assert.equal(await mm.pendingReward(this.deployer.address),1);
+
+        await mm.save({value:"10"});
+
+        assert.equal(await mm.pendingReward(this.deployer.address),11);
+
+        await mm.addWhiteList(user1.address);
+        console.log("addWhiteList is ok");
+        await mm.connect(user1).deposit({value:"100"});
+
+        console.log("user1 deposit ok");
+
+        assert.equal(await mm.pendingReward(this.deployer.address),11);
+        assert.equal(await mm.pendingReward(user1.address),0);
+
+        await mm.save({value:"101"});
+
+        assert.equal(await mm.pendingReward(this.deployer.address),12);
+        assert.equal(await mm.pendingReward(user1.address),100);
+
+        await mm.withdraw("1");
+        console.log(await mm.userInfo(this.deployer.address))
+        console.log(await mm.userInfo(user1.address))
+        await mm.connect(user1).withdraw(100);
     });
 
 

@@ -23,10 +23,10 @@ module.exports = async function ({ethers, deployments}) {
 
     console.log(MaintainerManager.address)
 
-    await hre.run("verify:verify", {
-        address: MaintainerManager.address,
-        constructorArguments:[]
-    });
+    // await hre.run("verify:verify", {
+    //     address: MaintainerManager.address,
+    //     constructorArguments:[]
+    // });
 
 }
 

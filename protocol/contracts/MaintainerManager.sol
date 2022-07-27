@@ -6,10 +6,19 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./utils/Role.sol";
+import "./utils/IWToken.sol";
 
 contract MaintainerManager is Role {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
+    // Info of each pool.
+    PoolInfo public pool;
+    // Info of each user that stakes Maps tokens.
+    mapping (address => UserInfo) public userInfo;
+    //while list
+    mapping(address =>bool) public whiteList;
+
+    IWToken wMap;
 
     // Info of each user.
     struct UserInfo {
@@ -20,40 +29,41 @@ contract MaintainerManager is Role {
     // Info of each pool.
     struct PoolInfo {
         uint256 accMapsPerShare; // Accumulated MAPs per share, times 1e23. See below.
-        uint256 awards;
+        //        uint256 awards;
         uint256 lastAwards;
         uint256 allStake;
+        uint256 awardWithdraw;
     }
-
-
-    // Info of each pool.
-    PoolInfo public pool;
-    // Info of each user that stakes Maps tokens.
-    mapping (address => UserInfo) public userInfo;
-    //while list
-    mapping(address =>bool) public whiteList;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 amount);
     event WhiteList(address indexed user, uint256 tag);
 
+
     constructor() {
 
         // staking pool
         pool = PoolInfo({
         accMapsPerShare: 0,
-        awards:0,
+//        awards:0,
         lastAwards:0,
-        allStake:0
+        allStake:0,
+        awardWithdraw: 0
         });
     }
 
     receive() external payable {}
 
-    function addAward(uint _award) external{
-        pool.awards += _award;
-        updatePool();
+//    function addAward(uint _award) external onlyManager{
+//        pool.awards += _award;
+//        updatePool();
+//    }
+
+    function save() external payable{}
+
+    function getAllAwards() public view returns(uint256){
+        return address(this).balance.add(pool.awardWithdraw).sub(pool.allStake);
     }
 
     // View function to see pending Reward on frontend.
@@ -61,27 +71,35 @@ contract MaintainerManager is Role {
         UserInfo storage user = userInfo[_user];
         uint256 accMapPerShare = pool.accMapsPerShare;
         if (pool.allStake != 0) {
-            accMapPerShare = accMapPerShare.add(pool.awards.sub(pool.lastAwards).mul(1e12).div(pool.allStake));
+            accMapPerShare = accMapPerShare.add(getAllAwards().sub(pool.lastAwards).mul(1e12).div(pool.allStake));
         }
         return user.amount.mul(accMapPerShare).div(1e12).sub(user.rewardDebt);
     }
 
     // Update reward variables of the given pool to be up-to-date.
-    function updatePool() public {
-        if (pool.awards > 0){
-            pool.accMapsPerShare = pool.accMapsPerShare.add(pool.awards.sub(pool.lastAwards).mul(1e12).div(pool.allStake));
-            pool.lastAwards = pool.awards;
+    function updatePool(uint256 amount) public {
+        if (getAllAwards().sub(amount) > 0){
+            uint awardAdd = getAllAwards().sub(amount).sub(pool.lastAwards);
+            if (awardAdd > 0){
+                pool.accMapsPerShare = pool.accMapsPerShare.add(awardAdd.mul(1e12).div(pool.allStake));
+                pool.lastAwards = getAllAwards().sub(amount);
+            }
         }
+    }
+
+    function getSub() public view returns (uint256){
+        return getAllAwards();
     }
 
     function deposit() public payable {
         require(whiteList[msg.sender],"only whitelist");
         UserInfo storage user = userInfo[msg.sender];
-        updatePool();
+        updatePool(msg.value);
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accMapsPerShare).div(1e12).sub(user.rewardDebt);
             if(pending > 0) {
                 payable(msg.sender).transfer(pending);
+                pool.awardWithdraw += pending;
             }
         }
         if(msg.value > 0) {
@@ -95,10 +113,11 @@ contract MaintainerManager is Role {
     function withdraw(uint256 _amount) public {
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
-        updatePool();
+        updatePool(0);
         uint256 pending = user.amount.mul(pool.accMapsPerShare).div(1e12).sub(user.rewardDebt);
         if(pending > 0) {
             payable(msg.sender).transfer(pending);
+            pool.awardWithdraw += pending;
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
