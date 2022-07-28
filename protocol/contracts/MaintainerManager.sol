@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./utils/Role.sol";
-import "hardhat/console.sol";
 
 contract MaintainerManager is Role {
     using SafeMath for uint;
@@ -27,7 +26,6 @@ contract MaintainerManager is Role {
     // Info of each pool.
     struct PoolInfo {
         uint256 accMapsPerShare; // Accumulated MAPs per share, times 1e23. See below.
-        //        uint256 awards;
         uint256 lastAwards;
         uint256 allStake;
         uint256 awardWithdraw;
@@ -40,11 +38,8 @@ contract MaintainerManager is Role {
 
 
     constructor() {
-
-        // staking pool
         pool = PoolInfo({
         accMapsPerShare: 0,
-//        awards:0,
         lastAwards:0,
         allStake:0,
         awardWithdraw: 0
@@ -53,10 +48,6 @@ contract MaintainerManager is Role {
 
     receive() external payable {}
 
-//    function addAward(uint _award) external onlyManager{
-//        pool.awards += _award;
-//        updatePool();
-//    }
 
     function save() external payable{}
 
@@ -75,7 +66,7 @@ contract MaintainerManager is Role {
     }
 
     // Update reward variables of the given pool to be up-to-date.
-    function updatePool(uint256 amount) public {
+    function updatePool(uint256 amount) internal {
         if (getAllAwards().sub(amount) > 0){
             uint awardAdd = getAllAwards().sub(amount).sub(pool.lastAwards);
             if (awardAdd > 0 && pool.allStake >0){
@@ -119,7 +110,6 @@ contract MaintainerManager is Role {
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
-//            require(address(this).balance >= _amount,"withdraw: not good 2");
             payable(msg.sender).transfer(_amount);
             pool.allStake = pool.allStake.sub(_amount);
         }
