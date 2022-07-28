@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./utils/Role.sol";
-import "./utils/IWToken.sol";
+import "hardhat/console.sol";
 
 contract MaintainerManager is Role {
     using SafeMath for uint;
@@ -17,8 +17,6 @@ contract MaintainerManager is Role {
     mapping (address => UserInfo) public userInfo;
     //while list
     mapping(address =>bool) public whiteList;
-
-    IWToken wMap;
 
     // Info of each user.
     struct UserInfo {
@@ -80,7 +78,7 @@ contract MaintainerManager is Role {
     function updatePool(uint256 amount) public {
         if (getAllAwards().sub(amount) > 0){
             uint awardAdd = getAllAwards().sub(amount).sub(pool.lastAwards);
-            if (awardAdd > 0){
+            if (awardAdd > 0 && pool.allStake >0){
                 pool.accMapsPerShare = pool.accMapsPerShare.add(awardAdd.mul(1e12).div(pool.allStake));
                 pool.lastAwards = getAllAwards().sub(amount);
             }
@@ -121,7 +119,9 @@ contract MaintainerManager is Role {
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
+//            require(address(this).balance >= _amount,"withdraw: not good 2");
             payable(msg.sender).transfer(_amount);
+            pool.allStake = pool.allStake.sub(_amount);
         }
         user.rewardDebt = user.amount.mul(pool.accMapsPerShare).div(1e12);
         emit Withdraw(msg.sender, _amount);
@@ -140,6 +140,7 @@ contract MaintainerManager is Role {
     function emergencyRewardWithdraw(uint256 _amount) public onlyManager {
         require(_amount < address(this).balance.sub(pool.allStake), 'not enough token');
         payable(msg.sender).transfer(_amount);
+        pool.allStake = pool.allStake.sub(_amount);
     }
 
     function addWhiteList(address _address) external onlyManager{

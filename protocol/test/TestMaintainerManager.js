@@ -54,10 +54,26 @@ describe('MaintainerManager', function () {
         assert.equal(await mm.pendingReward(this.deployer.address),12);
         assert.equal(await mm.pendingReward(user1.address),100);
 
-        await mm.withdraw("1");
+        await mm.withdraw(1);
+
         console.log(await mm.userInfo(this.deployer.address))
         console.log(await mm.userInfo(user1.address))
         await mm.connect(user1).withdraw(100);
+
+
+        await mm.save({value:"101"});
+
+        assert.equal(await mm.pendingReward(this.deployer.address),0);
+        assert.equal(await mm.pendingReward(user1.address),0);
+
+        await mm.deposit({value:"1"});
+        assert.equal(await mm.pendingReward(this.deployer.address),101);
+
+        await mm.connect(user1).deposit({value:"1"});
+        await mm.save({value:"100"});
+
+        assert.equal(await mm.pendingReward(this.deployer.address),151);
+        assert.equal(await mm.pendingReward(user1.address),50);
     });
 
 
