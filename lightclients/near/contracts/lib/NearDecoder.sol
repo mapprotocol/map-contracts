@@ -123,7 +123,7 @@ library NearDecoder {
         bytes32 inner_rest_hash;
         OptionalBlockProducers next_bps;
         OptionalSignature[] approvals_after_next;
-        bytes32 hash;
+        bytes32 hash;         
         bytes32 next_hash;
     }
 

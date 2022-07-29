@@ -1,7 +1,7 @@
 const { Web3 } = require('./robust')
 const bs58 = require('bs58')
 
-function borshifyOutcomeProof (proof) {
+function borshifyOutcomeProof(proof) {
   const statusToBuffer = (status) => {
     if ('SuccessValue' in status) {
       const data = Buffer.from(status.SuccessValue, 'base64')
@@ -35,9 +35,35 @@ function borshifyOutcomeProof (proof) {
     bs58.decode(proof.outcome_proof.id),
 
     Buffer.concat([
+
+
+
+
+
       Web3.utils
         .toBN(proof.outcome_proof.outcome.logs.length)
         .toBuffer('le', 4),
+
+        
+      Buffer.concat(
+        proof.outcome_proof.outcome.logs.map((log) => 
+          Buffer.concat([
+            Web3.utils.toBN(log.length).toBuffer('le', 4),
+            Buffer.from(log, 'utf8')
+          ])
+        )
+      ),
+
+      // Buffer.concat(
+      //   proof.outcome_root_proof.map((p) =>
+      //     Buffer.concat([
+      //       bs58.decode(p.hash),
+      //       Buffer.from([p.direction === 'Right' ? 1 : 0])
+      //     ])
+      //   )
+      // ),
+
+
 
       Web3.utils
         .toBN(proof.outcome_proof.outcome.receipt_ids.length)
@@ -57,7 +83,17 @@ function borshifyOutcomeProof (proof) {
 
       statusToBuffer(proof.outcome_proof.outcome.status),
 
-      Web3.utils.toBN(0).toBuffer('le', 4),
+      //  Web3.utils.toBN(0).toBuffer('le', 4),
+
+      Web3.utils.toBN(proof.outcome_root_proof.length).toBuffer('le', 4),
+      Buffer.concat(
+        proof.outcome_root_proof.map((p) =>
+          Buffer.concat([
+            bs58.decode(p.hash),
+            Buffer.from([p.direction === 'Right' ? 1 : 0])
+          ])
+        )
+      ),
 
       bs58.decode(proof.block_header_lite.prev_block_hash),
       bs58.decode(proof.block_header_lite.inner_rest_hash),
@@ -72,7 +108,7 @@ function borshifyOutcomeProof (proof) {
       Web3.utils
         .toBN(
           proof.block_header_lite.inner_lite.timestamp_nanosec ||
-            proof.block_header_lite.inner_lite.timestamp
+          proof.block_header_lite.inner_lite.timestamp
         )
         .toBuffer('le', 8),
       bs58.decode(proof.block_header_lite.inner_lite.next_bp_hash),

@@ -1,15 +1,15 @@
 const hre = require("hardhat");
 const { ethers } = require("hardhat");
 const { promisify } = require('util');
-const  onchainData  = require("./data/onchainData");
+const { borshify, borshifyInitialValidators, borshifyOutcomeProof } = require('./utils/borsh');
 const sleep = promisify(setTimeout);
 
-
+let nearcms = '0x6d63732e70616e646172722e746573746e6574';
 let initData = '0x439fab91000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000066175726f72610000000000000000000000000000000000000000000000000000';
 async function main() {
-  
+
   await verifyProofData();
-  
+
 }
 
 
@@ -24,52 +24,34 @@ async function verifyProofData() {
   console.log("Implementation deployed to .....", lightNode.address);
 
   const LightNodeProxy = await hre.ethers.getContractFactory("LightNodeProxy");
-  const lightNodeProxy = await LightNodeProxy.connect(wallet).deploy(lightNode.address,initData);
+  const lightNodeProxy = await LightNodeProxy.connect(wallet).deploy(lightNode.address, initData);
   await lightNodeProxy.deployed();
   console.log("lightNodeProxy deployed to .....", lightNodeProxy.address);
 
   const proxy = LightNode.attach(lightNodeProxy.address);
 
-  await proxy.connect(wallet).initWithValidators(onchainData.validators, { gasLimit: 20000000 });
-  await proxy.connect(wallet).initWithBlock(onchainData.block, { gasLimit: 20000000 });
+
+  await proxy.connect(wallet).setNearProofProducerAccount_(nearcms);
+
+  let block = borshify(require('./data/block.json'));
+
+  let validators = borshifyInitialValidators(require('./data/validators.json').next_bps);
+
+  await proxy.connect(wallet).initWithValidators(validators, { gasLimit: 20000000 });
+  await sleep(20000);
+
+  await proxy.connect(wallet).initWithBlock(block, { gasLimit: 20000000 });
 
   await sleep(20000);
 
-  console.log(await proxy.curHeight());
+  await proxy.updateBlockHeader(borshify(require('./data/addBlock.json')), { gasLimit: 20000000 })
 
-  await sleep(10000);
-  await proxy.updateBlockHeader(onchainData.block1, { gasLimit: 20000000 });
-  console.log(await proxy.curHeight());
+  await sleep(20000);
 
-  await sleep(10000);
+  console.log(await proxy.headerHeight());
 
-  await proxy.updateBlockHeader(onchainData.block2, { gasLimit: 20000000 });
-  console.log(await proxy.curHeight());
-  await sleep(10000);
-
-  await proxy.updateBlockHeader(onchainData.block3, { gasLimit: 20000000 });
-  console.log(await proxy.curHeight());
-  await sleep(10000);
-
-  await proxy.updateBlockHeader(onchainData.block4, { gasLimit: 20000000 });
-  console.log(await proxy.curHeight());
-
-  await sleep(10000);
-
-  await proxy.updateBlockHeader(onchainData.block5, { gasLimit: 20000000 });
-  console.log(await proxy.curHeight());
-
-  await sleep(10000);
-
-  await proxy.updateBlockHeader(onchainData.block5, { gasLimit: 20000000 });
-  console.log(await proxy.curHeight());
-
-  await sleep(10000);
-
-  //https://etherscan.io/tx/0x4fceceeab94e28ef145e4c48a7c4f1d1205690bb897027258e92e5df218fc2fc
-  let height = 55554217;
-
-  let proof = "0x010000006015f5820b5ceac27963c1433525da4eec1657ef275812e72fffb80148e6cbe8007bc59ed6cbd4572b421e1f25790449319a55148f233aaac1a1b476cd209283ab7f15da5657bb008b6a2ff5a3c17fc6014776fae794e091cca24620297127ac45000000000100000067e5feb52f023e404fa1bb51e4840f4025b3108865aee4c233bd17ddbed424525177c1cf0a040000003163cf141cf5171800000000000000060000006175726f726102380000000080e03779c3110000000000000000008461437439cb886eed17f0d46fdf357956acccc56bfad42cfc4efc96f529d786d643ff4a8b89fa52020000005727e7f0b652604998ce539b747034aa6864faee01fe09e9051d63ce8004495700fd9fa08f9a6b332a4eb92603a03b9d6a2efe862c8ffd8b0c8f473f5d8480fa67017d4b45b9330d573f45cbe83039359fe6d454c835eb240e4fbe46fb3e9cdffb28661722a18ac198086008a00a5d00a02b0f85bd11703a317713551468b03fa3381f614e0300000000aec2ccb42fcc3789ff36291c4b09fffb2ce396500f2a4a54d440775b68ca70be05c4be526c0e20159e40efcc96a06ad685417a3b7f537aac0cbc96b38f3462efcb9d05badc54790b797f736f048e7d71a3f60e125aa0dffb71812348b7d635bdfc740da37760cdfd5f1c4115ba0fd7d5692543e93f7858bca06495377ade9877bdbd170517edc116a3446814a2948a98df8245a8d703ee82cb49838c03e17eabb8c1e736e32dfa2823367efcd9f237b9c3fe5c1de5093e25f68e860e847e32b978a25079bafb6a4317000000a15beca53bdc63295dc50dedcec80ca5b1e5529ad8833e21a99769d7695ed64c01d4defeb9829185c8b0fe3b02e352fcf109e500886f178d12ed46c75dc5a6616001bf2c032961bd1a8c3c8cc1751e8b628fd5c4ae674d8bfd27c58d7ae7f1145915010cfa451c721e2037368a8b31e4f103d6c9f0df3539b439ec7c13414f79ac0bd3003c6b80025f46bf0f03c2cdbbf2fb0a66f9fd9edde3ea7fa403f4b5b77b26906b01edc098163f01488f22bfea4e31af2e7f028487a59e9fbb2b6c40f59f47642f6301d3b3cae39585b5fb60f82c612c0dd8499f7654790db38eb3b94d486f000c3d5d013382003959cfd3c97a773d5f8a35c985a5f7c5259eb1908b8a3fe23e758afe5c006fac15c554eaa70b544948ce2e2d66dca49956ddfd1c50b8eadb500c2fa264d301a01d10254041b9c00b9d2bcfd89cf073418b4cf177f7a7be2a2ab236098a7f7f0088621c653b260a1a6e6782e969f974e04401cafd7082f22f143ee696787efa31005ac4a33ae94cd90779f41c589a0be4591964ed9d863a94cd05d6ae3a9595da8a00f634d5dab528dca176cdff9691ced1eaa4839bd73cb57b7badad90f12040e07b013040b803bf08adb992718dc5a967066e4d55b9cb2dab12c1edcca4b40c378d5a00409622a49fa96a2fcfab01e670749a0ba037e1e2520137eca727a43f19f2e46b003ac1ab17979427372bd3c3ab4ed198dff56465955722f032d41c67abec29071d01a0fded21ced05b26b6be780c0a7990f4569414db079a07f7854ed2447c1d826c01ceaff618f32fdd2d1c3243ec3fedee02ec4d288cd0c9c64e258fae189e62538900cdc9115487e65c51af95a64f1b82b6739da1ec9fa5afc1ee9d457c5dba6f461a0053964b62d2da84da20bdef920b8935db2afda95e6c7470ed428cd20c67550c4000e852c4d38e7c893fc9345ecaf9c882a7b1b9cf8d119743a015752135a86cc52500d5278fffd12598f2d0eeb5ae1ec46ba9bf64d9a8cf9f97e47717915116e2e1e300a722b83b65c0b02efa03bcb6a01bfeea6328c2db08249ed816abc8fcb0485d0c00";
+  let head = "0x" + borshify(require('./data/proofHead.json')).toString('hex');
+  let proof = "0x" + borshifyOutcomeProof(require('./data/proof.json')).toString('hex');
 
   let types = [
     'bytes',
@@ -77,7 +59,7 @@ async function verifyProofData() {
   ]
 
   let values = [
-    onchainData.block2,
+    head,
     proof
   ]
 
@@ -87,22 +69,17 @@ async function verifyProofData() {
 
   console.log(result);
 
-  //55590575
-  //https://etherscan.io/tx/0xefa2004b6792e02e5ffa4a8655ae0f3ed3984eb3b1da369f8b18cba34a5d034b
-
-
-  proof = "0x000000009041330745c626f370016dd4bbe971ee767014a1480cfbe7e1de660965860e96e79045d48f1b176ca999287bdf51b831414e235005e671599b25480d87a0f46e00000000010000004c5409cc2864d8b784ab51674cc04bec508edc76a662ff61f79fc855fa7b498f5177c1cf0a040000003163cf141cf5171800000000000000060000006175726f7261023800000000001c3984c2e20300000000000000001107602d51193953cfe4cb8a4b01d846e7e426ab6bfad42cfc4efc96f529d786d643ff4a8b89fa52020000006ae1243168c17d069d47126a8ddbcd9d6b9a05f26cbf0f241871e29f54e18a330070991485e494e284bb539ac23d97e263b3f8946c03a3b207313a219007c32375011e863174f13164b0faa17bf3e51d11ad99c3ade0ad7d1e692fd3142856bf676e9cc3364968017ac8adf7577f6948dce66ca883dfd6f9d7b537480ab79414e1808ee34e030000000005c4be526c0e20159e40efcc96a06ad685417a3b7f537aac0cbc96b38f3462ef5db2d0154e48d40187ff44ec41d0eaa64286f4fce74fd9f38a2fef26a0388a5e312828d635a28816de60bfa55e81c25ae2acb19ca9ec59a6381d34b773eb7da60cbd9f064db3241c69c79a102cf943db48fcd9235e09904aace94f32c1d0eea26e3a47bc280fc21660cc0a0998abf74efcadabec4c12e922f7791e9bd1911518f8055d8dd6f30c5c410e73b78c947cd7418c540718683831bb5f78a3a93080c26375606a59988cde180000008a0e5d06db4cb552c1d79d0926d67d7d56c0b3a3ceef49bb146d7a07ab28ba69016baed1bf562c0bb67181a34cff5ba96ebb1d21138bcc03c8278879950fdf9f9200720b22013a4ed7d8a56dfd5e52e24683c6db8349d1d15e7366684d8a39bf8c9b0142a91197ef81955a89efac2e4b38aeedb7c7524d2a9c32d14d2d609f6cf8161500fe8d9b7bbe146b12f443bb81cc5f107d8a7dfa70335e3a51b52c5bf16e441db700b2b8d0e67f129ad6ede7f69e450d86e4093d5e57b0e36d1606e059e331b0420501bdb45edee8598dd85e0d98fad3495c2659d13b11f9c513db0cac7889a7bda20001698c5af25bdb466ae79faea72ee19c3597c704c31101807d7e7d7288d5dc044401f0f0a108472743a6e8e0960735142fb60adae669d9be525b44431be1925c97e701b0e093ef9adff53fdde1c61cdcb3aceb3bb8bf93e66546c0c1796db93a06cf4901b3a39f7cd9f32ac02ac7883a03830eac0542cf726b1e6ab6289a7caddaff32ed0165a42a2c7d62c7a204f1b5e61cdfc1c0d429b7d58ea1086c89518286e2220a8501456dc425612341864845d64426717c01fc9d4cffa71f43b6f7b6008a52e2f81c00ce570d4d311f6ab359e5970ec3159c34cdcf29413a7606b089e835cba7bc60e00009927a0bf14c38fc00001199172810af905abbfe3d00230f37dcf2c0a3a00ed5005f140ac0f9376c3f8681f77b3eb689e9ee727e93dec4d8918af7431614e1374e00c1359dd324b5dc932cd57febe4dd156314acd1c581b24498786ecb1b3d6581fd01ceaff618f32fdd2d1c3243ec3fedee02ec4d288cd0c9c64e258fae189e62538900cdc9115487e65c51af95a64f1b82b6739da1ec9fa5afc1ee9d457c5dba6f461a00657ff0d279a51a52696ee9d3abc560c45d2daabd0cc6dc3afd6a167b07dd6d790153964b62d2da84da20bdef920b8935db2afda95e6c7470ed428cd20c67550c4000e852c4d38e7c893fc9345ecaf9c882a7b1b9cf8d119743a015752135a86cc52500d5278fffd12598f2d0eeb5ae1ec46ba9bf64d9a8cf9f97e47717915116e2e1e300a722b83b65c0b02efa03bcb6a01bfeea6328c2db08249ed816abc8fcb0485d0c00"
+  let proof2 = "0x" + borshifyOutcomeProof(require('./data/proof2.json')).toString('hex');
 
   values = [
-    onchainData.block5,
-    proof
+    head,
+    proof2
   ]
 
   await sleep(30000);
-
   result = await proxy.verifyProofData(ethers.utils.defaultAbiCoder.encode(types, values), { gasLimit: 20000000 });
-
   console.log(result);
+
 }
 
 // We recommend this pattern to be able to use async/await everywhere

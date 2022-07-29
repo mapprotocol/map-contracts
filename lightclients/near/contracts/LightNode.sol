@@ -4,18 +4,20 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interface/ILightNode.sol";
 import "./lib/Borsh.sol";
 import "./lib/NearDecoder.sol";
 import "./lib/ProofDecoder.sol";
 import "./lib/Ed25519Verify.sol";
 
-contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
+contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     using Borsh for Borsh.Data;
     using NearDecoder for Borsh.Data;
     using ProofDecoder for Borsh.Data;
-                                           
-    bytes32 private constant zero_byte32 = 0x0000000000000000000000000000000000000000000000000000000000000000;
+
+    bytes32 private constant zero_byte32 =
+        0x0000000000000000000000000000000000000000000000000000000000000000;
 
     bool public setFirstBlock;
     uint256 constant MAX_BLOCK_PRODUCERS = 100;
@@ -57,6 +59,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         nearProofProducerAccount_ = nearProofProducerAccount;
 
         emit SetNearProofProducerAccount(nearProofProducerAccount);
+    }
+
+    function trigglePause(bool flag) public onlyOwner returns (bool) {
+        if (flag) {
+            _pause();
+        } else {
+            _unpause();
+        }
+
+        return true;
     }
 
     function setNearProofProducerAccount_(bytes memory nearProofProducerAccount)
@@ -130,7 +142,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         external
         view
         override
-        returns (bool success, bytes memory logs)
+        returns (
+            bool success,
+            string memory message,
+            bytes memory logs
+        )
     {
         (bytes memory _blockHeader, bytes memory proofs) = abi.decode(
             _receiptProof,
@@ -142,21 +158,25 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             .decodeLightClientBlock();
         borsh.done();
 
-        (bool result, string memory reason) = checkBlockHeader(nearBlock);
+        (bool _result, string memory _reason) = checkBlockHeader(nearBlock);
 
-        if (!result) {
+        if (!_result) {
             success = false;
-            logs = bytes(reason);
+            message = _reason;
         } else {
             Borsh.Data memory borshData = Borsh.from(proofs);
-            (success, logs) = _verifyProofData(
+            (success, message, logs) = _verifyProofData(
                 nearBlock.inner_lite.block_merkle_root,
                 borshData
             );
         }
     }
 
-    function updateBlockHeader(bytes memory _blockHeader) external override {
+    function updateBlockHeader(bytes memory _blockHeader)
+        external
+        override
+        whenNotPaused
+    {
         require(setFirstBlock, "Contract is not initialized");
         Borsh.Data memory borsh = Borsh.from(_blockHeader);
         NearDecoder.LightClientBlock memory nearBlock = borsh
@@ -306,48 +326,65 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     function _verifyProofData(
         bytes32 block_merkle_root,
         Borsh.Data memory borshData
-    ) public view returns (bool success, bytes memory logs) {
-        ProofDecoder.ExecutionStatus memory result = parseAndConsumeProof(
-            borshData,
-            block_merkle_root
-        );
-
-        success = (!result.failed && !result.unknown);
-
-        logs = result.successValue;
-    }
-
-    function parseAndConsumeProof(
-        Borsh.Data memory borshData,
-        bytes32 block_merkle_root
-    ) internal view returns (ProofDecoder.ExecutionStatus memory result) {
+    )
+        public
+        view
+        returns (
+            bool success,
+            string memory reason,
+            bytes memory logs
+        )
+    {
         ProofDecoder.FullOutcomeProof memory fullOutcomeProof = borshData
             .decodeFullOutcomeProof();
         borshData.done();
 
-        require(
-            proveOutcome(fullOutcomeProof, block_merkle_root),
-            "Proof should be valid"
+        (bool _success, string memory _reason) = proveOutcome(
+            fullOutcomeProof,
+            block_merkle_root
         );
 
-        require(
-            keccak256(
-                fullOutcomeProof
+        if (!_success) {
+            success = _success;
+
+            reason = _reason;
+        } else {
+            if (
+                keccak256(
+                    fullOutcomeProof
+                        .outcome_proof
+                        .outcome_with_id
+                        .outcome
+                        .executor_id
+                ) != keccak256(nearProofProducerAccount_)
+            ) {
+                success = false;
+
+                reason = "Can only withdraw coins from the linked proof producer on Near blockchain";
+            } else {
+                ProofDecoder.ExecutionStatus memory status = fullOutcomeProof
                     .outcome_proof
                     .outcome_with_id
                     .outcome
-                    .executor_id
-            ) == keccak256(nearProofProducerAccount_),
-            "Can only withdraw coins from the linked proof producer on Near blockchain"
-        );
+                    .status;
+                success = (!status.failed && !status.unknown);
 
-        result = fullOutcomeProof.outcome_proof.outcome_with_id.outcome.status;
+                if (!success) {
+                    reason = "failed or unknow transation";
+                }
+
+                logs = abi.encode(
+                    fullOutcomeProof.outcome_proof.outcome_with_id.outcome.logs
+                );
+            }
+        }
+
     }
 
     function proveOutcome(
         ProofDecoder.FullOutcomeProof memory fullOutcomeProof,
         bytes32 block_merkle_root
-    ) internal pure returns (bool) {
+    ) internal pure returns (bool, string memory) {
         bytes32 hash = _computeRoot(
             fullOutcomeProof.outcome_proof.outcome_with_id.hash,
             fullOutcomeProof.outcome_proof.proof
@@ -357,20 +394,22 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
         hash = _computeRoot(hash, fullOutcomeProof.outcome_root_proof);
 
-        require(
-            hash == fullOutcomeProof.block_header_lite.inner_lite.outcome_root,
-            "NearProver: outcome merkle proof is not valid"
-        );
+        if (
+            hash != fullOutcomeProof.block_header_lite.inner_lite.outcome_root
+        ) {
+            return (false, "outcome merkle proof is not valid");
+        }
 
-        require(
+        if (
             _computeRoot(
                 fullOutcomeProof.block_header_lite.hash,
                 fullOutcomeProof.block_proof
-            ) == block_merkle_root,
-            "NearProver: block proof is not valid"
-        );
+            ) != block_merkle_root
+        ) {
+            return (false, "block proof is not valid");
+        }
 
-        return true;
+        return (true, "");
     }
 
     function _computeRoot(bytes32 node, ProofDecoder.MerklePath memory proof)

@@ -17,7 +17,7 @@ module.exports = {
     map_test: {
       chainId: 212,
       url: process.env.ROPSTEN_URL || "http://18.142.54.137:7445",
-      accounts: { mnemonic: ""},
+      accounts: { mnemonic: "onion rather orphan plastic illegal father volcano pupil exhaust forward mammal cinnamon"},
     },
   },
   gasReporter: {
