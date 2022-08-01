@@ -14,7 +14,7 @@ eth-types =  { path="../eth-types" }
 near-contract-standards = "4.0.0"
 admin-controlled = { path="../admin-controlled" }
 uint = { version = "0.8.3", default-features = false }
-rlp = "0.4.2"
+rlp = "0.5.1"
 hex = "0.4.2"
 ethabi = "12.0.0"
 map-light-client = {path="../../../mapclients/near/contracts"}
