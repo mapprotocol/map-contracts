@@ -1,6 +1,6 @@
 use crate::prover::{Address, MapEvent, EthEventParams};
 use ethabi::{ParamType, Token};
-use near_sdk::{AccountId, Balance, CryptoHash};
+use near_sdk::{Balance, CryptoHash};
 use near_sdk::serde::{Serialize, Deserialize};
 use map_light_client::proof::LogEntry;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
@@ -96,7 +96,8 @@ impl std::fmt::Display for MapTransferOutEvent {
     }
 }
 
-#[derive(Debug, BorshSerialize, BorshDeserialize)]
+#[derive(Debug, Serialize, BorshDeserialize, BorshSerialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct TransferOutEvent {
     pub token: String,
     pub from: String,
@@ -125,22 +126,36 @@ impl Encodable for TransferOutEvent {
 
 impl std::fmt::Display for TransferOutEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", hex::encode(borsh::to_vec(self).unwrap()))
+        write!(f, "{}", hex::encode(rlp::encode(self)))
     }
 }
 
-#[derive(Debug, BorshSerialize, BorshDeserialize)]
+#[derive(Debug, Serialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct DepositOutEvent {
     pub token: String,
     pub from: String,
-    pub to: String,
     pub order_id: CryptoHash,
+    pub to: String,
     pub amount: u128,
 }
 
+impl Encodable for DepositOutEvent {
+    fn rlp_append(&self, s: &mut RlpStream) {
+        s.begin_list(5);
+
+        s.append(&self.token);
+        s.append(&self.from);
+        s.append(&self.order_id.as_ref());
+        s.append(&self.to);
+        s.append(&self.amount);
+    }
+}
+
+
 impl std::fmt::Display for DepositOutEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", hex::encode(self.try_to_vec().unwrap()))
+        write!(f, "{}", hex::encode(rlp::encode(self)))
     }
 }
 

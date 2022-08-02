@@ -6,13 +6,11 @@ macro_rules! impl_admin_controlled {
 
         #[near_bindgen]
         impl AdminControlledInner for $contract {
-            #[result_serializer(borsh)]
             fn get_paused(&self) -> MaskInner {
                 self.$paused
             }
 
-            #[result_serializer(borsh)]
-            fn set_paused(&mut self, #[serializer(borsh)] paused: MaskInner) {
+            fn set_paused(&mut self, paused: MaskInner) {
                 near_sdk_inner::assert_self();
                 self.$paused = paused;
             }
