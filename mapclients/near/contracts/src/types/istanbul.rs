@@ -284,8 +284,8 @@ mod tests {
     use near_sdk::serde_json;
     use super::*;
     use num_traits::Num;
-    use crate::Bloom;
-    use crate::types::header::{HASH_LENGTH, NONCE_LENGTH};
+    use crate::header::Bloom;
+    use crate::header::{HASH_LENGTH, NONCE_LENGTH};
 
     // tiny example to assert validity of basic data
     const ISTANBUL_EXTRA_TINY: &str = "f7ea9444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212c0c00c80c3808080c3808080";
