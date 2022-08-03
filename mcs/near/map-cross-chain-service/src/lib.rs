@@ -9,6 +9,7 @@ use event::*;
 use prover::*;
 use std::str::FromStr;
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
+use near_contract_standards::storage_management::{StorageBalance, StorageBalanceBounds};
 use near_sdk::env::panic_str;
 use map_light_client::proof::ReceiptProof;
 
@@ -29,7 +30,13 @@ const MCS_TOKEN_INIT_BALANCE: Balance = 5_000_000_000_000_000_000_000_000; // 5e
 const MCS_TOKEN_NEW: Gas = Gas(10_000_000_000_000);
 
 /// Gas to call ft_transfer on ext fungible contract
-const FT_TRANSFER_GAS: Gas = Gas(80_000_000_000_000);
+const FT_TRANSFER_GAS: Gas = Gas(30_000_000_000_000);
+
+/// Gas to call storage_deposit on ext fungible contract
+const STORAGE_DEPOSIT_GAS: Gas = Gas(30_000_000_000_000);
+
+/// Gas to call storage_balance_bounds on ext fungible contract
+const STORAGE_BALANCE_BOUNDS_GAS: Gas = Gas(30_000_000_000_000);
 
 /// Gas to call mint method on mcs token.
 const MINT_GAS: Gas = Gas(10_000_000_000_000);
@@ -84,6 +91,8 @@ pub struct MapCrossChainService {
     pub mcs_tokens: UnorderedMap<String, HashSet<u128>>,
     /// Set of other fungible token contracts.
     pub fungible_tokens: UnorderedMap<String, HashSet<u128>>,
+    /// Set of other fungible token contracts and their min storage balance.
+    pub fungible_tokens_storage_balance: UnorderedMap<String, u128>,
     /// Set of other fungible token contracts.
     pub native_to_chains: HashSet<u128>,
     /// Hashes of the events that were already used.
@@ -121,6 +130,9 @@ pub trait ExtMapCrossChainService {
 #[ext_contract(ext_fungible_token)]
 pub trait FungibleToken {
     fn ft_transfer(&mut self, receiver_id: AccountId, amount: U128, memo: Option<String>);
+    fn storage_deposit(&mut self, account_id: Option<AccountId>, registration_only: Option<bool>);
+    fn storage_balance_of(&self, account_id: AccountId) -> Option<StorageBalance>;
+    fn storage_balance_bounds(&self) -> StorageBalanceBounds;
 }
 
 #[ext_contract(ext_wnear_token)]
@@ -133,14 +145,6 @@ pub trait ExtWNearToken {
 pub trait ExtMCSToken {
     fn mint(&self, account_id: AccountId, amount: U128);
     fn burn(&self, account_id: AccountId, amount: U128);
-
-    fn ft_transfer_call(
-        &mut self,
-        receiver_id: AccountId,
-        amount: U128,
-        memo: Option<String>,
-        msg: String,
-    ) -> PromiseOrValue<U128>;
 
     fn set_metadata(
         &mut self,
@@ -182,6 +186,7 @@ impl MapCrossChainService {
             map_bridge_address: validate_eth_address(map_bridge_address),
             mcs_tokens: UnorderedMap::new(b"t".to_vec()),
             fungible_tokens: UnorderedMap::new(b"f".to_vec()),
+            fungible_tokens_storage_balance: UnorderedMap::new(b"s".to_vec()),
             native_to_chains: Default::default(),
             used_events: UnorderedSet::new(b"u".to_vec()),
             owner_pk: env::signer_account_pk(),
@@ -364,18 +369,29 @@ impl MapCrossChainService {
             assert!(ret_deposit >= self.mcs_storage_transfer_in_required, "not enough deposit for mcs token mint");
             ret_deposit = ret_deposit - self.mcs_storage_transfer_in_required;
 
-            (ext_mcs_token::ext(self.get_mcs_token_account_id(event.token.clone()))
+            (ext_mcs_token::ext(self.get_mcs_token_account_id(event.to_chain_token.clone()))
                  .with_static_gas(MINT_GAS)
                  .with_attached_deposit(self.mcs_storage_transfer_in_required)
                  .mint(event.to.clone().parse().unwrap(), event.amount.into()), ret_deposit)
         } else if self.fungible_tokens.get(&event.to_chain_token).is_some() {
-            assert!(ret_deposit >= 1, "not enough deposit for ft transfer");
-            ret_deposit = ret_deposit - 1;
+            let min_storage_balance = self.fungible_tokens_storage_balance.get(&event.token).unwrap();
+            assert!(ret_deposit >= 1 + min_storage_balance, "not enough deposit for ft transfer");
+            ret_deposit = ret_deposit - 1 - min_storage_balance;
 
-            (ext_fungible_token::ext(event.to_chain_token.parse().unwrap())
-                 .with_static_gas(FT_TRANSFER_GAS)
-                 .with_attached_deposit(1)
-                 .ft_transfer(event.to.clone().parse().unwrap(), event.amount.into(), None), ret_deposit)
+            let token_account: AccountId = event.to_chain_token.parse().unwrap();
+
+            (ext_fungible_token::ext(token_account.clone())
+                .with_static_gas(STORAGE_DEPOSIT_GAS)
+                .with_attached_deposit(min_storage_balance)
+                .storage_deposit(Some(event.to.clone().parse().unwrap()), Some(true))
+                .then(
+                    ext_fungible_token::ext(token_account)
+                        .with_static_gas(FT_TRANSFER_GAS)
+                        .with_attached_deposit(1)
+                        .ft_transfer(event.to.clone().parse().unwrap(), event.amount.into(), None)
+
+                ), ret_deposit)
+
         } else {
             panic_str(&*format!("unknown to_chain_token {} to transfer in", event.to_chain_token))
         }
@@ -574,13 +590,40 @@ impl MapCrossChainService {
         to_chain_set.contains(&to_chain)
     }
 
-    pub fn add_fungible_token_to_chain(&mut self, token: String, to_chain: u128) {
+    pub fn add_fungible_token_to_chain(&mut self, token: String, to_chain: u128) -> PromiseOrValue<()>{
         assert!(self.controller_or_self());
         assert!(self.mcs_tokens.get(&token).is_none(), "token name {} exists in mcs token", token);
+
+        if self.fungible_tokens_storage_balance.get(&token).is_none() {
+            ext_fungible_token::ext(token.parse().unwrap())
+                .with_static_gas(STORAGE_BALANCE_BOUNDS_GAS)
+                .storage_balance_bounds()
+                .then(
+                    Self::ext(env::current_account_id())
+                        .with_static_gas(FINISH_TRANSFER_IN_NATIVE_TOKEN_GAS)
+                        .finish_add_fungible_token_to_chain(token, to_chain)
+                ).into()
+        } else {
+            let mut to_chain_set = self.fungible_tokens.get(&token).unwrap_or(Default::default());
+            to_chain_set.insert(to_chain);
+            self.fungible_tokens.insert(&token, &to_chain_set);
+            PromiseOrValue::Value(())
+        }
+    }
+
+    pub fn finish_add_fungible_token_to_chain(&mut self, token: String, to_chain: u128) {
+        assert_self();
+        assert_eq!(env::promise_results_count(), 1, "ERR_TOO_MANY_RESULTS");
+
+        let bounds = match env::promise_result(0) {
+            PromiseResult::Successful(x) => serde_json::from_slice::<StorageBalanceBounds>(&x).unwrap(),
+            _ => env::panic_str("Promise with index 0 failed"),
+        };
 
         let mut to_chain_set = self.fungible_tokens.get(&token).unwrap_or(Default::default());
         to_chain_set.insert(to_chain);
         self.fungible_tokens.insert(&token, &to_chain_set);
+        self.fungible_tokens_storage_balance.insert(&token, &bounds.min.0);
     }
 
     pub fn remove_fungible_token_to_chain(&mut self, token: String, to_chain: u128) {

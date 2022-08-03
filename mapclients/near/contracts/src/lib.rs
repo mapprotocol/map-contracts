@@ -6,7 +6,7 @@ mod serialization;
 pub use serialization::*;
 mod crypto;
 mod macros;
-mod traits;
+pub mod traits;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::{env, log, near_bindgen, PanicOnDefault};

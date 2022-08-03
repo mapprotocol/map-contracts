@@ -12,7 +12,7 @@ INIT_ARGS_MCS='{
 
 near deploy --accountId client.$MASTER_ACCOUNT --wasmFile ~/WorkMap/map-contracts/mapclients/near/target/wasm32-unknown-unknown/release/map_light_client.wasm
 
-near call client.$MASTER_ACCOUNT new INIT_ARGS_CLIENT --accountId $MASTER_ACCOUNT
+near call client.$MASTER_ACCOUNT new $INIT_ARGS_CLIENT --accountId $MASTER_ACCOUNT
 
 echo "deploying mcs contract"
 near deploy --accountId mcs.$MASTER_ACCOUNT --wasmFile ~/WorkMap/map-contracts/mcs/near/target/wasm32-unknown-unknown/release/mcs.wasm
@@ -49,7 +49,7 @@ near view wrap.testnet ft_balance_of '{"account_id":"'$MASTER_ACCOUNT'"}'
 
 
 echo "transfer out 5 near from "$MASTER_ACCOUNT" to 0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4 on chain 1"
-near call mcs.$MASTER_ACCOUNT transfer_out_native '{ "to":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4", "to_chain": 1}' --accountId $MASTER_ACCOUNT --deposit 5 --gas 60000000000000
+near call mcs.$MASTER_ACCOUNT transfer_out_native '{ "to":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4", "to_chain": 1}' --accountId $MASTER_ACCOUNT --deposit 5 --gas 100000000000000
 
 echo "deploying ft contract"
 near deploy --accountId ft.$MASTER_ACCOUNT --wasmFile ~/WorkMap/map-contracts/mcs/near/target/wasm32-unknown-unknown/release/mcs_token.wasm
