@@ -1,9 +1,10 @@
 use crate::prover::{Address, MapEvent, EthEventParams};
 use ethabi::{ParamType, Token};
-use near_sdk::{AccountId, Balance, CryptoHash};
+use near_sdk::{Balance, CryptoHash};
 use near_sdk::serde::{Serialize, Deserialize};
 use map_light_client::proof::LogEntry;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use rlp::{Encodable, RlpStream};
 
 /// Data that was emitted by the Ethereum Locked event.
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
@@ -70,14 +71,14 @@ impl MapTransferOutEvent {
             MapTransferOutEvent::event_params(),
             self.map_bridge_address,
             vec![
-                self.token.clone().into_bytes(),
-                self.from.clone().into_bytes(),
+                hex::decode(self.token.clone()).unwrap(),
+                hex::decode(self.from.clone()).unwrap(),
                 self.order_id.clone().to_vec(),
             ],
             vec![
                 Token::Uint(self.from_chain.into()),
                 Token::Uint(self.to_chain.into()),
-                Token::String(self.to.clone()),
+                Token::Bytes(hex::decode(self.to.clone()).unwrap()),
                 Token::Uint(self.amount.into()),
                 Token::String(self.to_chain_token.clone()),
             ],
@@ -95,12 +96,11 @@ impl std::fmt::Display for MapTransferOutEvent {
     }
 }
 
-#[derive(Debug, BorshSerialize, BorshDeserialize)]
-// #[serde(crate = "near_sdk::serde")]
+#[derive(Debug, Serialize, BorshDeserialize, BorshSerialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct TransferOutEvent {
     pub token: String,
     pub from: String,
-    // #[serde(with = "crate::bytes::hexstring")]
     pub order_id: CryptoHash,
     pub from_chain: u128,
     pub to_chain: u128,
@@ -109,24 +109,53 @@ pub struct TransferOutEvent {
     pub to_chain_token: String,
 }
 
-impl std::fmt::Display for TransferOutEvent {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", hex::encode(borsh::to_vec(self).unwrap()))
+impl Encodable for TransferOutEvent {
+    fn rlp_append(&self, s: &mut RlpStream) {
+        s.begin_list(8);
+
+        s.append(&self.token);
+        s.append(&self.from);
+        s.append(&self.order_id.as_ref());
+        s.append(&self.from_chain);
+        s.append(&self.to_chain);
+        s.append(&self.to);
+        s.append(&self.amount);
+        s.append(&self.to_chain_token);
     }
 }
 
-#[derive(Debug, BorshSerialize, BorshDeserialize)]
+impl std::fmt::Display for TransferOutEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex::encode(rlp::encode(self)))
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct DepositOutEvent {
     pub token: String,
     pub from: String,
-    pub to: String,
     pub order_id: CryptoHash,
+    pub to: String,
     pub amount: u128,
 }
 
+impl Encodable for DepositOutEvent {
+    fn rlp_append(&self, s: &mut RlpStream) {
+        s.begin_list(5);
+
+        s.append(&self.token);
+        s.append(&self.from);
+        s.append(&self.order_id.as_ref());
+        s.append(&self.to);
+        s.append(&self.amount);
+    }
+}
+
+
 impl std::fmt::Display for DepositOutEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", hex::encode(self.try_to_vec().unwrap()))
+        write!(f, "{}", hex::encode(rlp::encode(self)))
     }
 }
 
@@ -141,7 +170,7 @@ mod tests {
             map_bridge_address: [0u8; 20],
             token: "6b175474e89094c44da98b954eedeac495271d0f".to_string(),
             from: "00005474e89094c44da98b954eedeac495271d0f".to_string(),
-            to: "123".to_string(),
+            to: "1234".to_string(),
             amount: 1000,
             from_chain: 0,
             to_chain: 0,
@@ -149,28 +178,26 @@ mod tests {
             order_id: [1; 32],
         };
         let data = event_data.to_log_entry_data();
-        let result = MapTransferOutEvent::from_log_entry_data(&data);
-        // assert_eq!(result, event_data);
+        let result = MapTransferOutEvent::from_log_entry_data(&data).unwrap();
+        assert_eq!(result, event_data);
     }
 
     #[test]
     fn test_event_serialize() {
+        let exp = "f87fa836623137353437346538393039346334346461393862393534656564656163343935323731643066a830303030353437346538393039346334346461393862393534656564656163343935323731643066a000000000000000000000000000000000000000000000000000000000000000006482c350833132338203e880";
         let event_data = TransferOutEvent {
             token: "6b175474e89094c44da98b954eedeac495271d0f".to_string(),
             from: "00005474e89094c44da98b954eedeac495271d0f".to_string(),
             to: "123".to_string(),
             amount: 1000,
-            from_chain: 0,
-            to_chain: 0,
+            from_chain: 100,
+            to_chain: 50000,
             to_chain_token: "".to_string(),
-            order_id: [1; 32],
+            order_id: [0; 32],
         };
-        // assert_eq!(result, event_data);
-        let data = "1f0000006d63735f746f6b656e5f302e6d63732e70616e646172722e746573746e65740f00000070616e646172722e746573746e6574445c15cde59e54edb751d2c91f3a241e87f7eaad794d78d867f5a85ec37cc0cf5341454e000000000000000000000000010000000000000000000000000000002a0000003078373630376339636464373333643863646130613634343833396563326261633566613138306564346400000000000000000000000000000000000000";
-        let event = hex::decode(data).unwrap();
-        let result:TransferOutEvent = TransferOutEvent::try_from_slice(&event).unwrap();
-        println!("{}, {}, {}, {}, {}, {}, {}, {}",
-                 result.token, result.from, result.to, result.amount, result.from_chain, result.to_chain, result.to_chain_token, hex::encode(&result.order_id));
+
+        let rlp = rlp::encode(&event_data);
+        assert_eq!(exp, hex::encode(&rlp))
     }
 
     #[test]

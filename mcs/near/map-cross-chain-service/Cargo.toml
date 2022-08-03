@@ -3,8 +3,6 @@ name = "mcs"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -14,7 +12,7 @@ eth-types =  { path="../eth-types" }
 near-contract-standards = "4.0.0"
 admin-controlled = { path="../admin-controlled" }
 uint = { version = "0.8.3", default-features = false }
-rlp = "0.4.2"
+rlp = "0.5.1"
 hex = "0.4.2"
 ethabi = "12.0.0"
 map-light-client = {path="../../../mapclients/near/contracts"}

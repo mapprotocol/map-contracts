@@ -1718,7 +1718,7 @@ dependencies = [
  "near-vm-errors 0.13.0",
  "ripemd",
  "serde",
- "sha2 0.9.9",
+ "sha2 0.10.2",
  "sha3",
 ]
 

@@ -1228,7 +1228,7 @@ dependencies = [
  "derive_more",
  "ethereum-types",
  "near-sdk",
- "rlp",
+ "rlp 0.4.6",
  "rlp-derive",
  "serde",
 ]
@@ -1747,7 +1747,7 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f7a72f11830b52333f36e3b09a288333888bf54380fd0ac0790a3c31ab0f3c5"
 dependencies = [
- "rlp",
+ "rlp 0.4.6",
 ]
 
 [[package]]
@@ -1884,7 +1884,7 @@ dependencies = [
  "num",
  "num-bigint 0.4.3",
  "num-traits",
- "rlp",
+ "rlp 0.4.6",
  "uint 0.8.5",
 ]
 
@@ -1916,7 +1916,7 @@ dependencies = [
  "near-sdk",
  "num",
  "num-bigint 0.4.3",
- "rlp",
+ "rlp 0.5.1",
  "serde_json",
  "tiny-keccak 1.5.0",
  "uint 0.8.5",
@@ -3351,6 +3351,16 @@ version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1190dcc8c3a512f1eef5d09bb8c84c7f39e1054e174d1795482e18f5272f2e73"
 dependencies = [
+ "rustc-hex",
+]
+
+[[package]]
+name = "rlp"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "999508abb0ae792aabed2460c45b89106d97fe4adac593bdaef433c2605847b5"
+dependencies = [
+ "bytes",
  "rustc-hex",
 ]
 

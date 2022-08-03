@@ -1,14 +1,7 @@
 use std::fs;
-use std::ops::Index;
-// macro allowing us to convert human readable units to workspace units.
-// use near_units::parse_near;
-
-// macro allowing us to convert args into JSON bytes to be read by the contract.
 use serde_json::json;
-
-// Additional convenient imports that allows workspaces to function readily.
 use workspaces::{prelude::*, Worker, Contract};
-use workspaces::network::{Sandbox, Testnet};
+use workspaces::network::Sandbox;
 use map_light_client::{EpochRecord, Validator};
 
 const MAP_CLIENT_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/map_light_client.wasm";
@@ -784,7 +777,7 @@ async fn test_get_validators_for_epoch() -> anyhow::Result<()> {
 
     assert!(res.is_success(), "new contract failed");
 
-    let recordOpt: Option<EpochRecord> = contract
+    let record_opt: Option<EpochRecord> = contract
         .call(&worker, "get_record_for_epoch")
         .args_json(json!({
             "epoch": 1
@@ -793,8 +786,8 @@ async fn test_get_validators_for_epoch() -> anyhow::Result<()> {
         .await?
         .json()?;
 
-    assert!(recordOpt.is_some(), "epoch 1 should have record");
-    let record = recordOpt.unwrap();
+    assert!(record_opt.is_some(), "epoch 1 should have record");
+    let record = record_opt.unwrap();
     let validators = &init_args["validators"];
     assert_eq!(3, record.threshold, "threshold check failed");
     assert_eq!(1, record.epoch, "epoch check failed");
@@ -890,7 +883,7 @@ async fn test_update_validator_for_21_epochs() -> anyhow::Result<()> {
         block += 1000;
     }
 
-    let recordOpt: Option<EpochRecord> = contract
+    let record_opt: Option<EpochRecord> = contract
         .call(&worker, "get_record_for_epoch")
         .args_json(json!({
             "epoch": 180
@@ -899,9 +892,9 @@ async fn test_update_validator_for_21_epochs() -> anyhow::Result<()> {
         .await?
         .json()?;
 
-    assert!(recordOpt.is_none(), "epoch 180 should have no record");
+    assert!(record_opt.is_none(), "epoch 180 should have no record");
 
-    let recordOpt: Option<EpochRecord> = contract
+    let record_opt: Option<EpochRecord> = contract
         .call(&worker, "get_record_for_epoch")
         .args_json(json!({
             "epoch": 181
@@ -910,9 +903,9 @@ async fn test_update_validator_for_21_epochs() -> anyhow::Result<()> {
         .await?
         .json()?;
 
-    assert!(recordOpt.is_none(), "epoch 181 should have  no record");
+    assert!(record_opt.is_none(), "epoch 181 should have  no record");
 
-    let recordOpt: Option<EpochRecord> = contract
+    let record_opt: Option<EpochRecord> = contract
         .call(&worker, "get_record_for_epoch")
         .args_json(json!({
             "epoch": 182
@@ -921,15 +914,15 @@ async fn test_update_validator_for_21_epochs() -> anyhow::Result<()> {
         .await?
         .json()?;
 
-    assert!(recordOpt.is_some(), "epoch 182 should have record");
+    assert!(record_opt.is_some(), "epoch 182 should have record");
 
-    let record = recordOpt.unwrap();
+    let record = record_opt.unwrap();
     let validators = &init_args["validators"].as_array().unwrap();
     assert_eq!(4, record.threshold, "threshold check failed");
     assert_eq!(182, record.epoch, "epoch check failed");
     assert_eq!(validators.len(), record.validators.len(), "no validator should be added/removed");
 
-    let recordOpt: Option<EpochRecord> = contract
+    let record_opt: Option<EpochRecord> = contract
         .call(&worker, "get_record_for_epoch")
         .args_json(json!({
             "epoch": 201
@@ -938,9 +931,9 @@ async fn test_update_validator_for_21_epochs() -> anyhow::Result<()> {
         .await?
         .json()?;
 
-    assert!(recordOpt.is_some(), "epoch 201 should have record");
+    assert!(record_opt.is_some(), "epoch 201 should have record");
 
-    let record = recordOpt.unwrap();
+    let record = record_opt.unwrap();
     let validators = &init_args["validators"].as_array().unwrap();
     assert_eq!(4, record.threshold, "threshold check failed");
     assert_eq!(201, record.epoch, "epoch check failed");
@@ -1062,7 +1055,7 @@ async fn test_add_validator() -> anyhow::Result<()> {
     println!("logs {:?}", res.logs());
     assert!(res.is_success(), "update_block_header 124000 failed");
 
-    let recordOpt: Option<EpochRecord> = contract
+    let record_opt: Option<EpochRecord> = contract
         .call(&worker, "get_record_for_epoch")
         .args_json(json!({
             "epoch": 125
@@ -1071,8 +1064,8 @@ async fn test_add_validator() -> anyhow::Result<()> {
         .await?
         .json()?;
 
-    assert!(recordOpt.is_some(), "epoch 125 should have record");
-    let record = recordOpt.unwrap();
+    assert!(record_opt.is_some(), "epoch 125 should have record");
+    let record = record_opt.unwrap();
     let validators = &init_args["validators"].as_array().unwrap();
     assert_eq!(4, record.threshold, "threshold check failed");
     assert_eq!(125, record.epoch, "epoch check failed");
@@ -1151,7 +1144,7 @@ async fn test_remove_validator() -> anyhow::Result<()> {
     println!("logs {:?}", res.logs());
     assert!(res.is_success(), "update_block_header 190000 failed");
 
-    let recordOpt: Option<EpochRecord> = contract
+    let record_opt: Option<EpochRecord> = contract
         .call(&worker, "get_record_for_epoch")
         .args_json(json!({
             "epoch": 191
@@ -1160,8 +1153,8 @@ async fn test_remove_validator() -> anyhow::Result<()> {
         .await?
         .json()?;
 
-    assert!(recordOpt.is_some(), "epoch 191 should have record");
-    let record = recordOpt.unwrap();
+    assert!(record_opt.is_some(), "epoch 191 should have record");
+    let record = record_opt.unwrap();
     let validators = &init_args["validators"].as_array().unwrap();
     assert_eq!(4, record.threshold, "threshold check failed");
     assert_eq!(191, record.epoch, "epoch check failed");
@@ -1254,33 +1247,10 @@ async fn test_verify_proof_after_add_remove_validators_002() -> anyhow::Result<(
     Ok(())
 }
 
-async fn prepare_data() -> anyhow::Result<()> {
-    let file = fs::File::open("./tests/data/updateHeader.json").unwrap();
-    let mut json: serde_json::Value = serde_json::from_reader(file).unwrap();
-    println!("json value: {}", json["1000"]);
+async fn deploy_contract() -> anyhow::Result<(Worker<Sandbox>, Contract)> {
+    std::env::var(NEAR_SANDBOX_BIN_PATH).expect("environment variable NEAR_SANDBOX_BIN_PATH should be set");
 
-    let mut i = 1000;
-    while i <= 20000 {
-        let block = i.to_string();
-        json[&block]["header"]["number"] = json!(format!("0x{:x}", i));
-        let time_str = json[&block]["header"]["time"].as_str().unwrap();
-        let time: u64 = time_str[1..].parse().unwrap();
-        json[&block]["header"]["time"] = json!(format!("0x{:x}", time));
-
-        println!("number: {}, time: {}", &json[&block]["header"]["number"], &json[&block]["header"]["time"]);
-    }
-
-    let file = fs::File::create("./tests/data/headers.json").unwrap();
-    serde_json::to_writer(file, &json).unwrap();
-
-    Ok(())
-}
-
-async fn deploy_contract() -> anyhow::Result<(Worker<Testnet>, Contract)> {
-    // std::env::set_var(NEAR_SANDBOX_BIN_PATH, "/Users/rong/Projects/near/nearcore/target/debug/neard-sandbox");
-    // std::env::var(NEAR_SANDBOX_BIN_PATH).expect("environment variable NEAR_SANDBOX_BIN_PATH should be set");
-
-    let worker = workspaces::testnet().await?;
+    let worker = workspaces::sandbox().await?;
     let contract = worker
         .dev_deploy(&std::fs::read(MAP_CLIENT_WASM_FILEPATH)?)
         .await?;
