@@ -886,7 +886,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_transfer_out_token_no_tochian() {
+    fn test_transfer_out_token_no_to_chain() {
         let token = mcs_token().0;
         let from = alice().0;
         let to = alice().1;

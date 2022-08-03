@@ -71,14 +71,14 @@ impl MapTransferOutEvent {
             MapTransferOutEvent::event_params(),
             self.map_bridge_address,
             vec![
-                self.token.clone().into_bytes(),
-                self.from.clone().into_bytes(),
+                hex::decode(self.token.clone()).unwrap(),
+                hex::decode(self.from.clone()).unwrap(),
                 self.order_id.clone().to_vec(),
             ],
             vec![
                 Token::Uint(self.from_chain.into()),
                 Token::Uint(self.to_chain.into()),
-                Token::String(self.to.clone()),
+                Token::Bytes(hex::decode(self.to.clone()).unwrap()),
                 Token::Uint(self.amount.into()),
                 Token::String(self.to_chain_token.clone()),
             ],
@@ -170,7 +170,7 @@ mod tests {
             map_bridge_address: [0u8; 20],
             token: "6b175474e89094c44da98b954eedeac495271d0f".to_string(),
             from: "00005474e89094c44da98b954eedeac495271d0f".to_string(),
-            to: "123".to_string(),
+            to: "1234".to_string(),
             amount: 1000,
             from_chain: 0,
             to_chain: 0,
@@ -178,8 +178,8 @@ mod tests {
             order_id: [1; 32],
         };
         let data = event_data.to_log_entry_data();
-        let result = MapTransferOutEvent::from_log_entry_data(&data);
-        // assert_eq!(result, event_data);
+        let result = MapTransferOutEvent::from_log_entry_data(&data).unwrap();
+        assert_eq!(result, event_data);
     }
 
     #[test]
