@@ -29,7 +29,6 @@ pub struct MCSToken {
     reference_hash: Base64VecU8,
     decimals: u8,
     paused: Mask,
-    #[cfg(feature = "migrate_icon")]
     icon: Option<String>,
 }
 
@@ -59,9 +58,28 @@ impl MCSToken {
             reference_hash: Base64VecU8(vec![]),
             decimals: 0,
             paused: Mask::default(),
-            #[cfg(feature = "migrate_icon")]
             icon: None,
         }
+    }
+
+    pub fn set_metadata(
+        &mut self,
+        name: Option<String>,
+        symbol: Option<String>,
+        reference: Option<String>,
+        reference_hash: Option<Base64VecU8>,
+        decimals: Option<u8>,
+        icon: Option<String>,
+    ) {
+        // Only owner can change the metadata
+        assert!(self.controller_or_self());
+
+        name.map(|name| self.name = name);
+        symbol.map(|symbol| self.symbol = symbol);
+        reference.map(|reference| self.reference = reference);
+        reference_hash.map(|reference_hash| self.reference_hash = reference_hash);
+        decimals.map(|decimals| self.decimals = decimals);
+        icon.map(|icon| self.icon = Some(icon));
     }
 
     #[payable]
@@ -74,29 +92,6 @@ impl MCSToken {
 
         self.storage_deposit(Some(account_id.clone()), None);
         self.token.internal_deposit(&account_id, amount.into());
-    }
-
-    #[payable]
-    pub fn withdraw(&mut self, amount: U128, recipient: String) -> Promise {
-        self.check_not_paused(PAUSE_WITHDRAW);
-
-        assert_one_yocto();
-        Promise::new(env::predecessor_account_id()).transfer(1);
-
-        self.token
-            .internal_withdraw(&env::predecessor_account_id(), amount.0);
-
-        // ext_map_cross_chain_service::finish_withdraw(
-        //     amount.into(),
-        //     recipient,
-        //     &self.controller,
-        //     NO_DEPOSIT,
-        //     FINISH_WITHDRAW_GAS,
-        // )
-
-        ext_map_cross_chain_service::ext(self.controller.clone())
-            .with_static_gas(FINISH_WITHDRAW_GAS)
-            .finish_withdraw(amount.0, recipient.parse().unwrap())
     }
 
     #[payable]

@@ -1,6 +1,6 @@
 use crate::prover::{Address, MapEvent, EthEventParams};
 use ethabi::{ParamType, Token};
-use near_sdk::{AccountId, Balance, CryptoHash};
+use near_sdk::{Balance, CryptoHash};
 use near_sdk::serde::{Serialize, Deserialize};
 use map_light_client::proof::LogEntry;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
@@ -71,14 +71,14 @@ impl MapTransferOutEvent {
             MapTransferOutEvent::event_params(),
             self.map_bridge_address,
             vec![
-                self.token.clone().into_bytes(),
-                self.from.clone().into_bytes(),
+                hex::decode(self.token.clone()).unwrap(),
+                hex::decode(self.from.clone()).unwrap(),
                 self.order_id.clone().to_vec(),
             ],
             vec![
                 Token::Uint(self.from_chain.into()),
                 Token::Uint(self.to_chain.into()),
-                Token::String(self.to.clone()),
+                Token::Bytes(hex::decode(self.to.clone()).unwrap()),
                 Token::Uint(self.amount.into()),
                 Token::String(self.to_chain_token.clone()),
             ],
@@ -96,7 +96,8 @@ impl std::fmt::Display for MapTransferOutEvent {
     }
 }
 
-#[derive(Debug, BorshSerialize, BorshDeserialize)]
+#[derive(Debug, Serialize, BorshDeserialize, BorshSerialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct TransferOutEvent {
     pub token: String,
     pub from: String,
@@ -125,22 +126,36 @@ impl Encodable for TransferOutEvent {
 
 impl std::fmt::Display for TransferOutEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", hex::encode(borsh::to_vec(self).unwrap()))
+        write!(f, "{}", hex::encode(rlp::encode(self)))
     }
 }
 
-#[derive(Debug, BorshSerialize, BorshDeserialize)]
+#[derive(Debug, Serialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct DepositOutEvent {
     pub token: String,
     pub from: String,
-    pub to: String,
     pub order_id: CryptoHash,
+    pub to: String,
     pub amount: u128,
 }
 
+impl Encodable for DepositOutEvent {
+    fn rlp_append(&self, s: &mut RlpStream) {
+        s.begin_list(5);
+
+        s.append(&self.token);
+        s.append(&self.from);
+        s.append(&self.order_id.as_ref());
+        s.append(&self.to);
+        s.append(&self.amount);
+    }
+}
+
+
 impl std::fmt::Display for DepositOutEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", hex::encode(self.try_to_vec().unwrap()))
+        write!(f, "{}", hex::encode(rlp::encode(self)))
     }
 }
 
@@ -155,7 +170,7 @@ mod tests {
             map_bridge_address: [0u8; 20],
             token: "6b175474e89094c44da98b954eedeac495271d0f".to_string(),
             from: "00005474e89094c44da98b954eedeac495271d0f".to_string(),
-            to: "123".to_string(),
+            to: "1234".to_string(),
             amount: 1000,
             from_chain: 0,
             to_chain: 0,
@@ -163,8 +178,8 @@ mod tests {
             order_id: [1; 32],
         };
         let data = event_data.to_log_entry_data();
-        let result = MapTransferOutEvent::from_log_entry_data(&data);
-        // assert_eq!(result, event_data);
+        let result = MapTransferOutEvent::from_log_entry_data(&data).unwrap();
+        assert_eq!(result, event_data);
     }
 
     #[test]

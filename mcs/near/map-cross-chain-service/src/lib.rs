@@ -5,14 +5,11 @@ use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::collections::{UnorderedMap, UnorderedSet};
 use near_sdk::json_types::{Base64VecU8, U128};
 use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Gas, PanicOnDefault, Promise, PublicKey, PromiseOrValue, PromiseResult, CryptoHash, log};
-
-type EthereumAddress = [u8; 20];
-
 use event::*;
 use prover::*;
-use std::convert::TryInto;
 use std::str::FromStr;
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
+use near_contract_standards::storage_management::{StorageBalance, StorageBalanceBounds};
 use near_sdk::env::panic_str;
 use map_light_client::proof::ReceiptProof;
 
@@ -27,73 +24,54 @@ const MAP_CHAIN_ID: u128 = 22776;
 const NO_DEPOSIT: Balance = 0;
 
 /// Initial balance for the MCSToken contract to cover storage and related.
-const MCS_TOKEN_INIT_BALANCE: Balance = 5_000_000_000_000_000_000_000_000; // 3e24yN, 3N
+const MCS_TOKEN_INIT_BALANCE: Balance = 5_000_000_000_000_000_000_000_000; // 5e24yN, 5N
 
 /// Gas to initialize MCSToken contract.
 const MCS_TOKEN_NEW: Gas = Gas(10_000_000_000_000);
 
 /// Gas to call ft_transfer on ext fungible contract
-const FT_TRANSFER_GAS: Gas = Gas(80_000_000_000_000);
+const FT_TRANSFER_GAS: Gas = Gas(30_000_000_000_000);
 
-/// Gas to call mint method on bridge token.
+/// Gas to call storage_deposit on ext fungible contract
+const STORAGE_DEPOSIT_GAS: Gas = Gas(30_000_000_000_000);
+
+/// Gas to call storage_balance_bounds on ext fungible contract
+const STORAGE_BALANCE_BOUNDS_GAS: Gas = Gas(30_000_000_000_000);
+
+/// Gas to call mint method on mcs token.
 const MINT_GAS: Gas = Gas(10_000_000_000_000);
 
-/// Gas to call mint method on bridge token.
+/// Gas to call burn method on mcs token.
 const BURN_GAS: Gas = Gas(10_000_000_000_000);
 
-/// Gas to call ft_transfer_call when the target of deposit is a contract
-const FT_TRANSFER_CALL_GAS: Gas = Gas(80_000_000_000_000);
-
 /// Gas to call near_withdraw when the to chain token address is empty
-const NEAR_WITHDRAW_GAS: Gas = Gas(80_000_000_000_000);
+const NEAR_WITHDRAW_GAS: Gas = Gas(40_000_000_000_000);
 
 /// Gas to call near_deposit when the to chain token address is empty
-const NEAR_DEPOSIT_GAS: Gas = Gas(80_000_000_000_000);
+const NEAR_DEPOSIT_GAS: Gas = Gas(40_000_000_000_000);
 
 /// Gas to call finish deposit method.
 /// This doesn't cover the gas required for calling mint method.
-const FINISH_DEPOSIT_GAS: Gas = Gas(30_000_000_000_000);
+const FINISH_TRANSFER_IN_SINGLE_EVENT_GAS: Gas = Gas(80_000_000_000_000);
 
 /// Gas to call finish transfer out method.
 const FINISH_TRANSFER_OUT_GAS: Gas = Gas(30_000_000_000_000);
 
-/// Gas to call finish update_metadata method.
-const FINISH_UPDATE_METADATA_GAS: Gas = Gas(5_000_000_000_000);
+/// Gas to call finish transfer in native token method.
+const FINISH_TRANSFER_IN_NATIVE_TOKEN_GAS: Gas = Gas(30_000_000_000_000);
 
 /// Gas to call verify_log_entry on prover.
 const VERIFY_LOG_ENTRY_GAS: Gas = Gas(50_000_000_000_000);
 
-/// Amount of gas used by set_metadata in the factory, without taking into account
+/// Amount of gas used by set_metadata in the mcs, without taking into account
 /// the gas consumed by the promise.
 const OUTER_SET_METADATA_GAS: Gas = Gas(15_000_000_000_000);
-
-/// Amount of gas used by bridge token to set the metadata.
-const SET_METADATA_GAS: Gas = Gas(5_000_000_000_000);
 
 /// Controller storage key.
 const CONTROLLER_STORAGE_KEY: &[u8] = b"aCONTROLLER";
 
-/// Metadata connector address storage key.
-const METADATA_CONNECTOR_ETH_ADDRESS_STORAGE_KEY: &[u8] = b"aM_CONNECTOR";
-
-/// Prefix used to store a map between tokens and timestamp `t`, where `t` stands for the
-/// block on Ethereum where the metadata for given token was emitted.
-/// The prefix is made specially short since it becomes more expensive with larger prefixes.
-const TOKEN_TIMESTAMP_MAP_PREFIX: &[u8] = b"aTT";
-
-#[derive(Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize)]
-pub enum ResultType {
-    Withdraw {
-        amount: Balance,
-        token: EthereumAddress,
-        recipient: EthereumAddress,
-    },
-    Lock {
-        token: String,
-        amount: Balance,
-        recipient: EthereumAddress,
-    },
-}
+const TRANSFER_OUT_TYPE: &str = "2ef1cdf83614a69568ed2c96a275dd7fb2e63a464aa3a0ffe79f55d538c8b3b5";
+const DEPOSIT_OUT_TYPE: &str = "150bd848adaf4e3e699dcac82d75f111c078ce893375373593cc1b9208998377";
 
 const PAUSE_DEPLOY_TOKEN: Mask = 1 << 0;
 const PAUSE_TRANSFER_IN: Mask = 1 << 1;
@@ -101,7 +79,6 @@ const PAUSE_TRANSFER_OUT_TOKEN: Mask = 1 << 2;
 const PAUSE_TRANSFER_OUT_NATIVE: Mask = 1 << 3;
 const PAUSE_DEPOSIT_OUT_TOKEN: Mask = 1 << 4;
 const PAUSE_DEPOSIT_OUT_NATIVE: Mask = 1 << 5;
-
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -114,6 +91,8 @@ pub struct MapCrossChainService {
     pub mcs_tokens: UnorderedMap<String, HashSet<u128>>,
     /// Set of other fungible token contracts.
     pub fungible_tokens: UnorderedMap<String, HashSet<u128>>,
+    /// Set of other fungible token contracts and their min storage balance.
+    pub fungible_tokens_storage_balance: UnorderedMap<String, u128>,
     /// Set of other fungible token contracts.
     pub native_to_chains: HashSet<u128>,
     /// Hashes of the events that were already used.
@@ -151,6 +130,9 @@ pub trait ExtMapCrossChainService {
 #[ext_contract(ext_fungible_token)]
 pub trait FungibleToken {
     fn ft_transfer(&mut self, receiver_id: AccountId, amount: U128, memo: Option<String>);
+    fn storage_deposit(&mut self, account_id: Option<AccountId>, registration_only: Option<bool>);
+    fn storage_balance_of(&self, account_id: AccountId) -> Option<StorageBalance>;
+    fn storage_balance_bounds(&self) -> StorageBalanceBounds;
 }
 
 #[ext_contract(ext_wnear_token)]
@@ -163,14 +145,6 @@ pub trait ExtWNearToken {
 pub trait ExtMCSToken {
     fn mint(&self, account_id: AccountId, amount: U128);
     fn burn(&self, account_id: AccountId, amount: U128);
-
-    fn ft_transfer_call(
-        &mut self,
-        receiver_id: AccountId,
-        amount: U128,
-        memo: Option<String>,
-        msg: String,
-    ) -> PromiseOrValue<U128>;
 
     fn set_metadata(
         &mut self,
@@ -187,11 +161,6 @@ pub fn assert_self() {
     assert_eq!(env::predecessor_account_id(), env::current_account_id());
 }
 
-struct Recipient {
-    target: AccountId,
-    message: Option<String>,
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FungibleTokenMsg {
@@ -201,45 +170,13 @@ pub struct FungibleTokenMsg {
     pub to_chain: u128, // if typ is 1, it is omitted
 }
 
-
-/// `recipient` is the target account id receiving current ERC-20 tokens.
-///
-/// If `recipient` doesn't contain a semicolon (:) then it is interpreted as a NEAR account id
-/// and token are minted as NEP-141 directly on `recipient` account id.
-///
-/// Otherwise, the format expected is: <target_address>:<message>
-///
-/// @target_address: Account id of the contract to transfer current funds
-/// @message: Free form message to be send to the target using ft_transfer_call
-///
-/// The final message sent to the `target_address` has the format:
-///
-/// <message>
-///
-/// Where `message` is the free form string that was passed.
-fn parse_recipient(recipient: String) -> Recipient {
-    if recipient.contains(':') {
-        let mut iter = recipient.split(':');
-        let target = iter.next().unwrap().parse().unwrap();
-        let message = iter.collect::<Vec<&str>>().join(":");
-
-        Recipient {
-            target,
-            message: Some(message),
-        }
-    } else {
-        Recipient {
-            target: recipient.parse().unwrap(),
-            message: None,
-        }
-    }
-}
-
 #[near_bindgen]
 impl MapCrossChainService {
     /// Initializes the contract.
-    /// `map_client_account`: NEAR account of the MAP light client contract;
-    /// `map_bridge_address`: the address of the MCS contract on MAP blockchain, in hex.
+    /// map_client_account: NEAR account of the MAP light client contract;
+    /// map_bridge_address: the address of the MCS contract on MAP blockchain, in hex.
+    /// wrapped_token: the wrap near contract account id
+    /// near_chain_id: the chain id of the near blockchain
     #[init]
     pub fn init(map_light_client: String, map_bridge_address: String, wrapped_token: String, near_chain_id: u128) -> Self {
         assert!(!env::state_exists(), "Already initialized");
@@ -249,6 +186,7 @@ impl MapCrossChainService {
             map_bridge_address: validate_eth_address(map_bridge_address),
             mcs_tokens: UnorderedMap::new(b"t".to_vec()),
             fungible_tokens: UnorderedMap::new(b"f".to_vec()),
+            fungible_tokens_storage_balance: UnorderedMap::new(b"s".to_vec()),
             native_to_chains: Default::default(),
             used_events: UnorderedSet::new(b"u".to_vec()),
             owner_pk: env::signer_account_pk(),
@@ -261,6 +199,10 @@ impl MapCrossChainService {
             nonce: 0,
             paused: Mask::default(),
         }
+    }
+
+    pub fn version() -> &'static str {
+        "0.1.1"
     }
 
     /// Transfer from Map to NEAR based on the proof of the locked tokens or messages.
@@ -276,7 +218,6 @@ impl MapCrossChainService {
             .filter(|e| e.map_bridge_address == self.map_bridge_address)
             .collect();
         assert_ne!(0, events.len(), "no cross chain event in the receipt");
-
 
         for event in events.iter() {
             assert!(
@@ -295,15 +236,14 @@ impl MapCrossChainService {
             .verify_proof_data(receipt_proof)
             .then(
                 Self::ext(env::current_account_id())
-                    .with_static_gas((FINISH_DEPOSIT_GAS + MINT_GAS + FT_TRANSFER_CALL_GAS) * event_len)
+                    .with_static_gas(FINISH_TRANSFER_IN_SINGLE_EVENT_GAS * event_len)
                     .with_attached_deposit(env::attached_deposit())
                     .finish_transfer_in(events)
             )
     }
 
-    #[payable]
     pub fn transfer_out_token(&mut self, token: String, to: String, amount: u128, to_chain: u128) -> Promise {
-        self.check_not_paused(PAUSE_TRANSFER_IN);
+        self.check_not_paused(PAUSE_TRANSFER_OUT_TOKEN);
 
         if self.valid_mcs_token_out(&token, to_chain) {
             let from = env::signer_account_id().to_string();
@@ -323,12 +263,10 @@ impl MapCrossChainService {
 
             ext_mcs_token::ext(event.token.parse().unwrap())
                 .with_static_gas(BURN_GAS)
-                .with_attached_deposit(self.mcs_storage_transfer_in_required)
                 .burn(from.parse().unwrap(), event.amount.into())
                 .then(
                     Self::ext(env::current_account_id())
                         .with_static_gas(FINISH_TRANSFER_OUT_GAS)
-                        .with_attached_deposit(env::attached_deposit() - self.mcs_storage_transfer_in_required)
                         .finish_transfer_out(event)
                 )
         } else if self.valid_fungible_token_out(&token, to_chain) {
@@ -410,66 +348,74 @@ impl MapCrossChainService {
         let required_deposit = self.record_order_id(&event.order_id);
         assert!(cur_deposit >= required_deposit, "not enough deposit for record proof, exp: {}, cur: {}", required_deposit, cur_deposit);
 
-        let Recipient { target, message } = parse_recipient(event.to.to_string());
-        env::log_str(&*format!("Finish transfer in. Target:{} Message:{:?}", target, message));
+        env::log_str(&*format!("transfer in to: {}", event.to));
 
         let mut ret_deposit = cur_deposit - required_deposit;
-        let to_chain_token_account: AccountId = event.to_chain_token.parse().unwrap();
 
         if event.to_chain_token == "" {
+            assert!(ret_deposit >= 1, "not enough deposit for near withdraw");
+            ret_deposit = ret_deposit - 1;
+
             (ext_wnear_token::ext(self.wrapped_token.parse().unwrap())
                  .with_static_gas(NEAR_WITHDRAW_GAS)
                  .with_attached_deposit(1)
                  .near_withdraw(event.amount.into())
                  .then(
-                     Promise::new(target).transfer(event.amount.into())
+                     Self::ext(env::current_account_id())
+                         .with_static_gas(FINISH_TRANSFER_IN_NATIVE_TOKEN_GAS)
+                         .finish_transfer_in_native_token(event.clone())
                  ), ret_deposit)
-        } else if self.mcs_tokens.get(&event.to_chain_token).is_some()
-            // FIXME: for test
-            // || event.to_chain_token ==  "6feacd7ddb1bf2511b4ea0e83d89be0af295d52adb965883283d6835b15e0cd3"
-        {
-            assert!(ret_deposit >= self.mcs_storage_transfer_in_required, "not enough deposit for transfer in");
-
+        } else if self.mcs_tokens.get(&event.to_chain_token).is_some() {
+            assert!(ret_deposit >= self.mcs_storage_transfer_in_required, "not enough deposit for mcs token mint");
             ret_deposit = ret_deposit - self.mcs_storage_transfer_in_required;
 
-            match message {
-                Some(message) =>
-                    (ext_mcs_token::ext(to_chain_token_account.clone())
-                         .with_static_gas(MINT_GAS)
-                         .with_attached_deposit(self.mcs_storage_transfer_in_required)
-                         .mint(env::current_account_id(), event.amount.into())
-                         .then(
-                             ext_mcs_token::ext(to_chain_token_account.clone())
-                                 .with_static_gas(FT_TRANSFER_CALL_GAS)
-                                 .with_attached_deposit(1)
-                                 .ft_transfer_call(target.try_into().unwrap(), event.amount.into(), None, message)
-                         ), ret_deposit),
-
-                None =>
-                     (ext_mcs_token::ext( self.get_mcs_token_account_id("eth_token".to_string()))
-                    .with_static_gas(MINT_GAS)
-                    .with_attached_deposit(self.mcs_storage_transfer_in_required)
-                     .mint(target, event.amount.into()), ret_deposit),
-            }
+            (ext_mcs_token::ext(self.get_mcs_token_account_id(event.to_chain_token.clone()))
+                 .with_static_gas(MINT_GAS)
+                 .with_attached_deposit(self.mcs_storage_transfer_in_required)
+                 .mint(event.to.clone().parse().unwrap(), event.amount.into()), ret_deposit)
         } else if self.fungible_tokens.get(&event.to_chain_token).is_some() {
-                (ext_fungible_token::ext(to_chain_token_account.clone())
-                     .with_static_gas(FT_TRANSFER_GAS)
-                     .with_attached_deposit(1)
-                     .ft_transfer(target, event.amount.into(), None), ret_deposit)
+            let min_storage_balance = self.fungible_tokens_storage_balance.get(&event.token).unwrap();
+            assert!(ret_deposit >= 1 + min_storage_balance, "not enough deposit for ft transfer");
+            ret_deposit = ret_deposit - 1 - min_storage_balance;
+
+            let token_account: AccountId = event.to_chain_token.parse().unwrap();
+
+            (ext_fungible_token::ext(token_account.clone())
+                .with_static_gas(STORAGE_DEPOSIT_GAS)
+                .with_attached_deposit(min_storage_balance)
+                .storage_deposit(Some(event.to.clone().parse().unwrap()), Some(true))
+                .then(
+                    ext_fungible_token::ext(token_account)
+                        .with_static_gas(FT_TRANSFER_GAS)
+                        .with_attached_deposit(1)
+                        .ft_transfer(event.to.clone().parse().unwrap(), event.amount.into(), None)
+
+                ), ret_deposit)
+
         } else {
             panic_str(&*format!("unknown to_chain_token {} to transfer in", event.to_chain_token))
         }
     }
 
+    pub fn finish_transfer_in_native_token(
+        &mut self,
+        event: &MapTransferOutEvent
+    ) -> Promise {
+        assert_self();
+        assert_eq!(PromiseResult::Successful(vec![]), env::promise_result(0), "get result from cross contract");
+        Promise::new(event.to.clone().parse().unwrap()).transfer(event.amount.into())
+    }
+
     /// Finish transfer out once the nep141 token is burned from MCSToken contract or native token is transferred.
-    #[payable]
     pub fn finish_transfer_out(
         &mut self,
         #[serializer(borsh)]
         event: TransferOutEvent,
     ) {
+        assert_self();
         assert_eq!(PromiseResult::Successful(vec![]), env::promise_result(0), "get result from cross contract");
-        log!("transfer out: {}", event);
+        log!("transfer out: {}", serde_json::to_string(&event).unwrap());
+        log!("{}{}", TRANSFER_OUT_TYPE, event);
     }
 
     #[payable]
@@ -491,7 +437,8 @@ impl MapCrossChainService {
             amount,
         };
 
-        log!("deposit out: {}", event);
+        log!("deposit out: {}", serde_json::to_string(&event).unwrap());
+        log!("{}{}", DEPOSIT_OUT_TYPE, event);
     }
 
     #[payable]
@@ -587,8 +534,8 @@ impl MapCrossChainService {
                 reference,
                 reference_hash,
                 decimals,
-                icon
-        )
+                icon,
+            )
     }
 
     /// Factory Controller. Controller has extra privileges inside this contract.
@@ -643,13 +590,40 @@ impl MapCrossChainService {
         to_chain_set.contains(&to_chain)
     }
 
-    pub fn add_fungible_token_to_chain(&mut self, token: String, to_chain: u128) {
+    pub fn add_fungible_token_to_chain(&mut self, token: String, to_chain: u128) -> PromiseOrValue<()>{
         assert!(self.controller_or_self());
         assert!(self.mcs_tokens.get(&token).is_none(), "token name {} exists in mcs token", token);
+
+        if self.fungible_tokens_storage_balance.get(&token).is_none() {
+            ext_fungible_token::ext(token.parse().unwrap())
+                .with_static_gas(STORAGE_BALANCE_BOUNDS_GAS)
+                .storage_balance_bounds()
+                .then(
+                    Self::ext(env::current_account_id())
+                        .with_static_gas(FINISH_TRANSFER_IN_NATIVE_TOKEN_GAS)
+                        .finish_add_fungible_token_to_chain(token, to_chain)
+                ).into()
+        } else {
+            let mut to_chain_set = self.fungible_tokens.get(&token).unwrap_or(Default::default());
+            to_chain_set.insert(to_chain);
+            self.fungible_tokens.insert(&token, &to_chain_set);
+            PromiseOrValue::Value(())
+        }
+    }
+
+    pub fn finish_add_fungible_token_to_chain(&mut self, token: String, to_chain: u128) {
+        assert_self();
+        assert_eq!(env::promise_results_count(), 1, "ERR_TOO_MANY_RESULTS");
+
+        let bounds = match env::promise_result(0) {
+            PromiseResult::Successful(x) => serde_json::from_slice::<StorageBalanceBounds>(&x).unwrap(),
+            _ => env::panic_str("Promise with index 0 failed"),
+        };
 
         let mut to_chain_set = self.fungible_tokens.get(&token).unwrap_or(Default::default());
         to_chain_set.insert(to_chain);
         self.fungible_tokens.insert(&token, &to_chain_set);
+        self.fungible_tokens_storage_balance.insert(&token, &bounds.min.0);
     }
 
     pub fn remove_fungible_token_to_chain(&mut self, token: String, to_chain: u128) {
@@ -699,13 +673,13 @@ impl MapCrossChainService {
     }
 
     // FIXME: for testing only
-    #[payable]
-    pub fn mint(&mut self, token: String, to: String, amount: u128) -> Promise {
-        ext_mcs_token::ext( self.get_mcs_token_account_id(token))
-            .with_static_gas(MINT_GAS)
-            .with_attached_deposit(self.mcs_storage_transfer_in_required + 2)
-            .mint(to.parse().unwrap(), U128::from(amount))
-    }
+    // #[payable]
+    // pub fn mint(&mut self, token: String, to: String, amount: u128) -> Promise {
+    //     ext_mcs_token::ext( self.get_mcs_token_account_id(token))
+    //         .with_static_gas(MINT_GAS)
+    //         .with_attached_deposit(self.mcs_storage_transfer_in_required + 2)
+    //         .mint(to.parse().unwrap(), U128::from(amount))
+    // }
 }
 
 #[near_bindgen]
@@ -716,6 +690,7 @@ impl FungibleTokenReceiver for MapCrossChainService {
 
         let from = sender_id.to_string();
         if transfer_msg.typ == 0 {
+            self.check_not_paused(PAUSE_TRANSFER_OUT_TOKEN);
             assert!(self.valid_fungible_token_out(&token, transfer_msg.to_chain),
                     "transfer token {} to chain {} is not supported", token, transfer_msg.to_chain);
 
@@ -734,8 +709,10 @@ impl FungibleTokenReceiver for MapCrossChainService {
                 to_chain_token: "".to_string(),
                 amount: amount.0,
             };
-            log!("transfer out: {}", event);
+            log!("transfer out: {}", serde_json::to_string(&event).unwrap());
+            log!("{}{}", TRANSFER_OUT_TYPE, event);
         } else if transfer_msg.typ == 1 {
+            self.check_not_paused(PAUSE_DEPOSIT_OUT_TOKEN);
             assert!(self.valid_fungible_token_out(&token, MAP_CHAIN_ID)
                         || self.valid_mcs_token_out(&token, MAP_CHAIN_ID),
                     "deposit token {} to chain {} is not supported", token, MAP_CHAIN_ID);
@@ -752,7 +729,8 @@ impl FungibleTokenReceiver for MapCrossChainService {
                 token,
                 amount: amount.0,
             };
-            log!("deposit out: {}", event);
+            log!("deposit out: {}", serde_json::to_string(&event).unwrap());
+            log!("{}{}", DEPOSIT_OUT_TYPE, event);
         } else {
             panic_str(format!("transfer msg typ {} is not supported", transfer_msg.typ).as_ref());
         }
@@ -893,9 +871,9 @@ mod tests {
     fn test_fail_deploy_mcs_token() {
         set_env!(predecessor_account_id: alice().0);
         let mut contract = MapCrossChainService::init(prover(),
-                                                     map_bridge_address(),
-                                                     wrap_token(),
-                                                     NEAR_CHAIN_ID);
+                                                      map_bridge_address(),
+                                                      wrap_token(),
+                                                      NEAR_CHAIN_ID);
         set_env!(
             predecessor_account_id: alice().0,
             attached_deposit: MCS_TOKEN_INIT_BALANCE,
@@ -908,9 +886,9 @@ mod tests {
     fn test_fail_transfer_in_no_event() {
         set_env!(predecessor_account_id: alice().0);
         let mut contract = MapCrossChainService::init(prover(),
-                                                     map_bridge_address(),
-                                                     wrap_token(),
-                                                     NEAR_CHAIN_ID);
+                                                      map_bridge_address(),
+                                                      wrap_token(),
+                                                      NEAR_CHAIN_ID);
         set_env!(
             predecessor_account_id: alice().0,
             attached_deposit: env::storage_byte_cost() * 1000
@@ -922,9 +900,9 @@ mod tests {
     fn test_deploy_mcs_token() {
         set_env!(predecessor_account_id: alice().0);
         let mut contract = MapCrossChainService::init(prover(),
-                                                     map_bridge_address(),
-                                                     wrap_token(),
-                                                     NEAR_CHAIN_ID);
+                                                      map_bridge_address(),
+                                                      wrap_token(),
+                                                      NEAR_CHAIN_ID);
         set_env!(
             current_account_id: map_cross_chain_service(),
             predecessor_account_id: alice().0,
@@ -951,16 +929,16 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_transfer_out_token_no_tochian() {
+    fn test_transfer_out_token_no_to_chain() {
         let token = mcs_token().0;
         let from = alice().0;
         let to = alice().1;
 
         set_env!(predecessor_account_id: controller());
         let mut contract = MapCrossChainService::init(prover(),
-                                                     map_bridge_address(),
-                                                     wrap_token(),
-                                                     NEAR_CHAIN_ID);
+                                                      map_bridge_address(),
+                                                      wrap_token(),
+                                                      NEAR_CHAIN_ID);
 
         set_env!(
             predecessor_account_id: alice().0,
