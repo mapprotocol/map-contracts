@@ -5,7 +5,7 @@ const { borshify, borshifyInitialValidators, borshifyOutcomeProof } = require('.
 const sleep = promisify(setTimeout);
 
 let nearcms = '0x6d63732e70616e646172722e746573746e6574';
-let initData = '0x439fab91000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000066175726f72610000000000000000000000000000000000000000000000000000';
+let initData = '0x8129fc1c';
 async function main() {
 
   await verifyProofData();
@@ -16,7 +16,6 @@ async function main() {
 
 async function verifyProofData() {
   let [wallet] = await ethers.getSigners();
-
 
   const LightNode = await hre.ethers.getContractFactory("LightNode");
   const lightNode = await LightNode.connect(wallet).deploy();
@@ -29,9 +28,6 @@ async function verifyProofData() {
   console.log("lightNodeProxy deployed to .....", lightNodeProxy.address);
 
   const proxy = LightNode.attach(lightNodeProxy.address);
-
-
-  await proxy.connect(wallet).setNearProofProducerAccount_(nearcms);
 
   let block = borshify(require('./data/block.json'));
 

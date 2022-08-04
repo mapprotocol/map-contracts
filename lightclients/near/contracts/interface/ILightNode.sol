@@ -3,10 +3,11 @@
 pragma solidity ^0.8.0;
 
 interface ILightNode {
-    //Verify the validity of the transaction according to the header, receipt, and aggPk
+    //Verify the validity of the transaction according to the header, receipt
     //The interface will be updated later to return logs
     function verifyProofData(bytes memory _receiptProof)
         external
+        view
         returns (
             bool success,
             string memory message,

@@ -6,9 +6,8 @@ const sleep = promisify(setTimeout);
 const { Web3 } = require('../test/utils/robust')
 
 
-//let nearProofProducerAccount_ = "0x6175726f7261"; //0x6d63732e70616e646172722e746573746e6574
 
-let initData = '0x439fab91000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000066175726f72610000000000000000000000000000000000000000000000000000';
+let initData = '0x8129fc1c';
 let nearcms = '0x6d63732e70616e646172722e746573746e6574';
 async function main() {
 
@@ -26,52 +25,23 @@ async function main() {
 
   const proxy = LightNode.attach(lightNodeProxy.address);
 
-  await proxy.connect(wallet).setNearProofProducerAccount_(nearcms);
+   let block = borshify(require('./data/block.json'));
+   let validators = borshifyInitialValidators(require('./data/validators.json').next_bps);
 
-  let block = borshify(require('./data/block.json'));
-  let validators = borshifyInitialValidators(require('./data/validators.json').next_bps);
+   await (await proxy.connect(wallet).initWithValidators(validators, { gasLimit: 20000000 })).wait();
 
-  await proxy.connect(wallet).initWithValidators(validators, { gasLimit: 20000000 });
+   await sleep(20000);
+   
+   await (await proxy.connect(wallet).initWithBlock(block, { gasLimit: 20000000 })).wait();
 
-  await sleep(20000);
-  await proxy.connect(wallet).initWithBlock(block, { gasLimit: 20000000 });
+   await sleep(20000);
 
-  await sleep(20000);
+   await (await proxy.updateBlockHeader(borshify(require('./data/addBlock.json')), { gasLimit: 20000000 })).wait();
 
-  await proxy.updateBlockHeader(borshify(require('./data/addBlock.json')), { gasLimit: 20000000 })
+   await sleep(20000);
 
-  await sleep(20000);
+   console.log(await proxy.headerHeight());
 
-  console.log(await proxy.headerHeight());
-  // await sleep(20000);
-  //  const proxy = LightNode.attach("0xeA9066b735dA0ad462B269711be8e39fe7156d15");
-
-  //  let block = "0x" + borshify(require('./data/addBlock.json')).toString('hex');
-
-  //  let proof = "0x" + borshifyOutcomeProof(require('./data/proof.json')).toString('hex');
-
-  // await proxy.updateBlockHeader(borshify(require('./data/addBlock.json')), { gasLimit: 20000000 })
-
-  //  await sleep(20000);
-  //  console.log(await proxy.curHeight());
-
-  // let types = [
-  //   'bytes',
-  //   'bytes'
-  // ]
-
-  // let values = [
-  //   block,
-  //   proof
-  // ]
-
-  // await sleep(10000);
-
-  // let result = await proxy.verifyProofData(ethers.utils.defaultAbiCoder.encode(types, values), { gasLimit: 20000000 });
-
-  // console.log(result);
-
-  //  console.log(Buffer.from('aurora', 'utf8').toString('hex'));
 }
 
 // We recommend this pattern to be able to use async/await everywhere

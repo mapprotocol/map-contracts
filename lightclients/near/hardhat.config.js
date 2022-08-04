@@ -1,6 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
 
-const { MNEMONIC } = process.env;
+
 
 module.exports = {
   solidity: {
@@ -17,8 +18,9 @@ module.exports = {
     map_test: {
       chainId: 212,
       url: process.env.ROPSTEN_URL || "http://18.142.54.137:7445",
-      accounts: { mnemonic: ""},
+      accounts: { mnemonic: process.env.MNEMONIC},
     },
+    
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -28,3 +30,5 @@ module.exports = {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
 };
+
+

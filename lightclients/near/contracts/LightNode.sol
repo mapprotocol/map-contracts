@@ -10,6 +10,7 @@ import "./lib/Borsh.sol";
 import "./lib/NearDecoder.sol";
 import "./lib/ProofDecoder.sol";
 import "./lib/Ed25519Verify.sol";
+import "./lib/RLPEncode.sol";
 
 contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     using Borsh for Borsh.Data;
@@ -35,14 +36,11 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     bytes32 public curEpoch;
     uint256 public curHeight;
-    bytes public nearProofProducerAccount_;
 
     modifier onlyOwner() {
         require(msg.sender == _getAdmin(), "lightnode :: only admin");
         _;
     }
-
-    event SetNearProofProducerAccount(bytes nearProofProducerAccount);
 
     event UpdateBlockHeader(bytes32 indexed epochId, uint256 blockHeight);
 
@@ -50,15 +48,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     constructor() {}
 
-    function initialize(bytes memory nearProofProducerAccount)
-        public
-        initializer
-    {
+    function initialize() public initializer {
         _changeAdmin(msg.sender);
-
-        nearProofProducerAccount_ = nearProofProducerAccount;
-
-        emit SetNearProofProducerAccount(nearProofProducerAccount);
     }
 
     function trigglePause(bool flag) public onlyOwner returns (bool) {
@@ -69,14 +60,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
 
         return true;
-    }
-
-    function setNearProofProducerAccount_(bytes memory nearProofProducerAccount)
-        public
-        onlyOwner
-    {
-        nearProofProducerAccount_ = nearProofProducerAccount;
-        emit SetNearProofProducerAccount(nearProofProducerAccount);
     }
 
     function initWithValidators(bytes memory data) public onlyOwner {
@@ -349,36 +332,39 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
             reason = _reason;
         } else {
-            if (
-                keccak256(
+            ProofDecoder.ExecutionStatus memory status = fullOutcomeProof
+                .outcome_proof
+                .outcome_with_id
+                .outcome
+                .status;
+            success = (!status.failed && !status.unknown);
+
+            if (!success) {
+                reason = "failed or unknow transation";
+            } else {
+                logs = encodeLogs(
                     fullOutcomeProof
                         .outcome_proof
                         .outcome_with_id
                         .outcome
-                        .executor_id
-                ) != keccak256(nearProofProducerAccount_)
-            ) {
-                success = false;
-
-                reason = "Can only withdraw coins from the linked proof producer on Near blockchain";
-            } else {
-                ProofDecoder.ExecutionStatus memory status = fullOutcomeProof
-                    .outcome_proof
-                    .outcome_with_id
-                    .outcome
-                    .status;
-                success = (!status.failed && !status.unknown);
-
-                if (!success) {
-                    reason = "failed or unknow transation";
-                }
-
-                logs = abi.encode(
+                        .executor_id,
                     fullOutcomeProof.outcome_proof.outcome_with_id.outcome.logs
                 );
             }
         }
+    }
 
+    function encodeLogs(bytes memory executor_id, bytes[] memory logs)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        bytes[] memory list = new bytes[](2);
+
+        list[0] = RLPEncode.encodeBytes(executor_id);
+        list[1] = RLPEncode.encodeList(logs);
+
+        return RLPEncode.encodeList(list);
     }
 
     function proveOutcome(
