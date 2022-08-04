@@ -10,11 +10,12 @@ crate-type = ["cdylib", "rlib"]
 near-sdk = "4.0.0"
 near-sys = "0.2.0"
 uint = { version = "0.8.3", default-features = false }
-hex = { version = "0.4", default-features = false, features = ["alloc"]}
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
 rlp = { version = "0.4.6", default-features = false, features = ["std"] }
 num-bigint = { version = "0.4", default-features = false }
 num = { version = "0.3", default-features = false }
 num-traits = { version = "0.2.14", default-features = false }
+map-bn128 = { path = "../map-bn128" }
 
 [profile.release]
 codegen-units = 1

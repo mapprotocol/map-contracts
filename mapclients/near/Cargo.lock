@@ -1161,6 +1161,9 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+dependencies = [
+ "spin",
+]
 
 [[package]]
 name = "libc"
@@ -1200,10 +1203,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "map-bn"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "byteorder",
+ "crunchy",
+ "lazy_static",
+ "rustc-hex",
+ "seq-macro",
+]
+
+[[package]]
+name = "map-bn128"
+version = "0.1.0"
+dependencies = [
+ "map-bn",
+]
+
+[[package]]
 name = "map-light-client"
 version = "0.1.0"
 dependencies = [
  "hex 0.4.3",
+ "map-bn128",
  "near-sdk",
  "near-sys",
  "num",
@@ -1718,7 +1741,7 @@ dependencies = [
  "near-vm-errors 0.13.0",
  "ripemd",
  "serde",
- "sha2 0.9.9",
+ "sha2 0.10.2",
  "sha3",
 ]
 
@@ -2413,6 +2436,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2333e6df6d6598f2b1974829f853c2b4c5f4a6e503c10af918081aa6f8564e1"
 
 [[package]]
+name = "seq-macro"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa62e15412784450a67f0f49cc3cfd295f3ac0c5cda05e8312f089040debda0c"
+
+[[package]]
 name = "serde"
 version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2554,6 +2583,12 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "spin"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "static_assertions"

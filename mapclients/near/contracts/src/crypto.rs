@@ -133,14 +133,15 @@ pub fn sum_points<'a>(points: &'a Vec<G1>, bitmap: &'a Integer) -> Result<G1, &'
 
     let buf = filtered.concat();
 
-    unsafe {
-        near_sys::alt_bn128_g1_sum(buf.len() as _, buf.as_ptr() as _, ALT_BN128_REGISTER);
-    }
+    let res = map_bn128::alt_bn128_g1_sum(buf).unwrap();
+    // unsafe {
+    //     near_sys::alt_bn128_g1_sum(buf.len() as _, buf.as_ptr() as _, ALT_BN128_REGISTER);
+    // }
 
-    let res = env::read_register(ALT_BN128_REGISTER).expect(REGISTER_EXPECTED_ERR);
-    if res.len() != G1_PUBLIC_KEY_LENGTH {
-        return Err("alt_bn128_g1_sum get invalid result");
-    }
+    // let res = env::read_register(ALT_BN128_REGISTER).expect(REGISTER_EXPECTED_ERR);
+    // if res.len() != G1_PUBLIC_KEY_LENGTH {
+    //     return Err("alt_bn128_g1_sum get invalid result");
+    // }
 
     Ok(G1::from_le_slice(res.as_slice()).unwrap())
 }
@@ -151,12 +152,13 @@ pub fn check_aggregated_g2_pub_key(points: &Vec<G1>, bitmap: &Integer, agg_g2_pk
     let g1 = get_g1();
     let buf = pack_points(&g1_pk_sum, &g2, &g1.neg(), agg_g2_pk);
 
-    let mut res = 0;
-    unsafe {
-        res = near_sys::alt_bn128_pairing_check(buf.len() as _, buf.as_ptr() as _);
-    }
+    map_bn128::alt_bn128_pairing_check(buf).unwrap()
+    // let mut res = 0;
+    // unsafe {
+    //     res = near_sys::alt_bn128_pairing_check(buf.len() as _, buf.as_ptr() as _);
+    // }
 
-    res == 1
+    // res == 1
 }
 
 pub fn check_sealed_signature(agg_seal: &IstanbulAggregatedSeal, hash: &Hash, agg_g2_pk: &G2) -> bool {
@@ -167,12 +169,13 @@ pub fn check_sealed_signature(agg_seal: &IstanbulAggregatedSeal, hash: &Hash, ag
 
     let buf = pack_points(&sig_on_g1, &g2, &hash_to_g1.neg(), agg_g2_pk);
 
-    let mut res = 0;
-    unsafe {
-        res = near_sys::alt_bn128_pairing_check(buf.len() as _, buf.as_ptr() as _);
-    }
+    map_bn128::alt_bn128_pairing_check(buf).unwrap()
+    // let mut res = 0;
+    // unsafe {
+    //     res = near_sys::alt_bn128_pairing_check(buf.len() as _, buf.as_ptr() as _);
+    // }
 
-    res == 1
+    // res == 1
 }
 
 fn hash_to_g1(msg: Vec<u8>) -> G1 {
@@ -185,12 +188,13 @@ fn hash_to_g1(msg: Vec<u8>) -> G1 {
         &to_le_bytes(&g1.y),
         integer_to_vec_32(&scalar, false).as_slice()].concat();
 
-    unsafe {
-        near_sys::alt_bn128_g1_multiexp(buf.len() as _, buf.as_ptr() as _, ALT_BN128_REGISTER);
-    }
+    let res = map_bn128::alt_bn128_g1_multiexp(buf).unwrap();
+    // unsafe {
+    //     near_sys::alt_bn128_g1_multiexp(buf.len() as _, buf.as_ptr() as _, ALT_BN128_REGISTER);
+    // }
 
-    let res = env::read_register(ALT_BN128_REGISTER).expect(REGISTER_EXPECTED_ERR);
-    assert_eq!(64, res.len(), "G1 multiexp get invalid result");
+    // let res = env::read_register(ALT_BN128_REGISTER).expect(REGISTER_EXPECTED_ERR);
+    // assert_eq!(64, res.len(), "G1 multiexp get invalid result");
 
     G1::from_le_slice(res.as_slice()).unwrap()
 }

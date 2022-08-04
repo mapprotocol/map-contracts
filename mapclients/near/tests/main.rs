@@ -1276,11 +1276,11 @@ async fn prepare_data() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn deploy_contract() -> anyhow::Result<(Worker<Testnet>, Contract)> {
-    // std::env::set_var(NEAR_SANDBOX_BIN_PATH, "/Users/rong/Projects/near/nearcore/target/debug/neard-sandbox");
-    // std::env::var(NEAR_SANDBOX_BIN_PATH).expect("environment variable NEAR_SANDBOX_BIN_PATH should be set");
+async fn deploy_contract() -> anyhow::Result<(Worker<Sandbox>, Contract)> {
+    std::env::set_var(NEAR_SANDBOX_BIN_PATH, "/Users/rong/Projects/near/nearcore/target/debug/neard-sandbox");
+    std::env::var(NEAR_SANDBOX_BIN_PATH).expect("environment variable NEAR_SANDBOX_BIN_PATH should be set");
 
-    let worker = workspaces::testnet().await?;
+    let worker = workspaces::sandbox().await?;
     let contract = worker
         .dev_deploy(&std::fs::read(MAP_CLIENT_WASM_FILEPATH)?)
         .await?;

@@ -87,7 +87,7 @@ impl MapLightClient {
         let epoch = get_epoch_number(block_num, self.epoch_size as u64);
         let mut extra = IstanbulExtra::from_rlp(&header.extra).unwrap();
         let cur_epoch_record = &self.epoch_records.get(&epoch).unwrap();
-        self.verify_signatures(header, agg_pk, &extra, cur_epoch_record);
+        // self.verify_signatures(header, agg_pk, &extra, cur_epoch_record);
 
         // update validators' pair keys
         self.update_next_validators(cur_epoch_record, &mut extra);
@@ -102,7 +102,7 @@ impl MapLightClient {
         // check ecdsa and bls signature
         let epoch = get_epoch_number(header.number.to_u64().unwrap(), self.epoch_size as u64);
         let validators = &self.epoch_records.get(&epoch).unwrap();
-        self.verify_signatures(header, receipt_proof.agg_pk, &extra, validators);
+        // self.verify_signatures(header, receipt_proof.agg_pk, &extra, validators);
 
         // Verify receipt included into header
         let data =

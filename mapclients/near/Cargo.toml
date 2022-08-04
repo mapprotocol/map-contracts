@@ -26,4 +26,6 @@ overflow-checks = true
 [workspace]
 members = [
     "contracts",
+    "map-bn128",
+    "map-bn"
 ]
