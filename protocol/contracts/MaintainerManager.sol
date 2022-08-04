@@ -2,12 +2,13 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./utils/Role.sol";
 
-contract MaintainerManager is Role {
+contract MaintainerManager is  Role,UUPSUpgradeable {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
     // Info of each pool.
@@ -38,12 +39,14 @@ contract MaintainerManager is Role {
 
 
     constructor() {
-        pool = PoolInfo({
-        accMapsPerShare: 0,
-        lastAwards:0,
-        allStake:0,
-        awardWithdraw: 0
-        });
+//        pool = PoolInfo({
+//        accMapsPerShare: 0,
+//        lastAwards:0,
+//        allStake:0,
+//        awardWithdraw: 0
+//        });
+//        _setupRole(MANAGER_ROLE, msg.sender);
+//        _authorizeUpgrade(msg.sender);
     }
 
     receive() external payable {}
@@ -141,6 +144,28 @@ contract MaintainerManager is Role {
     function removeWhiteList(address _address) external onlyManager{
         whiteList[_address] = false;
         emit WhiteList(_address,0);
+    }
+
+    /** UUPS *********************************************************/
+    function _authorizeUpgrade(address)
+    internal
+    view
+    override {
+        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
+    }
+
+    function changeAdmin(address _admin) public onlyManager {
+        require(_admin != address(0), "zero address");
+
+        _changeAdmin(_admin);
+    }
+
+    function getAdmin() external view returns (address) {
+        return _getAdmin();
+    }
+
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
     }
 
 }

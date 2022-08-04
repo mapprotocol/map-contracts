@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "map:deploy:bridgerelay": "npx hardhat deploy --tags MAPBridgeRelayV1 --network Map"
+    "map:deploy:bridgerelay": "npx hardhat deploy --tags MaintainerManager --network Map"
   },
   "repository": {
     "type": "git",
