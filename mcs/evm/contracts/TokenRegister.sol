@@ -36,6 +36,13 @@ contract TokenRegister {
     function getTargetToken(
         uint256 sourceChain, address sourceToken, uint256 targetChain
     ) external view  returns (address mapToken){
-        return mapCorrespond[targetChain][sourceCorrespond[sourceChain][sourceToken]];
+        if(targetChain == chainID ){
+            mapToken = sourceCorrespond[sourceChain][sourceToken];
+        }else if(sourceChain == chainID){
+            mapToken = mapCorrespond[targetChain][sourceToken];
+        }else{
+            mapToken = mapCorrespond[targetChain][sourceCorrespond[sourceChain][sourceToken]];
+        }
+
     }
 }
