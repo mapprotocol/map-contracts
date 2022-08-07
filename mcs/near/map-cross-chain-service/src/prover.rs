@@ -3,12 +3,11 @@ use ethabi::{Event, EventParam, Hash, Log, ParamType, RawLog, Token};
 use ethabi::param_type::Writer;
 use near_sdk::ext_contract;
 use tiny_keccak::Keccak;
-use eth_types::H256;
 use map_light_client::{
     proof::ReceiptProof,
     proof::LogEntry,
     header::Hash as MapHash,
-    traits::FromBytes
+    traits::FromVec
 };
 
 pub type Address = [u8; 20];
@@ -87,7 +86,7 @@ impl MapEvent {
             anonymous: false,
         };
         let params: Vec<ParamType> = event.inputs.iter().map(|p| p.kind.clone()).collect();
-        let topics = indexes.into_iter().map(|value| MapHash::from_bytes(H256::from(value).0.as_bytes()).unwrap().clone()).collect();
+        let topics = indexes.into_iter().map(|value| MapHash::from_vec(&value).unwrap().clone()).collect();
         LogEntry {
             address: locker_address.into(),
             topics: vec![vec![long_signature(&event.name, &params)], topics].concat(),

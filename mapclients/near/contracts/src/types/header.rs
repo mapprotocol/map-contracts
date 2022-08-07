@@ -1,6 +1,6 @@
 use crate::serialization::rlp::{big_int_to_rlp_compat_bytes, rlp_list_field_from_bytes, rlp_to_big_int, };
 use crate::slice_as_array_ref;
-use crate::traits::{DefaultFrom, FromBytes, FromRlp, ToRlp};
+use crate::traits::{DefaultFrom, FromBytes, FromRlp, FromVec, ToRlp};
 use crate::types::{istanbul::ISTANBUL_EXTRA_VANITY_LENGTH, istanbul::istanbul_filtered_header, errors::Kind};
 use num_bigint::BigInt as Integer;
 use rlp::{
@@ -232,6 +232,17 @@ impl FromBytes for Address {
 impl FromBytes for Nonce {
     fn from_bytes(data: &[u8]) -> Result<&Nonce, Kind> {
         slice_as_array_ref!(&data[..NONCE_LENGTH], NONCE_LENGTH)
+    }
+}
+
+impl FromVec for Hash {
+    fn from_vec(data: &Vec<u8>) -> Result<Hash, Kind> {
+        let mut hash = [0u8; HASH_LENGTH];
+        for i in 0..data.len() {
+            hash[HASH_LENGTH - 1 - i] = data[data.len() - 1 - i];
+        }
+
+        Ok(hash)
     }
 }
 

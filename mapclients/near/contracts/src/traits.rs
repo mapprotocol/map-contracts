@@ -10,6 +10,12 @@ pub trait FromBytes {
     fn from_bytes(data: &[u8]) -> Result<&Self, Kind>;
 }
 
+pub trait FromVec {
+    fn from_vec(data: &Vec<u8>) -> Result<Self, Kind>
+    where
+        Self: std::marker::Sized;
+}
+
 pub trait ToRlp {
     fn to_rlp(&self) -> Vec<u8>;
 }

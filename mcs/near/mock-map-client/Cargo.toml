@@ -1,0 +1,13 @@
+[package]
+name = "mock-map-client"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+near-sdk = "4.0.0"
+hex = { version = "0.4", default-features = false, features = ["alloc"]}
+num-bigint = { version = "0.4", default-features = false }
+num = { version = "0.3", default-features = false }

@@ -8,7 +8,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 near-sdk = "4.0.0"
-eth-types =  { path="../eth-types" }
 near-contract-standards = "4.0.0"
 admin-controlled = { path="../admin-controlled" }
 uint = { version = "0.8.3", default-features = false }
