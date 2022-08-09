@@ -23,7 +23,6 @@ pub fn validate_eth_address(address: String) -> Address {
 #[ext_contract(ext_map_light_client)]
 pub trait MapLightClient {
     fn verify_proof_data(&self, receipt_proof: ReceiptProof);
-    fn test(&self) -> bool;
 }
 
 pub type EthEventParams = Vec<(String, ParamType, bool)>;

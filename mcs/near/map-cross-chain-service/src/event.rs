@@ -29,9 +29,9 @@ uint fromChain, uint toChain, bytes to, uint amount, bytes toChainToken);
 impl MapTransferOutEvent {
     fn event_params() -> EthEventParams {
         vec![
-            ("token".to_string(), ParamType::Bytes, true),
-            ("from".to_string(), ParamType::Bytes, true),
-            ("orderId".to_string(), ParamType::FixedBytes(32), true),
+            ("token".to_string(), ParamType::Bytes, false),
+            ("from".to_string(), ParamType::Bytes, false),
+            ("orderId".to_string(), ParamType::FixedBytes(32), false),
             ("fromChain".to_string(), ParamType::Uint(256), false),
             ("toChain".to_string(), ParamType::Uint(256), false),
             ("to".to_string(), ParamType::Bytes, false),
@@ -70,12 +70,11 @@ impl MapTransferOutEvent {
             "mapTransferOut",
             MapTransferOutEvent::event_params(),
             self.map_bridge_address,
+            vec![],
             vec![
-                self.token.clone(),
-                self.from.clone(),
-                self.order_id.clone().to_vec(),
-            ],
-            vec![
+                Token::Bytes(self.token.clone()),
+                Token::Bytes(self.from.clone()),
+                Token::FixedBytes(self.order_id.clone().to_vec()),
                 Token::Uint(self.from_chain.into()),
                 Token::Uint(self.to_chain.into()),
                 Token::Bytes(self.to.clone()),
@@ -168,22 +167,19 @@ mod tests {
     fn test_event_data() {
         let logs_str = r#"[
             {
-                "address": "0x1e2b8b93443cc0a3ac97b7844092fa6950f47435",
+                "address": "0x765a5a86411ab8627516cbb77d5db00b74fe610d",
                 "topics": [
-                    "0x1d7c4ab437b83807c25950ac63192692227b29e3205a809db6a4c3841836eb02",
-                    "0x000000000000000000000000ec3e016916ba9f10762e33e03e8556409d096fb4",
-                    "0x000000000000000000000000ec3e016916ba9f10762e33e03e8556409d096fb4",
-                    "0x7240c481582afe87a6cb9f590fa966ad7ded67e66365a9b98bde1d198a99bec1"
+                    "0xaca0a1067548270e80c1209ec69b5381d80bdaf345ad70cf7f00af9c6ed3f9b4"
                 ],
-                "data": "0x00000000000000000000000000000000000000000000000000000000000000d4000000000000000000000000000000000000000000000000000000004e45415300000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000000f70616e646172722e746573746e65740000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b6d63735f746f6b656e5f30000000000000000000000000000000000000000000"
+                "data": "0x00000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140d1edb03b4a0fe5d7b378a7beddd84a81ff8d6f2cf15607be44ba3518b541818f00000000000000000000000000000000000000000000000000000000000000d4000000000000000000000000000000000000000000000000000000004e4541530000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000014ec3e016916ba9f10762e33e03e8556409d096fb40000000000000000000000000000000000000000000000000000000000000000000000000000000000000014ec3e016916ba9f10762e33e03e8556409d096fb4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f70616e646172722e746573746e65740000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b6d63735f746f6b656e5f30000000000000000000000000000000000000000000"
             }
         ]"#;
 
         let logs: Vec<LogEntry> = serde_json::from_str(&logs_str).unwrap();
         assert_eq!(1, logs.len(), "should have only 1 log");
 
-       let event = MapTransferOutEvent::from_log_entry_data(logs.get(0).unwrap()).unwrap();
-        assert_eq!("1e2b8b93443cc0a3ac97b7844092fa6950f47435", hex::encode(event.map_bridge_address.clone()));
+        let event = MapTransferOutEvent::from_log_entry_data(logs.get(0).unwrap()).unwrap();
+        assert_eq!("765a5a86411ab8627516cbb77d5db00b74fe610d", hex::encode(event.map_bridge_address.clone()));
         assert_eq!("ec3e016916ba9f10762e33e03e8556409d096fb4", hex::encode(event.token.clone()));
         assert_eq!("ec3e016916ba9f10762e33e03e8556409d096fb4", hex::encode(event.from.clone()));
         assert_eq!(212, event.from_chain);
@@ -203,7 +199,7 @@ mod tests {
         let event_data = TransferOutEvent {
             token: "6b175474e89094c44da98b954eedeac495271d0f".to_string(),
             from: "00005474e89094c44da98b954eedeac495271d0f".to_string(),
-            to: "123".try_to_vec().unwrap(),
+            to: "123".as_bytes().to_vec(),
             amount: 1000,
             from_chain: 100,
             to_chain: 50000,
@@ -213,44 +209,5 @@ mod tests {
 
         let rlp = rlp::encode(&event_data);
         assert_eq!(exp, hex::encode(&rlp))
-    }
-
-    #[test]
-    fn test_log() {
-        let logs_str = r#"[
-        {
-            "address": "0xe2123fa0c94db1e5baeff348c0e7aecd15a11b45",
-            "topics": [
-            "0x1d7c4ab437b83807c25950ac63192692227b29e3205a809db6a4c3841836eb02",
-            "0x000000000000000000000000078f684c7d3bf78bdbe8bef93e56998442dc8099",
-            "0x000000000000000000000000078f684c7d3bf78bdbe8bef93e56998442dc8099",
-            "0xb2c235986cf359714f68eb1bd939adefcfb0bb2447c2c6473e569945f897761f"
-            ],
-            "data": "0x00000000000000000000000000000000000000000000000000000000000071a0000000000000000000000000000000000000000000000000000000004e45415300000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000206feacd7ddb1bf2511b4ea0e83d89be0af295d52adb965883283d6835b15e0cd300000000000000000000000000000000000000000000000000000000000000206feacd7ddb1bf2511b4ea0e83d89be0af295d52adb965883283d6835b15e0cd3"
-        }
-        ]"#;
-
-        let logs: Vec<LogEntry> = serde_json::from_str(&logs_str).unwrap();
-
-        let events: Vec<MapTransferOutEvent> = logs.iter()
-            .map(|e| MapTransferOutEvent::from_log_entry_data(e))
-            .filter(|e| e.is_some())
-            .map(|e| e.unwrap())
-            .collect();
-
-
-        assert_eq!(1, events.len());
-
-        let event = events.get(0).unwrap();
-
-        assert_eq!("078F684c7d3bf78BDbe8bEf93E56998442dc8099".to_lowercase(), hex::encode(&event.token));
-        assert_eq!("078F684c7d3bf78BDbe8bEf93E56998442dc8099".to_lowercase(), hex::encode(&event.from));
-        assert_eq!("b2c235986cf359714f68eb1bd939adefcfb0bb2447c2c6473e569945f897761f".to_string(), hex::encode(event.order_id));
-        assert_eq!(29088, event.from_chain);
-        assert_eq!(1313161555, event.to_chain);
-        assert_eq!("6feacd7ddb1bf2511b4ea0e83d89be0af295d52adb965883283d6835b15e0cd3".to_lowercase(), String::from_utf8(event.to.clone()).unwrap());
-        assert_eq!(100, event.amount);
-        assert_eq!("6feacd7ddb1bf2511b4ea0e83d89be0af295d52adb965883283d6835b15e0cd3".to_lowercase(), String::from_utf8(event.to_chain_token.clone()).unwrap());
-        assert_eq!("e2123fa0c94db1e5baeff348c0e7aecd15a11b45".to_lowercase(), hex::encode(event.map_bridge_address));
     }
 }

@@ -94,7 +94,6 @@ impl MCSToken {
         self.token.internal_deposit(&account_id, amount.into());
     }
 
-    #[payable]
     pub fn burn(&mut self, account_id: AccountId, amount: U128) {
         assert_eq!(
             env::predecessor_account_id(),
