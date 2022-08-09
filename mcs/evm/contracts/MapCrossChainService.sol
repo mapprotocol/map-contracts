@@ -41,8 +41,11 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     uint public chainGasFees;
     mapping(address => bool) public authToken;
 
+    mapping(address => uint256) public bridageAddress;
+
     //Can storage tokens be cross-chain?
     mapping(address => mapping(uint => bool)) canBridgeToken;
+
 
     struct txLog {
         address addr;
@@ -50,7 +53,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         bytes data;
     }
 
-    event mapTransferOut(address indexed token, address indexed from, bytes32 indexed orderId,
+    event mapTransferOut(bytes token, bytes from, bytes32 orderId,
         uint fromChain, uint toChain, bytes to, uint amount, bytes toChainToken);
     event mapTransferIn(address indexed token, bytes indexed from, bytes32 indexed orderId,
         uint fromChain, uint toChain, address to, uint amount);
@@ -65,7 +68,8 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         bytes32 orderId, uint amount);
 
 
-    bytes32 mapTransferOutTopic = keccak256(bytes('mapTransferOut(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
+    //bytes32 public mapTransferOutTopic = keccak256(bytes('mapTransferOut(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
+    bytes32 mapTransferOutTopic = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
     //    bytes mapTransferInTopic = keccak256(bytes('mapTransferIn(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
 
     function initialize(address _wToken, address _mapToken, address _lightNode) public initializer {
@@ -127,18 +131,19 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         for (uint i = 0; i < logs.length; i++) {
             txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
-            if (topic == mapTransferOutTopic) {
+            if (topic == mapTransferOutTopic && bridageAddress[log.addr] > 0) {
                 //                address token = abi.decode(log.topics[1], (address));
-                address from = abi.decode(log.topics[2], (address));
-                bytes32 orderId = abi.decode(log.topics[3], (bytes32));
-                (uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
-                = abi.decode(log.data, (uint, uint, bytes, uint, bytes));
+                // address from = abi.decode(log.topics[2], (address));
+                // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
+                (,bytes memory from,bytes32 orderId,uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
+                = abi.decode(log.data, (bytes,bytes,bytes32,uint, uint, bytes, uint, bytes));
                 address token = _bytesToAddress(toChainToken);
                 address payable toAddress = payable(_bytesToAddress(to));
-                _transferIn(token, _addressToBytes(from), toAddress, amount, orderId, fromChain, toChain);
+                _transferIn(token, from, toAddress, amount, orderId, fromChain, toChain);
             }
         }
     }
+
 
     function transferOut(address toContract, uint toChain, bytes memory data) external override whenNotPaused {
 
@@ -152,7 +157,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         } else {
             TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         }
-        emit mapTransferOut(token, msg.sender, orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
+        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
     }
 
     function transferOutNative(bytes memory toAddress, uint toChain) external override payable whenNotPaused {
@@ -160,7 +165,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         require(amount > 0, "balance is zero");
         bytes32 orderId = getOrderID(address(0), msg.sender, toAddress, amount, toChain);
         IWToken(wToken).deposit{value : amount}();
-        emit mapTransferOut(address(0), msg.sender, orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
+        emit mapTransferOut(_addressToBytes(address(0)), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
     }
 
 
@@ -220,7 +225,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     }
 
     function _addressToBytes(address a) internal pure returns (bytes memory b) {
-        return abi.encodePacked(a);
+        return abi.encode(a);
     }
 
     function decodeTxLog(bytes memory logsHash)
