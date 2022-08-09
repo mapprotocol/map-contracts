@@ -362,7 +362,15 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         bytes[] memory list = new bytes[](2);
 
         list[0] = RLPEncode.encodeBytes(executor_id);
-        list[1] = RLPEncode.encodeList(logs);
+
+        bytes[] memory _logs = new bytes[](logs.length);
+
+        for (uint256 i = 0; i < logs.length; i++) {
+
+            _logs[i] = RLPEncode.encodeBytes(logs[i]);
+
+        }
+        list[1] = RLPEncode.encodeList(_logs);
 
         return RLPEncode.encodeList(list);
     }
