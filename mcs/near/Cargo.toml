@@ -28,6 +28,5 @@ members = [
     "map-cross-chain-service",
     "mcs-token",
     "admin-controlled",
-    "near-lake-s3",
     "mock-map-client"
 ]

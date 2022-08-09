@@ -170,7 +170,8 @@ pub fn assert_self() {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FungibleTokenMsg {
-    pub typ: u8, // 0: Transfer or 1: Deposit
+    pub typ: u8,
+    // 0: Transfer or 1: Deposit
     pub to: Vec<u8>,
     pub to_chain: u128, // if typ is 1, it is omitted
 }
@@ -809,6 +810,7 @@ mod tests {
     const UNPAUSE_ALL: Mask = 0;
     const NEAR_CHAIN_ID: u128 = 1313161555;
     const ETH_CHAIN_ID: u128 = 1;
+    const STORAGE_BALANCE: u128 = 10000000;
 
     macro_rules! inner_set_env {
         ($builder:ident) => {
@@ -891,6 +893,24 @@ mod tests {
         }
     }
 
+    fn mcs_contract() -> MapCrossChainService {
+        MapCrossChainService{
+            map_client_account: prover().parse().unwrap(),
+            map_bridge_address: validate_eth_address(map_bridge_address()),
+            mcs_tokens: UnorderedMap::new(b"t".to_vec()),
+            fungible_tokens: UnorderedMap::new(b"f".to_vec()),
+            fungible_tokens_storage_balance: UnorderedMap::new(b"s".to_vec()),
+            native_to_chains: Default::default(),
+            used_events: UnorderedSet::new(b"u".to_vec()),
+            owner_pk: env::signer_account_pk(),
+            mcs_storage_transfer_in_required: STORAGE_BALANCE,
+            wrapped_token: wrap_token(),
+            near_chain_id:NEAR_CHAIN_ID,  // 1313161555 for testnet
+            nonce: 0,
+            paused: Mask::default(),
+        }
+    }
+
     // fn create_proof(locker: String, token: String) -> Proof {
     //     let event_data = MapTransferOutEvent {
     //         map_bridge_address: locker
@@ -919,11 +939,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_fail_deploy_mcs_token() {
-        set_env!(predecessor_account_id: alice().0);
-        let mut contract = MapCrossChainService::init(prover(),
-                                                      map_bridge_address(),
-                                                      wrap_token(),
-                                                      NEAR_CHAIN_ID);
+        let mut contract = mcs_contract();
         set_env!(
             predecessor_account_id: alice().0,
             attached_deposit: MCS_TOKEN_INIT_BALANCE,
@@ -934,11 +950,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_fail_transfer_in_no_event() {
-        set_env!(predecessor_account_id: alice().0);
-        let mut contract = MapCrossChainService::init(prover(),
-                                                      map_bridge_address(),
-                                                      wrap_token(),
-                                                      NEAR_CHAIN_ID);
+        let mut contract = mcs_contract();
         set_env!(
             predecessor_account_id: alice().0,
             attached_deposit: env::storage_byte_cost() * 1000
@@ -948,11 +960,7 @@ mod tests {
 
     #[test]
     fn test_deploy_mcs_token() {
-        set_env!(predecessor_account_id: alice().0);
-        let mut contract = MapCrossChainService::init(prover(),
-                                                      map_bridge_address(),
-                                                      wrap_token(),
-                                                      NEAR_CHAIN_ID);
+        let mut contract = mcs_contract();
         set_env!(
             current_account_id: map_cross_chain_service(),
             predecessor_account_id: alice().0,
@@ -983,12 +991,7 @@ mod tests {
         let token = mcs_token().0;
         let from = alice().0;
         let to = alice().1;
-
-        set_env!(predecessor_account_id: controller());
-        let mut contract = MapCrossChainService::init(prover(),
-                                                      map_bridge_address(),
-                                                      wrap_token(),
-                                                      NEAR_CHAIN_ID);
+        let mut contract = mcs_contract();
 
         set_env!(
             predecessor_account_id: alice().0,
