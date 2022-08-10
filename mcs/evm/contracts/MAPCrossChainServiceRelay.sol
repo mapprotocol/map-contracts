@@ -65,6 +65,17 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         bytes data;
     }
 
+    struct nearTransferOutEvent {
+        bytes token;
+        bytes from;
+        bytes order_id;
+        uint256 from_chain;
+        uint256 to_chain;
+        bytes to;
+        uint256 amount;
+        bytes to_chain_token;
+    }
+
     event mapTransferOut(bytes token, bytes from, bytes32 orderId,
         uint fromChain, uint toChain, bytes to, uint amount, bytes toChainToken);
 
@@ -77,6 +88,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     bytes32 public mapTransferOutTopic = keccak256(bytes('mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)'));
     //    bytes mapTransferInTopic = keccak256(bytes('mapTransferIn(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
+
+    bytes32 public NEARTRANSFEROUT = keccak256(bytes("transfer out"));
 
     function initialize(address _wToken, address _mapToken,address _managerAddress) public initializer {
         uint _chainId;
@@ -198,12 +211,19 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         return feeCenter.getTokenFee(toChainId, token, amount);
     }
 
+
     function transferIn(uint chainId, bytes memory receiptProof) external override{
         (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(chainId,receiptProof);
         require(sucess, message);
-
         //near
         if(chainId == ChainIdTable[1]){
+
+            (bytes memory executorId,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
+            if(bridageAddress[executorId] > 0 ){
+                bytes memory tokenAddr = tokenRegister.getTargetToken(_outEvent.from_chain,_outEvent.from,_outEvent.to_chain);
+                address payable toAddress = payable(_bytesToAddress(_outEvent.to));
+                _transferIn(_bytesToAddress(tokenAddr),_outEvent.from, toAddress, _outEvent.amount,bytes32(_outEvent.order_id),_outEvent.from_chain, _outEvent.to_chain);
+            }
 
         }
 
@@ -345,6 +365,119 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         }
     }
 
+    function decodeNearLog(bytes memory logsHash)
+    public
+    view
+    returns(bytes memory executorId,nearTransferOutEvent memory _outEvent){
+        RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
+
+        executorId = ls[0].toBytes();
+
+        bytes[] memory logs = new bytes[](ls[1].toList().length);
+        for (uint256 i = 0; i < ls[1].toList().length; i++) {
+
+            logs[i] = ls[1].toList()[i].toBytes();
+
+        }
+        bytes memory log;
+        for(uint256 i = 0;i < logs.length;i++){
+            if(bytes32(logs[i]) == NEARTRANSFEROUT){
+                log = splitExtra(logs[i]);
+            }
+        }
+
+        RLPReader.RLPItem[] memory logList = log.toRlpItem().toList();
+
+        _outEvent = nearTransferOutEvent({
+        token : logList[0].toBytes(),
+        from : logList[1].toBytes(),
+        order_id : logList[2].toBytes(),
+        from_chain : logList[3].toUint(),
+        to_chain : logList[4].toUint(),
+        to : logList[5].toBytes(),
+        amount : logList[6].toUint(),
+        to_chain_token : logList[7].toBytes()
+        });
+
+    }
+
+
+    function hexStrToBytes(bytes memory _hexStr)
+    public
+    pure
+    returns (bytes memory)
+    {
+        //Check hex string is valid
+        if (
+            _hexStr.length % 2 != 0 ||
+            _hexStr.length < 4
+        ) {
+            revert("hexStrToBytes: invalid input");
+        }
+
+        bytes memory bytes_array = new bytes((_hexStr.length ) / 2);
+
+        for (uint256 i = 0; i < _hexStr.length; i += 2) {
+            uint8 tetrad1 = 16;
+            uint8 tetrad2 = 16;
+
+            //left digit
+            if (
+                uint8(_hexStr[i]) >= 48 && uint8(_hexStr[i]) <= 57
+            ) tetrad1 = uint8(_hexStr[i]) - 48;
+
+            //right digit
+            if (
+                uint8(_hexStr[i + 1]) >= 48 &&
+                uint8(_hexStr[i + 1]) <= 57
+            ) tetrad2 = uint8(_hexStr[i + 1]) - 48;
+
+            //left A->F
+            if (
+                uint8(_hexStr[i]) >= 65 && uint8(_hexStr[i]) <= 70
+            ) tetrad1 = uint8(_hexStr[i]) - 65 + 10;
+
+            //right A->F
+            if (
+                uint8(_hexStr[i + 1]) >= 65 &&
+                uint8(_hexStr[i + 1]) <= 70
+            ) tetrad2 = uint8(_hexStr[i + 1]) - 65 + 10;
+
+            //left a->f
+            if (
+                uint8(_hexStr[i]) >= 97 &&
+                uint8(_hexStr[i]) <= 102
+            ) tetrad1 = uint8(_hexStr[i]) - 97 + 10;
+
+            //right a->f
+            if (
+                uint8(_hexStr[i + 1]) >= 97 &&
+                uint8(_hexStr[i + 1]) <= 102
+            ) tetrad2 = uint8(_hexStr[i + 1]) - 97 + 10;
+
+            //Check all symbols are allowed
+            if (tetrad1 == 16 ||  tetrad2 == 16)
+                revert("hexStrToBytes: invalid input");
+
+            bytes_array[i / 2 ] = bytes1(16 * tetrad1 + tetrad2);
+        }
+
+        return bytes_array;
+    }
+
+
+    function splitExtra(bytes memory extra)
+    internal
+    pure
+    returns (bytes memory newExtra){
+        newExtra = new bytes(extra.length - 32);
+        uint256 n = 0;
+        for (uint256 i = 32; i < extra.length; i++) {
+            newExtra[n] = extra[i];
+            n = n + 1;
+        }
+        return newExtra;
+    }
 
 
 }
