@@ -91,7 +91,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     bytes32 public NEARTRANSFEROUT = keccak256(bytes("transfer out"));
 
-    function initialize(address _wToken, address _mapToken,address _managerAddress) public initializer {
+    function initialize(address _wToken, address _mapToken, address _managerAddress) public initializer {
         uint _chainId;
         assembly {_chainId := chainid()}
         selfChainId = _chainId;
@@ -125,12 +125,12 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         lightClientManager = ILightClientManager(_managerAddress);
     }
 
-    function setBridageAddress(uint256 _chainId,bytes memory _addr) external onlyManager {
+    function setBridageAddress(uint256 _chainId, bytes memory _addr) external onlyManager {
 
         bridageAddress[_addr] = _chainId;
     }
 
-    function setIdTable(uint256 _chainId,uint256 _id) external onlyManager {
+    function setIdTable(uint256 _chainId, uint256 _id) external onlyManager {
 
         ChainIdTable[_id] = _chainId;
     }
@@ -212,22 +212,18 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
 
-    function transferIn(uint chainId, bytes memory receiptProof) external override{
-        (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(chainId,receiptProof);
+    function transferIn(uint chainId, bytes memory receiptProof) external override {
+        (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(chainId, receiptProof);
         require(sucess, message);
         //near
-        if(chainId == ChainIdTable[1]){
-
+        if (chainId == ChainIdTable[1]) {
             (bytes memory executorId,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
-            if(bridageAddress[executorId] > 0 ){
-                bytes memory tokenAddr = tokenRegister.getTargetToken(_outEvent.from_chain,_outEvent.from,_outEvent.to_chain);
+            if (bridageAddress[executorId] > 0) {
+                bytes memory tokenAddr = tokenRegister.getTargetToken(_outEvent.from_chain, _outEvent.from, _outEvent.to_chain);
                 address payable toAddress = payable(_bytesToAddress(_outEvent.to));
-                _transferIn(_bytesToAddress(tokenAddr),_outEvent.from, toAddress, _outEvent.amount,bytes32(_outEvent.order_id),_outEvent.from_chain, _outEvent.to_chain);
+                _transferIn(_bytesToAddress(tokenAddr), _outEvent.from, toAddress, _outEvent.amount, bytes32(_outEvent.order_id), _outEvent.from_chain, _outEvent.to_chain);
             }
-
-        }
-
-        if(chainId == ChainIdTable[0]){
+        } else {
             txLog[] memory logs = decodeTxLog(logArray);
 
             for (uint i = 0; i < logs.length; i++) {
@@ -238,18 +234,22 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
                     //                address token = abi.decode(log.topics[1], (address));
                     // address from = abi.decode(log.topics[2], (address));
                     // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
-                    (bytes memory fromAddress,bytes memory from,bytes32 orderId,uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
-                    = abi.decode(log.data, (bytes,bytes,bytes32,uint, uint, bytes, uint, bytes));
-                    bytes memory token = tokenRegister.getTargetToken(fromChain,fromAddress,toChain);
-                    address payable toAddress = payable(_bytesToAddress(to));
-                    _transferIn(_bytesToAddress(token),from, toAddress, amount, orderId, fromChain, toChain);
+                    (bytes memory fromToken,bytes memory from,bytes32 orderId,uint fromChain, uint toChain, bytes memory to, uint amount,)
+                    = abi.decode(log.data, (bytes, bytes, bytes32, uint, uint, bytes, uint, bytes));
+                    bytes memory toChainToken = tokenRegister.getTargetToken(fromChain, fromToken, toChain);
+                    if (toChain == selfChainId) {
+                        address payable toAddress = payable(_bytesToAddress(to));
+                        _transferIn(_bytesToAddress(toChainToken), from, toAddress, amount, orderId, fromChain, toChain);
+                    }else{
+                        _transferInOtherChain(_bytesToAddress(fromToken), from, to, amount, orderId, fromChain, toChain,toChainToken);
+                    }
                 }
             }
         }
     }
 
 
-    function transferOut(address toContract, uint toChain, bytes memory data) external override{
+    function transferOut(address toContract, uint toChain, bytes memory data) external override {
 
     }
 
@@ -265,8 +265,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         setVaultValue(amount, selfChainId, toChainId, token);
-        bytes memory toTokenAddress = tokenRegister.getTargetToken(selfChainId,_addressToBytes(token),toChainId);
-        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId,selfChainId, toChainId, to, outAmount,toTokenAddress);
+        bytes memory toTokenAddress = tokenRegister.getTargetToken(selfChainId, _addressToBytes(token), toChainId);
+        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, toTokenAddress);
     }
 
     function transferOutNative(bytes memory to, uint toChainId) external override payable whenNotPaused {
@@ -279,8 +279,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
         setVaultValue(amount, selfChainId, toChainId, address(0));
-        bytes memory token = tokenRegister.getTargetToken(selfChainId,_addressToBytes(address(0)),toChainId);
-        emit mapTransferOut(_addressToBytes(address(0)), _addressToBytes(msg.sender),orderId, selfChainId, toChainId, to, outAmount,token);
+        bytes memory token = tokenRegister.getTargetToken(selfChainId, _addressToBytes(address(0)), toChainId);
+        emit mapTransferOut(_addressToBytes(address(0)), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, token);
     }
 
     function _transferIn(address token, bytes memory from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
@@ -300,12 +300,18 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             }
             collectChainFee(fee, token);
             emit mapTransferIn(address(0), from, orderId, fromChain, toChain, to, outAmount);
-        } else {
-            if (checkAuthToken(token)) {
-                IMAPToken(token).burn(outAmount);
-            }
-            emit mapTransferOut(_addressToBytes(token), from, orderId, fromChain, toChain, _addressToBytes(to), outAmount, _addressToBytes(address(0)));
         }
+        setVaultValue(amount, fromChain, toChain, token);
+    }
+
+    function _transferInOtherChain(address token, bytes memory from, bytes memory to, uint amount, bytes32 orderId, uint fromChain, uint toChain,bytes memory toChainToken)
+    internal checkOrder(orderId) nonReentrant whenNotPaused {
+        uint fee = getChainFee(toChain, token, amount);
+        uint outAmount = amount.sub(fee);
+        if (checkAuthToken(token)) {
+            IMAPToken(token).burn(outAmount);
+        }
+        emit mapTransferOut(_addressToBytes(token), from, orderId, fromChain, toChain, to, outAmount, toChainToken);
         setVaultValue(amount, fromChain, toChain, token);
     }
 
@@ -339,11 +345,22 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
     function _bytesToAddress(bytes memory bys) internal pure returns (address addr){
-        return abi.decode(bys,(address));
+        assembly {
+            addr := mload(add(bys, 20))
+        }
     }
 
     function _addressToBytes(address a) internal pure returns (bytes memory b) {
-        return abi.encode(a);
+        assembly {
+            let m := mload(0x40)
+            a := and(a, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+            mstore(
+            add(m, 20),
+            xor(0x140000000000000000000000000000000000000000, a)
+            )
+            mstore(0x40, add(m, 52))
+            b := m
+        }
     }
 
     function decodeTxLog(bytes memory logsHash)
@@ -368,7 +385,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     function decodeNearLog(bytes memory logsHash)
     public
     view
-    returns(bytes memory executorId,nearTransferOutEvent memory _outEvent){
+    returns (bytes memory executorId, nearTransferOutEvent memory _outEvent){
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
 
         executorId = ls[0].toBytes();
@@ -380,8 +397,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
         }
         bytes memory log;
-        for(uint256 i = 0;i < logs.length;i++){
-            if(bytes32(logs[i]) == NEARTRANSFEROUT){
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (bytes32(logs[i]) == NEARTRANSFEROUT) {
                 log = splitExtra(logs[i]);
             }
         }
@@ -415,7 +432,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             revert("hexStrToBytes: invalid input");
         }
 
-        bytes memory bytes_array = new bytes((_hexStr.length ) / 2);
+        bytes memory bytes_array = new bytes((_hexStr.length) / 2);
 
         for (uint256 i = 0; i < _hexStr.length; i += 2) {
             uint8 tetrad1 = 16;
@@ -456,10 +473,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             ) tetrad2 = uint8(_hexStr[i + 1]) - 97 + 10;
 
             //Check all symbols are allowed
-            if (tetrad1 == 16 ||  tetrad2 == 16)
+            if (tetrad1 == 16 || tetrad2 == 16)
                 revert("hexStrToBytes: invalid input");
 
-            bytes_array[i / 2 ] = bytes1(16 * tetrad1 + tetrad2);
+            bytes_array[i / 2] = bytes1(16 * tetrad1 + tetrad2);
         }
 
         return bytes_array;
