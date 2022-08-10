@@ -216,14 +216,18 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(chainId, receiptProof);
         require(sucess, message);
         //near
+
         if (chainId == ChainIdTable[1]) {
-            (bytes memory executorId,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
-            if (bridageAddress[executorId] > 0) {
-                bytes memory tokenAddr = tokenRegister.getTargetToken(_outEvent.from_chain, _outEvent.from, _outEvent.to_chain);
-                address payable toAddress = payable(_bytesToAddress(_outEvent.to));
-                _transferIn(_bytesToAddress(tokenAddr), _outEvent.from, toAddress, _outEvent.amount, bytes32(_outEvent.order_id), _outEvent.from_chain, _outEvent.to_chain);
+            (,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
+            bytes memory toChainToken = tokenRegister.getTargetToken(_outEvent.from_chain, _outEvent.token, _outEvent.to_chain);
+            address payable toAddress = payable(_bytesToAddress(_outEvent.to));
+            if (_outEvent.to_chain == selfChainId) {
+                _transferIn(_bytesToAddress(toChainToken), _outEvent.from, toAddress, _outEvent.amount, bytes32(_outEvent.order_id), _outEvent.from_chain, _outEvent.to_chain);
+            } else {
+                _transferInOtherChain(_outEvent.token, _outEvent.from, _outEvent.to, _outEvent.amount, bytes32(_outEvent.order_id), _outEvent.from_chain, _outEvent.to_chain, toChainToken);
             }
         } else {
+
             txLog[] memory logs = decodeTxLog(logArray);
 
             for (uint i = 0; i < logs.length; i++) {
@@ -240,8 +244,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
                     if (toChain == selfChainId) {
                         address payable toAddress = payable(_bytesToAddress(to));
                         _transferIn(_bytesToAddress(toChainToken), from, toAddress, amount, orderId, fromChain, toChain);
-                    }else{
-                        _transferInOtherChain(_bytesToAddress(fromToken), from, to, amount, orderId, fromChain, toChain,toChainToken);
+                    } else {
+                        _transferInOtherChain(fromToken, from, to, amount, orderId, fromChain, toChain, toChainToken);
                     }
                 }
             }
@@ -299,16 +303,18 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
                 TransferHelper.safeTransfer(token, to, outAmount);
             }
             collectChainFee(fee, token);
-            emit mapTransferIn(address(0), from, orderId, fromChain, toChain, to, outAmount);
+            emit mapTransferIn(token, from, orderId, fromChain, toChain, to, outAmount);
         }
         setVaultValue(amount, fromChain, toChain, token);
     }
 
-    function _transferInOtherChain(address token, bytes memory from, bytes memory to, uint amount, bytes32 orderId, uint fromChain, uint toChain,bytes memory toChainToken)
+    function _transferInOtherChain(bytes memory sourceToken, bytes memory from, bytes memory to, uint amount, bytes32 orderId, uint fromChain, uint toChain, bytes memory toChainToken)
     internal checkOrder(orderId) nonReentrant whenNotPaused {
+        address token = _bytesToAddress(tokenRegister.getTargetToken(selfChainId, sourceToken, toChain));
         uint fee = getChainFee(toChain, token, amount);
         uint outAmount = amount.sub(fee);
         if (checkAuthToken(token)) {
+            IMAPToken(token).mint(address(this),amount);
             IMAPToken(token).burn(outAmount);
         }
         emit mapTransferOut(_addressToBytes(token), from, orderId, fromChain, toChain, to, outAmount, toChainToken);
