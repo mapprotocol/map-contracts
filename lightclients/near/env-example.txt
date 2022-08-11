@@ -1,0 +1,1 @@
+MNEMONIC = test test orphan test illegal father test pupil test forward mammal cinnamon
