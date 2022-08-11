@@ -63,20 +63,29 @@ lightNodeProxy deployed to ..... 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 
 **onChainTest.sol** including test cases related to proof validation. It also contains proof validation using map pre-compiled Ed25519 contracts.
 
-This test requires a different setup since it is tested on map testnet.  We need to add map testnet in Hardhat configuration and enter a funded account mnemonic.
+This test requires a different setup since it is tested on map testnet.  
+
+We need to first enter a funded account mnemonic in .env file.
+
+```
+MNEMONIC = test test orphan test illegal father test pupil test forward mammal cinnamon
+```
+
+Then we need to add custom map_test network settings in hardhat config file.
 
 ```json
-networks: {
+ networks: {
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     map_test: {
-      chainId: 22776,
-      url: "https://poc2-rpc.maplabs.io" || "",
-      accounts: { mnemonic: ""},
+      chainId: 212,
+      url: process.env.ROPSTEN_URL || "http://18.142.54.137:7445",
+      accounts: { mnemonic: process.env.MNEMONIC},
     },
+    
   },
 ```
 
