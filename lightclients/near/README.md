@@ -65,7 +65,7 @@ lightNodeProxy deployed to ..... 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 
 This test requires a different setup since it is tested on map testnet.  
 
-We need to first enter a funded account mnemonic in .env file.
+We need to first enter a funded account mnemonic and put it into a newly created .env file. The example content for .env file is in env-example.txt.
 
 ```
 MNEMONIC = test test orphan test illegal father test pupil test forward mammal cinnamon
@@ -85,7 +85,6 @@ Then we need to add custom map_test network settings in hardhat config file.
       url: process.env.ROPSTEN_URL || "http://18.142.54.137:7445",
       accounts: { mnemonic: process.env.MNEMONIC},
     },
-    
   },
 ```
 
