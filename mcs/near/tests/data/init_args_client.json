@@ -1,47 +1,39 @@
 {
     "threshold": 3,
-    "epoch": 450,
+    "epoch": 300,
     "epoch_size": 1000,
     "validators": [
         {
             "g1_pub_key": {
-                "x": "0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249",
-                "y": "0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"
+                "x": "0x01370ecd3f4871a718079cb799ed57597b6087eb09811fae7635f541a0b14c57",
+                "y": "0x1b327c6f9d07f6f2b666e341fa7cb3531ee510da50fedc567739a7040a1dc696"
             },
             "weight": 1,
-            "address": "0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"
+            "address": "0xec3e016916ba9f10762e33e03e8556409d096fb4"
         },
         {
             "g1_pub_key": {
-                "x": "0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58",
-                "y": "0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"
+                "x": "0x2dc393cb4e1d6bb5e26c4fef0ccdde874535af1da42f64b34525a399dc1bbe62",
+                "y": "0x1291bd0437dbb1f7ea7737ad515546b8f6b696ea0b9f6f49d5f6c039259ae778"
             },
             "weight": 1,
-            "address": "0x7a3a26123dbd9cfefc1725fe7779580b987251cb"
+            "address": "0x6f08db5ba52d896f2472eb49580ac6d8d0351a66"
         },
         {
             "g1_pub_key": {
-                "x": "0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812",
-                "y": "0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"
+                "x": "0x2801781ffcf2371c911090b1dfe626a7b4e745810f30d545e45b965674bee6b3",
+                "y": "0x23ef4f51b21bd4d141e484ff8f9d5becddc4ffe0d432a80d59b982aab1f9e575"
             },
             "weight": 1,
-            "address": "0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"
+            "address": "0x2f3079a1c1c0995a1c9803853d1b8444cce0aa9f"
         },
         {
             "g1_pub_key": {
-                "x": "0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6",
-                "y": "0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"
+                "x": "0x1d330a79f1374d37c618bcb34edc38f99935a9f44d3885672232495e22fce151",
+                "y": "0x2b742d040ff3e9a996b79406cc4f18fc6c9b4a28ee7c3e88590406259f404531"
             },
             "weight": 1,
-            "address": "0x65b3fee569bf82ff148bdded9c3793fb685f9333"
-        },
-        {
-            "g1_pub_key": {
-                "x": "0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d",
-                "y": "0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"
-            },
-            "weight": 1,
-            "address": "0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"
+            "address": "0x096bf1097f3af73b716eab545001d97b2cf1fb20"
         }
     ]
 }

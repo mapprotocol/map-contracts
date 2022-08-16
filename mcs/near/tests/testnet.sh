@@ -1,8 +1,8 @@
 MASTER_ACCOUNT="XXX.testnet"
 INIT_ARGS_CLIENT=`cat data/init_args_client.json`
 INIT_ARGS_MCS='{
-              "map_light_client": "client.'$MASTER_ACCOUNT'",
-              "map_bridge_address": "e2123fa0c94db1e5baeff348c0e7aecd15a11b45",
+              "map_light_client": "client1.'$MASTER_ACCOUNT'",
+              "map_bridge_address": "81d871383FdB1E96A701aa2A4ba2Bcf86ffE06b1",
               "wrapped_token": "wrap.testnet",
               "near_chain_id": 1313161555
             }'
@@ -12,7 +12,7 @@ INIT_ARGS_MCS='{
 
 near deploy --accountId client.$MASTER_ACCOUNT --wasmFile ~/WorkMap/map-contracts/mapclients/near/target/wasm32-unknown-unknown/release/map_light_client.wasm
 
-near call client.$MASTER_ACCOUNT new $INIT_ARGS_CLIENT --accountId $MASTER_ACCOUNT
+near call client.$MASTER_ACCOUNT new "$INIT_ARGS_CLIENT" --accountId $MASTER_ACCOUNT
 
 echo "deploying mcs contract"
 near deploy --accountId mcs.$MASTER_ACCOUNT --wasmFile ~/WorkMap/map-contracts/mcs/near/target/wasm32-unknown-unknown/release/mcs.wasm
@@ -21,7 +21,7 @@ echo "get mcs version"
 near call mcs.$MASTER_ACCOUNT version {} --accountId $MASTER_ACCOUNT
 
 echo "initializing mcs contract"
-near call mcs.$MASTER_ACCOUNT init $INIT_ARGS_MCS --accountId $MASTER_ACCOUNT
+near call mcs.$MASTER_ACCOUNT init "$INIT_ARGS_MCS" --accountId $MASTER_ACCOUNT --gas 80000000000000
 
 # deploy 2 mcs token contracts
 echo "deploying mcs_token_0 contract"
@@ -33,14 +33,14 @@ echo "getting mcs_token list from mcs contract"
 near view mcs.$MASTER_ACCOUNT get_mcs_tokens '{}'
 
 echo "adding mcs_token_0 to_chain info to mcs contract"
-near call mcs.$MASTER_ACCOUNT add_mcs_token_to_chain '{"token": "mcs_token_0", "to_chain": 1}' --accountId mcs.$MASTER_ACCOUNT
+near call mcs.$MASTER_ACCOUNT add_mcs_token_to_chain '{"token": "mcs_token_0", "to_chain": 34434}' --accountId mcs.$MASTER_ACCOUNT
 
 echo "minting 1000 mcs token for "$MASTER_ACCOUNT
-near call mcs.$MASTER_ACCOUNT mint '{"token": "mcs_token_0", "to":"'$MASTER_ACCOUNT'", "amount": 1000}' --accountId mcs.$MASTER_ACCOUNT
+near call mcs_token_0.mcs.$MASTER_ACCOUNT mint '{"account_id": "'$MASTER_ACCOUNT'", "amount": "1000"}' --accountId mcs.$MASTER_ACCOUNT
 near view mcs_token_0.mcs.$MASTER_ACCOUNT ft_balance_of '{"account_id":"'$MASTER_ACCOUNT'"}'
 
 echo "transfer out 100 mcs token from "$MASTER_ACCOUNT" to 0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4 on chain 1"
-near call mcs.$MASTER_ACCOUNT transfer_out_token '{"token":"mcs_token_0", "to":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4", "amount": 100, "to_chain": 1}' --accountId $MASTER_ACCOUNT --deposit 5 --gas 60000000000000
+near call mcs.$MASTER_ACCOUNT transfer_out_token '{"token":"mcs_token_0", "to":[207, 200, 11, 237, 219, 112, 241, 42, 246, 218, 118, 143, 195, 14, 57, 104, 137, 223, 206, 38], "amount": 100, "to_chain": 34434}' --accountId $MASTER_ACCOUNT --gas 60000000000000
 
 echo "adding native token to_chain info to mcs contract"
 near call mcs.$MASTER_ACCOUNT add_native_to_chain '{"to_chain": 1}' --accountId mcs.$MASTER_ACCOUNT
