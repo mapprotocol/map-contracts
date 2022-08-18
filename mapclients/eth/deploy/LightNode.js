@@ -26,8 +26,19 @@ module.exports = async function ({ethers, deployments}) {
     })
 
 
-     let verifyTool = await ethers.getContract('VerifyTool');
+    let verifyTool = await ethers.getContract('VerifyTool');
     let lightNode = await ethers.getContract('LightNode');
+
+    await deploy('LightNodeProxy', {
+        from: deployer.address,
+        args: [lightNode.address,"0x"],
+        log: true,
+        contract: 'LightNodeProxy',
+    })
+
+    let LightNodeProxy = await ethers.getContract('LightNodeProxy');
+
+    lightNode = await ethers.getContractAt('LightNode',LightNodeProxy.address)
 
     //ROPSTEN
     //0x04b12c39a37230c99b9f0D57902509179C4BCd60
