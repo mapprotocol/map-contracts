@@ -182,10 +182,13 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     function getToChainAmount(address token, uint256 fromChain, uint256 toChain, uint256 amount)
     internal view returns (uint256){
-        uint256 decimalsFrom = tokenOtherChainDecimals[token][fromChain];
+        uint256 decimalsFrom = IERC20Metadata(token).decimals();
+        if (fromChain == selfChainId) {
+            decimalsFrom = tokenOtherChainDecimals[token][fromChain];
+        }
         require(decimalsFrom > 0, "decimals error");
-        uint256 decimalsTo = 18;
-        if (toChain != selfChainId){
+        uint256 decimalsTo = IERC20Metadata(token).decimals();
+        if (toChain != selfChainId) {
             decimalsTo = tokenOtherChainDecimals[token][toChain];
         }
         require(decimalsTo > 0, "decimals error");
@@ -194,8 +197,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     function getToChainAmountOther(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
     internal view returns (uint256){
-        address tokenMap = getMapToken(token,fromChain);
-        return getToChainAmount(tokenMap,fromChain,toChain,amount);
+        address tokenMap = getMapToken(token, fromChain);
+        return getToChainAmount(tokenMap, fromChain, toChain, amount);
     }
 
     function getMapToken(bytes memory fromToken, uint256 fromChain)
@@ -254,7 +257,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             (,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
             bytes memory toChainToken = tokenRegister.getTargetToken(_outEvent.from_chain, _outEvent.token, _outEvent.to_chain);
             address payable toAddress = payable(_bytesToAddress(_outEvent.to));
-            uint256 outAmount = getToChainAmountOther(_outEvent.token,_outEvent.from_chain,_outEvent.to_chain,_outEvent.amount);
+            uint256 outAmount = getToChainAmountOther(_outEvent.token, _outEvent.from_chain, _outEvent.to_chain, _outEvent.amount);
             if (_outEvent.to_chain == selfChainId) {
                 _transferIn(_bytesToAddress(toChainToken), _outEvent.from, toAddress, outAmount,
                     bytes32(_outEvent.order_id), _outEvent.from_chain, _outEvent.to_chain);
@@ -278,7 +281,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
                     uint256 toChain, bytes memory to, uint256 amount,)
                     = abi.decode(log.data, (bytes, bytes, bytes32, uint, uint, bytes, uint, bytes));
                     bytes memory toChainToken = tokenRegister.getTargetToken(fromChain, fromToken, toChain);
-                    uint256 outAmount = getToChainAmountOther(fromToken,fromChain,toChain,amount);
+                    uint256 outAmount = getToChainAmountOther(fromToken, fromChain, toChain, amount);
                     if (toChain == selfChainId) {
                         address payable toAddress = payable(_bytesToAddress(to));
                         _transferIn(_bytesToAddress(toChainToken), from, toAddress, outAmount, orderId, fromChain, toChain);
@@ -307,7 +310,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         setVaultValue(amount, selfChainId, toChainId, token);
         bytes memory toTokenAddress = tokenRegister.getTargetToken(selfChainId, _addressToBytes(token), toChainId);
-        outAmount = getToChainAmount(token,selfChainId,toChainId,outAmount);
+        outAmount = getToChainAmount(token, selfChainId, toChainId, outAmount);
         emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, toTokenAddress);
     }
 
@@ -322,7 +325,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
         setVaultValue(amount, selfChainId, toChainId, address(0));
         bytes memory token = tokenRegister.getTargetToken(selfChainId, _addressToBytes(address(0)), toChainId);
-        outAmount = getToChainAmount(address(0),selfChainId,toChainId,outAmount);
+        outAmount = getToChainAmount(address(0), selfChainId, toChainId, outAmount);
         emit mapTransferOut(_addressToBytes(address(0)), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, token);
     }
 
