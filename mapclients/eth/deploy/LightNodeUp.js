@@ -21,14 +21,16 @@ module.exports = async function ({ethers, deployments}) {
 
     let lightNode = await ethers.getContract('LightNode');
 
-    let proxyAddress = await  ethers.getContract("LightNodeProxy").address;
+    let proxy = await  ethers.getContract("LightNodeProxy");
 
     console.log(lightNode.address)
+    console.log(proxy.address)
 
-
-    let lightNodeProxy = await ethers.getContractAt("LightNode",proxyAddress);
+    let lightNodeProxy = await ethers.getContractAt("LightNode",proxy.address);
 
     await  lightNodeProxy.upgradeTo(lightNode.address);
+
+    console.log("LightNodeUp ok")
 }
 
 module.exports.tags = ['LightNodeUp']

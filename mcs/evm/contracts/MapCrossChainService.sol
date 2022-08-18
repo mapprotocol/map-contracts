@@ -126,6 +126,10 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         return authToken[token];
     }
 
+    function setCanBridgeToken(address token, uint chainId, bool canBridge) public onlyManager{
+        canBridge[token][chainId] = canBridge;
+    }
+
 
     function transferIn(uint, bytes memory receiptProof) external override nonReentrant whenNotPaused {
         (bool sucess,string memory message,bytes memory logArray) = lightNode.verifyProofData(receiptProof);
