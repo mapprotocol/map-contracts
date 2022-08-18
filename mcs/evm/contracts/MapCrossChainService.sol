@@ -41,7 +41,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     uint public chainGasFees;
     mapping(address => bool) public authToken;
 
-    mapping(address => uint256) public bridageAddress;
+    mapping(address => uint256) public bridgeAddress;
 
     //Can storage tokens be cross-chain?
     mapping(address => mapping(uint => bool)) canBridgeToken;
@@ -69,7 +69,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
 
 
     //bytes32 public mapTransferOutTopic = keccak256(bytes('mapTransferOut(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
-    bytes32 mapTransferOutTopic = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
+    bytes32 public mapTransferOutTopic = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
     //    bytes mapTransferInTopic = keccak256(bytes('mapTransferIn(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
 
     function initialize(address _wToken, address _mapToken, address _lightNode) public initializer {
@@ -118,6 +118,10 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         }
     }
 
+    function setBridge(address _bridge, uint256 _num) public onlyManager{
+        bridgeAddress[_bridge]   = _num;
+    }
+
     function checkAuthToken(address token) public view returns (bool) {
         return authToken[token];
     }
@@ -131,7 +135,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         for (uint i = 0; i < logs.length; i++) {
             txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
-            if (topic == mapTransferOutTopic && bridageAddress[log.addr] > 0) {
+            if (topic == mapTransferOutTopic && bridgeAddress[log.addr] > 0) {
                 //                address token = abi.decode(log.topics[1], (address));
                 // address from = abi.decode(log.topics[2], (address));
                 // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
@@ -159,6 +163,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         }
         emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
     }
+
 
     function transferOutNative(bytes memory toAddress, uint toChain) external override payable whenNotPaused {
         uint amount = msg.value;
@@ -226,18 +231,10 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         }
     }
 
-    function _addressToBytes(address a) internal pure returns (bytes memory b) {
-        assembly {
-            let m := mload(0x40)
-            a := and(a, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-            mstore(
-            add(m, 20),
-            xor(0x140000000000000000000000000000000000000000, a)
-            )
-            mstore(0x40, add(m, 52))
-            b := m
-        }
+    function _addressToBytes(address self) public pure returns (bytes memory b) {
+        b = abi.encodePacked(self);
     }
+
 
     function decodeTxLog(bytes memory logsHash)
     internal

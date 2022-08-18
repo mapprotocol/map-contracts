@@ -247,10 +247,14 @@ contract VerifyTool is ILightNodePoint {
             listLog[j] = logBytes;
         }
         list[3] = RLPEncode.encodeList(listLog);
-        bytes memory tempType = abi.encode(_txReceipt.receiptType);
-        bytes1 tip = tempType[31];
-        bytes memory temp = RLPEncode.encodeList(list);
-        output = abi.encodePacked(tip, temp);
+        if(_txReceipt.receiptType == 0){
+            output = RLPEncode.encodeList(list);
+        }else{
+            bytes memory tempType = abi.encode(_txReceipt.receiptType);
+            bytes1 tip = tempType[31];
+            bytes memory temp = RLPEncode.encodeList(list);
+            output = abi.encodePacked(tip, temp);
+        }
     }
 
     function getHeaderHash(blockHeader memory bh)

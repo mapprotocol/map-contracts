@@ -33,9 +33,9 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     IERC20 public mapToken;
     //    ILightNode public lightNode;
-    ITokenRegister public tokenRegister;
-    ILightClientManager public lightClientManager;
-    IFeeCenter public feeCenter;
+    ITokenRegister public tokenRegister ;
+    ILightClientManager public lightClientManager ;
+    IFeeCenter public feeCenter ;
 
     address public wToken;        // native wrapped token
 
@@ -44,7 +44,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     // mapping(bytes32 => address) public tokenRegister;
     //Gas transfer fee charged by the target chain
     mapping(uint => uint) public chainGasFee;
-    mapping(bytes32 => bool) orderList;
+    mapping(bytes32 => bool) public orderList;
 
     uint public chainGasFees;
 
@@ -55,7 +55,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     mapping(uint => mapping(address => uint)) public vaultBalance;
 
-    mapping(bytes => uint256) bridageAddress;
+    mapping(bytes => uint256) bridgeAddress;
 
     mapping(uint => uint) ChainIdTable;
 
@@ -86,10 +86,12 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     event mapDepositIn(address indexed token, address indexed from, address indexed to,
         bytes32 orderId, uint amount, uint fromChain);
 
-    bytes32 public mapTransferOutTopic = keccak256(bytes('mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)'));
+    bytes32 mapTransferOutTopic = keccak256(bytes('mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)'));
     //    bytes mapTransferInTopic = keccak256(bytes('mapTransferIn(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
 
-    bytes32 public NEARTRANSFEROUT = keccak256(bytes("transfer out"));
+    //bytes32 public NEARTRANSFEROUT = keccak256(bytes("transfer out"));
+
+    bytes32 public NEARTRANSFEROUT = 0x4e87426fdd31a6df84975ed344b2c3fbd45109085f1557dff1156b300f135df8;
 
     function initialize(address _wToken, address _mapToken, address _managerAddress) public initializer {
         uint _chainId;
@@ -127,12 +129,16 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     function setBridageAddress(uint256 _chainId, bytes memory _addr) external onlyManager {
 
-        bridageAddress[_addr] = _chainId;
+        bridgeAddress[_addr] = _chainId;
     }
 
     function setIdTable(uint256 _chainId, uint256 _id) external onlyManager {
 
         ChainIdTable[_id] = _chainId;
+    }
+
+    function setNearHash(bytes32 _hash) external onlyManager {
+        NEARTRANSFEROUT = _hash;
     }
 
     function setPause() external onlyManager {
@@ -234,7 +240,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
                 txLog memory log = logs[i];
                 bytes32 topic = abi.decode(log.topics[0], (bytes32));
                 bytes memory mcsAddress = _addressToBytes(log.addr);
-                if (topic == mapTransferOutTopic && bridageAddress[mcsAddress] > 0) {
+                if (topic == mapTransferOutTopic && bridgeAddress[mcsAddress] > 0) {
                     //                address token = abi.decode(log.topics[1], (address));
                     // address from = abi.decode(log.topics[2], (address));
                     // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
@@ -251,7 +257,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             }
         }
     }
-
 
     function transferOut(address toContract, uint toChain, bytes memory data) external override {
 
@@ -309,17 +314,18 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
     function _transferInOtherChain(bytes memory sourceToken, bytes memory from, bytes memory to, uint amount, bytes32 orderId, uint fromChain, uint toChain, bytes memory toChainToken)
-    internal checkOrder(orderId) nonReentrant whenNotPaused {
-        address token = _bytesToAddress(tokenRegister.getTargetToken(selfChainId, sourceToken, toChain));
+    public checkOrder(orderId) nonReentrant whenNotPaused {
+        address token = _bytesToAddress(toChainToken);
         uint fee = getChainFee(toChain, token, amount);
         uint outAmount = amount.sub(fee);
         if (checkAuthToken(token)) {
             IMAPToken(token).mint(address(this),amount);
             IMAPToken(token).burn(outAmount);
         }
-        emit mapTransferOut(_addressToBytes(token), from, orderId, fromChain, toChain, to, outAmount, toChainToken);
+        emit mapTransferOut(sourceToken, from, orderId, fromChain, toChain, to, outAmount, toChainToken);
         setVaultValue(amount, fromChain, toChain, token);
     }
+
 
     function depositIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain)
     external payable override checkOrder(orderId) nonReentrant whenNotPaused {
@@ -350,23 +356,14 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         }
     }
 
-    function _bytesToAddress(bytes memory bys) internal pure returns (address addr){
+    function _bytesToAddress(bytes memory bys) public pure returns (address addr){
         assembly {
             addr := mload(add(bys, 20))
         }
     }
 
-    function _addressToBytes(address a) internal pure returns (bytes memory b) {
-        assembly {
-            let m := mload(0x40)
-            a := and(a, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-            mstore(
-            add(m, 20),
-            xor(0x140000000000000000000000000000000000000000, a)
-            )
-            mstore(0x40, add(m, 52))
-            b := m
-        }
+    function _addressToBytes(address self) public pure returns (bytes memory b) {
+        b = abi.encodePacked(self);
     }
 
     function decodeTxLog(bytes memory logsHash)
@@ -404,8 +401,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         }
         bytes memory log;
         for (uint256 i = 0; i < logs.length; i++) {
-            if (bytes32(logs[i]) == NEARTRANSFEROUT) {
-                log = splitExtra(logs[i]);
+
+            (bytes memory temp) = splitExtra(logs[i]);
+            if (keccak256(temp) == NEARTRANSFEROUT) {
+                log = hexStrToBytes(logs[i]);
             }
         }
 
@@ -438,9 +437,9 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             revert("hexStrToBytes: invalid input");
         }
 
-        bytes memory bytes_array = new bytes((_hexStr.length) / 2);
+        bytes memory bytes_array = new bytes(_hexStr.length / 2 - 32);
 
-        for (uint256 i = 0; i < _hexStr.length; i += 2) {
+        for (uint256 i = 64; i < _hexStr.length; i += 2) {
             uint8 tetrad1 = 16;
             uint8 tetrad2 = 16;
 
@@ -482,25 +481,32 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             if (tetrad1 == 16 || tetrad2 == 16)
                 revert("hexStrToBytes: invalid input");
 
-            bytes_array[i / 2] = bytes1(16 * tetrad1 + tetrad2);
+            bytes_array[i / 2 - 32] = bytes1(16 * tetrad1 + tetrad2);
+
+
         }
 
         return bytes_array;
     }
 
 
+
     function splitExtra(bytes memory extra)
-    internal
+    public
     pure
     returns (bytes memory newExtra){
-        newExtra = new bytes(extra.length - 32);
+        newExtra = new bytes( 64);
         uint256 n = 0;
-        for (uint256 i = 32; i < extra.length; i++) {
-            newExtra[n] = extra[i];
+        for (uint256 i = 0; i < extra.length; i++) {
+            if(i < 64){
+                newExtra[n] = extra[i];
+            }
             n = n + 1;
         }
-        return newExtra;
     }
+
+
+
 
 
 }
