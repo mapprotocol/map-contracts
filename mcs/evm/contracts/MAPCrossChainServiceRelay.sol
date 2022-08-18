@@ -58,7 +58,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     mapping(uint256 => uint) ChainIdTable;
 
-    mapping(address => mapping(uint256 => uint256)) tokenOtherChainDecimals;
+    mapping(bytes => mapping(uint256 => uint256)) tokenOtherChainDecimals;
 
     struct txLog {
         address addr;
@@ -148,7 +148,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         _unpause();
     }
 
-    function setTokenOtherChainDecimals(address selfToken, uint256 chainId, uint256 decimals) external onlyManager {
+    function setTokenOtherChainDecimals(bytes memory selfToken, uint256 chainId, uint256 decimals) external onlyManager {
         tokenOtherChainDecimals[selfToken][chainId] = decimals;
     }
 
@@ -180,14 +180,15 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         return amount.mul(rate).div(1000000);
     }
 
-    function getToChainAmount(address token, uint256 fromChain, uint256 toChain, uint256 amount)
+    function getToChainAmount(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
     internal view returns (uint256){
-        uint256 decimalsFrom = IERC20Metadata(token).decimals();
+        address _token = _bytesToAddress(token);
+        uint256 decimalsFrom = IERC20Metadata(_token).decimals();
         if (fromChain == selfChainId) {
             decimalsFrom = tokenOtherChainDecimals[token][fromChain];
         }
         require(decimalsFrom > 0, "decimals error");
-        uint256 decimalsTo = IERC20Metadata(token).decimals();
+        uint256 decimalsTo = IERC20Metadata(_token).decimals();
         if (toChain != selfChainId) {
             decimalsTo = tokenOtherChainDecimals[token][toChain];
         }
@@ -197,14 +198,13 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     function getToChainAmountOther(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
     internal view returns (uint256){
-        address tokenMap = getMapToken(token, fromChain);
+        bytes memory tokenMap = getMapToken(token, fromChain);
         return getToChainAmount(tokenMap, fromChain, toChain, amount);
     }
 
     function getMapToken(bytes memory fromToken, uint256 fromChain)
-    internal view returns (address){
-        bytes memory toChainToken = tokenRegister.getTargetToken(fromChain, fromToken, selfChainId);
-        return _bytesToAddress(toChainToken);
+    internal view returns (bytes memory){
+        return tokenRegister.getTargetToken(fromChain, fromToken, selfChainId);
     }
 
     function collectChainFee(uint256 amount, address token) public {
@@ -310,7 +310,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         setVaultValue(amount, selfChainId, toChainId, token);
         bytes memory toTokenAddress = tokenRegister.getTargetToken(selfChainId, _addressToBytes(token), toChainId);
-        outAmount = getToChainAmount(token, selfChainId, toChainId, outAmount);
+        outAmount = getToChainAmount(_addressToBytes(token), selfChainId, toChainId, outAmount);
         emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, toTokenAddress);
     }
 
@@ -325,7 +325,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
         setVaultValue(amount, selfChainId, toChainId, address(0));
         bytes memory token = tokenRegister.getTargetToken(selfChainId, _addressToBytes(address(0)), toChainId);
-        outAmount = getToChainAmount(address(0), selfChainId, toChainId, outAmount);
+        outAmount = getToChainAmount(_addressToBytes(address(0)), selfChainId, toChainId, outAmount);
         emit mapTransferOut(_addressToBytes(address(0)), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, token);
     }
 
