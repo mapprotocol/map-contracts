@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: MIT
 
+
+
+
+
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
@@ -18,9 +22,8 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     uint256 public headerHeight;
     address[] public validatorAddresss;
     validator[20] public validators;
-
     IVerifyTool public verifyTool;
-    BlsCode blsCode = new BlsCode();
+    BlsCode blsCode;
 
     struct validator {
         G1[] pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
@@ -61,6 +64,14 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         validatorAddresss = _validatorAddresss;
         setStateInternal(_threshold, _pairKeys, _weights, _epoch);
         verifyTool = IVerifyTool(_verifyTool);
+        blsCode = new BlsCode();
+        g1 = G1(1, 2);
+        g2 = G2(
+            0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed,
+            0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2,
+            0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa,
+            0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b
+        );
         emit mapInitializeValidators(_threshold, _pairKeys, _weights, _epoch);
     }
 

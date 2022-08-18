@@ -2,10 +2,21 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
 pragma solidity >=0.7.0;
 //pragma experimental ABIEncoderV2;
 
 import "./RLPReader.sol";
+import "hardhat/console.sol";
 
 /*
     Documentation:
@@ -13,7 +24,7 @@ import "./RLPReader.sol";
     - https://github.com/blockchainsllc/in3/wiki/Ethereum-Verification-and-MerkleProof
     - https://easythereentropy.wordpress.com/2014/06/04/understanding-the-ethereum-trie/
 */
-library MPT {
+library MPTTest {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
 
@@ -28,7 +39,8 @@ library MPT {
 
     function verifyTrieProof(
         MerkleProof memory data
-    ) pure internal returns (bool)
+    )  internal
+    //returns (bool)
     {
         bytes memory node = data.proof[data.proofIndex];
         RLPReader.Iterator memory dec = RLPReader.toRlpItem(node).iterator();
@@ -48,20 +60,20 @@ library MPT {
 
         // branch
         if (numberItems == 17) {
-            return verifyTrieProofBranch(data);
+             verifyTrieProofBranch(data);
         }
         // leaf / extension
         else if (numberItems == 2) {
-            return verifyTrieProofLeafOrExtension(dec, data);
+             verifyTrieProofLeafOrExtension(dec, data);
         }
 
-        if (data.expectedValue.length == 0) return true;
-        else return false;
+//        if (data.expectedValue.length == 0) return true;
+//        else return false;
     }
 
     function verifyTrieProofBranch(
         MerkleProof memory data
-    ) pure internal returns (bool)
+    )  internal returns (bool)
     {
         bytes memory node = data.proof[data.proofIndex];
 
@@ -79,7 +91,7 @@ library MPT {
                 data.expectedRoot = b2b32(_newExpectedRoot);
                 data.keyIndex += 1;
                 data.proofIndex += 1;
-                return verifyTrieProof(data);
+                 verifyTrieProof(data);
             }
         }
 
@@ -90,24 +102,33 @@ library MPT {
     function verifyTrieProofLeafOrExtension(
         RLPReader.Iterator memory dec,
         MerkleProof memory data
-    ) pure internal returns (bool)
+    )  internal returns (bool)
     {
         bytes memory nodekey = dec.next().toBytes();
         bytes memory nodevalue = dec.next().toBytes();
+        console.logBytes(nodevalue);
         uint256 prefix;
         assembly {
             let first := shr(248, mload(add(nodekey, 32)))
             prefix := shr(4, first)
         }
 
+        console.logUint(prefix);
+
+        console.logBytes(data.expectedValue);
+
         if (prefix == 2) {
             // leaf even
             uint256 length = nodekey.length - 1;
             bytes memory actualKey = sliceTransform(nodekey, 1, length, false);
+            console.logBytes(actualKey);
             bytes memory restKey = sliceTransform(data.key, data.keyIndex, length, false);
+            console.logBytes(restKey);
             if (keccak256(data.expectedValue) == keccak256(nodevalue)) {
                 if (keccak256(actualKey) == keccak256(restKey)) return true;
+
                 if (keccak256(expandKeyEven(actualKey)) == keccak256(restKey)) return true;
+                console.logBytes(expandKeyEven(actualKey));
             }
         }
         else if (prefix == 3) {
@@ -132,7 +153,7 @@ library MPT {
                 data.expectedRoot = b2b32(nodevalue);
                 data.keyIndex += extensionLength;
                 data.proofIndex += 1;
-                return verifyTrieProof(data);
+                 verifyTrieProof(data);
             }
         }
         else if (prefix == 1) {
@@ -147,7 +168,7 @@ library MPT {
                 data.expectedRoot = b2b32(nodevalue);
                 data.keyIndex += extensionLength;
                 data.proofIndex += 1;
-                return verifyTrieProof(data);
+                verifyTrieProof(data);
             }
         }
         else {
@@ -169,7 +190,7 @@ library MPT {
         uint256 length,
         bool removeFirstNibble
     )
-        pure internal returns(bytes memory)
+    pure internal returns(bytes memory)
     {
         uint256 slots = length / 32;
         uint256 rest = (length % 32) * 8;
@@ -182,8 +203,8 @@ library MPT {
 
             if removeFirstNibble {
                 mstore(
-                    add(newdata, pos),
-                    shr(4, shl(4, mload(add(source, pos))))
+                add(newdata, pos),
+                shr(4, shl(4, mload(add(source, pos))))
                 )
                 si := 1
                 pos := add(pos, 32)
@@ -194,8 +215,8 @@ library MPT {
                 pos := add(pos, 32)
             }
             mstore(add(newdata, pos), shl(
-                rest,
-                shr(rest, mload(add(source, pos)))
+            rest,
+            shr(rest, mload(add(source, pos)))
             ))
         }
         return newdata;
@@ -203,9 +224,9 @@ library MPT {
 
     function getNibbles(bytes1 b) internal pure returns (bytes1 nibble1, bytes1 nibble2) {
         assembly {
-                nibble1 := shr(4, b)
-                nibble2 := shr(4, shl(4, b))
-            }
+            nibble1 := shr(4, b)
+            nibble2 := shr(4, shl(4, b))
+        }
     }
 
     function expandKeyEven(bytes memory data) internal pure returns (bytes memory) {
