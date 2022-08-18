@@ -94,6 +94,11 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         _;
     }
 
+    modifier checkCanBridge(address token, uint chainId) {
+        require(canBridgeToken[token][chainId], "token not can bridge");
+        _;
+    }
+
     function setPause() external onlyManager {
         _pause();
     }
@@ -127,7 +132,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     }
 
     function setCanBridgeToken(address token, uint chainId, bool canBridge) public onlyManager{
-        canBridge[token][chainId] = canBridge;
+        canBridgeToken[token][chainId] = canBridge;
     }
 
 
@@ -157,7 +162,11 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
 
     }
 
-    function transferOutToken(address token, bytes memory toAddress, uint amount, uint toChain) external override whenNotPaused {
+    function transferOutToken(address token, bytes memory toAddress, uint amount, uint toChain)
+    external override
+    whenNotPaused
+    checkCanBridge(token,toChain)
+    {
         bytes32 orderId = getOrderID(token, msg.sender, toAddress, amount, toChain);
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
         if (checkAuthToken(token)) {
@@ -169,7 +178,10 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     }
 
 
-    function transferOutNative(bytes memory toAddress, uint toChain) external override payable whenNotPaused {
+    function transferOutNative(bytes memory toAddress, uint toChain)
+    external override payable
+    whenNotPaused
+    checkCanBridge(address(0),toChain){
         uint amount = msg.value;
         require(amount > 0, "balance is zero");
         bytes32 orderId = getOrderID(address(0), msg.sender, toAddress, amount, toChain);
