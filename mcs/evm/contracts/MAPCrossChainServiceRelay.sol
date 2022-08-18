@@ -273,7 +273,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
                 txLog memory log = logs[i];
                 bytes32 topic = abi.decode(log.topics[0], (bytes32));
                 bytes memory mcsAddress = _addressToBytes(log.addr);
-                if (topic == mapTransferOutTopic && bridgeAddress[mcsAddress] > 0) {
+                if (topic == mapTransferOutTopic) {
+                    require(bridgeAddress[mcsAddress] > 0,"Illegal across the chain");
                     //                address token = abi.decode(log.topics[1], (address));
                     // address from = abi.decode(log.topics[2], (address));
                     // bytes32 orderId = abi.decode(log.topics[3], (bytes32));

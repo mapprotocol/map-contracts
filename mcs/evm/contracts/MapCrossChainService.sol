@@ -144,7 +144,8 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         for (uint i = 0; i < logs.length; i++) {
             txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
-            if (topic == mapTransferOutTopic && bridgeAddress[log.addr] > 0) {
+            if (topic == mapTransferOutTopic) {
+                require(bridgeAddress[log.addr] > 0,"Illegal across the chain");
                 //                address token = abi.decode(log.topics[1], (address));
                 // address from = abi.decode(log.topics[2], (address));
                 // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
