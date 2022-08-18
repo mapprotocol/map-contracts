@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+
+
 pragma solidity >0.8.0;
 
 import "../interface/IBLSPoint.sol";
@@ -72,6 +74,7 @@ contract BGLS is IBLSPoint {
         }
         require(success);
         return result[0] == 1;
+
     }
 
 
@@ -84,11 +87,11 @@ contract BGLS is IBLSPoint {
         return scalarMultiply(g1, h);
     }
 
-    uint prime = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47;
-    uint order = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
+    uint constant prime = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47;
+    uint constant order = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
 
-    uint pminus = 21888242871839275222246405745257275088696311157297823662689037894645226208582;
-    uint pplus = 21888242871839275222246405745257275088696311157297823662689037894645226208584;
+    uint constant pminus = 21888242871839275222246405745257275088696311157297823662689037894645226208582;
+    uint constant pplus = 21888242871839275222246405745257275088696311157297823662689037894645226208584;
 
     //    function hashToG1(uint[] memory b) internal returns (G1 memory) {
     //        uint x = 0;
