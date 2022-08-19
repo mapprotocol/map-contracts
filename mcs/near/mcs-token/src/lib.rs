@@ -11,8 +11,6 @@ use near_sdk::{
 };
 use std::convert::TryInto;
 
-near_sdk::setup_alloc!();
-
 const NO_DEPOSIT: Balance = 0;
 
 /// Gas to call finish withdraw method on factory.

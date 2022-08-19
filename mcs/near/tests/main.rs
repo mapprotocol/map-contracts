@@ -3941,7 +3941,6 @@ async fn deploy_and_init_light_client(worker: &Worker<impl DevNetwork>) -> anyho
 }
 
 async fn init_worker() -> anyhow::Result<Worker<impl DevNetwork>> {
-    std::env::set_var(NEAR_SANDBOX_BIN_PATH, "/Users/rong/Projects/near/nearcore/target/debug/neard-sandbox");
     std::env::var(NEAR_SANDBOX_BIN_PATH).expect("environment variable NEAR_SANDBOX_BIN_PATH should be set");
 
     let worker = workspaces::sandbox().await?;
