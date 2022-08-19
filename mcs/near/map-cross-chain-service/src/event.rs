@@ -89,6 +89,7 @@ impl MapTransferOutEvent {
 pub struct TransferOutEvent {
     pub token: String,
     pub from: String,
+    #[serde(with = "crate::bytes::hexstring")]
     pub order_id: CryptoHash,
     pub from_chain: u128,
     pub to_chain: u128,
@@ -123,6 +124,7 @@ impl std::fmt::Display for TransferOutEvent {
 pub struct DepositOutEvent {
     pub token: String,
     pub from: String,
+    #[serde(with = "crate::bytes::hexstring")]
     pub order_id: CryptoHash,
     pub to: Vec<u8>,
     pub amount: u128,
@@ -181,5 +183,9 @@ mod tests {
         let data = event.to_log_entry_data();
         let result = MapTransferOutEvent::from_log_entry_data(&data).unwrap();
         assert_eq!(result, event);
+
+        let s = format!("{:?}", hex::decode("2E784874ddB32cD7975D68565b509412A5B519F4").unwrap());
+
+        println!("{:?}", s.replace(" ", ""))
     }
 }
