@@ -4,7 +4,7 @@ SCRIPT_DIR=$(dirname $0)
 source $SCRIPT_DIR/config.sh
 FILE_NAME=$0
 
-MCS_TOKEN_NAME="mcs_token_1"
+MCS_TOKEN_NAME="mcs_token_0"
 MCS_TOKEN=$MCS_TOKEN_NAME.$MCS_ACCOUNT
 DECIMALS=24
 FT_TOKEN="wrap.testnet"

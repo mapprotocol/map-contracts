@@ -297,7 +297,7 @@ async fn test_transfer_in_mcs_token_wrong_bridge() -> anyhow::Result<()> {
         .await;
     assert!(res.is_err(), "transfer_in should fail");
     println!("error: {:?}", res.as_ref().err());
-    assert!(res.err().unwrap().to_string().contains("no cross chain event in the receipt"), "should have no event");
+    assert!(res.err().unwrap().to_string().contains("unexpected map mcs address"), "should be mcs address error");
     let dev_balance_1 = dev_account.view_account(&worker).await?.balance;
     println!("after transfer in: account {} balance: {}", dev_account.id(), dev_balance_1);
     assert!(dev_balance_0 - dev_balance_1 < parse_near!("1 N"));

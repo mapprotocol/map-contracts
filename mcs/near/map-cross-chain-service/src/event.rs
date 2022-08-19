@@ -84,6 +84,17 @@ impl MapTransferOutEvent {
     }
 }
 
+impl std::fmt::Display for MapTransferOutEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "token: {:?}; from: {:?};  orderId: {}; fromChain: {}; toChain: {}; to: {}; amount: {}; toChainToken: {}",
+            self.token, self.from, hex::encode(self.order_id), self.from_chain, self.to_chain,
+            String::from_utf8(self.to.clone()).unwrap(), self.amount, String::from_utf8(self.to_chain_token.clone()).unwrap()
+        )
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TransferOutEvent {
@@ -183,9 +194,5 @@ mod tests {
         let data = event.to_log_entry_data();
         let result = MapTransferOutEvent::from_log_entry_data(&data).unwrap();
         assert_eq!(result, event);
-
-        let s = format!("{:?}", hex::decode("2E784874ddB32cD7975D68565b509412A5B519F4").unwrap());
-
-        println!("{:?}", s.replace(" ", ""))
     }
 }
