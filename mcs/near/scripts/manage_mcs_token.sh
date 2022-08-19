@@ -46,7 +46,7 @@ function list_tokens() {
 
 function transfer_out() {
   echo "transfer out $5 $1 token from $3 to $4 on chain $2"
-  near call $MCS_ACCOUNT transfer_out_token '{"token":"'$1'", "to":'$4', "amount":"'$5'", "to_chain":'$2'}' --accountId $MASTER_ACCOUNT --gas 60000000000000
+  near call $MCS_ACCOUNT transfer_out_token '{"token":"'$1'", "to":'$4', "amount":"'$5'", "to_chain":'$2'}' --accountId $3 --gas 60000000000000
 
 }
 

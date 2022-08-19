@@ -4,15 +4,15 @@ SCRIPT_DIR=$(dirname $0)
 source $SCRIPT_DIR/config.sh
 FILE_NAME=$0
 
-MCS_TOKEN_NAME="mcs_token_0"
+MCS_TOKEN_NAME="mcs_token_1"
 MCS_TOKEN=$MCS_TOKEN_NAME.$MCS_ACCOUNT
 DECIMALS=24
 FT_TOKEN="wrap.testnet"
 AMOUNT=1000000000000000000000
 
 FROM="pandarr.testnet"
-TO="[207,200,11,237,219,112,241,42,246,218,118,143,195,14,57,104,137,223,206,38]"
-TO_CHAIN=34434
+TO="[46,120,72,116,221,179,44,215,151,93,104,86,91,80,148,18,165,181,25,244]"
+TO_CHAIN=212
 
 function printHelp() {
   echo "Usage:"
@@ -77,7 +77,7 @@ function prepare() {
   $SCRIPT_DIR/manage_native_token.sh list
 
   echo "minting 100000000000000000000000 $MCS_TOKEN for account $FROM"
-  near call $MCS_TOKEN mint '{"account_id": "'$FROM'", "amount": "100000000000000000000000"}' --accountId $MCS_ACCOUNT
+  near call $MCS_TOKEN mint '{"account_id": "'$FROM'", "amount": "100000000000000000000000"}' --accountId $MCS_ACCOUNT --deposit 0.01
 }
 
 
