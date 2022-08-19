@@ -184,7 +184,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     internal view returns (uint256){
         address _token = _bytesToAddress(token);
         uint256 decimalsFrom = IERC20Metadata(_token).decimals();
-        if (fromChain == selfChainId) {
+        if (fromChain != selfChainId) {
             decimalsFrom = tokenOtherChainDecimals[token][fromChain];
         }
         require(decimalsFrom > 0, "decimals error");
