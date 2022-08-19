@@ -3,8 +3,9 @@
 pragma solidity ^0.8.0;
 
 import "./interface/ITokenRegister.sol";
+import "./utils/Role.sol";
 
-contract TokenRegister {
+contract TokenRegister is Role {
     uint public chainID;
     constructor(){
         uint _chainId;
@@ -23,12 +24,14 @@ contract TokenRegister {
 
     function regToken(
         uint256 sourceChain, bytes memory sourceMapToken, bytes memory mapToken
-    ) external {
+    ) external
+    onlyManager{
         sourceCorrespond[sourceChain][sourceMapToken] = mapToken;
         mapCorrespond[sourceChain][mapToken] = sourceMapToken;
     }
 
-    function regTokenSource(bytes memory sourceToken, bytes memory sourceMapToken) external {
+    function regTokenSource(bytes memory sourceToken, bytes memory sourceMapToken) external
+    onlyManager{
         sourceBinding[chainID][sourceMapToken] = sourceToken;
     }
 
