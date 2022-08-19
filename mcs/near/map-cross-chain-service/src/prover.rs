@@ -6,8 +6,8 @@ use tiny_keccak::Keccak;
 use map_light_client::{
     proof::ReceiptProof,
     proof::LogEntry,
-    header::Hash as MapHash,
-    traits::FromVec
+    traits::FromVec,
+    header::Hash as MapHash
 };
 
 pub type Address = [u8; 20];

@@ -5,7 +5,7 @@ map chain light client contract, will be deployed on near blockchain.
 # How to build?
 
 ```shell
-cargo build --workspace --target wasm32-unknown-unknown --release
+./scripts/build.sh
 ```
 
 The mcs contract wasm file "mcs.wasm" and mcs token contract wasm file "mcs_token.wasm" will be generated in ./target/wasm32-unknown-unknown/release.

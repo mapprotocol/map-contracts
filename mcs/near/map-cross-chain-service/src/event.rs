@@ -1,9 +1,8 @@
 use crate::prover::{Address, MapEvent, EthEventParams};
-use ethabi::{Bytes, ParamType, Token};
+use ethabi::{ParamType, Token};
 use near_sdk::{Balance, CryptoHash};
 use near_sdk::serde::{Serialize, Deserialize};
 use map_light_client::proof::LogEntry;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use rlp::{Encodable, RlpStream};
 
 /// Data that was emitted by the Ethereum Locked event.
@@ -14,12 +13,12 @@ pub struct MapTransferOutEvent {
     pub map_bridge_address: Address,
     pub from_chain: u128,
     pub to_chain: u128,
-    pub from: Bytes,
-    pub to: Bytes,
+    pub from: Vec<u8>,
+    pub to: Vec<u8>,
     #[serde(with = "crate::bytes::hexstring")]
     pub order_id: CryptoHash,
-    pub token: Bytes,
-    pub to_chain_token: Bytes,
+    pub token: Vec<u8>,
+    pub to_chain_token: Vec<u8>,
     pub amount: Balance,
 }
 /*
@@ -85,17 +84,7 @@ impl MapTransferOutEvent {
     }
 }
 
-// impl std::fmt::Display for MapTransferOutEvent {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(
-//             f,
-//             "token: {}; from: {};  orderId: {}; fromChain: {}; toChain: {}; to: {}; amount: {}; toChainToken: {}",
-//             self.token, self.from, hex::encode(self.order_id), self.from_chain, self.to_chain, self.to, self.amount, self.to_chain_token
-//         )
-//     }
-// }
-
-#[derive(Debug, Serialize, BorshDeserialize, BorshSerialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TransferOutEvent {
     pub token: String,
@@ -129,7 +118,7 @@ impl std::fmt::Display for TransferOutEvent {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct DepositOutEvent {
     pub token: String,
@@ -167,7 +156,7 @@ mod tests {
     fn test_event_data() {
         let logs_str = r#"[
             {
-                "address": "0x765a5a86411ab8627516cbb77d5db00b74fe610d",
+                "address": "0xe2123fa0c94db1e5baeff348c0e7aecd15a11b45",
                 "topics": [
                     "0xaca0a1067548270e80c1209ec69b5381d80bdaf345ad70cf7f00af9c6ed3f9b4"
                 ],
@@ -178,36 +167,19 @@ mod tests {
         let logs: Vec<LogEntry> = serde_json::from_str(&logs_str).unwrap();
         assert_eq!(1, logs.len(), "should have only 1 log");
 
-        let event = MapTransferOutEvent::from_log_entry_data(logs.get(0).unwrap()).unwrap();
-        assert_eq!("765a5a86411ab8627516cbb77d5db00b74fe610d", hex::encode(event.map_bridge_address.clone()));
+        let mut event = MapTransferOutEvent::from_log_entry_data(logs.get(0).unwrap()).unwrap();
         assert_eq!("ec3e016916ba9f10762e33e03e8556409d096fb4", hex::encode(event.token.clone()));
         assert_eq!("ec3e016916ba9f10762e33e03e8556409d096fb4", hex::encode(event.from.clone()));
         assert_eq!(212, event.from_chain);
-        assert_eq!("pandarr.testnet", String::from_utf8(event.to.clone()).unwrap());
         assert_eq!(1313161555, event.to_chain);
-        assert_eq!("mcs_token_0", String::from_utf8(event.to_chain_token.clone()).unwrap());
+        assert_eq!("pandarr.testnet", String::from_utf8(event.to.clone()).unwrap());
         assert_eq!(100, event.amount);
+        assert_eq!("mcs_token_0", String::from_utf8(event.to_chain_token.clone()).unwrap());
+        assert_eq!("e2123fa0c94db1e5baeff348c0e7aecd15a11b45".to_lowercase(), hex::encode(event.map_bridge_address));
+
 
         let data = event.to_log_entry_data();
         let result = MapTransferOutEvent::from_log_entry_data(&data).unwrap();
         assert_eq!(result, event);
-    }
-
-    #[test]
-    fn test_event_serialize() {
-        let exp = "f87fa836623137353437346538393039346334346461393862393534656564656163343935323731643066a830303030353437346538393039346334346461393862393534656564656163343935323731643066a000000000000000000000000000000000000000000000000000000000000000006482c350833132338203e880";
-        let event_data = TransferOutEvent {
-            token: "6b175474e89094c44da98b954eedeac495271d0f".to_string(),
-            from: "00005474e89094c44da98b954eedeac495271d0f".to_string(),
-            to: "123".as_bytes().to_vec(),
-            amount: 1000,
-            from_chain: 100,
-            to_chain: 50000,
-            to_chain_token: "".to_string(),
-            order_id: [0; 32],
-        };
-
-        let rlp = rlp::encode(&event_data);
-        assert_eq!(exp, hex::encode(&rlp))
     }
 }

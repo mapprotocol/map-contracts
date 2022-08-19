@@ -9,3 +9,5 @@ typechain
 cache
 artifacts
 deployments
+/mapclients/near/scripts/res/
+/mcs/near/scripts/res/

@@ -126,10 +126,7 @@ impl FungibleTokenMetadataProvider for MCSToken {
             spec: FT_METADATA_SPEC.to_string(),
             name: self.name.clone(),
             symbol: self.symbol.clone(),
-            #[cfg(feature = "migrate_icon")]
             icon: self.icon.clone(),
-            #[cfg(not(feature = "migrate_icon"))]
-            icon: None,
             reference: Some(self.reference.clone()),
             reference_hash: Some(self.reference_hash.clone()),
             decimals: self.decimals,

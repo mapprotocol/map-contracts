@@ -1,5 +1,3 @@
-use std::io::Error;
-
 pub(crate) mod hexstring {
     use hex::FromHex;
     use near_sdk::serde::{de::Error, Deserialize, Deserializer, Serializer};
