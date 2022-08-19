@@ -183,16 +183,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     function getToChainAmount(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
     internal view returns (uint256){
         address _token = _bytesToAddress(token);
-        uint256 decimalsFrom = IERC20Metadata(_token).decimals();
-        if (fromChain != selfChainId) {
-            decimalsFrom = tokenOtherChainDecimals[token][fromChain];
-        }
-        require(decimalsFrom > 0, "decimals error");
-        uint256 decimalsTo = IERC20Metadata(_token).decimals();
-        if (toChain != selfChainId) {
-            decimalsTo = tokenOtherChainDecimals[token][toChain];
-        }
-        require(decimalsTo > 0, "decimals error");
+        uint256 decimalsFrom = tokenOtherChainDecimals[token][fromChain];
+        uint256 decimalsTo = tokenOtherChainDecimals[token][toChain];
         return amount.mul(decimalsTo ** 10).div(decimalsFrom ** 10);
     }
 
