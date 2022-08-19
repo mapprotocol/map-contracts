@@ -99,7 +99,7 @@ module.exports = {
     },
     mapcoin: {
       default: 0,
-      1: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+      1: '0x9E976F211daea0D652912AB99b0Dc21a7fD728e4',
       3: '0x47f423C44976Fbe745588020b85B09A56458f9C0',
       56: '0x8105ECe4ce08B6B6449539A5db23e23b973DfA8f',
       97: '0x624F96Ea37bBbEA15Df489f9083Fe786BAf15723',

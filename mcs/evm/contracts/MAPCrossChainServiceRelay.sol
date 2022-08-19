@@ -87,12 +87,9 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     event mapDepositIn(address indexed token, address indexed from, address indexed to,
         bytes32 orderId, uint256 amount, uint256 fromChain);
 
-    bytes32 mapTransferOutTopic = keccak256(bytes('mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)'));
-    //    bytes mapTransferInTopic = keccak256(bytes('mapTransferIn(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
+    bytes32 public mapTransferOutTopic;
 
-    //bytes32 public NEARTRANSFEROUT = keccak256(bytes("transfer out"));
-
-    bytes32 public NEARTRANSFEROUT = 0x4e87426fdd31a6df84975ed344b2c3fbd45109085f1557dff1156b300f135df8;
+    bytes32 public nearTransferOut ;
 
     function initialize(address _wToken, address _mapToken, address _managerAddress) public initializer {
         uint256 _chainId;
@@ -101,6 +98,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         wToken = _wToken;
         mapToken = IERC20(_mapToken);
         lightClientManager = ILightClientManager(_managerAddress);
+        mapTransferOutTopic = keccak256(bytes('mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)'));
+        nearTransferOut = 0x4e87426fdd31a6df84975ed344b2c3fbd45109085f1557dff1156b300f135df8;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
     }
@@ -137,7 +136,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
     function setNearHash(bytes32 _hash) external onlyManager {
-        NEARTRANSFEROUT = _hash;
+        nearTransferOut = _hash;
     }
 
     function setPause() external onlyManager {
@@ -434,7 +433,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         for (uint256 i = 0; i < logs.length; i++) {
 
             (bytes memory temp) = splitExtra(logs[i]);
-            if (keccak256(temp) == NEARTRANSFEROUT) {
+            if (keccak256(temp) == nearTransferOut) {
                 log = hexStrToBytes(logs[i]);
             }
         }
