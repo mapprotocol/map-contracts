@@ -315,9 +315,9 @@ impl BlockHeader {
 
     fn stream_rlp(&self, stream: &mut RlpStream, partial: bool) {
         #[cfg(feature = "eip1559")]
-            let list_size = 14 + if !partial { 2 } else { 0 };
+        let list_size = 14 + if !partial { 2 } else { 0 };
         #[cfg(not(feature = "eip1559"))]
-            let list_size = 13 + if !partial { 2 } else { 0 };
+        let list_size = 13 + if !partial { 2 } else { 0 };
 
         stream.begin_list(list_size);
 
@@ -381,7 +381,7 @@ impl RlpDecodable for BlockHeader {
                 block_header.stream_rlp(&mut stream, false);
                 stream.out().as_slice()
             })
-                .into(),
+            .into(),
         );
 
         if block_header.hash.unwrap() != near_keccak256(serialized.as_raw()).into() {
@@ -394,7 +394,7 @@ impl RlpDecodable for BlockHeader {
                 block_header.stream_rlp(&mut stream, true);
                 stream.out().as_slice()
             })
-                .into(),
+            .into(),
         );
 
         Ok(block_header)
