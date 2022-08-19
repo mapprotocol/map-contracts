@@ -182,7 +182,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     function getToChainAmount(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
     internal view returns (uint256){
-        address _token = _bytesToAddress(token);
         uint256 decimalsFrom = tokenOtherChainDecimals[token][fromChain];
         uint256 decimalsTo = tokenOtherChainDecimals[token][toChain];
         return amount.mul(decimalsTo ** 10).div(decimalsFrom ** 10);
@@ -246,7 +245,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         //near
 
         if (chainId == ChainIdTable[1]) {
-            (,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
+            (bytes memory mcsContract,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
+            require(bridgeAddress[mcsContract] > 0,"Illegal across the chain");
             bytes memory toChainToken = tokenRegister.getTargetToken(_outEvent.from_chain, _outEvent.token, _outEvent.to_chain);
             address payable toAddress = payable(_bytesToAddress(_outEvent.to));
             uint256 outAmount = getToChainAmountOther(_outEvent.token, _outEvent.from_chain, _outEvent.to_chain, _outEvent.amount);
