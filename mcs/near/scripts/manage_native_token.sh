@@ -34,12 +34,12 @@ function list_to_chains() {
 
 function transfer_out() {
   echo "transfer out $4 amount near from $2 to $3 on chain $1"
-  near call $MCS_ACCOUNT transfer_out_native '{ "to":'$3', "to_chain": '$1'}' --accountId $2 --deposit $4 --gas 100000000000000
+  near call $MCS_ACCOUNT transfer_out_native '{ "to":'$3', "to_chain": '$1'}' --accountId $2 --depositYocto $4 --gas 100000000000000
 }
 
 function deposit_out() {
   echo "deposit out $3 amount near from $1 to $2 on MAP chain"
-  near call $MCS_ACCOUNT deposit_out_native '{ "to":'$3'}' --accountId $1 --deposit $3 --gas 100000000000000
+  near call $MCS_ACCOUNT deposit_out_native '{ "to":'$3'}' --accountId $1 --depositYocto $3 --gas 100000000000000
 }
 
 function balance() {

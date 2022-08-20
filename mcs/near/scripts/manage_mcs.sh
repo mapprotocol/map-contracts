@@ -10,6 +10,7 @@ function printHelp() {
   echo "  $FILE_NAME <command>"
   echo "Commands:"
   echo "  deploy                              deploy and init mcs contract"
+  echo "  redeploy                            redeploy mcs contract"
   echo "  clean                               delete mcs contract account"
   echo "  help                                show help"
 }
@@ -24,6 +25,11 @@ function deploy() {
   near call $MCS_ACCOUNT init "$INIT_ARGS_MCS" --accountId $MASTER_ACCOUNT --gas 80000000000000
 }
 
+function redeploy() {
+  echo "redeploying mcs contract"
+  near deploy --accountId $MCS_ACCOUNT --wasmFile $RES_DIR/mcs.wasm
+}
+
 function clean() {
     near delete $MCS_ACCOUNT $MASTER_ACCOUNT
 }
@@ -33,6 +39,9 @@ if [[ $# -eq 1 ]]; then
   case $1 in
     deploy)
       deploy
+      ;;
+    redeploy)
+      redeploy
       ;;
     clean)
       clean
