@@ -353,7 +353,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             IMAPToken(token).burn(outAmount);
         }
         emit mapTransferOut(sourceToken, from, orderId, fromChain, toChain, to, outAmount, toChainToken);
-        setVaultValue(amount, fromChain, toChain, token);
+        address mapToken = _bytesToAddress(getMapToken(sourceToken,fromChain));
+        setVaultValue(amount, fromChain, toChain, mapToken);
     }
 
 
