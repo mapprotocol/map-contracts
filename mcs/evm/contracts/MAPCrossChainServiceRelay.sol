@@ -247,9 +247,9 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             (bytes memory mcsContract,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
             require(bridgeAddress[mcsContract] > 0,"Illegal across the chain");
             bytes memory toChainToken = tokenRegister.getTargetToken(_outEvent.from_chain, _outEvent.token, _outEvent.to_chain);
-            address payable toAddress = payable(_bytesToAddress(_outEvent.to));
             uint256 outAmount = getToChainAmountOther(_outEvent.token, _outEvent.from_chain, _outEvent.to_chain, _outEvent.amount);
             if (_outEvent.to_chain == selfChainId) {
+                address payable toAddress = payable(_bytesToAddress(_outEvent.to));
                 _transferIn(_bytesToAddress(toChainToken), _outEvent.from, toAddress, outAmount,
                     bytes32(_outEvent.order_id), _outEvent.from_chain, _outEvent.to_chain);
             } else {
