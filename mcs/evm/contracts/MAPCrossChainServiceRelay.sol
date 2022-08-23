@@ -344,7 +344,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     function _transferInOtherChain(bytes memory sourceToken, bytes memory from, bytes memory to, uint256 amount,
         bytes32 orderId, uint256 fromChain, uint256 toChain, bytes memory toChainToken)
-    public checkOrder(orderId) nonReentrant whenNotPaused {
+    internal checkOrder(orderId) nonReentrant whenNotPaused {
         address token = _bytesToAddress(toChainToken);
         uint256 fee = getChainFee(toChain, token, amount);
         uint256 outAmount = amount.sub(fee);
