@@ -36,7 +36,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     mapping(bytes32 => address) public tokenRegister;
     //Gas transfer fee charged by the target chain
     mapping(uint => uint) public chainGasFee;
-    mapping(bytes32 => bool) orderList;
+    mapping(bytes32 => bool) public orderList;
 
     uint public chainGasFees;
     mapping(address => bool) public authToken;
