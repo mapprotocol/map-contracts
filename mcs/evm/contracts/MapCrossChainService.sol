@@ -64,8 +64,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         uint fromChain, uint toChain, bytes data);
 
     event mapTokenRegister(bytes32 tokenID, address token);
-    event mapDepositOut(address indexed token, address indexed from, bytes indexed to,
-        bytes32 orderId, uint amount);
+    event mapDepositOut(address token, address from, address to, bytes32 orderId, uint256 amount, uint256 fromChain);
 
 
     //bytes32 public mapTransferOutTopic = keccak256(bytes('mapTransferOut(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
@@ -123,15 +122,15 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         }
     }
 
-    function setBridge(address _bridge, uint256 _num) public onlyManager{
-        bridgeAddress[_bridge]   = _num;
+    function setBridge(address _bridge, uint256 _num) public onlyManager {
+        bridgeAddress[_bridge] = _num;
     }
 
     function checkAuthToken(address token) public view returns (bool) {
         return authToken[token];
     }
 
-    function setCanBridgeToken(address token, uint chainId, bool canBridge) public onlyManager{
+    function setCanBridgeToken(address token, uint chainId, bool canBridge) public onlyManager {
         canBridgeToken[token][chainId] = canBridge;
     }
 
@@ -145,12 +144,12 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
             txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
             if (topic == mapTransferOutTopic) {
-                require(bridgeAddress[log.addr] > 0,"Illegal across the chain");
+                require(bridgeAddress[log.addr] > 0, "Illegal across the chain");
                 //                address token = abi.decode(log.topics[1], (address));
                 // address from = abi.decode(log.topics[2], (address));
                 // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
                 (,bytes memory from,bytes32 orderId,uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
-                = abi.decode(log.data, (bytes,bytes,bytes32,uint, uint, bytes, uint, bytes));
+                = abi.decode(log.data, (bytes, bytes, bytes32, uint, uint, bytes, uint, bytes));
                 address token = _bytesToAddress(toChainToken);
                 address payable toAddress = payable(_bytesToAddress(to));
                 _transferIn(token, from, toAddress, amount, orderId, fromChain, toChain);
@@ -166,7 +165,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     function transferOutToken(address token, bytes memory toAddress, uint amount, uint toChain)
     external override
     whenNotPaused
-    checkCanBridge(token,toChain)
+    checkCanBridge(token, toChain)
     {
         bytes32 orderId = getOrderID(token, msg.sender, toAddress, amount, toChain);
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
@@ -182,7 +181,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     function transferOutNative(bytes memory toAddress, uint toChain)
     external override payable
     whenNotPaused
-    checkCanBridge(address(0),toChain){
+    checkCanBridge(address(0), toChain) {
         uint amount = msg.value;
         require(amount > 0, "balance is zero");
         bytes32 orderId = getOrderID(address(0), msg.sender, toAddress, amount, toChain);
@@ -191,18 +190,18 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     }
 
 
-    function depositOutToken(address token, address from, bytes memory to, uint amount) external override payable whenNotPaused {
-        bytes32 orderId = getOrderID(token, msg.sender, to, amount, 22776);
+    function depositOutToken(address token, address from, address to, uint amount) external override payable whenNotPaused {
+        bytes32 orderId = getOrderID(token, msg.sender, _addressToBytes(to), amount, 22776);
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
         TransferHelper.safeTransferFrom(token, from, address(this), amount);
-        emit mapDepositOut(token, from, to, orderId, amount);
+        emit mapDepositOut(token, from, to, orderId, amount,selfChainId);
     }
 
-    function depositOutNative(address from, bytes memory to) external override payable whenNotPaused {
+    function depositOutNative(address from, address to) external override payable whenNotPaused {
         uint amount = msg.value;
-        bytes32 orderId = getOrderID(address(0), msg.sender, to, amount, 22776);
+        bytes32 orderId = getOrderID(address(0), msg.sender, _addressToBytes(to), amount, 22776);
         require(msg.value >= amount, "balance too low");
-        emit mapDepositOut(address(0), from, to, orderId, amount);
+        emit mapDepositOut(address(0), from, to, orderId, amount,selfChainId);
     }
 
     function transferInVault(address token, bytes memory from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)

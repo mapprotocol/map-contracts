@@ -84,12 +84,13 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         uint256 fromChain, uint256 toChain, address to, uint256 amount);
 
     event mapTokenRegister(bytes32 tokenID, address token);
-    event mapDepositIn(address indexed token, address indexed from, address indexed to,
+    event mapDepositIn(address token, address from, address indexed to,
         bytes32 orderId, uint256 amount, uint256 fromChain);
 
     bytes32 public mapTransferOutTopic;
-
-    bytes32 public nearTransferOut ;
+    bytes32 public nearTransferOut;
+    bytes32 public mapDepositOutTopic;
+    bytes32 public nearDepositOut;
 
     function initialize(address _wToken, address _mapToken, address _managerAddress) public initializer {
         uint256 _chainId;
@@ -99,7 +100,9 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         mapToken = IERC20(_mapToken);
         lightClientManager = ILightClientManager(_managerAddress);
         mapTransferOutTopic = keccak256(bytes('mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)'));
+        mapDepositOutTopic = keccak256(bytes('mapDepositOut(bytes,address,bytes,bytes32,uint256)'));
         nearTransferOut = 0x4e87426fdd31a6df84975ed344b2c3fbd45109085f1557dff1156b300f135df8;
+        nearDepositOut = '';
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
     }
@@ -245,7 +248,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
         if (chainId == ChainIdTable[1]) {
             (bytes memory mcsContract,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
-            require(bridgeAddress[mcsContract] > 0,"Illegal across the chain");
+            require(bridgeAddress[mcsContract] > 0, "Illegal across the chain");
             bytes memory toChainToken = tokenRegister.getTargetToken(_outEvent.from_chain, _outEvent.token, _outEvent.to_chain);
             uint256 outAmount = getToChainAmountOther(_outEvent.token, _outEvent.from_chain, _outEvent.to_chain, _outEvent.amount);
             if (_outEvent.to_chain == selfChainId) {
@@ -265,7 +268,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
                 bytes32 topic = abi.decode(log.topics[0], (bytes32));
                 bytes memory mcsAddress = _addressToBytes(log.addr);
                 if (topic == mapTransferOutTopic) {
-                    require(bridgeAddress[mcsAddress] > 0,"Illegal across the chain");
+                    require(bridgeAddress[mcsAddress] > 0, "Illegal across the chain");
                     //                address token = abi.decode(log.topics[1], (address));
                     // address from = abi.decode(log.topics[2], (address));
                     // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
@@ -353,26 +356,48 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             IMAPToken(token).burn(outAmount);
         }
         emit mapTransferOut(sourceToken, from, orderId, fromChain, toChain, to, outAmount, toChainToken);
-        address mapToken = _bytesToAddress(getMapToken(sourceToken,fromChain));
-        setVaultValue(amount, fromChain, toChain, mapToken);
+        address _token = _bytesToAddress(getMapToken(sourceToken, fromChain));
+        setVaultValue(amount, fromChain, toChain, _token);
     }
 
 
-    function depositIn(address token, address from, address payable to, uint256 amount, bytes32 orderId, uint256 fromChain)
-    external payable override checkOrder(orderId) nonReentrant whenNotPaused {
+    function depositIn(uint256 _fromChain, bytes memory receiptProof) external payable override nonReentrant whenNotPaused {
+        (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_fromChain, receiptProof);
+        require(sucess, message);
+
+        if (_fromChain == ChainIdTable[1]) {
+            //todo will near
+        } else {
+            txLog[] memory logs = decodeTxLog(logArray);
+
+            for (uint256 i = 0; i < logs.length; i++) {
+                if (abi.decode(logs[i].topics[0], (bytes32)) == mapDepositOutTopic) {
+                    require(bridgeAddress[_addressToBytes(logs[i].addr)] > 0, "Illegal across the chain");
+                    (address fromToken,address from,address to,bytes32 orderId,uint256 amount,uint256 fromChain)
+                    = abi.decode(logs[i].data, (address, address, address, bytes32, uint256,uint256));
+                    bytes memory _fromBytes = _addressToBytes(fromToken);
+                    _fromBytes = tokenRegister.getTargetToken(fromChain, _fromBytes, selfChainId);
+                    address token = _bytesToAddress(_fromBytes);
+                    _depositIn(token,from,payable(to),amount,orderId,fromChain);
+                }
+            }
+        }
+    }
+
+    function _depositIn(address token, address from, address payable to, uint256 amount, bytes32 orderId, uint256 fromChain)
+    internal checkOrder(orderId) {
         if (token == address(0)) {
             IWToken(wToken).deposit{value : amount}();
             token == wToken;
         }
         address vaultTokenAddress = feeCenter.getVaultToken(token);
         require(vaultTokenAddress != address(0), "only vault token");
-        IVault vaultToken = IVault(vaultTokenAddress);
         if (checkAuthToken(token)) {
             IMAPToken(token).mint(vaultTokenAddress, amount);
         } else {
             TransferHelper.safeTransfer(token, vaultTokenAddress, amount);
         }
-        vaultToken.stakingTo(amount, to);
+        IVault(vaultTokenAddress).stakingTo(amount, to);
         vaultBalance[fromChain][token] += amount;
         emit mapDepositIn(token, from, to, orderId, amount, fromChain);
     }

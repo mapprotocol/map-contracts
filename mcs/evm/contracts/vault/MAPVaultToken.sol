@@ -72,7 +72,7 @@ contract MAPVaultToken is VERC20, IVault, Role {
         uint correspondAmount = getCorrespondQuantity(amount);
         require(correspondBalance().sub(correspondAmount) > 0, "take too much");
         _burn(msg.sender, amount);
-        TransferHelper.safeTransferFrom(correspond, msg.sender, address(this), amount);
+        TransferHelper.safeTransferFrom(correspond, address(this),msg.sender, amount);
         emit VaultWithdraw(correspondAmount, amount);
     }
 }
