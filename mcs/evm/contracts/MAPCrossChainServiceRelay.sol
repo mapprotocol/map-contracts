@@ -84,7 +84,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         uint256 fromChain, uint256 toChain, address to, uint256 amount);
 
     event mapTokenRegister(bytes32 tokenID, address token);
-    event mapDepositIn(address token, address from, address indexed to,
+    event mapDepositIn(address token, bytes from, address indexed to,
         bytes32 orderId, uint256 amount, uint256 fromChain);
 
     bytes32 public mapTransferOutTopic;
@@ -373,18 +373,19 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
             for (uint256 i = 0; i < logs.length; i++) {
                 if (abi.decode(logs[i].topics[0], (bytes32)) == mapDepositOutTopic) {
                     require(bridgeAddress[_addressToBytes(logs[i].addr)] > 0, "Illegal across the chain");
-                    (address fromToken,address from,address to,bytes32 orderId,uint256 amount,uint256 fromChain)
-                    = abi.decode(logs[i].data, (address, address, address, bytes32, uint256,uint256));
+                    (address fromToken, bytes memory from,address to,bytes32 orderId,uint256 amount)
+                    = abi.decode(logs[i].data, (address, bytes, address, bytes32, uint256));
+                    uint256 fromChain = _fromChain;
                     bytes memory _fromBytes = _addressToBytes(fromToken);
                     _fromBytes = tokenRegister.getTargetToken(fromChain, _fromBytes, selfChainId);
                     address token = _bytesToAddress(_fromBytes);
-                    _depositIn(token,from,payable(to),amount,orderId,fromChain);
+                    _depositIn(token, from, payable(to), amount, orderId, fromChain);
                 }
             }
         }
     }
 
-    function _depositIn(address token, address from, address payable to, uint256 amount, bytes32 orderId, uint256 fromChain)
+    function _depositIn(address token, bytes memory from, address payable to, uint256 amount, bytes32 orderId, uint256 fromChain)
     internal checkOrder(orderId) {
         if (token == address(0)) {
             IWToken(wToken).deposit{value : amount}();

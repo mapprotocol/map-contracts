@@ -64,7 +64,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         uint fromChain, uint toChain, bytes data);
 
     event mapTokenRegister(bytes32 tokenID, address token);
-    event mapDepositOut(address token, address from, address to, bytes32 orderId, uint256 amount, uint256 fromChain);
+    event mapDepositOut(address token, bytes from, address to, bytes32 orderId, uint256 amount);
 
 
     //bytes32 public mapTransferOutTopic = keccak256(bytes('mapTransferOut(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
@@ -194,14 +194,14 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         bytes32 orderId = getOrderID(token, msg.sender, _addressToBytes(to), amount, 22776);
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
         TransferHelper.safeTransferFrom(token, from, address(this), amount);
-        emit mapDepositOut(token, from, to, orderId, amount,selfChainId);
+        emit mapDepositOut(token, _addressToBytes(from), to, orderId, amount);
     }
 
     function depositOutNative(address from, address to) external override payable whenNotPaused {
         uint amount = msg.value;
         bytes32 orderId = getOrderID(address(0), msg.sender, _addressToBytes(to), amount, 22776);
         require(msg.value >= amount, "balance too low");
-        emit mapDepositOut(address(0), from, to, orderId, amount,selfChainId);
+        emit mapDepositOut(address(0), _addressToBytes(from), to, orderId, amount);
     }
 
     function transferInVault(address token, bytes memory from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
