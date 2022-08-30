@@ -25,8 +25,8 @@ contract LightClientManager is ILightClientManager,Role {
 
     function verifyProofData(uint _chainId, bytes memory _receiptProof) external view override
     returns (bool success, string memory message, bytes memory logs) {
-//        require(lightClientContract[_chainId] != address(0), "not register");
-//        ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
-//        return lightNode.verifyProofData(_receiptProof);
+        require(lightClientContract[_chainId] != address(0), "not register");
+        ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
+        return lightNode.verifyProofData(_receiptProof);
     }
 }
