@@ -21,13 +21,34 @@ module.exports = async function ({ethers, deployments}) {
 
     let MaintainerManager = await ethers.getContract('MaintainerManager');
 
-    console.log(MaintainerManager.address)
+    console.log("MaintainerManager",MaintainerManager.address)
 
     // await hre.run("verify:verify", {
     //     address: MaintainerManager.address,
     //     constructorArguments:[]
     // });
 
+    await deploy('MaintainerManagerProxy', {
+        from: deployer.address,
+        args: [MaintainerManager.address,"0x"],
+        log: true,
+        contract: 'MaintainerManagerProxy',
+    })
+
+    let MaintainerManagerProxy = await ethers.getContract('MaintainerManagerProxy');
+
+    console.log("MaintainerManagerProxy",MaintainerManagerProxy.address)
+
+
+    MaintainerManagerProxy = await ethers.getContractAt("MaintainerManager",MaintainerManagerProxy.address)
+
+    // await MaintainerManagerProxy.initialize();
+    console.log(await MaintainerManagerProxy.getAdmin())
+    // await MaintainerManagerProxy.changeAdmin(await deployer.getAddress());
+    //
+    // await MaintainerManagerProxy.addWhiteList("0x0000000000000000000000000000000000000008")
+    //
+    // console.log(await MaintainerManagerProxy.whiteList("0x0000000000000000000000000000000000000008"));
 }
 
 module.exports.tags = ['MaintainerManager']
