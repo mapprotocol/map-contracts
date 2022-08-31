@@ -1,0 +1,5 @@
+MNEMONIC = 
+BSCURI = 
+CHAINID = 
+# bsc mainnet 317 testnet 197
+MinEpochBlockExtraDataLen = 317

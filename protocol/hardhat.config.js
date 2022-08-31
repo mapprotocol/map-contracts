@@ -86,7 +86,7 @@ module.exports = {
       56: '0x038BCF8d2d48C084B661E3f2B3c514b4244B4D90',
       97: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
       137:'0x038BCF8d2d48C084B661E3f2B3c514b4244B4D90',
-      22776: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
+      22776: '0xcCCdFC1A4F3750601b6dA3f48Cf2FFf07Fb51e90',
     },
     wcoin: {
       default: 0,
@@ -220,6 +220,11 @@ module.exports = {
     MapTestNew: {
       url: `http://18.142.54.137:7445/`,
       chainId : 212,
+      accounts: accounts
+    },
+    MapMain: {
+      url: `https://poc3-rpc.maplabs.io/`,
+      chainId : 22776,
       accounts: accounts
     },
   },
