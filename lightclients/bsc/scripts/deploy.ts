@@ -60,23 +60,13 @@ async function getReceipt(txHash: string, uri?: string) {
 async function deployLightNode(wallet: SignerWithAddress) {
   const LightNode = await ethers.getContractFactory("LightNode");
 
-  const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen);
+  const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen,wallet.address);
 
   await lightNode.connect(wallet).deployed();
 
   console.log("lightNode Implementation deployed on:", lightNode.address);
 
   const LightNodeProxy = await ethers.getContractFactory("LightNodeProxy");
-
-  let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen]);
-
-  const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
-
-  await lightNodeProxy.connect(wallet).deployed();
-
-  console.log("lightNode proxy deployed on:", lightNodeProxy.address);
-
-  let proxy = LightNode.attach(lightNodeProxy.address);
 
   const provider = new ethers.providers.JsonRpcProvider(uri);
 
@@ -90,7 +80,15 @@ async function deployLightNode(wallet: SignerWithAddress) {
 
   let preValidators = '0x' + getValidators(second.extraData);
 
-  await (await proxy.connect(wallet).initBlock(preValidators, lastHeader)).wait();
+  let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen, wallet.address, preValidators, lastHeader]);
+
+  const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
+
+  await lightNodeProxy.connect(wallet).deployed();
+
+  console.log("lightNode proxy deployed on:", lightNodeProxy.address);
+
+  let proxy = LightNode.attach(lightNodeProxy.address);
 
   let current = BigNumber.from(await proxy.headerHeight()).toNumber();
 
@@ -166,23 +164,13 @@ async function deployDLightNode(wallet: SignerWithAddress) {
 
   const LightNode = await ethers.getContractFactory("DLightNode");
 
-  const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen);
+  const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen,wallet.address);
 
   await lightNode.connect(wallet).deployed();
 
   console.log("lightNode Implementation deployed on:", lightNode.address);
 
   const LightNodeProxy = await ethers.getContractFactory("LightNodeProxy");
-
-  let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen]);
-
-  const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
-
-  await lightNodeProxy.connect(wallet).deployed();
-
-  console.log("lightNode proxy deployed on:", lightNodeProxy.address);
-
-  let proxy = LightNode.attach(lightNodeProxy.address);
 
   const provider = new ethers.providers.JsonRpcProvider(uri);
 
@@ -200,7 +188,16 @@ async function deployDLightNode(wallet: SignerWithAddress) {
 
   initHeaders.push(lastHeader);
 
-  await (await proxy.connect(wallet).initBlock(initHeaders)).wait();
+  let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen,wallet.address,initHeaders]);
+
+  const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
+
+  await lightNodeProxy.connect(wallet).deployed();
+
+  console.log("lightNode proxy deployed on:", lightNodeProxy.address);
+
+  let proxy = LightNode.attach(lightNodeProxy.address);
+
 
   let current = BigNumber.from(await proxy.headerHeight()).toNumber();
 

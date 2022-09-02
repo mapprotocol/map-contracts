@@ -12,6 +12,6 @@ contract LightNodeProxy is ERC1967Proxy {
         payable
         ERC1967Proxy(_logic, _data)
     {
-        
+         require(address(_logic) != address(0),"_logic zero address");
     }
 }

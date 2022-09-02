@@ -177,18 +177,6 @@ export async function getBlock(blockNumber: number, provider: JsonRpcProvider) {
     return blockHeader;
 }
 
-export async function getReceipt(txHash: string, uri: string) {
-
-    //   let rpc = new Rpc("https://nd-013-308-555.p2pify.com/2e66f28b510dfa758c7dc43bb464dbde");
-    //   let r = await rpc.eth_getTransactionReceipt('0x0c867d78324855c269c1fc827a61e738bf6e55bb1f0aa77a4d4e8f5600d6e8e6');
-    //   console.log(r);
-
-    let p = new GetProof('https://nd-013-308-555.p2pify.com/2e66f28b510dfa758c7dc43bb464dbde');
-    const resp = await p.receiptProof(txHash)
-
-    console.log(resp);
-}
-
 export function index2key(index: number, proofLength: number) {
     const actualkey: Array<number> = new Array<number>;
     const encoded = buffer2hex(encode(index)).slice(2);

@@ -27,13 +27,15 @@ describe("LightNode", function () {
 
         const LightNode = await ethers.getContractFactory("DLightNode");
 
-        const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen);
+        const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen,wallet.address);
 
         await lightNode.connect(wallet).deployed();
 
         const LightNodeProxy = await ethers.getContractFactory("LightNodeProxy");
 
-        let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen]);
+        let initBlocks = [data.block20852800,data.block20853000]
+
+        let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen,wallet.address,initBlocks]);
 
         const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
 
@@ -47,18 +49,6 @@ describe("LightNode", function () {
 
     describe("Deployment", function () {
 
-        it("initBlock must owner", async function () {
-
-
-            let [wallet, other] = await ethers.getSigners();
-
-            const lightNode = await loadFixture(deployFixture);
-
-            let initBlocks = [data.block20852800,data.block20853000]
-
-            await expect(lightNode.connect(other).initBlock(initBlocks)).to.be.revertedWith('lightnode :: only admin')
-
-        });
 
         it("initBlock ok", async function () {
 
@@ -66,10 +56,6 @@ describe("LightNode", function () {
             let [wallet, other] = await ethers.getSigners();
 
             const lightNode = await loadFixture(deployFixture);
-
-            let initBlocks = [data.block20852800,data.block20853000]
-
-            await lightNode.connect(wallet).initBlock(initBlocks)
 
             let current = await lightNode.headerHeight();
 
@@ -88,7 +74,7 @@ describe("LightNode", function () {
             expect(admin).to.not.eq(other.address);
 
             const LightNode = await ethers.getContractFactory("LightNode");
-            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen);
+            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen,wallet.address);
             await newImplement.deployed();
 
             await expect(lightNode.connect(other).upgradeTo(newImplement.address)).to.be.revertedWith('LightNode: only Admin can upgrade');
@@ -107,7 +93,7 @@ describe("LightNode", function () {
             expect(admin).to.not.eq(other.address);
 
             const LightNode = await ethers.getContractFactory("LightNode");
-            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen);
+            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen,wallet.address);
             await newImplement.deployed();
 
             let oldImplement = await lightNode.getImplementation();
@@ -142,7 +128,7 @@ describe("LightNode", function () {
         });
 
 
-        it("trigglePause  only admin ", async function () {
+        it("togglePause  only admin ", async function () {
 
             let [wallet, other] = await ethers.getSigners();
 
@@ -152,13 +138,13 @@ describe("LightNode", function () {
 
             expect(paused).to.false;
 
-            await expect(lightNode.connect(other).trigglePause(true)).to.be.revertedWith("lightnode :: only admin");
+            await expect(lightNode.connect(other).togglePause(true)).to.be.revertedWith("lightnode :: only admin");
 
-            await lightNode.connect(wallet).trigglePause(true);
+            await lightNode.connect(wallet).togglePause(true);
 
             expect(await lightNode.paused()).to.true;
 
-            await lightNode.connect(wallet).trigglePause(false);
+            await lightNode.connect(wallet).togglePause(false);
 
             expect(await lightNode.paused()).to.false;
 
@@ -172,11 +158,7 @@ describe("LightNode", function () {
             let lightNode = await loadFixture(deployFixture);
 
 
-            await lightNode.connect(wallet).trigglePause(true);
-
-            let initBlocks = [data.block20852800,data.block20853000]
-
-            await lightNode.connect(wallet).initBlock(initBlocks)
+            await lightNode.connect(wallet).togglePause(true);
 
             await expect(lightNode.updateBlockHeader(data.dAddBlocks)).to.be.revertedWith('Pausable: paused');
 
@@ -188,9 +170,6 @@ describe("LightNode", function () {
 
             let lightNode = await loadFixture(deployFixture);
 
-            let initBlocks = [data.block20852800,data.block20853000]
-
-            await lightNode.connect(wallet).initBlock(initBlocks)
 
             await lightNode.updateBlockHeader(data.dAddBlocks);
 
@@ -207,9 +186,6 @@ describe("LightNode", function () {
 
             let lightNode = await loadFixture(deployFixture);
 
-            let initBlocks = [data.block20852800,data.block20853000]
-
-            await lightNode.connect(wallet).initBlock(initBlocks)
 
             await lightNode.updateBlockHeader(data.dAddBlocks);
 

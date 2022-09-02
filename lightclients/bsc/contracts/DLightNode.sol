@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interface/ILightNode.sol";
 import "./lib/Verify.sol";
+
 //import "hardhat/console.sol";
 
 contract DLightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
@@ -22,7 +23,6 @@ contract DLightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     uint256 public minValidBlocknum;
 
-
     struct ProofData {
         Verify.BlockHeader[] headers;
         Verify.ReceiptProof receiptProof;
@@ -35,22 +35,33 @@ contract DLightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     event UpdateBlockHeader(uint256 blockHeight);
 
-    constructor(uint256 _chainId, uint256 _minEpochBlockExtraDataLen) {
+    constructor(
+        uint256 _chainId,
+        uint256 _minEpochBlockExtraDataLen,
+        address _controller
+    ) {
         chainId = _chainId;
         minEpochBlockExtraDataLen = _minEpochBlockExtraDataLen;
+        require(_controller != address(0), "_controller zero address");
+        _changeAdmin(_controller);
     }
 
-    function initialize(uint256 _chainId, uint256 _minEpochBlockExtraDataLen)
-        public
-        initializer
-    {
+    function initialize(
+        uint256 _chainId,
+        uint256 _minEpochBlockExtraDataLen,
+        address _controller,
+        Verify.BlockHeader[2] memory headers
+    ) public initializer {
         require(chainId == 0, "already initialized");
-        _changeAdmin(msg.sender);
+        require(_controller != address(0), "_controller zero address");
+        _changeAdmin(_controller);
         chainId = _chainId;
         minEpochBlockExtraDataLen = _minEpochBlockExtraDataLen;
+
+        initBlock(headers);
     }
 
-    function initBlock(Verify.BlockHeader[2] memory headers) public onlyOwner {
+    function initBlock(Verify.BlockHeader[2] memory headers) internal {
         require(lastSyncedBlock == 0, "already init");
 
         require(headers[0].number + epochNum == headers[1].number);
@@ -70,7 +81,7 @@ contract DLightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         lastSyncedBlock = headers[1].number;
     }
 
-    function trigglePause(bool flag) public onlyOwner returns (bool) {
+    function togglePause(bool flag) public onlyOwner returns (bool) {
         if (flag) {
             _pause();
         } else {
@@ -130,7 +141,6 @@ contract DLightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 message = "mpt verify fail";
             }
         }
-
     }
 
     function updateBlockHeader(Verify.BlockHeader[] memory _blockHeaders)

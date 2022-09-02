@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interface/ILightNode.sol";
 import "./lib/Verify.sol";
+
 //import "hardhat/console.sol";
 
 contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
@@ -40,25 +41,37 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     event UpdateBlockHeader(uint256 blockHeight);
 
-    constructor(uint256 _chainId, uint256 _minEpochBlockExtraDataLen) {
+    constructor(
+        uint256 _chainId,
+        uint256 _minEpochBlockExtraDataLen,
+        address _controller
+    ) {
         chainId = _chainId;
         minEpochBlockExtraDataLen = _minEpochBlockExtraDataLen;
+        require(_controller != address(0), "_controller zero address");
+        _changeAdmin(_controller);
     }
 
-    function initialize(uint256 _chainId, uint256 _minEpochBlockExtraDataLen)
-        public
-        initializer
-    {
+    function initialize(
+        uint256 _chainId,
+        uint256 _minEpochBlockExtraDataLen,
+        address _controller,
+        bytes memory preValidators,
+        Verify.BlockHeader memory _blockHeader
+    ) public initializer {
         require(chainId == 0, "already initialized");
-        _changeAdmin(msg.sender);
+        require(_controller != address(0), "_controller zero address");
+        _changeAdmin(_controller);
         chainId = _chainId;
         minEpochBlockExtraDataLen = _minEpochBlockExtraDataLen;
+
+        initBlock(preValidators, _blockHeader);
     }
 
     function initBlock(
         bytes memory preValidators,
         Verify.BlockHeader memory _blockHeader
-    ) public onlyOwner {
+    ) internal {
         require(lastSyncedBlock == 0, "already init");
 
         require(_blockHeader.number % epochNum == 0, "invalid init block");
@@ -76,7 +89,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         preTime = _blockHeader.timestamp;
     }
 
-    function trigglePause(bool flag) public onlyOwner returns (bool) {
+    function togglePause(bool flag) public onlyOwner returns (bool) {
         if (flag) {
             _pause();
         } else {
@@ -105,7 +118,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
             message = "unconfirm block";
         } else {
-            (success, logs) = Verify.validateProof(rootHash, proof.receiptProof);
+            (success, logs) = Verify.validateProof(
+                rootHash,
+                proof.receiptProof
+            );
 
             if (!success) {
                 message = "mpt verify fail";
@@ -226,7 +242,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     {
         return abi.encode(proof);
     }
-
 
     function isRepeat(
         address[] memory _miners,

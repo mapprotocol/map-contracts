@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "./RLPReader.sol";
 import "./RLPEncode.sol";
-import "./MPTValidatorV2.sol";
+// import "./MPTValidatorV2.sol";
 import "./MPT.sol";
 
 library Verify {
@@ -82,7 +82,9 @@ library Verify {
             v := byte(0, mload(add(signature, 0x60)))
         }
 
-        v = v + 27;
+        if (v <= 1) {
+            v = v + 27;
+        }
 
         address signer = ecrecover(hash, v, r, s);
 
@@ -103,6 +105,7 @@ library Verify {
                 return false;
             }
         }
+
         if (header.difficulty != 2) {
             return false;
         }
@@ -186,13 +189,13 @@ library Verify {
         return keccak256(RLPEncode.encodeList(list));
     }
 
-    function validateProof(
-        bytes32 rootHash,
-        uint256 paths,
-        bytes memory proof
-    ) internal pure returns (bytes memory) {
-        return MPTValidatorV2.validateProof(rootHash, paths, proof);
-    }
+    // function validateProof(
+    //     bytes32 rootHash,
+    //     uint256 paths,
+    //     bytes memory proof
+    // ) internal pure returns (bytes memory) {
+    //     return MPTValidatorV2.validateProof(rootHash, paths, proof);
+    // }
 
     function validateProof(bytes32 receiptsRoot, ReceiptProof memory receipt)
         internal
@@ -263,7 +266,7 @@ library Verify {
         }
 
         ptr += 32;
-
+        //extraData never less than 97
         _extraData = memoryToBytes(ptr, extraData.length - 65);
 
         ptr += extraData.length - 65;
@@ -282,7 +285,7 @@ library Verify {
         }
 
         ptr += 64;
-
+        //extraData never less than 97
         return memoryToBytes(ptr, extraData.length - 97);
     }
 
