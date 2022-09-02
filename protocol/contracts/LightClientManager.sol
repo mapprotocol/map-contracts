@@ -12,14 +12,16 @@ import "./interface/ILightNode.sol";
 
 contract LightClientManager is ILightClientManager,Role {
     mapping(uint256 => address) lightClientContract;
+    mapping(uint256 => address) updateBlockContract;
 
-    function register(uint256 _chainId, address _contract) external override onlyManager{
+    function register(uint256 _chainId, address _contract,address _blockContract) external override onlyManager{
         lightClientContract[_chainId] = _contract;
+        updateBlockContract[_chainId] = _blockContract;
     }
 
     function updateBlockHeader(uint256 _chainId, bytes memory _blockHeader) external override {
-        require(lightClientContract[_chainId] != address(0), "not register");
-        ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
+        require(updateBlockContract[_chainId] != address(0), "not register");
+        ILightNode lightNode = ILightNode(updateBlockContract[_chainId]);
         lightNode.updateBlockHeader(_blockHeader);
     }
 

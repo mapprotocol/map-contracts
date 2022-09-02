@@ -29,17 +29,6 @@ module.exports = async function ({ethers, deployments}) {
     let verifyTool = await ethers.getContract('VerifyTool');
     let lightNode = await ethers.getContract('LightNode');
 
-    await deploy('LightNodeProxy', {
-        from: deployer.address,
-        args: [lightNode.address,"0x"],
-        log: true,
-        contract: 'LightNodeProxy',
-    })
-
-    let LightNodeProxy = await ethers.getContract('LightNodeProxy');
-
-    lightNode = await ethers.getContractAt('LightNode',LightNodeProxy.address)
-
     //ROPSTEN
     //0x04b12c39a37230c99b9f0D57902509179C4BCd60
     // console.log(verifyTool.address)
@@ -105,13 +94,26 @@ module.exports = async function ({ethers, deployments}) {
 
     let _epochSize = 1000;
 
-    // function initialize(uint _threshold, address[]  memory _validatorAddresss, G1[] memory _pairKeys,
+    // function initialize(uint _threshold, address[]  memory _validatorAddress, G1[] memory _pairKeys,
     //     uint[] memory _weights, uint _epoch, uint _epochSize)
 
     //console.log(_threshold,addresss,g1List,_weights,_epoch,_epochSize)
 
-    await lightNode.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize,verifyTool.address);
+    let initD = await lightNode.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize,verifyTool.address);
     console.log("initialize success")
+
+
+    await deploy('LightNodeProxy', {
+        from: deployer.address,
+        args: [lightNode.address,initD.data],
+        log: true,
+        contract: 'LightNodeProxy',
+    })
+
+    let lightProxyClient = await ethers.getContract('LightNodeProxy');
+
+    console.log("lightProxyClient Address",lightProxyClient.address)
+
 
 }
 

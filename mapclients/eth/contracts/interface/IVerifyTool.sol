@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-
-
 pragma solidity ^0.8.0;
 import "./ILightNodePoint.sol";
 
@@ -36,7 +34,7 @@ interface IVerifyTool is ILightNodePoint {
     view
     returns (txLog[] memory _txLogs);
 
-    function getBlcokHash(blockHeader memory bh)
+    function getBlockHash(blockHeader memory bh)
     external
     view
     returns (bytes32);

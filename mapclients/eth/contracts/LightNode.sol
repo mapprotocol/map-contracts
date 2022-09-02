@@ -1,9 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-
-
-
-
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
@@ -20,7 +16,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     uint256 public maxValidators;
     uint256 public epochSize;
     uint256 public headerHeight;
-    address[] public validatorAddresss;
+    address[] public validatorAddress;
     validator[20] public validators;
     IVerifyTool public verifyTool;
     BlsCode blsCode;
@@ -47,7 +43,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     /** initialize  **********************************************************/
     function initialize(
         uint _threshold,
-        address[]  memory _validatorAddresss,
+        address[]  memory _validatorAddress,
         G1[] memory _pairKeys,
         uint[] memory _weights,
         uint _epoch,
@@ -61,7 +57,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         epochSize = 1000;
         headerHeight = 0;
         epochSize = _epochSize;
-        validatorAddresss = _validatorAddresss;
+        validatorAddress = _validatorAddress;
         setStateInternal(_threshold, _pairKeys, _weights, _epoch);
         verifyTool = IVerifyTool(_verifyTool);
         blsCode = new BlsCode();
@@ -151,7 +147,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     returns (bool){
         uint256 epoch = getEpochNumber(bh.number);
         bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
-        bytes memory bits = abi.encodePacked(getLengthenBytes(ist.aggregatedSeal.bitmap));
+        bytes memory bits = abi.encodePacked(getLengthInBytes(ist.aggregatedSeal.bitmap));
         G1 memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
         return checkSigTag(bits, message, sig, aggPk, epoch);
     }
@@ -179,7 +175,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     function updateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
     internal
     {
-        uint256 idPre = getValidatorsIdPrve(epoch);
+        uint256 idPre = getValidatorsIdPrev(epoch);
         validator memory vPre = validators[idPre];
         uint256 id = getValidatorsId(epoch);
         validator storage v = validators[id];
@@ -224,7 +220,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         return epoch % maxValidators;
     }
 
-    function getValidatorsIdPrve(uint256 epoch)
+    function getValidatorsIdPrev(uint256 epoch)
     internal
     view
     returns (uint){
@@ -273,7 +269,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     internal
     view
     returns (bytes memory result){
-        bytes32 hash = verifyTool.getBlcokHash(bh);
+        bytes32 hash = verifyTool.getBlockHash(bh);
         if (round == 0) {
             result = abi.encodePacked(hash, uint8(2));
         } else if (round < 256) {
@@ -285,7 +281,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         }
     }
 
-    function getLengthenBytes(uint256 num)
+    function getLengthInBytes(uint256 num)
     internal
     pure
     returns (bytes memory){

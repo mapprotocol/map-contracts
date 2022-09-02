@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-
-
 pragma solidity ^0.8.0;
 
 import "./lib/RLPReader.sol";
 import "./lib/RLPEncode.sol";
 import "./interface/ILightNodePoint.sol";
 import "./lib/MPT.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract VerifyTool is ILightNodePoint {
     using RLPReader for bytes;
@@ -99,21 +98,19 @@ contract VerifyTool is ILightNodePoint {
         address[] memory validatorTemp = new address[](item0.length);
         bytes[] memory addedPubKeyTemp = new bytes[](item1.length);
         bytes[] memory addedG1PubKeyTemp = new bytes[](item2.length);
-        if (item0.length > 0) {
-            for (uint256 i = 0; i < item0.length; i++) {
-                validatorTemp[i] = item0[i].toAddress();
-            }
+
+        for (uint256 i = 0; i < item0.length; i++) {
+            validatorTemp[i] = item0[i].toAddress();
         }
-        if (item1.length > 0) {
-            for (uint256 j = 0; j < item1.length; j++) {
-                addedPubKeyTemp[j] = item1[j].toBytes();
-            }
+
+        for (uint256 j = 0; j < item1.length; j++) {
+            addedPubKeyTemp[j] = item1[j].toBytes();
         }
-        if (item2.length > 0) {
-            for (uint256 k = 0; k < item2.length; k++) {
-                addedG1PubKeyTemp[k] = item2[k].toBytes();
-            }
+
+        for (uint256 k = 0; k < item2.length; k++) {
+            addedG1PubKeyTemp[k] = item2[k].toBytes();
         }
+
         ist = istanbulExtra({
         validators : validatorTemp,
         addedPubKey : addedPubKeyTemp,
@@ -159,21 +156,23 @@ contract VerifyTool is ILightNodePoint {
     pure
     returns (txLog[] memory _txLogs){
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
-         _txLogs = new txLog[](ls.length);
+        _txLogs = new txLog[](ls.length);
         for(uint256 i = 0; i< ls.length; i++){
-            bytes[] memory topic = new bytes[](ls[i].toList()[1].toList().length);
-            for(uint256 j = 0; j < ls[i].toList()[1].toList().length; j++){
-                topic[j] = ls[i].toList()[1].toList()[j].toBytes();
+            RLPReader.RLPItem[] memory item = ls[i].toList();
+            RLPReader.RLPItem[] memory firstItemList = item[1].toList();
+            bytes[] memory topic = new bytes[](firstItemList.length);
+            for(uint256 j = 0; j < firstItemList.length; j++){
+                topic[j] = firstItemList[j].toBytes();
             }
             _txLogs[i] = txLog({
-            addr:ls[i].toList()[0].toAddress(),
+            addr:item[0].toAddress(),
             topics : topic,
-            data : ls[i].toList()[2].toBytes()
+            data : item[2].toBytes()
             });
         }
     }
 
-    function getBlcokHash(blockHeader memory bh)
+    function getBlockHash(blockHeader memory bh)
     public
     pure
     returns (bytes32){
@@ -204,6 +203,7 @@ contract VerifyTool is ILightNodePoint {
     internal
     pure
     returns (bytes memory newExtra){
+        require(extra.length >= 32,"Invalid extra result type");
         newExtra = new bytes(extra.length - 32);
         uint256 n = 0;
         for (uint256 i = 32; i < extra.length; i++) {
@@ -217,14 +217,14 @@ contract VerifyTool is ILightNodePoint {
     internal
     pure
     returns (bytes memory newExtra){
+        require(extra.length >= 32,"Invalid extra result type");
         newExtra = new bytes(32);
-        uint m = 0;
         for (uint i = 0; i < 32; i++) {
-            newExtra[m] = extra[i];
-            m = m + 1;
+            newExtra[i] = extra[i];
         }
         return newExtra;
     }
+
 
 
     function getVerifyExpectedValueHash(txReceipt memory _txReceipt)
@@ -235,16 +235,18 @@ contract VerifyTool is ILightNodePoint {
         list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
         list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
         list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
-        bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
+        ILightNodePoint.txLog[] memory items = _txReceipt.logs;
+        bytes[] memory listLog = new bytes[](items.length);
         bytes[] memory loglist = new bytes[](3);
-        for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
-            loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
-            for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
+        for (uint256 j = 0; j < items.length; j++) {
+            ILightNodePoint.txLog memory item = items[j];
+            loglist[0] = RLPEncode.encodeAddress(item.addr);
+            bytes[] memory loglist1 = new bytes[](item.topics.length);
+            for (uint256 i = 0; i < item.topics.length; i++) {
+                loglist1[i] = RLPEncode.encodeBytes(item.topics[i]);
             }
             loglist[1] = RLPEncode.encodeList(loglist1);
-            loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
+            loglist[2] = RLPEncode.encodeBytes(item.data);
             bytes memory logBytes = RLPEncode.encodeList(loglist);
             listLog[j] = logBytes;
         }
@@ -371,8 +373,10 @@ contract VerifyTool is ILightNodePoint {
     pure
     returns (bool) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(seal);
-        v = v + 27;
-        return coinbase == ecrecover(hash, v, r, s);
+        if(v <= 1){
+            v = v + 27;
+        }
+        return coinbase == ECDSA.recover(hash, v, r, s);
     }
 
     function splitSignature(bytes memory sig)

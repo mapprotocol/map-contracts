@@ -170,6 +170,11 @@ module.exports = {
       chainId : 1,
       accounts: accounts
     },
+    ETHP: {
+      url: `http://18.138.248.113:8545`,
+      chainId : 34434,
+      accounts: accounts
+    },
     sepolia: {
       url: `https://rpc.sepolia.org`,
       chainId : 11155111,
