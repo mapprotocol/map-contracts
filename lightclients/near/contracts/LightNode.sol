@@ -34,7 +34,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     mapping(bytes32 => Epoch) public epochs;
 
-    bytes32 public curEpoch;
+    bytes32 public nextEpochId;
     uint256 public curHeight;
 
     modifier onlyOwner() {
@@ -48,11 +48,20 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     constructor() {}
 
-    function initialize() public initializer {
-        _changeAdmin(msg.sender);
+    function initialize(address _controller, bytes[2] memory initDatas)
+        public
+        initializer
+    {
+        require(_controller != address(0), "_controller zero address");
+
+        _changeAdmin(_controller);
+
+        initWithValidators(initDatas[0]);
+
+        initWithBlock(initDatas[1]);
     }
 
-    function trigglePause(bool flag) public onlyOwner returns (bool) {
+    function togglePause(bool flag) public onlyOwner returns (bool) {
         if (flag) {
             _pause();
         } else {
@@ -62,7 +71,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return true;
     }
 
-    function initWithValidators(bytes memory data) public onlyOwner {
+    function initWithValidators(bytes memory data) internal {
         require(
             !setFirstBlock && epochs[zero_byte32].numBPs == 0,
             "Wrong initialization stage"
@@ -79,7 +88,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     // The second part of the initialization -- setting the current head.
-    function initWithBlock(bytes memory data) public onlyOwner {
+    function initWithBlock(bytes memory data) internal {
         require(
             !setFirstBlock && epochs[zero_byte32].numBPs != 0,
             "Wrong initialization stage"
@@ -110,11 +119,9 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         epoch.init = true;
 
-        //   delete epochs[zero_byte32];
-
-        curEpoch = nearBlock.inner_lite.epoch_id;
-
         Epoch storage next = epochs[nearBlock.inner_lite.next_epoch_id];
+
+        nextEpochId = nearBlock.inner_lite.next_epoch_id;
 
         next.init = true;
 
@@ -173,26 +180,20 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 "New block must have higher height"
             );
 
-            // Check that the new block is from the same epoch as the current one, or from the next one.
-            bool fromNextEpoch;
-            if (nearBlock.inner_lite.epoch_id == curEpoch) {
-                fromNextEpoch = false;
-            } else {
-                fromNextEpoch = true;
-            }
+            // Check that the new block is from the next epoch.
+            require(
+                nearBlock.inner_lite.epoch_id == nextEpochId,
+                "initialized or unknown epoch"
+            );
 
-            // If the block is from the next epoch, make sure that next_bps is supplied and has a correct hash.
-            if (fromNextEpoch) {
-                require(
-                    nearBlock.next_bps.some,
-                    "Next next_bps should not be None"
-                );
-                require(
-                    nearBlock.next_bps.hash ==
-                        nearBlock.inner_lite.next_bp_hash,
-                    "Hash of block producers does not match"
-                );
-            }
+            require(
+                nearBlock.next_bps.some,
+                "Next next_bps should not be None"
+            );
+            require(
+                nearBlock.next_bps.hash == nearBlock.inner_lite.next_bp_hash,
+                "Hash of block producers does not match"
+            );
 
             (bool result, string memory reason) = checkBlockHeader(nearBlock);
 
@@ -200,16 +201,15 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
             curHeight = nearBlock.inner_lite.height;
 
-            if (fromNextEpoch) {
-                curEpoch = nearBlock.inner_lite.epoch_id;
-                Epoch storage nextEpoch = epochs[
-                    nearBlock.inner_lite.next_epoch_id
-                ];
-                nextEpoch.init = true;
-                setBlockProducers(nearBlock.next_bps.blockProducers, nextEpoch);
-            }
+            nextEpochId = nearBlock.inner_lite.next_epoch_id;
+            Epoch storage nextEpoch = epochs[
+                nearBlock.inner_lite.next_epoch_id
+            ];
+            nextEpoch.init = true;
 
-            emit UpdateBlockHeader(curEpoch, curHeight);
+            setBlockProducers(nearBlock.next_bps.blockProducers, nextEpoch);
+
+            emit UpdateBlockHeader(nearBlock.inner_lite.epoch_id, curHeight);
         }
     }
 
@@ -340,7 +340,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             success = (!status.failed && !status.unknown);
 
             if (!success) {
-                reason = "failed or unknow transation";
+                reason = "failed or unknown transaction";
             } else {
                 logs = encodeLogs(
                     fullOutcomeProof
@@ -366,9 +366,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         bytes[] memory _logs = new bytes[](logs.length);
 
         for (uint256 i = 0; i < logs.length; i++) {
-
             _logs[i] = RLPEncode.encodeBytes(logs[i]);
-
         }
         list[1] = RLPEncode.encodeList(_logs);
 
@@ -422,8 +420,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
-    function getEcopKeys(bytes32 id) public view returns (bytes32[100] memory) {
-        bytes32[100] memory keys = epochs[id].keys;
+    function getEpochKeys(bytes32 id)
+        public
+        view
+        returns (bytes32[MAX_BLOCK_PRODUCERS] memory)
+    {
+        bytes32[MAX_BLOCK_PRODUCERS] memory keys = epochs[id].keys;
 
         return keys;
     }

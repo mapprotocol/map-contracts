@@ -33,7 +33,9 @@ describe("LightNode", function () {
 
         const LightNodeProxy = await ethers.getContractFactory("LightNodeProxy");
 
-        let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen]);
+        let preValidators = '0x' + getValidators(data.block20853000.extraData);
+
+        let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen, wallet.address, preValidators, data.block20853200]);
 
         const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
 
@@ -47,19 +49,6 @@ describe("LightNode", function () {
 
     describe("Deployment", function () {
 
-        it("initBlock must owner", async function () {
-
-
-            let [wallet, other] = await ethers.getSigners();
-
-            const lightNode = await loadFixture(deployFixture);
-
-
-            let preValidators = '0x' + getValidators(data.block20853000.extraData);
-
-            await expect(lightNode.connect(other).initBlock(preValidators, data.block20853200)).to.be.revertedWith('lightnode :: only admin')
-
-        });
 
         it("initBlock ok", async function () {
 
@@ -68,10 +57,6 @@ describe("LightNode", function () {
 
             const lightNode = await loadFixture(deployFixture);
 
-
-            let preValidators = '0x' + getValidators(data.block20853000.extraData);
-
-            await lightNode.connect(wallet).initBlock(preValidators, data.block20853200);
 
             let current = await lightNode.headerHeight();
 
@@ -144,7 +129,7 @@ describe("LightNode", function () {
         });
 
 
-        it("trigglePause  only admin ", async function () {
+        it("togglePause  only admin ", async function () {
 
             let [wallet, other] = await ethers.getSigners();
 
@@ -154,13 +139,13 @@ describe("LightNode", function () {
 
             expect(paused).to.false;
 
-            await expect(lightNode.connect(other).trigglePause(true)).to.be.revertedWith("lightnode :: only admin");
+            await expect(lightNode.connect(other).togglePause(true)).to.be.revertedWith("lightnode :: only admin");
 
-            await lightNode.connect(wallet).trigglePause(true);
+            await lightNode.connect(wallet).togglePause(true);
 
             expect(await lightNode.paused()).to.true;
 
-            await lightNode.connect(wallet).trigglePause(false);
+            await lightNode.connect(wallet).togglePause(false);
 
             expect(await lightNode.paused()).to.false;
 
@@ -174,11 +159,8 @@ describe("LightNode", function () {
             let lightNode = await loadFixture(deployFixture);
 
 
-            await lightNode.connect(wallet).trigglePause(true);
+            await lightNode.connect(wallet).togglePause(true);
 
-            let preValidators = '0x' + getValidators(data.block20853000.extraData);
-
-            await lightNode.connect(wallet).initBlock(preValidators, data.block20853200);
 
             await expect(lightNode.updateBlockHeader(data.addBlocks)).to.be.revertedWith('Pausable: paused');
 
@@ -189,10 +171,6 @@ describe("LightNode", function () {
             let [wallet] = await ethers.getSigners();
 
             let lightNode = await loadFixture(deployFixture);
-
-            let preValidators = '0x' + getValidators(data.block20853000.extraData);
-
-            await lightNode.connect(wallet).initBlock(preValidators, data.block20853200);
 
             await lightNode.updateBlockHeader(data.addBlocks);
 
@@ -207,10 +185,6 @@ describe("LightNode", function () {
             let [wallet] = await ethers.getSigners();
 
             let lightNode = await loadFixture(deployFixture);
-
-            let preValidators = '0x' + getValidators(data.block20853000.extraData);
-
-            await lightNode.connect(wallet).initBlock(preValidators, data.block20853200);
 
             let receiptProof = new ReceiptProof(data.txReceipt, index2key(BigNumber.from(data.proof.key).toNumber(), data.proof.proof.length), data.proof.proof);
 
@@ -230,9 +204,6 @@ describe("LightNode", function () {
 
             let lightNode = await loadFixture(deployFixture);
 
-            let preValidators = '0x' + getValidators(data.block20853000.extraData);
-
-            await lightNode.connect(wallet).initBlock(preValidators, data.block20853200);
 
             await lightNode.updateBlockHeader(data.addBlocks);
 

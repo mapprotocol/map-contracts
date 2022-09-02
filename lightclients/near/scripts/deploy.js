@@ -7,40 +7,34 @@ const { Web3 } = require('../test/utils/robust')
 
 
 
-let initData = '0x8129fc1c';
-let nearcms = '0x6d63732e70616e646172722e746573746e6574';
 async function main() {
 
   let [wallet] = await hre.ethers.getSigners();
-
   const LightNode = await hre.ethers.getContractFactory("LightNode");
   const lightNode = await LightNode.connect(wallet).deploy();
   await lightNode.deployed();
   console.log("Implementation deployed to .....", lightNode.address);
 
   const LightNodeProxy = await hre.ethers.getContractFactory("LightNodeProxy");
-  const lightNodeProxy = await LightNodeProxy.connect(wallet).deploy(lightNode.address, initData);
+
+  const iface = new hre.ethers.utils.Interface([
+    "function initialize(address _owner, bytes[2] memory initDatas)"
+
+  ]);
+
+  let block = '0x' + borshify(require('./data/block.json')).toString('hex');
+  let validators = '0x' + borshifyInitialValidators(require('./data/validators.json').next_bps).toString('hex');
+  let arr = [validators, block];
+  let data = iface.encodeFunctionData("initialize", [wallet.address, arr]);
+  const lightNodeProxy = await LightNodeProxy.connect(wallet).deploy(lightNode.address, data);
   await lightNodeProxy.deployed();
   console.log("lightNodeProxy deployed to .....", lightNodeProxy.address);
 
   const proxy = LightNode.attach(lightNodeProxy.address);
 
-   let block = borshify(require('./data/block.json'));
-   let validators = borshifyInitialValidators(require('./data/validators.json').next_bps);
+  await (await proxy.updateBlockHeader(borshify(require('./data/addBlock.json')), { gasLimit: 20000000 })).wait();
 
-   await (await proxy.connect(wallet).initWithValidators(validators, { gasLimit: 20000000 })).wait();
-
-   await sleep(20000);
-   
-   await (await proxy.connect(wallet).initWithBlock(block, { gasLimit: 20000000 })).wait();
-
-   await sleep(20000);
-
-   await (await proxy.updateBlockHeader(borshify(require('./data/addBlock.json')), { gasLimit: 20000000 })).wait();
-
-   await sleep(20000);
-
-   console.log(await proxy.headerHeight());
+  console.log(await proxy.headerHeight());
 
 }
 
