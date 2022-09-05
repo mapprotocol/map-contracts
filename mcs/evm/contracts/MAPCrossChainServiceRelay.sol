@@ -14,7 +14,6 @@ import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./interface/IFeeCenter.sol";
 import "./utils/Role.sol";
-import "./interface/IFeeCenter.sol";
 import "./interface/IVault.sol";
 import "./utils/TransferHelper.sol";
 import "./interface/IMCSRelay.sol";
@@ -38,7 +37,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     address public wToken;        // native wrapped token
 
-    uint256 public selfChainId;
+    uint public immutable selfChainId = block.chainid;
 
     // mapping(bytes32 => address) public tokenRegister;
     //Gas transfer fee charged by the target chain
@@ -93,9 +92,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     bytes32 public nearDepositOut;
 
     function initialize(address _wToken, address _mapToken, address _managerAddress) public initializer {
-        uint256 _chainId;
-        assembly {_chainId := chainid()}
-        selfChainId = _chainId;
         wToken = _wToken;
         mapToken = IERC20(_mapToken);
         lightClientManager = ILightClientManager(_managerAddress);
@@ -179,6 +175,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
     function getFeeValue(uint256 amount, uint256 rate) pure public returns (uint){
+        require(rate <= 1000000, 'Invalid rate value');
         return amount.mul(rate).div(1000000);
     }
 

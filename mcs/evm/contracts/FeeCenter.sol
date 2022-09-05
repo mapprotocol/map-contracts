@@ -23,6 +23,8 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
 
 
     function setChainTokenGasFee(uint to, address token, uint lowest, uint highest,uint proportion) external onlyManager {
+        require(highest >= lowest, 'Invalid highest and lowest');
+        require(proportion <= 10000, 'Invalid proportion value');
         chainTokenGasFee[to][token] = gasFee(lowest,highest,proportion);
     }
 
@@ -68,7 +70,8 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
     }
 
     function setDistributeRate(uint id, address to, uint rate) external onlyManager{
-         distributeRate[id] = Rate(to,rate);
+        require(rate <= 10000, 'Invalid rate value');
+        distributeRate[id] = Rate(to,rate);
     }
 
 }

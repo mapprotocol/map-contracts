@@ -6,13 +6,9 @@ import "./interface/ITokenRegister.sol";
 import "./utils/Role.sol";
 
 contract TokenRegister is Role {
-    uint public chainID;
+    uint public immutable chainID = block.chainid;
+
     constructor(){
-        uint _chainId;
-        assembly {
-            _chainId := chainid()
-        }
-        chainID = _chainId;
     }
 
     //Source chain to MAP chain

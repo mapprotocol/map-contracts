@@ -11,7 +11,6 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
-import "./interface/IFeeCenter.sol";
 import "./utils/Role.sol";
 import "./interface/IFeeCenter.sol";
 import "./utils/TransferHelper.sol";
@@ -31,7 +30,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     ILightNode public lightNode;
     address public wToken;          // native wrapped token
 
-    uint public selfChainId;
+    uint public immutable selfChainId = block.chainid;
 
     mapping(bytes32 => address) public tokenRegister;
     //Gas transfer fee charged by the target chain
@@ -72,9 +71,6 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     //    bytes mapTransferInTopic = keccak256(bytes('mapTransferIn(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
 
     function initialize(address _wToken, address _mapToken, address _lightNode) public initializer {
-        uint _chainId;
-        assembly {_chainId := chainid()}
-        selfChainId = _chainId;
         wToken = _wToken;
         mapToken = IERC20(_mapToken);
         lightNode = ILightNode(_lightNode);
@@ -106,7 +102,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         _unpause();
     }
 
-    function getOrderID(address token, address from, bytes memory to, uint amount, uint toChainID) public returns (bytes32){
+    function getOrderID(address token, address from, bytes memory to, uint amount, uint toChainID) internal returns (bytes32){
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
 
@@ -191,15 +187,17 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
 
 
     function depositOutToken(address token, address from, address to, uint amount) external override payable whenNotPaused {
-        bytes32 orderId = getOrderID(token, msg.sender, _addressToBytes(to), amount, 22776);
-        require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
+        require(msg.sender == from, "from only sender");
+        bytes32 orderId = getOrderID(token, from, _addressToBytes(to), amount, 22776);
+//        require(IERC20(token).balanceOf(from) >= amount, "balance too low");
         TransferHelper.safeTransferFrom(token, from, address(this), amount);
         emit mapDepositOut(token, _addressToBytes(from), to, orderId, amount);
     }
 
     function depositOutNative(address from, address to) external override payable whenNotPaused {
+        require(msg.sender == from, "from only sender");
         uint amount = msg.value;
-        bytes32 orderId = getOrderID(address(0), msg.sender, _addressToBytes(to), amount, 22776);
+        bytes32 orderId = getOrderID(address(0), from, _addressToBytes(to), amount, 22776);
         require(msg.value >= amount, "balance too low");
         emit mapDepositOut(address(0), _addressToBytes(from), to, orderId, amount);
     }
@@ -214,7 +212,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         } else {
             TransferHelper.safeTransfer(token, to, amount);
         }
-        emit mapTransferIn(address(0), from, orderId, fromChain, toChain, to, amount);
+        emit mapTransferIn(token, from, orderId, fromChain, toChain, to, amount);
     }
 
 
@@ -228,7 +226,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         } else {
             TransferHelper.safeTransfer(token, to, amount);
         }
-        emit mapTransferIn(address(0), from, orderId, fromChain, toChain, to, amount);
+        emit mapTransferIn(token, from, orderId, fromChain, toChain, to, amount);
     }
 
 
@@ -247,7 +245,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         }
     }
 
-    function _addressToBytes(address self) public pure returns (bytes memory b) {
+    function _addressToBytes(address self) internal pure returns (bytes memory b) {
         b = abi.encodePacked(self);
     }
 
