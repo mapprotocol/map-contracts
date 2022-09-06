@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 
 import "./RLPReader.sol";
 import "./RLPEncode.sol";
-// import "./MPTValidatorV2.sol";
 import "./MPT.sol";
 
 library Verify {
@@ -189,13 +188,6 @@ library Verify {
         return keccak256(RLPEncode.encodeList(list));
     }
 
-    // function validateProof(
-    //     bytes32 rootHash,
-    //     uint256 paths,
-    //     bytes memory proof
-    // ) internal pure returns (bytes memory) {
-    //     return MPTValidatorV2.validateProof(rootHash, paths, proof);
-    // }
 
     function validateProof(bytes32 receiptsRoot, ReceiptProof memory receipt)
         internal

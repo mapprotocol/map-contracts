@@ -27,15 +27,15 @@ describe("LightNode", function () {
 
         const LightNode = await ethers.getContractFactory("LightNode");
 
-        const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen,wallet.address);
+        const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen, wallet.address);
 
         await lightNode.connect(wallet).deployed();
 
         const LightNodeProxy = await ethers.getContractFactory("LightNodeProxy");
 
-        let preValidators = '0x' + getValidators(data.block20853000.extraData);
+        let initBlocks = [data.block20852800, data.block20853000]
 
-        let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen, wallet.address, preValidators, data.block20853200]);
+        let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen, wallet.address, initBlocks]);
 
         const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
 
@@ -57,10 +57,9 @@ describe("LightNode", function () {
 
             const lightNode = await loadFixture(deployFixture);
 
-
             let current = await lightNode.headerHeight();
 
-            expect(current).to.eq(20853200)
+            expect(current).to.eq(20853000)
 
         });
 
@@ -75,7 +74,7 @@ describe("LightNode", function () {
             expect(admin).to.not.eq(other.address);
 
             const LightNode = await ethers.getContractFactory("LightNode");
-            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen,wallet.address);
+            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen, wallet.address);
             await newImplement.deployed();
 
             await expect(lightNode.connect(other).upgradeTo(newImplement.address)).to.be.revertedWith('LightNode: only Admin can upgrade');
@@ -94,7 +93,7 @@ describe("LightNode", function () {
             expect(admin).to.not.eq(other.address);
 
             const LightNode = await ethers.getContractFactory("LightNode");
-            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen,wallet.address);
+            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen, wallet.address);
             await newImplement.deployed();
 
             let oldImplement = await lightNode.getImplementation();
@@ -161,8 +160,7 @@ describe("LightNode", function () {
 
             await lightNode.connect(wallet).togglePause(true);
 
-
-            await expect(lightNode.updateBlockHeader(data.addBlocks)).to.be.revertedWith('Pausable: paused');
+            await expect(lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.dAddBlocks))).to.be.revertedWith('Pausable: paused');
 
         });
 
@@ -172,29 +170,13 @@ describe("LightNode", function () {
 
             let lightNode = await loadFixture(deployFixture);
 
-            await lightNode.updateBlockHeader(data.addBlocks);
+
+            await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.dAddBlocks));
 
             let current = await lightNode.headerHeight();
 
-            expect(current).to.eq(20853201)
+            expect(current).to.eq(20853200)
 
-        });
-
-        it("verifyProofData ... unconfirm block ", async function () {
-
-            let [wallet] = await ethers.getSigners();
-
-            let lightNode = await loadFixture(deployFixture);
-
-            let receiptProof = new ReceiptProof(data.txReceipt, index2key(BigNumber.from(data.proof.key).toNumber(), data.proof.proof.length), data.proof.proof);
-
-            let proofData = new ProofData(BigNumber.from(data.proof.key), receiptProof);
-
-            let proofBytes = await lightNode.getBytes(proofData);
-
-            let result = await lightNode.verifyProofData(proofBytes, { gasLimit: 20000000 });
-
-            expect("unconfirm block").to.eq(result.message);
         });
 
 
@@ -205,15 +187,15 @@ describe("LightNode", function () {
             let lightNode = await loadFixture(deployFixture);
 
 
-            await lightNode.updateBlockHeader(data.addBlocks);
+            await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.dAddBlocks));
 
             let current = await lightNode.headerHeight();
 
-            expect(current).to.eq(20853201)
+            expect(current).to.eq(20853200)
 
             let receiptProof = new ReceiptProof(data.txReceipt, index2key(BigNumber.from(data.proof.key).toNumber(), data.proof.proof.length), data.proof.proof);
 
-            let proofData = new ProofData(BigNumber.from(20853201), receiptProof);
+            let proofData = new DProofData(data.addBlocks, receiptProof);
 
             let proofBytes = await lightNode.getBytes(proofData);
 
@@ -230,8 +212,3 @@ describe("LightNode", function () {
 
 
 });
-
-function getValidators(extraData: string) {
-    let length = extraData.length;
-    return extraData.substring(66, length - 130);
-}
