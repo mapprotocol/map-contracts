@@ -410,18 +410,18 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         }
     }
 
-    function _bytesToAddress(bytes memory bys) public pure returns (address addr){
+    function _bytesToAddress(bytes memory bys) internal pure returns (address addr){
         assembly {
             addr := mload(add(bys, 20))
         }
     }
 
-    function _addressToBytes(address self) public pure returns (bytes memory b) {
+    function _addressToBytes(address self) internal pure returns (bytes memory b) {
         b = abi.encodePacked(self);
     }
 
     function decodeTxLog(bytes memory logsHash)
-    public
+    internal
     pure
     returns (txLog[] memory _txLogs){
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
@@ -440,7 +440,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
     function decodeNearLog(bytes memory logsHash)
-    public
+    internal
     view
     returns (bytes memory executorId, nearTransferOutEvent memory _outEvent){
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
@@ -479,7 +479,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
 
     function hexStrToBytes(bytes memory _hexStr)
-    public
+    internal
     pure
     returns (bytes memory)
     {
@@ -545,7 +545,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
 
     function splitExtra(bytes memory extra)
-    public
+    internal
     pure
     returns (bytes memory newExtra){
         newExtra = new bytes(64);
