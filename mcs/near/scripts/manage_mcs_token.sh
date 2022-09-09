@@ -52,7 +52,7 @@ function transfer_out() {
 
 function deposit_out() {
   echo "deposit out $4 $1 token from $2 to $3 on MAP chain"
-  near call $1.$MCS_ACCOUNT ft_transfer_call '{"receiver_id":"'$MCS_ACCOUNT'", "amount":"'$4'", "memo": "", "msg": "{\"typ\": 1, \"to\": '$3', \"to_chain\": }"}' --accountId $2 --depositYocto 1 --gas 60000000000000
+  near call $1 ft_transfer_call '{"receiver_id":"'$MCS_ACCOUNT'", "amount":"'$4'", "memo": "", "msg": "{\"typ\": 1, \"to\": '$3', \"to_chain\": 1}"}' --accountId $2 --depositYocto 1 --gas 60000000000000
 }
 
 function balance() {

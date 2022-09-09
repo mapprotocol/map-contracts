@@ -108,19 +108,16 @@ impl Header {
     }
 
     pub fn hash(&self) -> Result<Hash, Kind> {
-        if self.extra.len() >= ISTANBUL_EXTRA_VANITY_LENGTH {
-            let istanbul_header = istanbul_filtered_header(&self, true);
-            if istanbul_header.is_ok() {
-                return rlp_hash(&istanbul_header?);
-            }
-        }
-
-        rlp_hash(self)
+        self.internal_hash(true)
     }
 
     pub fn hash_without_seal(&self) -> Result<Hash, Kind> {
+        self.internal_hash(false)
+    }
+
+    fn internal_hash(&self, keep_seal: bool) -> Result<Hash, Kind> {
         if self.extra.len() >= ISTANBUL_EXTRA_VANITY_LENGTH {
-            let istanbul_header = istanbul_filtered_header(&self, false);
+            let istanbul_header = istanbul_filtered_header(self, keep_seal);
             if istanbul_header.is_ok() {
                 return rlp_hash(&istanbul_header?);
             }
@@ -132,7 +129,7 @@ impl Header {
 
 impl FromRlp for Header {
     fn from_rlp(bytes: &[u8]) -> Result<Self, Kind> {
-        rlp::decode(&bytes).map_err(|_e| Kind::RlpDecodeError)
+        rlp::decode(bytes).map_err(|_e| Kind::RlpDecodeError)
     }
 }
 

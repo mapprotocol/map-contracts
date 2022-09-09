@@ -22,6 +22,6 @@ pub enum Kind {
     // #[error("header verification failed: {msg}")]
     HeaderVerificationError { msg: &'static str },
 
-    // #[error("unkown error occurred")]
+    // #[error("unknown error occurred")]
     Unknown,
 }

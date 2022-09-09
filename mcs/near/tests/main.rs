@@ -1986,7 +1986,7 @@ async fn test_transfer_out_fungible_token() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 0,
+        msg_type: 0,
         to,
         to_chain: to_chain as _,
     };
@@ -2070,7 +2070,7 @@ async fn test_transfer_out_fungible_token_amount_too_small() -> anyhow::Result<(
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 0,
+        msg_type: 0,
         to,
         to_chain: to_chain as _,
     };
@@ -2181,7 +2181,7 @@ async fn test_transfer_out_fungible_token_diff_decimal() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 0,
+        msg_type: 0,
         to,
         to_chain: to_chain as _,
     };
@@ -2292,7 +2292,7 @@ async fn test_transfer_out_fungible_token_wrong_type() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 2,
+        msg_type: 2,
         to,
         to_chain: to_chain as _,
     };
@@ -2376,7 +2376,7 @@ async fn test_transfer_out_fungible_token_no_to_chain() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 0,
+        msg_type: 0,
         to,
         to_chain: to_chain as _,
     };
@@ -2454,7 +2454,7 @@ async fn test_transfer_out_fungible_token_not_registered() -> anyhow::Result<()>
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 0,
+        msg_type: 0,
         to,
         to_chain: to_chain as _,
     };
@@ -2978,7 +2978,7 @@ async fn test_deposit_out_fungible_token() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 1,
+        msg_type: 1,
         to,
         to_chain: 0 as _,
     };
@@ -3063,7 +3063,7 @@ async fn test_deposit_out_fungible_token_amount_too_small() -> anyhow::Result<()
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 1,
+        msg_type: 1,
         to,
         to_chain: to_chain as _,
     };
@@ -3174,7 +3174,7 @@ async fn test_deposit_out_fungible_token_diff_decimal() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 1,
+        msg_type: 1,
         to,
         to_chain: to_chain as _,
     };
@@ -3286,7 +3286,7 @@ async fn test_deposit_out_fungible_token_no_to_chain() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 1,
+        msg_type: 1,
         to,
         to_chain: 0,
     };
@@ -3364,7 +3364,7 @@ async fn test_deposit_out_fungible_token_not_registered() -> anyhow::Result<()> 
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 0,
+        msg_type: 0,
         to,
         to_chain: to_chain as _,
     };
@@ -3453,7 +3453,7 @@ async fn test_deposit_out_mcs_token() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 1,
+        msg_type: 1,
         to,
         to_chain: 0 as _,
     };
@@ -3544,7 +3544,7 @@ async fn test_deposit_out_mcs_token_amount_too_small() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 1,
+        msg_type: 1,
         to,
         to_chain: 0,
     };
@@ -3662,7 +3662,7 @@ async fn test_deposit_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 1,
+        msg_type: 1,
         to,
         to_chain: 0,
     };
@@ -3780,7 +3780,7 @@ async fn test_deposit_out_mcs_token_no_to_chain() -> anyhow::Result<()> {
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
     let msg = FungibleTokenMsg {
-        typ: 1,
+        msg_type: 1,
         to,
         to_chain: 0,
     };

@@ -124,7 +124,7 @@ pub fn sum_points<'a>(points: &'a Vec<G1>, bitmap: &'a Integer) -> Result<G1, &'
         .map(|(_, v)| [&[0], to_le_bytes(&v.x).as_ref(), to_le_bytes(&v.y).as_ref()].concat())
         .collect();
 
-    if filtered.len() == 0 {
+    if filtered.is_empty() {
         return Err("no g1 point to sum");
     } else if filtered.len() == 1 {
         let slice = filtered[0].as_slice();
@@ -223,7 +223,7 @@ fn to_le_bytes(bytes: &[u8; 32]) -> [u8; 32] {
 }
 
 fn prepare_commited_seal(hash: Hash, round: &Integer) -> Vec<u8> {
-    let round_bytes = big_int_to_rlp_compat_bytes(&round);
+    let round_bytes = big_int_to_rlp_compat_bytes(round);
     let commit_bytes = [IstanbulMsg::Commit as u8];
 
     [&hash[..], &round_bytes[..], &commit_bytes[..]].concat()

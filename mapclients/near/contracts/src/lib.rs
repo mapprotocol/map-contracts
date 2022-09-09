@@ -1,6 +1,8 @@
 extern crate core;
 
 mod types;
+
+use std::collections::HashSet;
 pub use types::*;
 mod serialization;
 pub use serialization::*;
@@ -9,7 +11,7 @@ mod macros;
 pub mod traits;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, log, near_bindgen, PanicOnDefault};
+use near_sdk::{env, log, near_bindgen, PanicOnDefault, serde_json};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::env::keccak256;
 use near_sdk::serde::{Serialize, Deserialize};
@@ -57,8 +59,19 @@ impl MapLightClient {
                validators: Vec<Validator>,
                epoch: u64,
                epoch_size: u64) -> Self {
-        assert!(!Self::initialized(), "Already initialized");
-        assert_ne!(0, validators.len(), "Empty validators!");
+        assert!(!Self::initialized(), "already initialized");
+        assert_ne!(0, validators.len(), "empty validators!");
+        assert_ne!(0, threshold, "threashold should not be 0");
+
+        let mut addresses: HashSet<Address> = HashSet::default();
+        let mut total_weight = 0;
+        for validator in validators.iter() {
+            assert_ne!(0, validator.weight, "the weight of validator {} is 0", serde_json::to_string(&validator.address).unwrap());
+            addresses.insert(validator.address);
+            total_weight += validator.weight;
+        }
+        assert_eq!(validators.len(), addresses.len(), "duplicated address in validators");
+        assert!(threshold <= total_weight, "threashold should not greater than validators' total weight");
 
         let mut val_records = UnorderedMap::new(b"v".to_vec());
         val_records.insert(&epoch, &EpochRecord {
@@ -93,6 +106,8 @@ impl MapLightClient {
         self.update_next_validators(cur_epoch_record, &mut extra);
 
         self.header_height = block_num;
+
+        log!("block header {} is updated for the next epoch {}", block_num, epoch + 1)
     }
 
     pub fn verify_proof_data(&self, receipt_proof: ReceiptProof) {
@@ -101,8 +116,8 @@ impl MapLightClient {
 
         // check ecdsa and bls signature
         let epoch = get_epoch_number(header.number.to_u64().unwrap(), self.epoch_size as u64);
-        let validators = &self.epoch_records.get(&epoch).unwrap();
-        self.verify_signatures(header, receipt_proof.agg_pk, &extra, validators);
+        let epoch_record = &self.epoch_records.get(&epoch).unwrap();
+        self.verify_signatures(header, receipt_proof.agg_pk, &extra, epoch_record);
 
         // Verify receipt included into header
         let data =
@@ -114,15 +129,15 @@ impl MapLightClient {
     }
 
     pub fn get_header_height(&self) -> u64 {
-        return self.header_height
+        self.header_height
     }
 
     pub fn get_epoch_size(&self) -> u64 {
-        return self.epoch_size
+        self.epoch_size
     }
 
     pub fn get_record_for_epoch(&self, epoch: u64) -> Option<EpochRecord> {
-        return self.epoch_records.get(&epoch)
+        self.epoch_records.get(&epoch)
     }
 
     fn verify_signatures(&self, header: &Header, agg_pk: G2, extra: &IstanbulExtra, epoch_record: &EpochRecord) {
@@ -134,36 +149,25 @@ impl MapLightClient {
         self.verify_ecdsa_signature(header, &extra.seal, &addresses);
 
         // check agg seal
-        self.verify_aggregated_seal(header, &extra, epoch_record, &agg_pk);
+        self.verify_aggregated_seal(header, extra, epoch_record, &agg_pk);
     }
 
-    fn is_quorum(&self, bitmap: &Integer, weights: &Vec<u128>, threshold: u128) -> bool {
-        let weight: u128 = weights
+    fn is_quorum(&self, bitmap: &Integer, validators: &Vec<Validator>, threshold: u128) -> bool {
+        let weight: u128 = validators
             .iter()
             .enumerate()
             .filter(|(i, _)| bitmap.bit(*i as u64))
-            .map(|(_, v)| v)
+            .map(|(_, v)| v.weight)
             .sum();
 
-        return weight >= threshold;
-    }
-
-    fn is_quorum_default_wight(&self, bitmap: &Integer, pair_keys: &Vec<G1>, threshold: u128) -> bool {
-        let mut weight = 0;
-        for (i, _) in pair_keys.iter().enumerate() {
-            if bitmap.bit(i as u64) {
-                weight += 1;
-            }
-        }
-
-        return weight >= threshold;
+        weight >= threshold
     }
 
     fn verify_ecdsa_signature(&self, header: &Header, signature: &Vec<u8>, addresses: &Vec<Address>) {
         assert_eq!(ECDSA_SIG_LENGTH, signature.len(), "invalid ecdsa signature length");
 
-        let res: Vec<Address> = addresses.iter().filter(|x| x.as_slice() == header.coinbase.as_slice()).cloned().collect();
-        assert_eq!(1, res.len(), "the header's coinbase is not in validators");
+        let res = addresses.iter().filter(|x| x.as_slice() == header.coinbase.as_slice()).count();
+        assert_eq!(1, res, "the header's coinbase is not in validators");
 
         let v = signature.last().unwrap();
         let header_hash = header.hash_without_seal().unwrap();
@@ -183,7 +187,7 @@ impl MapLightClient {
         assert_ne!(0, res, "ecrecover returns 0");
 
         let res = env::read_register(ECDSA_REGISTER).expect(REGISTER_EXPECTED_ERR);
-        assert_eq!(64, res.len(), "read register after ecrecover get invalid result");
+        assert_eq!(64, res.len(), "the length of the ecrecover result is not expected");
 
         let pub_key_hash = env::keccak256(res.as_slice());
         assert_eq!(&header.coinbase, &pub_key_hash[12..], "ecdsa signer is not correct");
@@ -194,7 +198,7 @@ impl MapLightClient {
             .iter()
             .map(|x| x.g1_pub_key)
             .collect();
-        assert!(self.is_quorum_default_wight(&extra.aggregated_seal.bitmap, &pair_keys, epoch_record.threshold), "threshold is not satisfied");
+        assert!(self.is_quorum(&extra.aggregated_seal.bitmap, &epoch_record.validators, epoch_record.threshold), "threshold is not satisfied");
 
         assert!(check_aggregated_g2_pub_key(&pair_keys, &extra.aggregated_seal.bitmap, agg_g2_pk), "check g2 pub key failed");
 
@@ -215,7 +219,6 @@ impl MapLightClient {
             .zip(extra.added_validators.iter())
             .map(|(g1_key, address)| Validator {
                 g1_pub_key: G1::from_slice(g1_key).unwrap(),
-                // TODO: update later?
                 weight: 1,
                 address: *address,
             })

@@ -2,7 +2,7 @@ use hex::FromHex;
 use crate::crypto::G2;
 use rlp::{Rlp, Encodable, RlpStream};
 use crate::types::header::{Header, Address, Bloom, Hash};
-use near_sdk::serde::{Serialize, ser::{Serializer}, Deserialize, de::Deserializer};
+use near_sdk::serde::{Serialize, ser::Serializer, Deserialize, de::Deserializer};
 use near_sdk::serde::de::Error;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -22,7 +22,7 @@ pub struct ProofEntry (Vec<u8>);
 impl Serialize for ProofEntry {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let hex_string = hex::encode(self.0.as_slice());
-        if hex_string.len() == 0 {
+        if hex_string.is_empty() {
             return serializer.serialize_str("");
         }
 
@@ -138,22 +138,18 @@ fn _verify_trie_proof(
 ) -> Vec<u8> {
     let node = &proof[proof_index].0;
 
-    if key_index == 0 {
-        // trie root is always a hash
-        assert_eq!(near_keccak256(node), expected_root.as_slice());
-    } else if node.len() < 32 {
-        // if rlp < 32 bytes, then it is not hashed
-        assert_eq!(node.as_slice(), expected_root);
+    if key_index == 0 || node.len() >= 32 {
+        assert_eq!(expected_root.as_slice(), near_keccak256(node), "incorrect root for node {:?}", node);
     } else {
-        assert_eq!(near_keccak256(node), expected_root.as_slice());
+        assert_eq!(expected_root, node.as_slice(), "incorrect node root");
     }
 
-    let node = Rlp::new(&node.as_slice());
+    let node = Rlp::new(node.as_slice());
 
     if node.iter().count() == 17 {
         // Branch node
         if key_index == key.len() {
-            assert_eq!(proof_index + 1, proof.len());
+            assert_eq!(proof_index + 1, proof.len(), "incorrect proof length for branch node");
             get_vec(&node, 16)
         } else {
             let new_expected_root = get_vec(&node, key[key_index] as usize);
@@ -167,12 +163,12 @@ fn _verify_trie_proof(
         }
     } else {
         // Leaf or extension node
-        assert_eq!(node.iter().count(), 2);
+        assert_eq!(node.iter().count(), 2, "incorrect node count");
         let path_u8 = get_vec(&node, 0);
         // Extract first nibble
         let head = path_u8[0] / 16;
         // assert!(0 <= head); is implicit because of type limits
-        assert!(head <= 3);
+        assert!(head <= 3, "incrorrect head {}", head);
 
         // Extract path
         let mut path = vec![];
@@ -183,12 +179,12 @@ fn _verify_trie_proof(
             path.push(val / 16);
             path.push(val % 16);
         }
-        assert_eq!(path.as_slice(), &key[key_index..key_index + path.len()]);
+        assert_eq!(path.as_slice(), &key[key_index..key_index + path.len()], "incorrect path");
 
         if head >= 2 {
             // Leaf node
-            assert_eq!(proof_index + 1, proof.len());
-            assert_eq!(key_index + path.len(), key.len());
+            assert_eq!(proof_index + 1, proof.len(), "incorrect proof length for leaf node");
+            assert_eq!(key_index + path.len(), key.len(), "incorrect key length for leaf node");
             get_vec(&node, 1)
         } else {
             // Extension node
@@ -206,7 +202,7 @@ fn _verify_trie_proof(
 
 pub fn near_keccak256(data: &[u8]) -> [u8; 32] {
     let mut buffer = [0u8; 32];
-    buffer.copy_from_slice(&near_sdk::env::keccak256(data).as_slice());
+    buffer.copy_from_slice(near_sdk::env::keccak256(data).as_slice());
     buffer
 }
 
@@ -327,7 +323,7 @@ mod tests {
         };
 
 
-        let receit_proof = ReceiptProof{
+        let receipt_proof = ReceiptProof{
             header,
             agg_pk,
             receipt,
@@ -337,7 +333,7 @@ mod tests {
 
         let exp = r#"{"header":{"parentHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7","coinbase":"0x908d0fdaeaefbb209bdcb540c2891e75616154b3","root":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7","txHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7","receiptHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7","bloom":"0x01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101","number":"0x0","gasLimit":"0x0","gasUsed":"0x0","time":"0x0","extra":"0x010203","minDigest":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7","nonce":"0x7285abd5b24742ff","baseFee":"0x0"},"agg_pk":{"xr":"0x0000000000000000000000000000000000000000000000000000000000000000","xi":"0x0101010101010101010101010101010101010101010101010101010101010101","yr":"0x0202020202020202020202020202020202020202020202020202020202020202","yi":"0x0303030303030303030303030303030303030303030303030303030303030303"},"receipt":{"receipt_type":1,"post_state_or_status":"0x010203","cumulative_gas_used":10000,"bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","logs":[{"address":"0x0101010101010101010101010101010101010101","topics":["0x0101010101010101010101010101010101010101010101010101010101010101","0x0202020202020202020202020202020202020202020202020202020202020202"],"data":"0x03020109"}]},"key_index":"0x0102","proof":["0x0102","0x0102"]}"#;
 
-        let serialized = serde_json::to_string(&receit_proof).unwrap();
+        let serialized = serde_json::to_string(&receipt_proof).unwrap();
         assert_eq!(exp, serialized);
 
         let deserialized: ReceiptProof = serde_json::from_str(&serialized).unwrap();

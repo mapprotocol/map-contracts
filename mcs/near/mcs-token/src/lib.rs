@@ -1,20 +1,10 @@
-use admin_controlled::Mask;
 use near_contract_standards::fungible_token::metadata::{
     FungibleTokenMetadata, FungibleTokenMetadataProvider, FT_METADATA_SPEC,
 };
 use near_contract_standards::fungible_token::FungibleToken;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::json_types::{Base64VecU8, ValidAccountId, U128};
-use near_sdk::{
-    assert_one_yocto, env, ext_contract, near_bindgen, AccountId, Balance, Gas, PanicOnDefault,
-    Promise, PromiseOrValue, StorageUsage,
-};
-use std::convert::TryInto;
-
-const NO_DEPOSIT: Balance = 0;
-
-/// Gas to call finish withdraw method on factory.
-const FINISH_WITHDRAW_GAS: Gas = Gas(50_000_000_000_000);
+use near_sdk::json_types::{Base64VecU8, U128};
+use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, PromiseOrValue, StorageUsage, };
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -26,20 +16,7 @@ pub struct MCSToken {
     reference: String,
     reference_hash: Base64VecU8,
     decimals: u8,
-    paused: Mask,
     icon: Option<String>,
-}
-
-const PAUSE_WITHDRAW: Mask = 1 << 0;
-
-#[ext_contract(ext_map_cross_chain_service)]
-pub trait ExtMapCrossChainService {
-    #[result_serializer(borsh)]
-    fn finish_withdraw(
-        &self,
-        #[serializer(borsh)] amount: Balance,
-        #[serializer(borsh)] recipient: AccountId,
-    ) -> Promise;
 }
 
 #[near_bindgen]
@@ -55,7 +32,6 @@ impl MCSToken {
             reference: String::default(),
             reference_hash: Base64VecU8(vec![]),
             decimals: 0,
-            paused: Mask::default(),
             icon: None,
         }
     }
@@ -70,7 +46,7 @@ impl MCSToken {
         icon: Option<String>,
     ) {
         // Only owner can change the metadata
-        assert!(self.controller_or_self());
+        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
 
         name.map(|name| self.name = name);
         symbol.map(|symbol| self.symbol = symbol);
@@ -131,5 +107,3 @@ impl FungibleTokenMetadataProvider for MCSToken {
         }
     }
 }
-
-admin_controlled::impl_admin_controlled!(MCSToken, paused);

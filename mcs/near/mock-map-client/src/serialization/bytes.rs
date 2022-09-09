@@ -24,7 +24,7 @@ pub(crate) mod hexstring {
         T: AsRef<[u8]>,
     {
         let hex_string = hex::encode(value.as_ref());
-        if hex_string.len() == 0 {
+        if hex_string.is_empty() {
             return serializer.serialize_str("");
         }
 
@@ -37,7 +37,7 @@ pub(crate) mod hexbigint {
     use num_bigint::BigInt as Integer;
     use near_sdk::serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
 
-    /// Deserialize string into T
+    /// Deserialize string into Integer
     pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Integer, D::Error>
     where
         D: Deserializer<'de>,

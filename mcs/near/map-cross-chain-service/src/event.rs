@@ -1,5 +1,5 @@
 use crate::prover::{Address, MapEvent, EthEventParams};
-use ethabi::{ParamType, Token};
+use ethabi::ParamType;
 use near_sdk::{Balance, CryptoHash};
 use near_sdk::serde::{Serialize, Deserialize};
 use map_light_client::proof::LogEntry;
@@ -62,25 +62,6 @@ impl MapTransferOutEvent {
             to_chain,
             to_chain_token,
         })
-    }
-
-    pub fn to_log_entry_data(&self) -> LogEntry {
-        MapEvent::to_log_entry_data(
-            "mapTransferOut",
-            MapTransferOutEvent::event_params(),
-            self.map_bridge_address,
-            vec![],
-            vec![
-                Token::Bytes(self.token.clone()),
-                Token::Bytes(self.from.clone()),
-                Token::FixedBytes(self.order_id.clone().to_vec()),
-                Token::Uint(self.from_chain.into()),
-                Token::Uint(self.to_chain.into()),
-                Token::Bytes(self.to.clone()),
-                Token::Uint(self.amount.into()),
-                Token::Bytes(self.to_chain_token.clone()),
-            ],
-        )
     }
 }
 
@@ -164,6 +145,28 @@ impl std::fmt::Display for DepositOutEvent {
 mod tests {
     use super::*;
     use hex;
+    use ethabi::Token;
+
+    impl MapTransferOutEvent {
+        pub fn to_log_entry_data(&self) -> LogEntry {
+            MapEvent::to_log_entry_data(
+                "mapTransferOut",
+                MapTransferOutEvent::event_params(),
+                self.map_bridge_address,
+                vec![],
+                vec![
+                    Token::Bytes(self.token.clone()),
+                    Token::Bytes(self.from.clone()),
+                    Token::FixedBytes(self.order_id.clone().to_vec()),
+                    Token::Uint(self.from_chain.into()),
+                    Token::Uint(self.to_chain.into()),
+                    Token::Bytes(self.to.clone()),
+                    Token::Uint(self.amount.into()),
+                    Token::Bytes(self.to_chain_token.clone()),
+                ],
+            )
+        }
+    }
 
     #[test]
     fn test_event_data() {
@@ -180,7 +183,7 @@ mod tests {
         let logs: Vec<LogEntry> = serde_json::from_str(&logs_str).unwrap();
         assert_eq!(1, logs.len(), "should have only 1 log");
 
-        let mut event = MapTransferOutEvent::from_log_entry_data(logs.get(0).unwrap()).unwrap();
+        let event = MapTransferOutEvent::from_log_entry_data(logs.get(0).unwrap()).unwrap();
         assert_eq!("ec3e016916ba9f10762e33e03e8556409d096fb4", hex::encode(event.token.clone()));
         assert_eq!("ec3e016916ba9f10762e33e03e8556409d096fb4", hex::encode(event.from.clone()));
         assert_eq!(212, event.from_chain);
@@ -189,7 +192,6 @@ mod tests {
         assert_eq!(100, event.amount);
         assert_eq!("mcs_token_0", String::from_utf8(event.to_chain_token.clone()).unwrap());
         assert_eq!("e2123fa0c94db1e5baeff348c0e7aecd15a11b45".to_lowercase(), hex::encode(event.map_bridge_address));
-
 
         let data = event.to_log_entry_data();
         let result = MapTransferOutEvent::from_log_entry_data(&data).unwrap();

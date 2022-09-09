@@ -142,7 +142,7 @@ pub struct ProofEntry (Vec<u8>);
 impl Serialize for ProofEntry {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let hex_string = hex::encode(self.0.as_slice());
-        if hex_string.len() == 0 {
+        if hex_string.is_empty() {
             return serializer.serialize_str("");
         }
 

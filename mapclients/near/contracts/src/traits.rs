@@ -1,6 +1,6 @@
 use crate::types::errors::Kind;
 
-// "Deafult" trait is implemented for a few selected fixed-array types. Taken we can't implement
+// "Default" trait is implemented for a few selected fixed-array types. Taken we can't implement
 // the trait outside of a crate, we created a new one that mimics the stdlib.
 pub trait DefaultFrom {
     fn default() -> Self;

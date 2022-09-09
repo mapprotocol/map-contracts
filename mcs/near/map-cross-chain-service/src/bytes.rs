@@ -24,7 +24,7 @@ pub(crate) mod hexstring {
         T: AsRef<[u8]>,
     {
         let hex_string = hex::encode(value.as_ref());
-        if hex_string.len() == 0 {
+        if hex_string.is_empty() {
             return serializer.serialize_str("");
         }
 
