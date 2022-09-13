@@ -5,7 +5,7 @@ require("solidity-coverage");
 const { BigNumber, BytesLike, Contract, ContractTransaction } = require("ethers");
 const {weiToHumanReadableString} = require("hardhat/internal/util/wei-values");
 
-describe("MAPCrossChainServiceRelay start test", function () {
+describe("MAPCrossChainService start test", function () {
 
     let owner;
     let addr1;
@@ -36,8 +36,8 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
     it("constract deploy init", async function () {
         console.log("deployer address:",deployer.address);
-         MCSS = await ethers.getContractFactory("MapCrossChainService");
-       // mcss = await ethers.getContractAt("MapCrossChainService",mcsData.mcs);
+        MCSS = await ethers.getContractFactory("MapCrossChainService");
+        // mcss = await ethers.getContractAt("MapCrossChainService",mcsData.mcs);
         mcss = await MCSS.deploy();
         console.log("mcss address:",mcss.address);
         StandardToken = await ethers.getContractFactory("StandardToken");
@@ -68,7 +68,9 @@ describe("MAPCrossChainServiceRelay start test", function () {
     });
 
     it('transferOutToken test',async function () {
-         address2Bytes = await mcss._addressToBytes(addr2.address);
+        //console.log(addr2.address);
+        //address2Bytes = await mcss._addressToBytes(addr2.address);
+        address2Bytes = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
 
         await standardToken.connect(addr1).approve(mcss.address,"10000000000000000000000000000000000")
 
@@ -87,27 +89,70 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
     });
 
-    it('transferIn test ', async function () {
+    it('map transferIn test ', async function () {
         standardEthToken = await ethers.getContractAt("StandardToken",mcsData.standardToken);
         mapTokenEthToken = await ethers.getContractAt("StandardToken",mcsData.mapToken);
+        wethEthToken = await ethers.getContractAt("StandardToken",mcsData.weth);
 
-        expect(await standardEthToken.totalSupply()).to.equal("209900100000000000000000");
+        expect(await standardEthToken.totalSupply()).to.equal("100000000000000000001300000000000000000");
 
         await mcss.addAuthToken([mcsData.standardToken]);
 
-        expect(await mcss.checkAuthToken(mcsData.standardToken)).to.equal(true);
+        //
+        // expect(await mcss.checkAuthToken(mcsData.standardToken)).to.equal(true);
+        console.log(await mcss.authToken(mcsData.standardToken));
+        console.log(await standardEthToken.balanceOf(mcss.address));
 
-        await mcss.transferIn(1313161555,mcsData.map2ethStandardToken);
+        await mcss.transferIn(212,mcsData.map2ethStandardToken);
 
-        expect(await standardEthToken.totalSupply()).to.equal("209900300000000000000000");
+        expect(await standardEthToken.totalSupply()).to.equal("200000000000000000001300000000000000000");
 
-        //balance 2000000000000000000
+        //balance 200000000000000000000
+        console.log(await mapTokenEthToken.balanceOf(mcss.address));
+
+        // mcs value mapToken 196000000000000000000
+        await mcss.transferIn(212,mcsData.map2ethMapToken);
+
+        expect(await mapTokenEthToken.balanceOf(mcss.address)).to.equal("4000000000000000000");
+
+        console.log(await wethEthToken.balanceOf(mcss.address));
+
+        await mcss.transferIn(212,mcsData.map2ethNative);
+
+        expect(await wethEthToken.balanceOf(mcss.address)).to.equal("150000000000000000");
+
+    });
+
+    it('near transferIn test ', async function () {
+        standardEthToken = await ethers.getContractAt("StandardToken",mcsData.standardToken);
+        mapTokenEthToken = await ethers.getContractAt("StandardToken",mcsData.mapToken);
+        wethEthToken = await ethers.getContractAt("StandardToken",mcsData.weth);
+
+        expect(await standardEthToken.totalSupply()).to.equal("200000000000000000001300000000000000000");
+
+        console.log(await standardEthToken.balanceOf(mcss.address));
+
+        console.log(await standardEthToken.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4"));
+
+        await mcss.transferIn(212,mcsData.near2ethW);
+
+        console.log(await standardEthToken.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4"));
+
+        expect(await standardEthToken.totalSupply()).to.equal("200000000000000000001450000000000000000");
+
         console.log(await mapTokenEthToken.balanceOf(mcss.address));
 
         // mcs value mapToken 150000000000000000
-        await mcss.transferIn(1313161555,mcsData.map2ethMapToken);
 
-        expect(await mapTokenEthToken.balanceOf(mcss.address)).to.equal("1850000000000000000")
+        await mcss.transferIn(1313161555,mcsData.near2eth001);
+
+        expect(await mapTokenEthToken.balanceOf(mcss.address)).to.equal("3850000000000000000");
+
+        console.log(await wethEthToken.balanceOf(mcss.address));
+
+        await mcss.transferIn(212,mcsData.near2et000);
+
+        expect(await wethEthToken.balanceOf(mcss.address)).to.equal("0");
 
     });
 

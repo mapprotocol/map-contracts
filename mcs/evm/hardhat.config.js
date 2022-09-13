@@ -127,16 +127,19 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        enabled: false,
+        enabled: true,
         //url: `https://bsctest.pls2e.cc`,
-        url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
+        //url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
+        url:`http://18.138.248.113:8545`,
         //url: `https://bsc-dataseed.eme-node.com`,
         //url: `https://bsc-dataseed2.defibit.io/`,
+        //blockNumber: 382190
       },
       live: true,
       saveDeployments: false,
       tags: ['local'],
       timeout: 2000000,
+      chainId:212
     },
     bscmain: {
       url: `https://bsc-dataseed2.defibit.io/`,
@@ -226,6 +229,15 @@ module.exports = {
       },
       {
         version: '0.4.22',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+      {
+        version: '0.4.18',
         settings: {
           optimizer: {
             enabled: true,
