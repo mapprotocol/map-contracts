@@ -31,4 +31,16 @@ contract LightClientManager is ILightClientManager,Role {
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.verifyProofData(_receiptProof);
     }
+
+    function headerHeight(uint256 _chainId) external view override returns (uint256){
+        require(lightClientContract[_chainId] != address(0), "not register");
+        ILightNode lightNode = ILightNode(updateBlockContract[_chainId]);
+        if(_chainId == 34434){
+            (uint256 number,) = lightNode.currentNumberAndHash(_chainId);
+            return number;
+        }else{
+            return lightNode.headerHeight();
+        }
+
+    }
 }
