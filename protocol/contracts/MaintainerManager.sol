@@ -39,6 +39,10 @@ contract MaintainerManager is Role, UUPSUpgradeable,Initializable {
     event WhiteList(address indexed user, uint256 tag);
 
 
+    //Bind a worker to submit data
+    mapping(address => address) public userWorker;
+    mapping(address => address) public workerUser;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor()  {}
 
@@ -148,6 +152,21 @@ contract MaintainerManager is Role, UUPSUpgradeable,Initializable {
         whiteList[_address] = false;
         emit WhiteList(_address, 0);
     }
+
+    function bindWorker(address _worker) external {
+        require(whiteList[msg.sender],"only while list");
+        userWorker[msg.sender] = _worker;
+        workerUser[_worker] = msg.sender;
+    }
+
+    function checkWorker(address _worker) external returns (address user){
+        user = workerUser[_worker];
+        if(user != address(0) && whiteList[user]){
+            return user;
+        }
+        return address(0);
+    }
+
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address)
