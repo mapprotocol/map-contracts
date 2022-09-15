@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -104,6 +105,44 @@ contract RulingSignTimeLock is TimelockController {
     }
 
 
+    function schedule(
+        address target,
+        uint256 value,
+        bytes calldata data,
+        bytes32 predecessor,
+        bytes32 salt,
+        uint256 delay
+    ) public override onlyRole(PROPOSER_ROLE) onlyContract {
+        super.schedule(target, value, data, predecessor, salt, delay);
+    }
+
+    function scheduleBatch(
+        address[] calldata targets,
+        uint256[] calldata values,
+        bytes[] calldata payloads,
+        bytes32 predecessor,
+        bytes32 salt,
+        uint256 delay
+    ) public override onlyRole(PROPOSER_ROLE) {}
+
+    function execute(
+        address target,
+        uint256 value,
+        bytes calldata data,
+        bytes32 predecessor,
+        bytes32 salt
+    ) public payable override  {
+        super.execute(target,value,data,predecessor,salt);
+    }
+
+    function executeBatch(
+        address[] calldata targets,
+        uint256[] calldata values,
+        bytes[] calldata datas,
+        bytes32 predecessor,
+        bytes32 salt
+    ) public payable override  {}
+
 
     /// @dev Allows to add a new owner. Transaction has to be sent by wallet.
     /// @param _proposer Address of new owner.
@@ -141,7 +180,7 @@ contract RulingSignTimeLock is TimelockController {
     function replaceProposer(address _proposer, address _newProposer) public
     onlyContract()
     notProposer(_newProposer)
-    onlyProposer(_proposer){
+    onlyProposer(_proposer) {
         for (uint i = 0; i < proposers.length; i++)
             if (proposers[i] == _proposer) {
                 proposers[i] = _newProposer;
@@ -162,7 +201,8 @@ contract RulingSignTimeLock is TimelockController {
         emit RequirementChange(_required);
     }
 
-    function submitTransactionCall(address destination, uint value, bytes memory data) public returns (uint transactionId){
+    function submitTransactionCall(address destination, uint value, bytes memory data) public
+    returns (uint transactionId){
         uint8 tType = 1;
         if (destination == address(this)) {
             tType = 0;
@@ -201,18 +241,25 @@ contract RulingSignTimeLock is TimelockController {
         if (isConfirmed(transactionId)) {
             Transaction storage transaction = transactions[transactionId];
             transaction.executed = true;
+            bool success = false;
             if (transaction.transactionType == 0) {
-                (bool success,) = transaction.destination.call{value : transaction.value}(transaction.data);
-                if (success) {
-                    emit SpentAny(transaction.destination, transaction.value);
-                } else {
-                    emit ExecutionFailure(transactionId);
-                    transaction.executed = false;
-                }
+                (success,) = transaction.destination.call{value : transaction.value}(transaction.data);
             } else {
-                // bytes memory _data = transaction.data;
-                // bytes calldata _data = transaction.data;
-                // schedule(transaction.destination, transaction.value, _data, bytes32(0), bytes32(transactionId), 3 days);
+                (success,) = address(this).call(abi.encodeWithSignature(
+                        "schedule(address,uint256,bytes,bytes32,bytes32,uint256)",
+                        transaction.destination,
+                        transaction.value,
+                        transaction.data,
+                        bytes32(0),
+                        bytes32(transactionId),
+                        3 days
+                    ));
+            }
+            if (success) {
+                emit SpentAny(transaction.destination, transaction.value);
+            } else {
+                emit ExecutionFailure(transactionId);
+                transaction.executed = false;
             }
         }
     }
