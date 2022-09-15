@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/governance/TimelockController.sol";
 
 contract RulingSignTimeLock is TimelockController {
 
-    uint constant public MAX_OWNER_COUNT = 50;
+    uint constant public MAX_PROPOSER_COUNT = 50;
 
     event Confirmation(address indexed sender, uint indexed transactionId);
     event Revocation(address indexed sender, uint indexed transactionId);
@@ -15,8 +15,8 @@ contract RulingSignTimeLock is TimelockController {
     event Execution(uint indexed transactionId);
     event ExecutionFailure(uint indexed transactionId);
     event Deposit(address indexed sender, uint value);
-    event OwnerAddition(address indexed owner);
-    event OwnerRemoval(address indexed owner);
+    event ProposerAddition(address indexed _proposer);
+    event ProposerRemoval(address indexed _proposer);
     event RequirementChange(uint required);
     event SpentAny(address to, uint transfer);
 
@@ -57,13 +57,13 @@ contract RulingSignTimeLock is TimelockController {
         _;
     }
 
-    modifier confirmed(uint transactionId, address owner) {
-        require(confirmations[transactionId][owner], "sender not confirmations");
+    modifier confirmed(uint transactionId, address _proposer) {
+        require(confirmations[transactionId][_proposer], "sender not confirmations");
         _;
     }
 
-    modifier notConfirmed(uint transactionId, address owner) {
-        require(!confirmations[transactionId][owner], "sender is confirmations");
+    modifier notConfirmed(uint transactionId, address _proposer) {
+        require(!confirmations[transactionId][_proposer], "sender is confirmations");
         _;
     }
 
@@ -77,18 +77,18 @@ contract RulingSignTimeLock is TimelockController {
         _;
     }
 
-    modifier validRequirement(uint ownerCount, uint _required) {
-        require(ownerCount <= MAX_OWNER_COUNT
-        && _required <= ownerCount
+    modifier validRequirement(uint ProposerCount, uint _required) {
+        require(Proposer <= MAX_PROPOSER_COUNT
+        && _required <= Proposer
         && _required > 0
-            && ownerCount > 0, "validRequirement error");
+            && Proposer > 0, "validRequirement error");
         _;
     }
 
     /*
      * Public functions
      */
-    /// @dev Contract constructor sets initial owners and required number of confirmations.
+    /// @dev Contract constructor sets initial proposers and required number of confirmations.
     /// @param _proposers List of initial proposers.
     /// @param _required Number of required confirmations.
     constructor (address[] memory _proposers, uint _required, uint _executors)
@@ -144,8 +144,8 @@ contract RulingSignTimeLock is TimelockController {
     ) public payable override  {}
 
 
-    /// @dev Allows to add a new owner. Transaction has to be sent by wallet.
-    /// @param _proposer Address of new owner.
+    /// @dev Allows to add a new proposer. Transaction has to be sent by wallet.
+    /// @param _proposer Address of new proposer.
     function addProposer(address _proposer) public
     onlyContract()
     notProposer(_proposer)
@@ -153,11 +153,11 @@ contract RulingSignTimeLock is TimelockController {
     validRequirement(proposers.length + 1, required) {
         isProposers[_proposer] = true;
         proposers.push(_proposer);
-        emit OwnerAddition(_proposer);
+        emit ProposerAddition(_proposer);
     }
 
-    /// @dev Allows to remove an owner. Transaction has to be sent by wallet.
-    /// @param _proposer Address of owner.
+    /// @dev Allows to remove an proposer. Transaction has to be sent by wallet.
+    /// @param _proposer Address of proposer.
     function removeProposer(address _proposer) public
     onlyContract()
     onlyProposer(_proposer)
@@ -171,12 +171,12 @@ contract RulingSignTimeLock is TimelockController {
         proposers.pop();
         if (required > proposers.length)
             changeRequirement(proposers.length);
-        emit OwnerRemoval(_proposer);
+        emit ProposerRemoval(_proposer);
     }
 
-    /// @dev Allows to replace an owner with a new owner. Transaction has to be sent by wallet.
-    /// @param _proposer Address of owner to be replaced.
-    /// @param _newProposer Address of new owner.
+    /// @dev Allows to replace an proposer with a new proposer. Transaction has to be sent by wallet.
+    /// @param _proposer Address of proposer to be replaced.
+    /// @param _newProposer Address of new proposer.
     function replaceProposer(address _proposer, address _newProposer) public
     onlyContract()
     notProposer(_newProposer)
@@ -188,8 +188,8 @@ contract RulingSignTimeLock is TimelockController {
             }
         isProposers[_proposer] = false;
         isProposers[_newProposer] = true;
-        emit OwnerRemoval(_proposer);
-        emit OwnerAddition(_newProposer);
+        emit ProposerRemoval(_proposer);
+        emit ProposerAddition(_newProposer);
     }
 
     /// @dev Allows to change the number of required confirmations. Transaction has to be sent by wallet.
@@ -201,17 +201,13 @@ contract RulingSignTimeLock is TimelockController {
         emit RequirementChange(_required);
     }
 
-    function submitTransactionCall(address destination, uint value, bytes memory data) public
+    function submitTransactionCall(address destination, uint value, uint tType, bytes memory data) public
     returns (uint transactionId){
-        uint8 tType = 1;
-        if (destination == address(this)) {
-            tType = 0;
-        }
         transactionId = addTransaction(destination, value, tType, data);
         confirmTransaction(transactionId);
     }
 
-    /// @dev Allows an owner to confirm a transaction.
+    /// @dev Allows an proposer to confirm a transaction.
     /// @param transactionId Transaction ID.
     function confirmTransaction(uint transactionId) public
     onlyProposer(msg.sender)
@@ -222,7 +218,7 @@ contract RulingSignTimeLock is TimelockController {
         executeTransactionOrToTimeLock(transactionId);
     }
 
-    /// @dev Allows an owner to revoke a confirmation for a transaction.
+    /// @dev Allows an proposer to revoke a confirmation for a transaction.
     /// @param transactionId Transaction ID.
     function revokeConfirmation(uint transactionId) public
     onlyProposer(msg.sender)
@@ -324,15 +320,15 @@ contract RulingSignTimeLock is TimelockController {
                 count += 1;
     }
 
-    /// @dev Returns list of owners.
-    /// @return List of owner addresses.
+    /// @dev Returns list of proposers.
+    /// @return List of proposer addresses.
     function getProposers() public view returns (address[] memory){
         return proposers;
     }
 
-    /// @dev transactionId Returns array with owner addresses, which confirmed transaction.
+    /// @dev transactionId Returns array with proposer addresses, which confirmed transaction.
     /// @param transactionId Transaction ID.
-    /// @return _confirmations Returns array of owner addresses.
+    /// @return _confirmations Returns array of proposer addresses.
     function getConfirmations(uint transactionId) public view returns (address[] memory _confirmations){
         address[] memory confirmationsTemp = new address[](proposers.length);
         uint count = 0;
