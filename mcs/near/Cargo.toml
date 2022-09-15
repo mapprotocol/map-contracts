@@ -14,6 +14,7 @@ tokio = { version = "1.14", features = ["full"] }
 workspaces = { git = "https://github.com/near/workspaces-rs", rev = "810c21032ef77b845ff507383e029d7d38586a2f" }
 map-light-client = { path = "../../mapclients/near/contracts"}
 mcs = { path = "./map-cross-chain-service"}
+hex = "0.4.2"
 
 [profile.release]
 codegen-units = 1
