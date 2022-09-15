@@ -25,7 +25,10 @@ let proofTx = '0xcc47eac7b22ab71494a4d605aedda7c8e39a949ae82dc6a14bc6358fee67ad5
 async function main() {
 
   let [wallet] = await ethers.getSigners();
-  await deployLightNode(wallet);
+  // await deployLightNode(wallet);
+ // await updateHead();
+
+
 }
 
 function getValidators(extraData: string) {
@@ -59,9 +62,19 @@ async function getReceipt(txHash: string, uri?: string) {
 
 async function deployLightNode(wallet: SignerWithAddress) {
 
+  console.log("开始");
+
+  const MPTVerify = await ethers.getContractFactory("MPTVerify");
+
+  const mPTVerify = await MPTVerify.deploy();
+
+  await mPTVerify.connect(wallet).deployed();
+
+  console.log("mPTVerify Implementation deployed on:", mPTVerify.address);
+
   const LightNode = await ethers.getContractFactory("LightNode");
 
-  const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen, wallet.address);
+  const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen, wallet.address, mPTVerify.address);
 
   await lightNode.connect(wallet).deployed();
 
@@ -77,6 +90,8 @@ async function deployLightNode(wallet: SignerWithAddress) {
 
   let lastHeader = await getBlock(lastEpoch, provider);
 
+  console.log(lastHeader);
+
   let second = await getBlock(lastEpoch - epochNum, provider);
 
   let initHeaders: Array<BlockHeader> = new Array<BlockHeader>();
@@ -85,7 +100,7 @@ async function deployLightNode(wallet: SignerWithAddress) {
 
   initHeaders.push(lastHeader);
 
-  let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen, wallet.address, initHeaders]);
+  let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen, wallet.address, mPTVerify.address, initHeaders]);
 
   const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
 
@@ -93,68 +108,67 @@ async function deployLightNode(wallet: SignerWithAddress) {
 
   console.log("lightNode proxy deployed on:", lightNodeProxy.address);
 
-  let proxy = LightNode.attach(lightNodeProxy.address);
+  // let proxy = LightNode.attach(lightNodeProxy.address);
+
+  // let current = BigNumber.from(await proxy.headerHeight()).toNumber();
+
+  // console.log(current);
+
+  // let addHearders: Array<BlockHeader> = new Array<BlockHeader>();
+
+  // let preValidators = '0x' + getValidators(lastHeader.extraData);
+
+  // let max = Math.floor((preValidators.length - 2) / 80) + 1
+
+  // for (let i = 0; i < max; i++) {
+
+  //   let t = await getBlock(current + epochNum + i, provider);
+
+  //   addHearders.push(t);
+
+  //   console.log(t.number);
+  // }
+
+  // let re = await (await proxy.updateBlockHeader(await lightNode.getHeadersBytes(addHearders))).wait();
+
+  // console.log(re);
+
+  // current = BigNumber.from(await proxy.headerHeight()).toNumber();
+
+  // console.log(current);
+
+  // let r = await provider.getTransactionReceipt(proofTx);
+
+  // let proofHearders: Array<BlockHeader> = new Array<BlockHeader>();
+
+  // for (let i = 0; i < max; i++) {
+
+  //   let t = await getBlock(r.blockNumber + i, provider);
+
+  //   proofHearders.push(t);
+  // }
 
 
-  let current = BigNumber.from(await proxy.headerHeight()).toNumber();
+  // let logs: TxLog[] = new Array<TxLog>();
 
-  console.log(current);
+  // for (let i = 0; i < r.logs.length; i++) {
 
-  let addHearders: Array<BlockHeader> = new Array<BlockHeader>();
+  //   let log = new TxLog(r.logs[i].address, r.logs[i].topics, r.logs[i].data);
 
-  let preValidators = '0x' + getValidators(lastHeader.extraData);
+  //   logs.push(log);
+  // }
 
-  let max = Math.floor((preValidators.length - 2) / 80) + 1
+  // let txReceipt = new TxReceipt(BigNumber.from(r.type), BigNumber.from(r.status || r.root).toHexString(), BigNumber.from(r.cumulativeGasUsed), r.logsBloom, logs);
 
-  for (let i = 0; i < max; i++) {
+  // let proof = await getReceipt(proofTx, uri);
 
-    let t = await getBlock(current + epochNum + i, provider);
+  // let receiptProof = new ReceiptProof(txReceipt, index2key(BigNumber.from(r.transactionIndex).toNumber(), proof.proof.length), proof.proof);
 
-    addHearders.push(t);
+  // let proofData = new DProofData(proofHearders, receiptProof);
 
-    console.log(t.number);
-  }
+  // let result = await proxy.verifyProofData(await proxy.getBytes(proofData), { gasLimit: 20000000 });
 
-  let re = await (await proxy.updateBlockHeader(await lightNode.getHeadersBytes(addHearders))).wait();
-
-  console.log(re);
-
-  current = BigNumber.from(await proxy.headerHeight()).toNumber();
-
-  console.log(current);
-
-  let r = await provider.getTransactionReceipt(proofTx);
-
-  let proofHearders: Array<BlockHeader> = new Array<BlockHeader>();
-
-  for (let i = 0; i < max; i++) {
-
-    let t = await getBlock(r.blockNumber + i, provider);
-
-    proofHearders.push(t);
-  }
-
-
-  let logs: TxLog[] = new Array<TxLog>();
-
-  for (let i = 0; i < r.logs.length; i++) {
-
-    let log = new TxLog(r.logs[i].address, r.logs[i].topics, r.logs[i].data);
-
-    logs.push(log);
-  }
-
-  let txReceipt = new TxReceipt(BigNumber.from(r.type), BigNumber.from(r.status || r.root).toHexString(), BigNumber.from(r.cumulativeGasUsed), r.logsBloom, logs);
-
-  let proof = await getReceipt(proofTx, uri);
-
-  let receiptProof = new ReceiptProof(txReceipt, index2key(BigNumber.from(r.transactionIndex).toNumber(), proof.proof.length), proof.proof);
-
-  let proofData = new DProofData(proofHearders, receiptProof);
-
-  let result = await proxy.verifyProofData(await proxy.getBytes(proofData), { gasLimit: 20000000 });
-
-  console.log("result ==", result);
+  // console.log("result ==", result);
 
 
   // const TestVerify = await ethers.getContractFactory("TestVerify");
@@ -163,10 +177,41 @@ async function deployLightNode(wallet: SignerWithAddress) {
 
   // await testVerify.connect(wallet).deployed();
 
-  // let g = await (await testVerify.verify(proxy.address,await proxy.getBytes(proofData),{gasLimit: 20000000 })).wait();
+  // let g = await (await testVerify.verify(proxy.address, await proxy.getBytes(proofData), { gasLimit: 20000000 })).wait();
 
   // console.log(g);
 
+}
+
+async function updateHead() {
+  const LightNode = await ethers.getContractFactory("LightNode");
+  const lightNode = LightNode.attach('0x682A38409204175aE2DF2cEa8f7885bAEF789E56');
+  const provider = new ethers.providers.JsonRpcProvider(uri);
+  let addHearders: Array<BlockHeader> = new Array<BlockHeader>();
+
+  let current = BigNumber.from(await lightNode.headerHeight()).toNumber();
+  for (let i = 0; i < 11; i++) {
+
+    let t = await getBlock(current + epochNum + i, provider);
+
+    addHearders.push(t);
+
+    console.log(t.number);
+  }
+
+  console.log(addHearders[0]);
+
+  let bytes = await lightNode.getHeadersBytes(addHearders);
+
+  console.log(bytes);
+
+  let re = await (await lightNode.updateBlockHeader(bytes)).wait();
+
+  console.log(re);
+
+  current = BigNumber.from(await lightNode.headerHeight()).toNumber();
+
+  console.log(current);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

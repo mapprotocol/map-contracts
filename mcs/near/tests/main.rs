@@ -4,7 +4,7 @@ use std::fs;
 use std::ops::Index;
 use std::str::FromStr;
 use near_sdk::json_types::U128;
-use near_sdk::{log, serde};
+use near_sdk::{Balance, log, serde};
 // macro allowing us to convert human readable units to workspace units.
 use near_units::parse_near;
 
@@ -31,6 +31,8 @@ const DEV_ACCOUNT_SEED: &str = "testificate";
 const TRANSFER_OUT_TYPE: &str = "2ef1cdf83614a69568ed2c96a275dd7fb2e63a464aa3a0ffe79f55d538c8b3b5";
 const DEPOSIT_OUT_TYPE: &str = "150bd848adaf4e3e699dcac82d75f111c078ce893375373593cc1b9208998377";
 
+const ORDER_ID_DEPOSIT: Balance = 1640000000000000000000;
+// const ORDER_ID_DEPOSIT: Balance = parse_near!("3 N");
 
 #[tokio::test]
 async fn test_deploy_mcs_token() -> anyhow::Result<()> {
@@ -395,6 +397,7 @@ async fn test_transfer_in_mcs_token_not_enough_deposit() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
+        .deposit(ORDER_ID_DEPOSIT - 1)
         .transact()
         .await;
     assert!(res.is_err(), "transfer_in should failed");
@@ -408,7 +411,7 @@ async fn test_transfer_in_mcs_token_not_enough_deposit() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
-        .deposit(1640000000000000000000)
+        .deposit(ORDER_ID_DEPOSIT)
         .transact()
         .await;
     assert!(res.is_err(), "transfer_in should failed");
@@ -416,8 +419,9 @@ async fn test_transfer_in_mcs_token_not_enough_deposit() -> anyhow::Result<()> {
     assert!(res.err().unwrap().to_string().contains("not enough deposit for mcs token mint"), "should be deposit error");
     let dev_balance_2 = dev_account.view_account(&worker).await?.balance;
     println!("after transfer in: account {} balance: {}", dev_account.id(), dev_balance_2);
+    assert!(dev_balance_1 - dev_balance_2 > dev_balance_0 - dev_balance_1);
+    assert!(dev_balance_1 - dev_balance_2 < dev_balance_0 - dev_balance_1 + ORDER_ID_DEPOSIT / 2);
     assert!(dev_balance_1 - dev_balance_2 < parse_near!("1 N"));
-    assert!(dev_balance_1 - dev_balance_2 > 1640000000000000000000);
 
     let to: AccountId = "pandarr.testnet".parse().unwrap();
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
@@ -432,7 +436,7 @@ async fn test_transfer_in_mcs_token_not_enough_deposit() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
-        .deposit(1640000000000000000000 + 1250000000000000000000 + parse_near!("3 N"))
+        .deposit(ORDER_ID_DEPOSIT + 1250000000000000000000)
         .transact()
         .await?;
     assert!(res.is_success(), "transfer_in should succeed");
@@ -440,8 +444,7 @@ async fn test_transfer_in_mcs_token_not_enough_deposit() -> anyhow::Result<()> {
     let dev_balance_3 = dev_account.view_account(&worker).await?.balance;
     println!("after transfer in: account {} balance: {}", dev_account.id(), dev_balance_3);
     println!("dev_account decrease {}", dev_balance_2 - dev_balance_3); //35777116013107000000000
-    assert!(dev_balance_2 - dev_balance_3 < parse_near!("1 N"));
-    assert!(dev_balance_2 - dev_balance_3 > 1640000000000000000000 + 1250000000000000000000);
+    assert!(dev_balance_2 - dev_balance_3 > dev_balance_1 - dev_balance_2 + ORDER_ID_DEPOSIT + 1250000000000000000000);
 
     let balance = dev_account.call(&worker, &token_account, "ft_balance_of")
         .args_json((to.clone(), ))?
@@ -716,6 +719,7 @@ async fn test_transfer_in_ft_token_not_enough_deposit() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
+        .deposit(ORDER_ID_DEPOSIT - 1)
         .transact()
         .await;
     assert!(res.is_err(), "transfer_in should failed");
@@ -729,7 +733,7 @@ async fn test_transfer_in_ft_token_not_enough_deposit() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
-        .deposit(1640000000000000000000)
+        .deposit(ORDER_ID_DEPOSIT)
         .transact()
         .await;
     assert!(res.is_err(), "transfer_in should failed");
@@ -737,8 +741,9 @@ async fn test_transfer_in_ft_token_not_enough_deposit() -> anyhow::Result<()> {
     assert!(res.err().unwrap().to_string().contains("not enough deposit for ft transfer"), "should be deposit error");
     let dev_balance_2 = dev_account.view_account(&worker).await?.balance;
     println!("after transfer in: account {} balance: {}", dev_account.id(), dev_balance_2);
+    assert!(dev_balance_1 - dev_balance_2 > dev_balance_0 - dev_balance_1);
+    assert!(dev_balance_1 - dev_balance_2 < dev_balance_0 - dev_balance_1 + ORDER_ID_DEPOSIT / 2);
     assert!(dev_balance_1 - dev_balance_2 < parse_near!("1 N"));
-    assert!(dev_balance_1 - dev_balance_2 > 1640000000000000000000);
 
     let to: AccountId = "pandarr.test.near".parse().unwrap();
     let balance = dev_account.call(&worker, &token_account, "ft_balance_of")
@@ -752,7 +757,7 @@ async fn test_transfer_in_ft_token_not_enough_deposit() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
-        .deposit(1640000000000000000000 + 1250000000000000000000 + parse_near!("3 N"))
+        .deposit(ORDER_ID_DEPOSIT + parse_near!("1 N"))
         .transact()
         .await?;
     assert!(res.is_success(), "transfer_in should succeed");
@@ -760,8 +765,8 @@ async fn test_transfer_in_ft_token_not_enough_deposit() -> anyhow::Result<()> {
     let dev_balance_3 = dev_account.view_account(&worker).await?.balance;
     println!("after transfer in: account {} balance: {}", dev_account.id(), dev_balance_3);
     println!("dev_account decrease {}", dev_balance_2 - dev_balance_3); //35777116013107000000000
-    assert!(dev_balance_2 - dev_balance_3 < parse_near!("1 N"));
-    assert!(dev_balance_2 - dev_balance_3 > 1640000000000000000000 + 1250000000000000000000);
+    assert!(dev_balance_2 - dev_balance_3 > dev_balance_1 - dev_balance_2 + ORDER_ID_DEPOSIT);
+    assert!(dev_balance_2 - dev_balance_3 < dev_balance_1 - dev_balance_2 + ORDER_ID_DEPOSIT + parse_near!("1 N"));
 
     let balance = dev_account.call(&worker, &token_account, "ft_balance_of")
         .args_json((to.clone(), ))?
@@ -1017,17 +1022,21 @@ async fn test_transfer_in_native_token_not_enough_deposit() -> anyhow::Result<()
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
-        .deposit(1640000000000000000000)
+        .deposit(ORDER_ID_DEPOSIT)
         .transact()
         .await;
     assert!(res.is_err(), "transfer_in should fail");
     println!("error {:?}", res.err());
+    let dev_balance_2 = worker.view_account(&dev_account.id()).await?.balance;
+    assert!(dev_balance_1 - dev_balance_2 > dev_balance_0 - dev_balance_1);
+    assert!(dev_balance_1 - dev_balance_2 < dev_balance_0 - dev_balance_1 + ORDER_ID_DEPOSIT / 2);
+    assert!(dev_balance_1 - dev_balance_2 < parse_near!("1 N"));
 
     let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
-        .deposit(1640000000000000000000 + 1)
+        .deposit(ORDER_ID_DEPOSIT + 1)
         .transact()
         .await?;
     assert!(res.is_success(), "transfer_in should succeed");
@@ -1036,11 +1045,11 @@ async fn test_transfer_in_native_token_not_enough_deposit() -> anyhow::Result<()
     let balance_2 = worker.view_account(&account_id).await?.balance;
     println!("after transfer in 3: account {} balance: {}", account_id, balance_2);
     assert_eq!(balance_1 + amount, balance_2, "should transfer in {} yocto near", amount);
-    let dev_balance_2 = worker.view_account(&dev_account.id()).await?.balance;
-    println!("after transfer in 3: account {} balance: {}", dev_account.id(), dev_balance_2);
-    println!("dev account balance decrease: {}", dev_balance_1 - dev_balance_2);
-    assert!(dev_balance_1 - dev_balance_2 < parse_near!("1 N"));
-    assert!(dev_balance_1 - dev_balance_2 > 1640000000000000000000 * 2 + 1);
+    let dev_balance_3 = worker.view_account(&dev_account.id()).await?.balance;
+    println!("after transfer in 3: account {} balance: {}", dev_account.id(), dev_balance_3);
+    println!("dev account balance decrease: {}", dev_balance_1 - dev_balance_3);
+    assert!(dev_balance_2 - dev_balance_3 > dev_balance_1 - dev_balance_2 + ORDER_ID_DEPOSIT + 1);
+    assert!(dev_balance_2 - dev_balance_3 < dev_balance_1 - dev_balance_2 + ORDER_ID_DEPOSIT + 1 + parse_near!("1 N"));
 
     let mcs_wnear_2 = dev_account.call(&worker, wnear.id(), "ft_balance_of")
         .args_json((mcs.id(), ))?

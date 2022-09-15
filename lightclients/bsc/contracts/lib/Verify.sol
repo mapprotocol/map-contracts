@@ -4,14 +4,15 @@ pragma solidity ^0.8.0;
 
 import "./RLPReader.sol";
 import "./RLPEncode.sol";
-import "./MPT.sol";
+//import "./MPT.sol";
+import "../interface/IMPTVerify.sol";
 
 library Verify {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
-    using MPT for MPT.MerkleProof;
+    // using MPT for MPT.MerkleProof;
 
     bytes32 constant sha3Uncles =
         0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
@@ -188,23 +189,19 @@ library Verify {
         return keccak256(RLPEncode.encodeList(list));
     }
 
-
-    function validateProof(bytes32 receiptsRoot, ReceiptProof memory receipt)
-        internal
-        pure
-        returns (bool success, bytes memory logs)
-    {
+    function validateProof(
+        bytes32 receiptsRoot,
+        ReceiptProof memory receipt,
+        address mptVerify
+    ) internal pure returns (bool success, bytes memory logs) {
         bytes memory bytesReceipt = encodeReceipt(receipt.txReceipt);
 
-        MPT.MerkleProof memory mp = MPT.MerkleProof({
-            expectedRoot: receiptsRoot,
-            key: receipt.keyIndex,
-            proof: receipt.proof,
-            keyIndex: 0,
-            proofIndex: 0,
-            expectedValue: bytesReceipt
-        });
-        success = MPT.verifyTrieProof(mp);
+        success = IMPTVerify(mptVerify).verifyTrieProof(
+            receiptsRoot,
+            receipt.keyIndex,
+            receipt.proof,
+            bytesReceipt
+        );
 
         if (success)
             logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).toBytes();

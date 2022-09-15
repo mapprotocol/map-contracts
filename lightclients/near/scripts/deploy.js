@@ -2,8 +2,6 @@ const { borshify, borshifyInitialValidators, borshifyOutcomeProof } = require('.
 const hre = require("hardhat");
 const { promisify } = require('util');
 const { SourceLocation } = require('hardhat/internal/hardhat-network/stack-traces/model');
-const sleep = promisify(setTimeout);
-const { Web3 } = require('../test/utils/robust')
 
 
 
@@ -26,7 +24,7 @@ async function main() {
   let validators = '0x' + borshifyInitialValidators(require('./data/validators.json').next_bps).toString('hex');
   let arr = [validators, block];
   let data = iface.encodeFunctionData("initialize", [wallet.address, arr]);
-  const lightNodeProxy = await LightNodeProxy.connect(wallet).deploy(lightNode.address, data);
+  const lightNodeProxy = await LightNodeProxy.connect(wallet).deploy(lightNode.address, data,{gasLimit: 20000000 });
   await lightNodeProxy.deployed();
   console.log("lightNodeProxy deployed to .....", lightNodeProxy.address);
 

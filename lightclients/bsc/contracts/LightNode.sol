@@ -11,6 +11,8 @@ import "./lib/Verify.sol";
 //import "hardhat/console.sol";
 
 contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
+    address public mptVerify;
+
     uint256 internal constant epochNum = 200;
 
     mapping(uint256 => bytes) public validators;
@@ -38,11 +40,14 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     constructor(
         uint256 _chainId,
         uint256 _minEpochBlockExtraDataLen,
-        address _controller
+        address _controller,
+        address _mptVerify
     ) {
         chainId = _chainId;
         minEpochBlockExtraDataLen = _minEpochBlockExtraDataLen;
         require(_controller != address(0), "_controller zero address");
+        require(_mptVerify != address(0), "_mptVerify zero address");
+        mptVerify = _mptVerify;
         _changeAdmin(_controller);
     }
 
@@ -50,10 +55,13 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         uint256 _chainId,
         uint256 _minEpochBlockExtraDataLen,
         address _controller,
+        address _mptVerify,
         Verify.BlockHeader[2] memory headers
     ) public initializer {
         require(chainId == 0, "already initialized");
         require(_controller != address(0), "_controller zero address");
+        require(_mptVerify != address(0), "_mptVerify zero address");
+        mptVerify = _mptVerify;
         _changeAdmin(_controller);
         chainId = _chainId;
         minEpochBlockExtraDataLen = _minEpochBlockExtraDataLen;
@@ -134,7 +142,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             bytes32 rootHash = bytes32(headers[0].receiptsRoot);
             (success, logs) = Verify.validateProof(
                 rootHash,
-                proof.receiptProof
+                proof.receiptProof,
+                mptVerify
             );
 
             if (!success) {

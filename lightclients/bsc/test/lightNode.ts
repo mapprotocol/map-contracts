@@ -25,9 +25,15 @@ describe("LightNode", function () {
     async function deployFixture() {
         let [wallet] = await ethers.getSigners();
 
+        const MPTVerify = await ethers.getContractFactory("MPTVerify");
+
+        const mPTVerify = await MPTVerify.deploy();
+      
+        await mPTVerify.connect(wallet).deployed();
+
         const LightNode = await ethers.getContractFactory("LightNode");
 
-        const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen, wallet.address);
+        const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen, wallet.address,mPTVerify.address);
 
         await lightNode.connect(wallet).deployed();
 
@@ -35,7 +41,7 @@ describe("LightNode", function () {
 
         let initBlocks = [data.block20852800, data.block20853000]
 
-        let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen, wallet.address, initBlocks]);
+        let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, minEpochBlockExtraDataLen, wallet.address,mPTVerify.address, initBlocks]);
 
         const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
 
@@ -74,7 +80,7 @@ describe("LightNode", function () {
             expect(admin).to.not.eq(other.address);
 
             const LightNode = await ethers.getContractFactory("LightNode");
-            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen, wallet.address);
+            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen, wallet.address,wallet.address);
             await newImplement.deployed();
 
             await expect(lightNode.connect(other).upgradeTo(newImplement.address)).to.be.revertedWith('LightNode: only Admin can upgrade');
@@ -93,7 +99,7 @@ describe("LightNode", function () {
             expect(admin).to.not.eq(other.address);
 
             const LightNode = await ethers.getContractFactory("LightNode");
-            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen, wallet.address);
+            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen, wallet.address,wallet.address);
             await newImplement.deployed();
 
             let oldImplement = await lightNode.getImplementation();

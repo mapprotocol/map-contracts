@@ -352,7 +352,10 @@ impl MapCrossChainService {
     fn process_transfer_in(&mut self, event: &MapTransferOutEvent) -> Promise {
         let cur_deposit = env::attached_deposit();
         let required_deposit = self.record_order_id(&event.order_id);
-        assert!(cur_deposit >= required_deposit, "not enough deposit for record proof, exp: {}, cur: {}", required_deposit, cur_deposit);
+        if cur_deposit < required_deposit {
+            return self.process_transfer_in_failure(cur_deposit, event,
+                                                    format!("not enough deposit for record proof, exp: {}, cur: {}", required_deposit, cur_deposit));
+        }
 
         let to = String::from_utf8(event.to.clone()).unwrap();
         let to_chain_token = String::from_utf8(event.to_chain_token.clone()).unwrap();
@@ -361,7 +364,10 @@ impl MapCrossChainService {
         let mut ret_deposit = cur_deposit - required_deposit;
 
         if self.is_native_token(event.to_chain_token.clone()) {
-            assert!(ret_deposit >= 1, "not enough deposit for near withdraw");
+            if ret_deposit < 1 {
+                return self.process_transfer_in_failure(cur_deposit, event,
+                                                        "not enough deposit for near withdraw".to_string());
+            }
 
             ext_wnear_token::ext(self.wrapped_token.parse().unwrap())
                 .with_static_gas(NEAR_WITHDRAW_GAS)
@@ -374,7 +380,10 @@ impl MapCrossChainService {
                         .transfer_in_native_token(event)
                 )
         } else if self.mcs_tokens.get(&to_chain_token).is_some() {
-            assert!(ret_deposit >= self.mcs_storage_transfer_in_required, "not enough deposit for mcs token mint, exp: {}, cur: {}", self.mcs_storage_transfer_in_required, ret_deposit);
+            if ret_deposit < self.mcs_storage_transfer_in_required {
+                return self.process_transfer_in_failure(cur_deposit, event,
+                                                        format!("not enough deposit for mcs token mint, exp: {}, cur: {}", self.mcs_storage_transfer_in_required, ret_deposit));
+            }
             ret_deposit = ret_deposit - self.mcs_storage_transfer_in_required;
 
             ext_mcs_token::ext(to_chain_token.parse().unwrap())
@@ -387,7 +396,10 @@ impl MapCrossChainService {
                     .finish_transfer_in(event))
         } else if self.fungible_tokens.get(&to_chain_token).is_some() {
             let min_storage_balance = self.fungible_tokens_storage_balance.get(&to_chain_token).unwrap();
-            assert!(ret_deposit > min_storage_balance, "not enough deposit for ft transfer, exp: {}, cur: {}", 1 + min_storage_balance, ret_deposit);
+            if ret_deposit < min_storage_balance + 1 {
+                return self.process_transfer_in_failure(cur_deposit, event,
+                                                        format!("not enough deposit for ft transfer, exp: {}, cur: {}", 1 + min_storage_balance, ret_deposit));
+            }
             ret_deposit = ret_deposit - 1 - min_storage_balance;
 
             let token_account: AccountId = to_chain_token.parse().unwrap();
@@ -404,8 +416,17 @@ impl MapCrossChainService {
                     .with_attached_deposit(ret_deposit)
                     .finish_transfer_in(event))
         } else {
-            panic_str(&*format!("unknown to_chain_token {} to transfer in", to_chain_token))
+            self.process_transfer_in_failure(cur_deposit, event,
+                                             format!("unknown to_chain_token {} to transfer in", to_chain_token))
         }
+    }
+
+    fn process_transfer_in_failure(&mut self, ret_deposit: Balance, event: &MapTransferOutEvent, err_msg: String) -> Promise {
+        self.remove_order_id(&event.order_id);
+        Promise::new(env::signer_account_id()).transfer(ret_deposit)
+            .then(Self::ext(env::current_account_id())
+                .with_static_gas(REPORT_FAIL_GAS)
+                .report_transfer_in_fail(err_msg))
     }
 
     #[payable]
