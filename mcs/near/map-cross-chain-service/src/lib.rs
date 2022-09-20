@@ -12,6 +12,7 @@ use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_contract_standards::storage_management::{StorageBalance, StorageBalanceBounds};
 use near_sdk::env::panic_str;
 use map_light_client::proof::ReceiptProof;
+use crate::ChainType::{EvmChain, Unknown};
 
 mod event;
 pub mod prover;
@@ -98,6 +99,13 @@ const PAUSE_TRANSFER_OUT_NATIVE: Mask = 1 << 3;
 const PAUSE_DEPOSIT_OUT_TOKEN: Mask = 1 << 4;
 const PAUSE_DEPOSIT_OUT_NATIVE: Mask = 1 << 5;
 
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug, PartialEq)]
+#[serde(crate = "near_sdk::serde")]
+pub enum ChainType {
+    EvmChain,
+    Unknown,
+}
+
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -116,6 +124,8 @@ pub struct MapCrossChainService {
     pub token_decimals: UnorderedMap<String, u8>,
     /// Set of other fungible token contracts.
     pub native_to_chains: HashSet<u128>,
+    /// Map of chain id and chain type
+    pub chain_id_type_map: UnorderedMap<u128, ChainType>,
     /// Hashes of the events that were already used.
     pub used_events: UnorderedSet<CryptoHash>,
     /// Public key of the account deploying the MCS contract.
@@ -214,6 +224,7 @@ impl MapCrossChainService {
             fungible_tokens_storage_balance: UnorderedMap::new(b"s".to_vec()),
             token_decimals: UnorderedMap::new(b"d".to_vec()),
             native_to_chains: Default::default(),
+            chain_id_type_map: UnorderedMap::new(b"c".to_vec()),
             used_events: UnorderedSet::new(b"u".to_vec()),
             owner_pk: env::signer_account_pk(),
             mcs_storage_transfer_in_required: storage_balance,
@@ -263,6 +274,7 @@ impl MapCrossChainService {
         self.check_not_paused(PAUSE_TRANSFER_OUT_TOKEN);
 
         if self.valid_mcs_token_out(&token, to_chain) {
+            self.check_to_account(to.clone(), to_chain);
             self.check_amount(token.clone(), amount.0, false);
             let from = env::signer_account_id().to_string();
             let amount = amount.0;
@@ -297,6 +309,7 @@ impl MapCrossChainService {
     #[payable]
     pub fn transfer_out_native(&mut self, to: Vec<u8>, to_chain: u128) -> Promise {
         self.check_not_paused(PAUSE_TRANSFER_OUT_NATIVE);
+        self.check_to_account(to.clone(), to_chain);
 
         let amount = env::attached_deposit();
         assert!(amount > 0, "amount should > 0");
@@ -501,6 +514,7 @@ impl MapCrossChainService {
     #[payable]
     pub fn deposit_out_native(&mut self, to: Vec<u8>) {
         self.check_not_paused(PAUSE_DEPOSIT_OUT_NATIVE);
+        self.check_to_account(to.clone(), MAP_CHAIN_ID);
 
         let amount = env::attached_deposit();
         assert!(amount > 0, "amount should > 0");
@@ -806,6 +820,24 @@ impl MapCrossChainService {
         self.mcs_tokens.insert(&token, &to_chain_set);
     }
 
+    pub fn set_chain_type(&mut self, chain_id: u128, chain_type: ChainType) {
+        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
+
+        self.chain_id_type_map.insert(&chain_id, &chain_type);
+    }
+
+    pub fn get_chain_type(&self, chain_id: u128) -> ChainType {
+        if chain_id == MAP_CHAIN_ID {
+            return EvmChain;
+        }
+        let option = self.chain_id_type_map.get(&chain_id);
+        if let Some(chain_type) = option {
+            chain_type
+        } else {
+            Unknown
+        }
+    }
+
     fn get_order_id(&mut self, token: &String, from: &String, to: &Vec<u8>, amount: u128, to_chain_id: u128) -> CryptoHash {
         let mut data = self.nonce.try_to_vec().unwrap();
         data.extend(from.as_bytes());
@@ -827,6 +859,17 @@ impl MapCrossChainService {
         let addr: Vec<u8> = vec![0; 20];
         (addr.clone(), String::from_utf8(addr).unwrap())
     }
+
+    fn check_to_account(&mut self, to: Vec<u8>, chain_id: u128) {
+        match self.get_chain_type(chain_id) {
+            EvmChain => {
+                assert_eq!(20, to.len(), "address length is incorrect for evm chain type")
+            }
+            _ => {
+                panic_str(&*format!("unknown chain type for chain {}", chain_id))
+            }
+        }
+    }
 }
 
 #[near_bindgen]
@@ -840,6 +883,7 @@ impl FungibleTokenReceiver for MapCrossChainService {
             self.check_not_paused(PAUSE_TRANSFER_OUT_TOKEN);
             assert!(self.valid_fungible_token_out(&token, transfer_msg.to_chain),
                     "transfer token {} to chain {} is not supported", token, transfer_msg.to_chain);
+            self.check_to_account(transfer_msg.to.clone(), transfer_msg.to_chain);
             self.check_amount(token.clone(), amount.0, false);
 
             let order_id = self.get_order_id(&token,
@@ -864,6 +908,7 @@ impl FungibleTokenReceiver for MapCrossChainService {
             assert!(self.valid_fungible_token_out(&token, MAP_CHAIN_ID)
                         || self.valid_mcs_token_out(&token, MAP_CHAIN_ID),
                     "deposit token {} to chain {} is not supported", token, MAP_CHAIN_ID);
+            self.check_to_account(transfer_msg.to.clone(), MAP_CHAIN_ID);
             self.check_amount(token.clone(), amount.0, false);
 
             let order_id = self.get_order_id(&token,
@@ -996,6 +1041,7 @@ mod tests {
             fungible_tokens_storage_balance: UnorderedMap::new(b"s".to_vec()),
             token_decimals: UnorderedMap::new(b"d".to_vec()),
             native_to_chains: Default::default(),
+            chain_id_type_map: UnorderedMap::new(b"c".to_vec()),
             used_events: UnorderedSet::new(b"u".to_vec()),
             owner_pk: env::signer_account_pk(),
             mcs_storage_transfer_in_required: STORAGE_BALANCE,

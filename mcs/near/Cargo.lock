@@ -1429,6 +1429,7 @@ name = "near"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "hex 0.4.3",
  "map-light-client",
  "mcs",
  "near-sdk",
