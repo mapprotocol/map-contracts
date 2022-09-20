@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./utils/Role.sol";
@@ -18,8 +18,7 @@ import "./interface/IMCS.sol";
 import "./interface/ILightNode.sol";
 import "./utils/RLPReader.sol";
 
-
-contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable, IMCS {
+contract MapCrossChainService is ReentrancyGuard, Ownable, Initializable, Pausable, IMCS {
     using SafeMath for uint;
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
@@ -74,8 +73,6 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         wToken = _wToken;
         mapToken = IERC20(_mapToken);
         lightNode = ILightNode(_lightNode);
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(MANAGER_ROLE, msg.sender);
     }
 
     receive() external payable {
@@ -94,11 +91,11 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         _;
     }
 
-    function setPause() external onlyManager {
+    function setPause() external onlyOwner {
         _pause();
     }
 
-    function setUnpause() external onlyManager {
+    function setUnpause() external onlyOwner {
         _unpause();
     }
 
@@ -106,19 +103,19 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
 
-    function addAuthToken(address[] memory token) external onlyManager {
+    function addAuthToken(address[] memory token) external onlyOwner {
         for (uint i = 0; i < token.length; i++) {
             authToken[token[i]] = true;
         }
     }
 
-    function removeAuthToken(address[] memory token) external onlyManager {
+    function removeAuthToken(address[] memory token) external onlyOwner {
         for (uint i = 0; i < token.length; i++) {
             authToken[token[i]] = false;
         }
     }
 
-    function setBridge(address _bridge, uint256 _num) public onlyManager {
+    function setBridge(address _bridge, uint256 _num) public onlyOwner {
         bridgeAddress[_bridge] = _num;
     }
 
@@ -126,7 +123,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
         return authToken[token];
     }
 
-    function setCanBridgeToken(address token, uint chainId, bool canBridge) public onlyManager {
+    function setCanBridgeToken(address token, uint chainId, bool canBridge) public onlyOwner {
         canBridgeToken[token][chainId] = canBridge;
     }
 
@@ -189,7 +186,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     function depositOutToken(address token, address from, address to, uint amount) external override payable whenNotPaused {
         require(msg.sender == from, "from only sender");
         bytes32 orderId = getOrderID(token, from, _addressToBytes(to), amount, 22776);
-//        require(IERC20(token).balanceOf(from) >= amount, "balance too low");
+        //        require(IERC20(token).balanceOf(from) >= amount, "balance too low");
         TransferHelper.safeTransferFrom(token, from, address(this), amount);
         emit mapDepositOut(token, _addressToBytes(from), to, orderId, amount);
     }
@@ -230,7 +227,7 @@ contract MapCrossChainService is ReentrancyGuard, Role, Initializable, Pausable,
     }
 
 
-    function withdraw(address token, address payable receiver, uint256 amount) public onlyManager {
+    function withdraw(address token, address payable receiver, uint256 amount) public onlyOwner {
         if (token == address(0)) {
             IWToken(wToken).withdraw(amount);
             receiver.transfer(amount);
