@@ -39,6 +39,7 @@ secp256k1 address:  0xD762eD84dB64848366E74Ce43742C1960Ba62304
  */
 
 const INIT_VALUE: &str = r#"{
+            "owner": "owne.near",
             "threshold": 3,
             "validators":
                 [

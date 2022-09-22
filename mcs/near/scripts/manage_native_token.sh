@@ -39,7 +39,7 @@ function transfer_out() {
 
 function deposit_out() {
   echo "deposit out $3 amount near from $1 to $2 on MAP chain"
-  near call $MCS_ACCOUNT deposit_out_native '{ "to":'$3'}' --accountId $1 --depositYocto $3 --gas 100000000000000
+  near call $MCS_ACCOUNT deposit_out_native '{ "to":'$2'}' --accountId $1 --depositYocto $3 --gas 100000000000000
 }
 
 function balance() {

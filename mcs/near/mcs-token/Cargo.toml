@@ -1,7 +1,7 @@
 [package]
 name = "mcs-token"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 publish = false
 
 [lib]
@@ -9,10 +9,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 near-sdk = "4.0.0"
-#near-sdk = { git = "https://github.com/near/near-sdk-rs", rev = "613adcab6322e4f830efb4d5bde2a810ae642158" }
 near-contract-standards = "4.0.0"
-admin-controlled = { path="../admin-controlled" }
 
 [features]
-default = ["migrate_icon"]
-migrate_icon = []
+default = ["release"]
+release = []

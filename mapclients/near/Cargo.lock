@@ -1200,6 +1200,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "map-client-factory"
+version = "0.1.0"
+dependencies = [
+ "hex 0.4.3",
+ "map-light-client",
+ "near-sdk",
+]
+
+[[package]]
 name = "map-light-client"
 version = "0.1.0"
 dependencies = [

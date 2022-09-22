@@ -4,12 +4,17 @@ use near_contract_standards::fungible_token::metadata::{
 use near_contract_standards::fungible_token::FungibleToken;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{Base64VecU8, U128};
-use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, PromiseOrValue, StorageUsage, };
+use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, PromiseOrValue, StorageUsage, log, Gas};
+
+const GAS_FOR_UPGRADE_SELF_DEPLOY: Gas = Gas(15_000_000_000_000);
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct MCSToken {
+    /// Controller is MCS contract which can min/burn token
     controller: AccountId,
+    /// Owner is multisig contract which can preform upgrade
+    owner: AccountId,
     token: FungibleToken,
     name: String,
     symbol: String,
@@ -22,10 +27,11 @@ pub struct MCSToken {
 #[near_bindgen]
 impl MCSToken {
     #[init]
-    pub fn new() -> Self {
+    pub fn new(owner: AccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         Self {
             controller: env::predecessor_account_id(),
+            owner,
             token: FungibleToken::new(b"t".to_vec()),
             name: String::default(),
             symbol: String::default(),
@@ -45,8 +51,7 @@ impl MCSToken {
         decimals: Option<u8>,
         icon: Option<String>,
     ) {
-        // Only owner can change the metadata
-        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
+        assert_eq!(env::predecessor_account_id(), self.controller, "Only controller can call set_metadata");
 
         name.map(|name| self.name = name);
         symbol.map(|symbol| self.symbol = symbol);
@@ -58,22 +63,16 @@ impl MCSToken {
 
     #[payable]
     pub fn mint(&mut self, account_id: AccountId, amount: U128) {
-        assert_eq!(
-            env::predecessor_account_id(),
-            self.controller,
-            "Only controller can call mint"
-        );
+        // in test mode, remove the check to allow anyone to mint token
+        #[cfg(feature = "release")]
+        assert_eq!(env::predecessor_account_id(), self.controller, "Only controller can call mint");
 
         self.storage_deposit(Some(account_id.clone()), None);
         self.token.internal_deposit(&account_id, amount.into());
     }
 
     pub fn burn(&mut self, account_id: AccountId, amount: U128) {
-        assert_eq!(
-            env::predecessor_account_id(),
-            self.controller,
-            "Only controller can call burn"
-        );
+        assert_eq!(env::predecessor_account_id(), self.controller, "Only controller can call burn");
 
         self.token
             .internal_withdraw(&account_id, amount.into());
@@ -83,10 +82,19 @@ impl MCSToken {
         self.token.account_storage_usage
     }
 
-    /// Return true if the caller is either controller or self
-    pub fn controller_or_self(&self) -> bool {
-        let caller = env::predecessor_account_id();
-        caller == self.controller || caller == env::current_account_id()
+    pub fn upgrade_self(&mut self, code: Base64VecU8) {
+        assert_eq!(self.owner, env::predecessor_account_id(), "unexpected caller {}", env::predecessor_account_id());
+
+        let current_id = env::current_account_id();
+        let promise_id = env::promise_batch_create(&current_id);
+        env::promise_batch_action_deploy_contract(promise_id, &code.0);
+        env::promise_batch_action_function_call(
+            promise_id,
+            "migrate",
+            &[],
+            0,
+            env::prepaid_gas() - env::used_gas() - GAS_FOR_UPGRADE_SELF_DEPLOY,
+        );
     }
 }
 

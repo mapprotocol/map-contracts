@@ -1349,10 +1349,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mcs-factory"
+version = "0.1.0"
+dependencies = [
+ "near-sdk",
+]
+
+[[package]]
 name = "mcs-token"
 version = "0.1.0"
 dependencies = [
- "admin-controlled",
  "near-contract-standards",
  "near-sdk",
 ]
@@ -1407,6 +1413,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "multisig"
+version = "0.1.0"
+dependencies = [
+ "near-sdk",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1431,7 +1444,6 @@ dependencies = [
  "anyhow",
  "hex 0.4.3",
  "map-light-client",
- "mcs",
  "near-sdk",
  "near-units",
  "serde_json",

@@ -1,10 +1,10 @@
 [package]
-name = "admin-controlled"
+name = "multisig"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [lib]
-crate-type = ["rlib"]
+crate-type = ["cdylib"]
 
 [dependencies]
 near-sdk = "4.0.0"
