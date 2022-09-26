@@ -6,6 +6,7 @@ use std::str::FromStr;
 use hex;
 use near_sdk::json_types::U128;
 use near_sdk::{Balance, log, serde};
+use near_sdk::serde::{Serialize, Deserialize};
 // macro allowing us to convert human readable units to workspace units.
 use near_units::parse_near;
 
@@ -19,8 +20,6 @@ use workspaces::operations::CallTransaction;
 use workspaces::result::CallExecutionDetails;
 use workspaces::types::{KeyType, SecretKey};
 use map_light_client::{EpochRecord, Validator};
-use mcs::{FungibleTokenMsg, ChainType};
-use mcs::ChainType::EvmChain;
 
 const MOCK_MAP_CLIENT_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/mock_map_client.wasm";
 const MCS_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/mcs.wasm";
@@ -34,7 +33,23 @@ const TRANSFER_OUT_TYPE: &str = "2ef1cdf83614a69568ed2c96a275dd7fb2e63a464aa3a0f
 const DEPOSIT_OUT_TYPE: &str = "150bd848adaf4e3e699dcac82d75f111c078ce893375373593cc1b9208998377";
 
 const ORDER_ID_DEPOSIT: Balance = 1640000000000000000000;
-// const ORDER_ID_DEPOSIT: Balance = parse_near!("3 N");
+
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct FungibleTokenMsg {
+    pub msg_type: u8,
+    // 0: Transfer or 1: Deposit
+    pub to: Vec<u8>,
+    pub to_chain: u128, // if msg_type is 1, it is omitted
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(crate = "near_sdk::serde")]
+pub enum ChainType {
+    EvmChain,
+    Unknown,
+}
 
 #[tokio::test]
 async fn test_deploy_mcs_token() -> anyhow::Result<()> {
@@ -81,6 +96,85 @@ async fn test_deploy_mcs_token() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn test_owner() -> anyhow::Result<()> {
+    let worker = init_worker().await?;
+    let wnear = deploy_and_init_wnear(&worker).await?;
+
+    let account_id: AccountId = "mcs.test.near".parse().unwrap();
+    let sk = SecretKey::from_seed(KeyType::ED25519, DEV_ACCOUNT_SEED);
+    let owner = worker.create_tla(account_id.clone(), sk).await?.unwrap();
+
+    let mcs = worker.dev_deploy(&std::fs::read(MCS_WASM_FILEPATH)?).await?;
+    println!("deploy mcs contract id: {:?}", mcs.id());
+
+    let res = mcs
+        .call(&worker, "init")
+        .args_json(json!({"owner": owner.id(),
+            "map_light_client": "map_light_client.near",
+            "map_bridge_address":MAP_BRIDGE_ADDRESS.to_string(),
+            "wrapped_token": wnear.id().to_string(),
+            "near_chain_id": 1313161555}))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "init MCS contract failed!");
+    println!("init mcs logs: {:?}", res.logs());
+
+    let chain_id = 100;
+    let token_name = "mcs_token";
+    let token_account = format!("{}.{}", token_name, mcs.id().to_string());
+
+    let res = gen_call_transaction(&worker, &mcs, "deploy_mcs_token", json!({"address": token_name}), true)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "deploy_mcs_token {} failed", token_name);
+
+    let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account, "to_chain": chain_id}), false)
+        .transact()
+        .await;
+    assert!(res.is_err(), "add_mcs_token_to_chain should be called by owner");
+
+    let res = gen_call_transaction_by_account(&worker, &owner, &mcs, "add_mcs_token_to_chain", json!({"token": token_account, "to_chain": chain_id}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "add_mcs_token_to_chain should succeed");
+
+    let res = gen_call_transaction(&worker, &mcs, "set_chain_type", json!({"chain_id": chain_id, "chain_type": "EvmChain"}), false)
+        .transact()
+        .await;
+    assert!(res.is_err(), "set_chain_type should be called by owner");
+
+    let res = gen_call_transaction_by_account(&worker, &owner, &mcs, "set_chain_type", json!({"chain_id": chain_id, "chain_type": "EvmChain"}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "set_chain_type should succeed");
+
+    let ft = deploy_and_init_ft(&worker).await?;
+    let token_name0 = ft.id().to_string();
+    let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": token_name0, "to_chain": chain_id}), false)
+        .transact()
+        .await;
+    assert!(res.is_err(), "add_fungible_token_to_chain should be called by owner");
+
+    let res = gen_call_transaction_by_account(&worker, &owner, &mcs, "add_fungible_token_to_chain", json!({"token": token_name0, "to_chain": chain_id}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "add_fungible_token_to_chain should succeed");
+
+    let res = gen_call_transaction(&worker, &mcs, "add_native_to_chain", json!({"to_chain": chain_id}), false)
+        .transact()
+        .await;
+    assert!(res.is_err(), "add_native_to_chain should be called by owner");
+
+    let res = gen_call_transaction_by_account(&worker, &owner, &mcs, "add_native_to_chain", json!({"to_chain": chain_id}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "add_native_to_chain should succeed");
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_manage_to_chain_type() -> anyhow::Result<()> {
     let worker = init_worker().await?;
     let wnear = deploy_and_init_wnear(&worker).await?;
@@ -89,7 +183,7 @@ async fn test_manage_to_chain_type() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
 
     let chain_id = 100;
-    let chain_type = EvmChain;
+    let chain_type = ChainType::EvmChain;
 
     let ret = gen_call_transaction(&worker, &mcs, "get_chain_type", json!({"chain_id": chain_id}), false)
         .view()
@@ -4282,6 +4376,19 @@ fn gen_call_transaction<'a, U: serde::Serialize>(worker: &'a Worker<impl DevNetw
     }
 }
 
+fn gen_call_transaction_by_account<'a, U: serde::Serialize>(worker: &'a Worker<impl DevNetwork>, account: &Account, contract: &'a Contract, function: &'a str, args: U, deposit: bool) -> CallTransaction<'a, 'a, impl DevNetwork> {
+    let call_tx = account
+        .call(&worker, &contract.id(), function)
+        .args_json(args)
+        .unwrap()
+        .gas(300_000_000_000_000);
+    if deposit {
+        call_tx.deposit(7_000_000_000_000_000_000_000_000)
+    } else {
+        call_tx
+    }
+}
+
 async fn deploy_and_init_wnear(worker: &Worker<impl DevNetwork>) -> anyhow::Result<Contract> {
     let contract = worker.dev_deploy(&std::fs::read(WNEAR_WASM_FILEPATH)?).await?;
     println!("deploy wnear contract id: {:?}", contract.id());
@@ -4323,6 +4430,7 @@ async fn deploy_and_init_ft_with_decimal(worker: &Worker<impl DevNetwork>, decim
 
     let res = contract
         .call(&worker, "new")
+        .args_json(json!({"owner": contract.id()}))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
@@ -4343,6 +4451,7 @@ async fn deploy_and_init_ft_with_account(worker: &Worker<impl DevNetwork>, accou
 
     let res = contract
         .call(&worker, "new")
+        .args_json(json!({"owner": contract.id()}))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
@@ -4361,7 +4470,8 @@ async fn deploy_and_init_mcs(worker: &Worker<impl DevNetwork>, map_light_client:
 
     let res = contract
         .call(&worker, "init")
-        .args_json(json!({"map_light_client": map_light_client,
+        .args_json(json!({"owner": contract.id(),
+            "map_light_client": map_light_client,
             "map_bridge_address":map_bridge_address,
             "wrapped_token": wrapped_token,
             "near_chain_id": 1313161555}))?

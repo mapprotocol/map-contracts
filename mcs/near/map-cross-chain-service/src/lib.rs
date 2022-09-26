@@ -4,13 +4,14 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::collections::{UnorderedMap, UnorderedSet};
 use near_sdk::json_types::{Base64VecU8, U128};
-use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Gas, PanicOnDefault, Promise, PublicKey, PromiseOrValue, PromiseResult, CryptoHash, log};
+use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Gas, PanicOnDefault, Promise, PromiseOrValue, PromiseResult, CryptoHash, log};
 use event::*;
 use prover::*;
 use near_contract_standards::fungible_token::metadata::FungibleTokenMetadata;
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_contract_standards::storage_management::{StorageBalance, StorageBalanceBounds};
 use near_sdk::env::panic_str;
+use near_sdk::serde_json::json;
 use map_light_client::proof::ReceiptProof;
 use crate::ChainType::{EvmChain, Unknown};
 
@@ -83,8 +84,7 @@ const VERIFY_LOG_ENTRY_GAS: Gas = Gas(40_000_000_000_000);
 /// the gas consumed by the promise.
 const OUTER_SET_METADATA_GAS: Gas = Gas(15_000_000_000_000);
 
-/// Controller storage key.
-const CONTROLLER_STORAGE_KEY: &[u8] = b"aCONTROLLER";
+const GAS_FOR_UPGRADE_SELF_DEPLOY: Gas = Gas(15_000_000_000_000);
 
 const TRANSFER_OUT_TYPE: &str = "2ef1cdf83614a69568ed2c96a275dd7fb2e63a464aa3a0ffe79f55d538c8b3b5";
 const DEPOSIT_OUT_TYPE: &str = "150bd848adaf4e3e699dcac82d75f111c078ce893375373593cc1b9208998377";
@@ -128,8 +128,8 @@ pub struct MapCrossChainService {
     pub chain_id_type_map: UnorderedMap<u128, ChainType>,
     /// Hashes of the events that were already used.
     pub used_events: UnorderedSet<CryptoHash>,
-    /// Public key of the account deploying the MCS contract.
-    pub owner_pk: PublicKey,
+    /// Account of the owner
+    pub owner: AccountId,
     /// Balance required to register a new account in the MCSToken
     pub mcs_storage_transfer_in_required: Balance,
     // Wrap token for near
@@ -193,7 +193,7 @@ impl MapCrossChainService {
     /// `map_bridge_address`: the address of the MCS contract on MAP blockchain, in hex.
     /// `wrapped_token`: the wrap near contract account id
     /// `near_chain_id`: the chain id of the near blockchain
-    pub fn init(map_light_client: String, map_bridge_address: String, wrapped_token: String, near_chain_id: u128) -> Promise {
+    pub fn init(owner: AccountId, map_light_client: String, map_bridge_address: String, wrapped_token: String, near_chain_id: u128) -> Promise {
         assert!(!env::state_exists(), "Already initialized");
 
         let storage_balance = near_contract_standards::fungible_token::FungibleToken::new(b"t".to_vec())
@@ -205,10 +205,10 @@ impl MapCrossChainService {
             .storage_deposit(Some(env::current_account_id()), Some(true))
             .then(Self::ext(env::current_account_id())
                 .with_static_gas(FINISH_INIT_GAS)
-                .finish_init(map_light_client, map_bridge_address, wrapped_token, near_chain_id, storage_balance))
+                .finish_init(owner, map_light_client, map_bridge_address, wrapped_token, near_chain_id, storage_balance))
     }
     #[init]
-    pub fn finish_init(map_light_client: String, map_bridge_address: String, wrapped_token: String, near_chain_id: u128, storage_balance: u128) -> Self {
+    pub fn finish_init(owner: AccountId, map_light_client: String, map_bridge_address: String, wrapped_token: String, near_chain_id: u128, storage_balance: u128) -> Self {
         assert_self();
         assert_eq!(env::promise_results_count(), 1, "ERR_TOO_MANY_RESULTS");
         let _balance = match env::promise_result(0) {
@@ -226,7 +226,7 @@ impl MapCrossChainService {
             native_to_chains: Default::default(),
             chain_id_type_map: UnorderedMap::new(b"c".to_vec()),
             used_events: UnorderedSet::new(b"u".to_vec()),
-            owner_pk: env::signer_account_pk(),
+            owner,
             mcs_storage_transfer_in_required: storage_balance,
             wrapped_token,
             near_chain_id,  // 1313161555 for testnet
@@ -562,11 +562,13 @@ impl MapCrossChainService {
         Promise::new(address.parse().unwrap())
             .create_account()
             .transfer(MCS_TOKEN_INIT_BALANCE)
-            .add_full_access_key(self.owner_pk.clone())
             .deploy_contract(MCS_TOKEN_BINARY.to_vec())
             .function_call(
                 "new".to_string(),
-                b"{}".to_vec(),
+                json!({ "owner": self.owner})
+                    .to_string()
+                    .as_bytes()
+                    .to_vec(),
                 NO_DEPOSIT,
                 MCS_TOKEN_NEW,
             ).then(
@@ -623,7 +625,7 @@ impl MapCrossChainService {
         decimals: Option<u8>,
         icon: Option<String>,
     ) -> Promise {
-        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
         assert!(self.mcs_tokens.get(&address).is_some(), "token {} is not mcs token", address);
 
         if let Some(value) = decimals {
@@ -654,25 +656,12 @@ impl MapCrossChainService {
         assert!(amount >= min_amount as Balance, "amount too small, min amount for {} is {}", token, min_amount);
     }
 
-    /// Factory Controller. Controller has extra privileges inside this contract.
-    pub fn controller(&self) -> Option<AccountId> {
-        env::storage_read(CONTROLLER_STORAGE_KEY)
-            .map(|value| String::from_utf8(value).expect("Invalid controller account id").parse().unwrap())
+    pub fn owner(&self) -> AccountId {
+        self.owner.clone()
     }
 
-    pub fn set_controller(&mut self, controller: AccountId) {
-        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
-        assert!(env::is_valid_account_id(controller.as_bytes()), "invalid account id {}", controller);
-        env::storage_write(CONTROLLER_STORAGE_KEY, controller.as_bytes());
-    }
-
-    pub fn controller_or_self(&self) -> bool {
-        let caller = env::predecessor_account_id();
-        caller == env::current_account_id()
-            || self
-            .controller()
-            .map(|controller| controller == caller)
-            .unwrap_or(false)
+    fn is_owner(&self) -> bool {
+        env::predecessor_account_id() == self.owner
     }
 
     /// Return all registered mcs tokens
@@ -691,13 +680,13 @@ impl MapCrossChainService {
     }
 
     pub fn add_native_to_chain(&mut self, to_chain: u128) {
-        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
 
         self.native_to_chains.insert(to_chain);
     }
 
     pub fn remove_native_to_chain(&mut self, to_chain: u128) {
-        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
 
         self.native_to_chains.remove(&to_chain);
     }
@@ -713,7 +702,7 @@ impl MapCrossChainService {
     }
 
     pub fn add_fungible_token_to_chain(&mut self, token: String, to_chain: u128) -> PromiseOrValue<()> {
-        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
         assert!(self.mcs_tokens.get(&token).is_none(), "token name {} exists in mcs token", token);
 
         if self.fungible_tokens_storage_balance.get(&token).is_none() {
@@ -783,7 +772,7 @@ impl MapCrossChainService {
     }
 
     pub fn remove_fungible_token_to_chain(&mut self, token: String, to_chain: u128) {
-        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
 
         let mut to_chain_set = self.fungible_tokens.get(&token).expect(format!("token {} is not supported", token).as_str());
         to_chain_set.remove(&to_chain);
@@ -805,7 +794,7 @@ impl MapCrossChainService {
     }
 
     pub fn add_mcs_token_to_chain(&mut self, token: String, to_chain: u128) {
-        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
 
         let mut to_chain_set = self.mcs_tokens.get(&token).expect(format!("token {} is not supported", token).as_str());
         to_chain_set.insert(to_chain);
@@ -813,7 +802,7 @@ impl MapCrossChainService {
     }
 
     pub fn remove_mcs_token_to_chain(&mut self, token: String, to_chain: u128) {
-        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
 
         let mut to_chain_set = self.mcs_tokens.get(&token).expect(format!("token {} is not supported", token).as_str());
         to_chain_set.remove(&to_chain);
@@ -821,7 +810,7 @@ impl MapCrossChainService {
     }
 
     pub fn set_chain_type(&mut self, chain_id: u128, chain_type: ChainType) {
-        assert!(self.controller_or_self(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
 
         self.chain_id_type_map.insert(&chain_id, &chain_type);
     }
@@ -869,6 +858,21 @@ impl MapCrossChainService {
                 panic_str(&*format!("unknown chain type for chain {}", chain_id))
             }
         }
+    }
+
+    pub fn upgrade_self(&mut self, code: Base64VecU8) {
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
+
+        let current_id = env::current_account_id();
+        let promise_id = env::promise_batch_create(&current_id);
+        env::promise_batch_action_deploy_contract(promise_id, &code.0);
+        env::promise_batch_action_function_call(
+            promise_id,
+            "migrate",
+            &[],
+            NO_DEPOSIT,
+            env::prepaid_gas() - env::used_gas() - GAS_FOR_UPGRADE_SELF_DEPLOY,
+        );
     }
 }
 

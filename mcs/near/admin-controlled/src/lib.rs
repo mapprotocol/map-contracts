@@ -1,15 +1,9 @@
 pub mod macros;
 pub use macros::*;
 
-use near_sdk::env;
-
 pub type Mask = u128;
 
 pub trait AdminControlled {
-    fn is_owner(&self) -> bool {
-        env::current_account_id() == env::predecessor_account_id()
-    }
-
     /// Return the current mask representing all paused events.
     fn get_paused(&self) -> Mask;
 

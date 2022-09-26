@@ -3,9 +3,10 @@ mod traits;
 mod macros;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen, PanicOnDefault};
+use near_sdk::{AccountId, env, Gas, near_bindgen, PanicOnDefault, Promise};
 use num_bigint::BigInt as Integer;
 use hex::FromHex;
+use near_sdk::json_types::Base64VecU8;
 use near_sdk::serde::{Serialize, ser::{Serializer}, Deserialize, de::Deserializer};
 use near_sdk::serde::de::Error;
 use crate::traits::FromBytes;
@@ -39,6 +40,8 @@ pub type Bloom = [u8; BLOOM_BYTE_LENGTH];
 
 /// Nonce represents a 64 bit nonce
 pub type Nonce = [u8; NONCE_LENGTH];
+
+const GAS_FOR_UPGRADE_SELF_DEPLOY: Gas = Gas(15_000_000_000_000);
 
 /// Header contains block metadata in Celo Blockchain
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -197,6 +200,20 @@ impl MapLightClient {
         }
     }
 
+    /// Should only be called by this contract on migration.
+    /// This is NOOP implementation. KEEP IT if you haven't changed contract state.
+    /// If you have changed state, you need to implement migration from old state (keep the old struct with different name to deserialize it first).
+    /// After migrate goes live on MainNet, return this implementation for next updates.
+    #[private]
+    #[init(ignore_state)]
+    pub fn migrate() -> Self {
+        // let this: MapLightClient = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
+        // this
+        Self {
+            value: true
+        }
+    }
+
     pub fn initialized() -> bool {
         env::state_read::<MapLightClient>().is_some()
     }
@@ -207,5 +224,23 @@ impl MapLightClient {
 
     pub fn verify_proof_data(&self, receipt_proof: ReceiptProof) {
         assert!(self.value);
+    }
+
+    pub fn upgrade_self(&mut self, code: Base64VecU8) {
+        let current_id = env::current_account_id();
+        let promise_id = env::promise_batch_create(&current_id);
+        env::promise_batch_action_deploy_contract(promise_id, &code.0);
+        env::promise_batch_action_function_call(
+            promise_id,
+            "migrate",
+            &[],
+            0,
+            env::prepaid_gas() - env::used_gas() - GAS_FOR_UPGRADE_SELF_DEPLOY,
+        );
+    }
+
+    pub fn delete_self(beneficiary: AccountId){
+        Promise::new(env::current_account_id())
+            .delete_account(beneficiary);
     }
 }

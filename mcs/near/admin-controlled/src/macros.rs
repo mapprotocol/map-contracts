@@ -2,7 +2,6 @@
 macro_rules! impl_admin_controlled {
     ($contract: ident, $paused: ident) => {
         use admin_controlled::{AdminControlled as AdminControlledInner, Mask as MaskInner};
-        use near_sdk as near_sdk_inner;
 
         #[near_bindgen]
         impl AdminControlledInner for $contract {
@@ -11,7 +10,7 @@ macro_rules! impl_admin_controlled {
             }
 
             fn set_paused(&mut self, paused: MaskInner) {
-                near_sdk_inner::assert_self();
+                assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
                 self.$paused = paused;
             }
         }
