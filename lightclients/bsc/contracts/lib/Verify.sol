@@ -106,7 +106,7 @@ library Verify {
             }
         }
 
-        if (header.difficulty != 2) {
+        if (header.difficulty != 2 && header.difficulty != 1) {
             return false;
         }
 
