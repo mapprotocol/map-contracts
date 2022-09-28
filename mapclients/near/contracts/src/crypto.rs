@@ -7,16 +7,13 @@ use near_sdk::serde_json;
 use crate::types::istanbul::{IstanbulAggregatedSeal, IstanbulMsg, G1_PUBLIC_KEY_LENGTH};
 use crate::types::header::Hash;
 use num_bigint::{BigInt as Integer, BigInt, Sign};
-use num_traits::{Num, One};
 use crate::serialization::rlp::big_int_to_rlp_compat_bytes;
+use crate::hash::{hash_to_g1, prime};
 
 
 const ALT_BN128_REGISTER: u64 = 1;
 pub const REGISTER_EXPECTED_ERR: &str =
     "Register was expected to have data because we just wrote it into it.";
-
-const ORDER: &str = "30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001";
-const PRIME: &str = "30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47";
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -71,10 +68,19 @@ impl G1 {
         Err(())
     }
 
+    pub fn from(x: &BigInt, y: &BigInt) -> Self {
+        let x = integer_to_vec_32(&x, true);
+        let y = integer_to_vec_32(&y, true);
+
+        Self {
+            x: <[u8; 32]>::try_from(x).unwrap(),
+            y: <[u8; 32]>::try_from(y).unwrap(),
+        }
+    }
+
     pub fn neg(&self) -> Self {
         let y = Integer::from_bytes_be(Sign::Plus, self.y.as_slice());
-        let prime = Integer::from_bytes_be(Sign::Plus, hex::decode(PRIME).unwrap().as_slice());
-        let neg_y = prime.sub(&y);
+        let neg_y = prime().sub(&y);
 
         let neg_y_bytes = integer_to_vec_32(&neg_y, true);
 
@@ -85,7 +91,7 @@ impl G1 {
     }
 }
 
-fn integer_to_vec_32(i: &BigInt, be: bool) -> Vec<u8> {
+pub(crate) fn integer_to_vec_32(i: &BigInt, be: bool) -> Vec<u8> {
     let mut bytes: Vec<u8> = if be { i.to_signed_bytes_be() } else { i.to_signed_bytes_le() };
     if bytes.len() < 32 {
         let mut res: Vec<u8> = vec![0; 32 - bytes.len()];
@@ -116,7 +122,7 @@ fn get_g2() -> G2 {
     ).unwrap()
 }
 
-pub fn sum_points<'a>(points: &'a Vec<G1>, bitmap: &'a Integer) -> Result<G1, &'a str> {
+pub fn sum_points<'a>(points: &'a Vec<G1>, bitmap: &'a Integer) -> G1 {
     let filtered: Vec<Vec<u8>> = points
         .iter()
         .enumerate()
@@ -124,11 +130,10 @@ pub fn sum_points<'a>(points: &'a Vec<G1>, bitmap: &'a Integer) -> Result<G1, &'
         .map(|(_, v)| [&[0], to_le_bytes(&v.x).as_ref(), to_le_bytes(&v.y).as_ref()].concat())
         .collect();
 
-    if filtered.is_empty() {
-        return Err("no g1 point to sum");
-    } else if filtered.len() == 1 {
+    assert!(!filtered.is_empty(), "no g1 point to sum");
+    if filtered.len() == 1 {
         let slice = filtered[0].as_slice();
-        return Ok(G1::from_le_slice(&slice[1..]).expect(format!("{:?}", filtered).as_str()));
+        return G1::from_le_slice(&slice[1..]).unwrap();
     }
 
     let buf = filtered.concat();
@@ -138,15 +143,13 @@ pub fn sum_points<'a>(points: &'a Vec<G1>, bitmap: &'a Integer) -> Result<G1, &'
     }
 
     let res = env::read_register(ALT_BN128_REGISTER).expect(REGISTER_EXPECTED_ERR);
-    if res.len() != G1_PUBLIC_KEY_LENGTH {
-        return Err("alt_bn128_g1_sum get invalid result");
-    }
+    assert_eq!(G1_PUBLIC_KEY_LENGTH, res.len(), "result of alt_bn128_g1_sum get invalid length: {}", res.len());
 
-    Ok(G1::from_le_slice(res.as_slice()).unwrap())
+    G1::from_le_slice(res.as_slice()).unwrap()
 }
 
 pub fn check_aggregated_g2_pub_key(points: &Vec<G1>, bitmap: &Integer, agg_g2_pk: &G2) -> bool {
-    let g1_pk_sum = sum_points(points, bitmap).unwrap();
+    let g1_pk_sum = sum_points(points, bitmap);
     let g2 = get_g2();
     let g1 = get_g1();
     let buf = pack_points(&g1_pk_sum, &g2, &g1.neg(), agg_g2_pk);
@@ -163,7 +166,7 @@ pub fn check_sealed_signature(agg_seal: &IstanbulAggregatedSeal, hash: &Hash, ag
     let sig_on_g1 = G1::from_slice(agg_seal.signature.as_slice()).unwrap();
     let g2 = get_g2();
     let proposal_seal = prepare_commited_seal(*hash, &agg_seal.round);
-    let hash_to_g1 = hash_to_g1(proposal_seal);
+    let hash_to_g1 = hash_to_g1(&proposal_seal);
 
     let buf = pack_points(&sig_on_g1, &g2, &hash_to_g1.neg(), agg_g2_pk);
 
@@ -175,27 +178,7 @@ pub fn check_sealed_signature(agg_seal: &IstanbulAggregatedSeal, hash: &Hash, ag
     res == 1
 }
 
-fn hash_to_g1(msg: Vec<u8>) -> G1 {
-    let h = Integer::from_bytes_be(Sign::Plus, env::keccak256(msg.as_slice()).as_slice());
-    let scalar = h.modpow(&Integer::one(), &Integer::from_str_radix(ORDER, 16).unwrap());
-    let g1 = get_g1();
-
-    let buf: Vec<u8> = [
-        &to_le_bytes(&g1.x),
-        &to_le_bytes(&g1.y),
-        integer_to_vec_32(&scalar, false).as_slice()].concat();
-
-    unsafe {
-        near_sys::alt_bn128_g1_multiexp(buf.len() as _, buf.as_ptr() as _, ALT_BN128_REGISTER);
-    }
-
-    let res = env::read_register(ALT_BN128_REGISTER).expect(REGISTER_EXPECTED_ERR);
-    assert_eq!(64, res.len(), "G1 multiexp get invalid result");
-
-    G1::from_le_slice(res.as_slice()).unwrap()
-}
-
-fn pack_points(p0: &G1, p1: &G2, p2: &G1, p3: &G2) -> Vec<u8> {
+pub(crate) fn pack_points(p0: &G1, p1: &G2, p2: &G1, p3: &G2) -> Vec<u8> {
     [
         to_le_bytes(&p0.x),
         to_le_bytes(&p0.y),

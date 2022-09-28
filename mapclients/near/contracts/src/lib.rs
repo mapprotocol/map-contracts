@@ -8,6 +8,7 @@ pub use serialization::*;
 mod crypto;
 mod macros;
 pub mod traits;
+mod hash;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::{AccountId, env, log, near_bindgen, PanicOnDefault, serde_json};
