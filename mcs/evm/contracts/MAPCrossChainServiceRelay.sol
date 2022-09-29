@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -13,7 +14,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./interface/IFeeCenter.sol";
-import "./utils/Role.sol";
 import "./interface/IVault.sol";
 import "./utils/TransferHelper.sol";
 import "./interface/IMCSRelay.sol";
@@ -21,8 +21,7 @@ import "./utils/RLPReader.sol";
 import "./interface/ITokenRegister.sol";
 import "./interface/ILightClientManager.sol";
 
-
-contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Pausable, IMCSRelay {
+contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, IMCSRelay,UUPSUpgradeable {
     using SafeMath for uint;
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
@@ -38,6 +37,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     address public wToken;        // native wrapped token
 
     uint public immutable selfChainId = block.chainid;
+    uint public nearChainId;
 
     // mapping(bytes32 => address) public tokenRegister;
     //Gas transfer fee charged by the target chain
@@ -76,6 +76,14 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         bytes to_chain_token;
     }
 
+    struct nearDepositOutEvent {
+        bytes token;
+        bytes from;
+        bytes order_id;
+        bytes to;
+        uint256 amount;
+    }
+
     event mapTransferOut(bytes token, bytes from, bytes32 orderId,
         uint256 fromChain, uint256 toChain, bytes to, uint256 amount, bytes toChainToken);
 
@@ -96,11 +104,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         mapToken = IERC20(_mapToken);
         lightClientManager = ILightClientManager(_managerAddress);
         mapTransferOutTopic = keccak256(bytes('mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)'));
-        mapDepositOutTopic = keccak256(bytes('mapDepositOut(bytes,address,bytes,bytes32,uint256)'));
+        mapDepositOutTopic = keccak256(bytes('mapDepositOut(address,bytes,bytes32,address,uint256)'));
         nearTransferOut = 0x4e87426fdd31a6df84975ed344b2c3fbd45109085f1557dff1156b300f135df8;
-        nearDepositOut = '';
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(MANAGER_ROLE, msg.sender);
+        nearDepositOut = 0x3ad224e3e42a516df08d1fca74990eac30205afb5287a46132a6975ce0b2cede;
+        _changeAdmin(msg.sender);
     }
 
     receive() external payable {
@@ -114,39 +121,40 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         _;
     }
 
-    function setVaultBalance(uint256 tochain, address token, uint256 amount) external onlyManager {
+    modifier onlyOwner() {
+        require(msg.sender == _getAdmin(), "lightnode :: only admin");
+        _;
+    }
+
+    function setVaultBalance(uint256 tochain, address token, uint256 amount) external onlyOwner {
         vaultBalance[tochain][token] = amount;
     }
 
-    function setTokenRegister(address _register) external onlyManager {
+    function setTokenRegister(address _register) external onlyOwner {
         tokenRegister = ITokenRegister(_register);
     }
 
-    function setLightClientManager(address _managerAddress) external onlyManager {
+    function setLightClientManager(address _managerAddress) external onlyOwner {
         lightClientManager = ILightClientManager(_managerAddress);
     }
 
-    function setBridageAddress(uint256 _chainId, bytes memory _addr) external onlyManager {
+    function setBridageAddress(uint256 _chainId, bytes memory _addr) external onlyOwner {
         bridgeAddress[_addr] = _chainId;
     }
 
-    function setIdTable(uint256 _chainId, uint256 _id) external onlyManager {
+    function setIdTable(uint256 _chainId, uint256 _id) external onlyOwner {
         ChainIdTable[_id] = _chainId;
     }
 
-    function setNearHash(bytes32 _hash) external onlyManager {
-        nearTransferOut = _hash;
-    }
-
-    function setPause() external onlyManager {
+    function setPause() external onlyOwner {
         _pause();
     }
 
-    function setUnpause() external onlyManager {
+    function setUnpause() external onlyOwner {
         _unpause();
     }
 
-    function setTokenOtherChainDecimals(bytes memory selfToken, uint256 chainId, uint256 decimals) external onlyManager {
+    function setTokenOtherChainDecimals(bytes memory selfToken, uint256 chainId, uint256 decimals) external onlyOwner {
         tokenOtherChainDecimals[selfToken][chainId] = decimals;
     }
 
@@ -154,17 +162,17 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
 
-    function setFeeCenter(address fee) external onlyManager {
+    function setFeeCenter(address fee) external onlyOwner {
         feeCenter = IFeeCenter(fee);
     }
 
-    function addAuthToken(address[] memory token) external onlyManager {
+    function addAuthToken(address[] memory token) external onlyOwner {
         for (uint256 i = 0; i < token.length; i++) {
             authToken[token[i]] = true;
         }
     }
 
-    function removeAuthToken(address[] memory token) external onlyManager {
+    function removeAuthToken(address[] memory token) external onlyOwner {
         for (uint256 i = 0; i < token.length; i++) {
             authToken[token[i]] = false;
         }
@@ -180,7 +188,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
     function getToChainAmount(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
-    internal view returns (uint256){
+    public view returns (uint256){
         uint256 decimalsFrom = tokenOtherChainDecimals[token][fromChain];
         uint256 decimalsTo = tokenOtherChainDecimals[token][toChain];
         return amount.mul(10 ** decimalsTo).div(10 ** decimalsFrom);
@@ -189,6 +197,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     function getToChainAmountOther(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
     internal view returns (uint256){
         bytes memory tokenMap = getMapToken(token, fromChain);
+        require(tokenMap.length > 0,"Token no register");
         return getToChainAmount(tokenMap, fromChain, toChain, amount);
     }
 
@@ -237,12 +246,14 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         return feeCenter.getTokenFee(toChainId, token, amount);
     }
 
+    function setChainId(uint256 _id) public onlyOwner {
+        require(_id > 0,"id error");
+        nearChainId = _id;
+    }
 
     function transferIn(uint256 chainId, bytes memory receiptProof) external override {
         (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(chainId, receiptProof);
         require(sucess, message);
-        //near
-
         if (chainId == ChainIdTable[1]) {
             (bytes memory mcsContract,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
             require(bridgeAddress[mcsContract] > 0, "Illegal across the chain");
@@ -257,9 +268,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
                     bytes32(_outEvent.order_id), _outEvent.from_chain, _outEvent.to_chain, toChainToken);
             }
         } else {
-
             txLog[] memory logs = decodeTxLog(logArray);
-
             for (uint256 i = 0; i < logs.length; i++) {
                 txLog memory log = logs[i];
                 bytes32 topic = abi.decode(log.topics[0], (bytes32));
@@ -291,9 +300,14 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     function transferOutToken(address token, bytes memory to, uint256 amount, uint256 toChainId) external override whenNotPaused {
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
+        if(toChainId == nearChainId){
+            require(to.length >=2 || to.length <= 64,"near address error");
+        }else {
+            require(to.length == 20,"address error");
+        }
         TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         uint256 fee = getChainFee(toChainId, token, amount);
-        uint256 outAmount = amount.sub(fee);
+        uint256 outAmount = amount.sub(fee,"sub error");
         if (checkAuthToken(token)) {
             IMAPToken(token).burn(outAmount);
         }
@@ -307,6 +321,11 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
     function transferOutNative(bytes memory to, uint256 toChainId) external override payable whenNotPaused {
+        if(toChainId == nearChainId){
+            require(to.length >=2 || to.length <= 64,"near address error");
+        }else {
+            require(to.length == 20,"address error");
+        }
         uint256 amount = msg.value;
         require(amount > 0, "value too low");
         IWToken(wToken).deposit{value : amount}();
@@ -364,19 +383,27 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
         if (_fromChain == ChainIdTable[1]) {
             //todo will near
+            (bytes memory mcsContract,nearDepositOutEvent memory _outEvent) = decodeNearDepositLog(logArray);
+            require(bridgeAddress[mcsContract] > 0, "Illegal across the chain");
+            uint256 fromChain = _fromChain;
+            bytes memory toChainToken = tokenRegister.getTargetToken(fromChain, _outEvent.token,selfChainId);
+            uint256 outAmount = getToChainAmountOther(_outEvent.token,fromChain, selfChainId, _outEvent.amount);
+            address payable toAddress = payable(_bytesToAddress(_outEvent.to));
+            _depositIn(_bytesToAddress(toChainToken), _outEvent.from, toAddress, outAmount,bytes32(_outEvent.order_id), fromChain);
         } else {
             txLog[] memory logs = decodeTxLog(logArray);
 
             for (uint256 i = 0; i < logs.length; i++) {
                 if (abi.decode(logs[i].topics[0], (bytes32)) == mapDepositOutTopic) {
                     require(bridgeAddress[_addressToBytes(logs[i].addr)] > 0, "Illegal across the chain");
-                    (address fromToken, bytes memory from,address to,bytes32 orderId,uint256 amount)
-                    = abi.decode(logs[i].data, (address, bytes, address, bytes32, uint256));
+                    (address fromToken, bytes memory from,bytes32 orderId,address to,uint256 amount)
+                    = abi.decode(logs[i].data, (address, bytes,bytes32, address,  uint256));
                     uint256 fromChain = _fromChain;
                     bytes memory _fromBytes = _addressToBytes(fromToken);
+                    uint256 outAmount = getToChainAmountOther(_fromBytes, fromChain, selfChainId, amount);
                     _fromBytes = tokenRegister.getTargetToken(fromChain, _fromBytes, selfChainId);
                     address token = _bytesToAddress(_fromBytes);
-                    _depositIn(token, from, payable(to), amount, orderId, fromChain);
+                    _depositIn(token, from, payable(to), outAmount, orderId, fromChain);
                 }
             }
         }
@@ -401,10 +428,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
 
-    function withdraw(address token, address payable receiver, uint256 amount) public onlyManager {
+    function withdraw(address token, address payable receiver, uint256 amount) public onlyOwner {
         if (token == address(0)) {
-            IWToken(wToken).withdraw(amount);
-            receiver.transfer(amount);
+            TransferHelper.safeWithdraw(wToken, amount);
+            TransferHelper.safeTransferETH(receiver, amount);
         } else {
             TransferHelper.safeTransfer(token, receiver, amount);
         }
@@ -477,6 +504,41 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
 
     }
 
+    function decodeNearDepositLog(bytes memory logsHash)
+    public
+    view
+    returns (bytes memory executorId, nearDepositOutEvent memory _outEvent){
+        RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
+
+        executorId = ls[0].toBytes();
+
+        bytes[] memory logs = new bytes[](ls[1].toList().length);
+        for (uint256 i = 0; i < ls[1].toList().length; i++) {
+
+            logs[i] = ls[1].toList()[i].toBytes();
+
+        }
+        bytes memory log;
+        for (uint256 i = 0; i < logs.length; i++) {
+
+            (bytes memory temp) = splitExtra(logs[i]);
+            if (keccak256(temp) == nearDepositOut) {
+                log = hexStrToBytes(logs[i]);
+            }
+        }
+
+        RLPReader.RLPItem[] memory logList = log.toRlpItem().toList();
+
+        _outEvent = nearDepositOutEvent({
+        token : logList[0].toBytes(),
+        from : logList[1].toBytes(),
+        order_id : logList[2].toBytes(),
+        to : logList[3].toBytes(),
+        amount : logList[4].toUint()
+        });
+
+    }
+
 
     function hexStrToBytes(bytes memory _hexStr)
     internal
@@ -543,20 +605,39 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         return bytes_array;
     }
 
-
     function splitExtra(bytes memory extra)
     internal
     pure
     returns (bytes memory newExtra){
+        require(extra.length >= 64,"Invalid extra result type");
         newExtra = new bytes(64);
-        uint256 n = 0;
-        for (uint256 i = 0; i < extra.length; i++) {
-            if (i < 64) {
-                newExtra[n] = extra[i];
-            }
-            n = n + 1;
+        for (uint256 i = 0; i < 64; i++) {
+            newExtra[i] = extra[i];
         }
     }
+
+    /** UUPS *********************************************************/
+    function _authorizeUpgrade(address)
+    internal
+    view
+    override {
+        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
+    }
+
+    function changeAdmin(address _admin) public onlyOwner {
+        require(_admin != address(0), "zero address");
+
+        _changeAdmin(_admin);
+    }
+
+    function getAdmin() external view returns (address) {
+        return _getAdmin();
+    }
+
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
+    }
+
 
 
 }
