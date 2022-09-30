@@ -8,6 +8,7 @@ pub use serialization::*;
 mod crypto;
 mod macros;
 pub mod traits;
+mod hash;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::{AccountId, env, log, near_bindgen, PanicOnDefault, serde_json};
@@ -112,7 +113,7 @@ impl MapLightClient {
 
         self.header_height = block_num;
 
-        log!("block header {} is updated for the next epoch {}", block_num, epoch + 1)
+        log!("block header {} is updated for the next epoch {} by {}", block_num, epoch + 1, env::signer_account_id())
     }
 
     pub fn verify_proof_data(&self, receipt_proof: ReceiptProof) {
