@@ -113,7 +113,7 @@ impl MapLightClient {
 
         self.header_height = block_num;
 
-        log!("block header {} is updated for the next epoch {}", block_num, epoch + 1)
+        log!("block header {} is updated for the next epoch {} by {}", block_num, epoch + 1, env::signer_account_id())
     }
 
     pub fn verify_proof_data(&self, receipt_proof: ReceiptProof) {
