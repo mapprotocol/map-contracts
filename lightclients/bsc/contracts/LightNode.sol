@@ -134,7 +134,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
         require(headers.length >= min, "not enough");
 
-        success = verifyBlockHeaders(headers);
+        success = verifyBlockHeaders(headers,min);
 
         if (!success) {
             message = "invalid proof blocks";
@@ -172,7 +172,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         require(_blockHeaders.length >= min, "not enough");
 
-        require(verifyBlockHeaders(_blockHeaders), "blocks verify fail");
+        require(verifyBlockHeaders(_blockHeaders,min), "blocks verify fail");
 
         validators[lastSyncedBlock] = Verify.getValidators(
             _blockHeaders[0].extraData
@@ -181,7 +181,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         emit UpdateBlockHeader(_blockHeaders[0].number);
     }
 
-    function verifyBlockHeaders(Verify.BlockHeader[] memory _blockHeaders)
+    function verifyBlockHeaders(Verify.BlockHeader[] memory _blockHeaders,uint256 min)
         internal
         view
         returns (bool)
@@ -198,7 +198,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         bytes memory _validators;
 
-        for (uint256 i = 0; i < _blockHeaders.length; i++) {
+        for (uint256 i = 0; i < min; i++) {
             require(
                 _blockHeaders[i].number == start + i,
                 "invalid bolck number"
@@ -306,7 +306,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return
             lastSyncedBlock +
             epochNum +
-            (validators[lastSyncedBlock - epochNum].length / 40);
+            (validators[lastSyncedBlock].length / 40);
     }
 
     /** UUPS *********************************************************/
