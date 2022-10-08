@@ -35,7 +35,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         _;
     }
 
-    event UpdateBlockHeader(uint256 blockHeight);
 
     constructor(
         uint256 _chainId,
@@ -178,7 +177,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             _blockHeaders[0].extraData
         );
 
-        emit UpdateBlockHeader(_blockHeaders[0].number);
+        emit UpdateBlockHeader(tx.origin,_blockHeaders[0].number);
     }
 
     function verifyBlockHeaders(Verify.BlockHeader[] memory _blockHeaders,uint256 min)
