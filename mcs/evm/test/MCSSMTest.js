@@ -4,6 +4,7 @@ const mcsData = require('./mcsData');
 require("solidity-coverage");
 const { BigNumber, BytesLike, Contract, ContractTransaction } = require("ethers");
 const {weiToHumanReadableString} = require("hardhat/internal/util/wei-values");
+const {address} = require("hardhat/internal/core/config/config-validation");
 
 describe("MAPCrossChainService start test", function () {
 
@@ -21,10 +22,17 @@ describe("MAPCrossChainService start test", function () {
     let StandardToken;
     let standardToken;
 
-    let standardEthToken;
-    let mapTokenEthToken;
-    let wethEthToken;
+    let UToken;
+    let usdt;
 
+    let WETH;
+    let weth;
+
+    let LightNode;
+    let lightNode;
+
+
+    let initData;
 
     let address2Bytes;
 
@@ -41,10 +49,32 @@ describe("MAPCrossChainService start test", function () {
         mcss = await MCSS.deploy();
         console.log("mcss address:",mcss.address);
         StandardToken = await ethers.getContractFactory("StandardToken");
-
         standardToken = await  StandardToken.deploy("MapToken","MP");
+        console.log("StandardToken:",standardToken.address);
 
-        await mcss.initialize(mcsData.weth,standardToken.address,mcsData.lightnode);
+        UToken = await ethers.getContractFactory("StandardToken");
+        usdt = await  UToken.deploy("U Toeken","USDT");
+        console.log("UToken:",usdt.address);
+
+        WETH = await ethers.getContractFactory("WETH9");
+        weth = await  WETH.deploy();
+        console.log("WETH:",weth.address);
+
+        LightNode = await ethers.getContractFactory("LightNode");
+        lightNode = await  LightNode.deploy();
+
+        let data  = await mcss.initialize(weth.address,standardToken.address,lightNode.address);
+
+        initData = data.data;
+
+    });
+
+    it('UUPS test', async function () {
+        const MapCrossChainServiceProxy = await ethers.getContractFactory("MapCrossChainServiceProxy");
+        let mcssp = await MapCrossChainServiceProxy.deploy(mcss.address,initData);
+        await mcssp.deployed()
+
+        mcss = MCSS.connect(deployer).attach(mcssp.address);
 
     });
 
@@ -90,83 +120,141 @@ describe("MAPCrossChainService start test", function () {
     });
 
     it('map transferIn test ', async function () {
-        standardEthToken = await ethers.getContractAt("StandardToken",mcsData.standardToken);
-        mapTokenEthToken = await ethers.getContractAt("StandardToken",mcsData.mapToken);
-        wethEthToken = await ethers.getContractAt("StandardToken",mcsData.weth);
-
-        expect(await standardEthToken.totalSupply()).to.equal("100000000000000000001300000000000000000");
-
-        await mcss.addAuthToken([mcsData.standardToken]);
-
-        //
-        // expect(await mcss.checkAuthToken(mcsData.standardToken)).to.equal(true);
-        console.log(await mcss.authToken(mcsData.standardToken));
-        console.log(await standardEthToken.balanceOf(mcss.address));
+        await mcss.addAuthToken([standardToken.address]);
 
         await mcss.transferIn(212,mcsData.map2ethStandardToken);
 
-        expect(await standardEthToken.totalSupply()).to.equal("200000000000000000001300000000000000000");
+        expect(await standardToken.totalSupply()).to.equal("99900000100000000000000000");
 
-        //balance 200000000000000000000
-        console.log(await mapTokenEthToken.balanceOf(mcss.address));
+        expect(await usdt.balanceOf(mcss.address)).to.equal("0");
 
-        // mcs value mapToken 196000000000000000000
-        await mcss.transferIn(212,mcsData.map2ethMapToken);
+        await mcss.transferIn(212,mcsData.map2ethMapToken0);
 
-        expect(await mapTokenEthToken.balanceOf(mcss.address)).to.equal("4000000000000000000");
+        expect(await standardToken.totalSupply()).to.equal("99900000100000000000000000");
+        expect(await usdt.balanceOf(mcss.address)).to.equal("0");
 
-        console.log(await wethEthToken.balanceOf(mcss.address));
+        await weth.deposit({value:"300000000000000000"});
+        await weth.transfer(mcss.address,"300000000000000000");
 
         await mcss.transferIn(212,mcsData.map2ethNative);
 
-        expect(await wethEthToken.balanceOf(mcss.address)).to.equal("150000000000000000");
+        expect(await weth.balanceOf(mcss.address)).to.equal("0");
 
+        await usdt.mint(mcss.address,"5000000000000000000")
+
+        await mcss.transferIn(212,mcsData.map2ethMapToken);
+        expect(await usdt.balanceOf(mcss.address)).to.equal("0");
+        expect(await usdt.totalSupply()).to.equal("5000000000000000000");
+
+    });
+
+    it('depositOut test', async function () {
+        await mcss.connect(addr1).depositOutToken(
+            standardToken.address,
+            addr1.address,
+            addr3.address,
+            "2000000000000000000000"
+        )
+        expect(await standardToken.balanceOf(addr1.address)).to.equal("98998000000000000000000000");
+
+        console.log( BigNumber.from(await ethers.provider.getBalance(addr2.address)));
+        await mcss.connect(addr2).depositOutNative(
+            addr2.address,
+            addr4.address,
+            {
+                value:"1000000000000000000"
+            }
+        )
+
+        // expect(await ethers.provider.getBalance(mcss.address)).to.equal("9998999928426602550800");
+        expect(await weth.balanceOf(mcss.address)).to.equal("1000000000000000000")
     });
 
     it('near transferIn test ', async function () {
-        standardEthToken = await ethers.getContractAt("StandardToken",mcsData.standardToken);
-        mapTokenEthToken = await ethers.getContractAt("StandardToken",mcsData.mapToken);
-        wethEthToken = await ethers.getContractAt("StandardToken",mcsData.weth);
 
-        expect(await standardEthToken.totalSupply()).to.equal("200000000000000000001300000000000000000");
-
-        console.log(await standardEthToken.balanceOf(mcss.address));
-
-        console.log(await standardEthToken.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4"));
-
+        //250000000000000000
+        await usdt.mint(mcss.address,"250000000000000000")
         await mcss.transferIn(212,mcsData.near2ethW);
+        expect(await usdt.totalSupply()).to.equal("5250000000000000000");
+        expect(await usdt.balanceOf(mcss.address)).to.equal("0");
+        // console.log(await standardToken.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4"));
 
-        console.log(await standardEthToken.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4"));
+        expect(await standardToken.totalSupply()).to.equal("99900000100000000000000000");
 
-        expect(await standardEthToken.totalSupply()).to.equal("200000000000000000001450000000000000000");
+        await mcss.transferIn(212,mcsData.near2eth001);
 
-        console.log(await mapTokenEthToken.balanceOf(mcss.address));
-
-        // mcs value mapToken 150000000000000000
-
-        await mcss.transferIn(1313161555,mcsData.near2eth001);
-
-        expect(await mapTokenEthToken.balanceOf(mcss.address)).to.equal("3850000000000000000");
-
-        console.log(await wethEthToken.balanceOf(mcss.address));
+        expect(await standardToken.totalSupply()).to.equal("99900000350000000000000000");
 
         await mcss.transferIn(212,mcsData.near2et000);
 
-        expect(await wethEthToken.balanceOf(mcss.address)).to.equal("0");
+        expect(await weth.balanceOf(mcss.address)).to.equal("750000000000000000");
 
     });
 
+
     it('transferOutNative', async function () {
-        wethEthToken = await ethers.getContractAt("StandardToken",mcsData.weth);
+        //wethEthToken = await ethers.getContractAt("StandardToken",mcsData.weth);
 
         await mcss.setCanBridgeToken("0x0000000000000000000000000000000000000000",1313161555,"true");
 
         await mcss.connect(owner).transferOutNative(address2Bytes,1313161555,{value:"100000000000000000"});
 
-        expect(await wethEthToken.balanceOf(mcss.address)).to.equal("100000000000000000")
+        expect(await weth.balanceOf(mcss.address)).to.equal("850000000000000000")
 
     });
 
+    it('withdraw test', async function () {
+        console.log(await ethers.provider.getBalance(mcss.address));
 
+        await mcss.withdraw(
+            "0x0000000000000000000000000000000000000000",
+            addr5.address,
+            "850000000000000000"
+        )
+        expect(await ethers.provider.getBalance(mcss.address)).to.equal("0");
+        expect(await ethers.provider.getBalance(addr5.address)).to.equal("10000850000000000000000");
 
+        await mcss.withdraw(
+            standardToken.address,
+            addr5.address,
+            "2000000000000000000000"
+        )
+        expect(await standardToken.balanceOf(mcss.address)).to.equal("900000000000000000000000");
+
+    });
+
+    it('set test', async function () {
+        await mcss.setPause();
+        expect(await mcss.paused()).to.equal(true);
+        await mcss.setUnpause();
+        expect(await mcss.paused()).to.equal(false);
+
+        await expect(mcss.connect(addr3).setPause()).to.be.revertedWith("lightnode :: only admin")
+    });
+
+    it('admin test', async function () {
+
+        await expect(mcss.changeAdmin("0x0000000000000000000000000000000000000000")).to.be.revertedWith("zero address")
+
+        await mcss.changeAdmin(addr5.address);
+
+        expect(await mcss.getAdmin()).to.equal(addr5.address);
+
+    });
+
+    it('Upgrade', async function () {
+        let MCSSUpGrade = await ethers.getContractFactory("MapCrossChainService");
+        // mcss = await ethers.getContractAt("MapCrossChainService",mcsData.mcs);
+        let mcssUpGrade = await MCSSUpGrade.deploy();
+        await mcssUpGrade.deployed();
+
+        mcss.connect(addr5).upgradeTo(mcssUpGrade.address);
+
+        expect(await mcss.getImplementation()).to.equal(mcssUpGrade.address);
+
+        await expect(mcss.transferIn(212,mcsData.near2et000)).to.be.revertedWith("order exist");
+
+    });
 })
+
+
