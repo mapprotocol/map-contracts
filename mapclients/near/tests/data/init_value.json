@@ -1,52 +1,52 @@
 {
     "owner": "owner.near",
     "threshold": 3,
-    "epoch": 1,
+    "epoch": 3,
     "epoch_size": 1000,
     "validators": [
         {
-            "address": "0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9",
+            "address": "0x053af2b1ccbacba47c659b977e93571c89c49654",
             "weight": 1,
             "g1_pub_key": {
-                "x": "0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249",
-                "y": "0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"
+                "x": "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
+                "y": "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287"
             },
-            "_BLSPublicKey": "0x1446c55bf2cd8f31d31eaa58b081b30cea50b4d8d9096682576688c2f9ae627d27f97e09b64c99b0e49e7c33c864c089ba5c03cf27e04af4ac457edb46d12ce92aa1ca438667203f7d1696549bd861bf6f11cd3cb7d67738222428137ecadac91b68426ad13c8af92a9b8dc62475fbb1617640c635b812733efc9b7d21c8ab49",
-            "_BLSG1PublicKey": "0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f2492b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3",
-            "_UncompressedBLSPublicKey": "FEbFW/LNjzHTHqpYsIGzDOpQtNjZCWaCV2aIwvmuYn0n+X4JtkyZsOSefDPIZMCJulwDzyfgSvSsRX7bRtEs6SqhykOGZyA/fRaWVJvYYb9vEc08t9Z3OCIkKBN+ytrJG2hCatE8ivkqm43GJHX7sWF2QMY1uBJzPvybfSHIq0k="
+            "_BLSPublicKey": "0x19587d8e318b681e8ff036af9c296b321f5066d03180705c4b244fd0555fcb6c0a4cdba7fb21dfba83a727ec4038967366af667efa211fe561a9ae53182040771189dcfaede47716b3e34cd3eea96dd791ca7947a62fb53721ad0ddc0dd15bcb2c41d5d6281528141ecbbbf836891742c9ac480165366bcc8ec79814f306aab7",
+            "_BLSG1PublicKey": "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c12b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
+            "_UncompressedBLSPublicKey": "GVh9jjGLaB6P8DavnClrMh9QZtAxgHBcSyRP0FVfy2wKTNun+yHfuoOnJ+xAOJZzZq9mfvohH+Vhqa5TGCBAdxGJ3Prt5HcWs+NM0+6pbdeRynlHpi+1NyGtDdwN0VvLLEHV1igVKBQey7v4NokXQsmsSAFlNmvMjseYFPMGqrc="
         },
         {
-            "address": "0x7a3a26123dbd9cfefc1725fe7779580b987251cb",
+            "address": "0xb47adf1e504601ff7682b68ba7990410b92cd958",
             "weight": 1,
             "g1_pub_key": {
-                "x": "0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58",
-                "y": "0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"
+                "x": "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
+                "y": "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7"
             },
-            "_BLSPublicKey": "0x25f8387695e95f4224919051cfebe64efa2efb4ca8b82bd04cada59edb9e54920a10ea0f9064067049aaf12299592b4746fe4085516fc3f00fbc7dbdd1c545fe126f7bd8d6b5eff857e6fa227c58eea0da0984b80922f5bb33dba1832cf8722f26dc97985df5bf1b4db96f102b905c6982192feecf860ffba2d5eb4db3a64bda",
-            "_BLSG1PublicKey": "0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf581ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b",
-            "_UncompressedBLSPublicKey": "Jfg4dpXpX0IkkZBRz+vmTvou+0youCvQTK2lntueVJIKEOoPkGQGcEmq8SKZWStHRv5AhVFvw/APvH290cVF/hJve9jWte/4V+b6InxY7qDaCYS4CSL1uzPboYMs+HIvJtyXmF31vxtNuW8QK5BcaYIZL+7Phg/7otXrTbOmS9o="
+            "_BLSPublicKey": "0x262292118774c85cb53e158bd3938ea804d7e9b28fa5a49ccbd23d18fb9a789b1dcd8922043d6563298355442be7680027cc0df3aa675a82d563c56db7c3903817e2042ceaa101dfbf5b279efe0dfb3842faa278486b1aa82202f92c6a6ec0a826ce3f717b3d1fd483ab0af83bc98fbc03caa7a97f32383100b48508a2b412ba",
+            "_BLSG1PublicKey": "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a692685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
+            "_UncompressedBLSPublicKey": "JiKSEYd0yFy1PhWL05OOqATX6bKPpaScy9I9GPuaeJsdzYkiBD1lYymDVUQr52gAJ8wN86pnWoLVY8Vtt8OQOBfiBCzqoQHfv1snnv4N+zhC+qJ4SGsaqCIC+SxqbsCoJs4/cXs9H9SDqwr4O8mPvAPKp6l/MjgxALSFCKK0Ero="
         },
         {
-            "address": "0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4",
+            "address": "0xf655fc7c95c70a118f98b46ca5028746284349a5",
             "weight": 1,
             "g1_pub_key": {
-                "x": "0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812",
-                "y": "0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"
+                "x": "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
+                "y": "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042"
             },
-            "_BLSPublicKey": "0x2c87c9887cd5af4e33cf09b0a7c4840f87b53bfe5a21d9e18051228577fb191615bb9e374b2625f11e47737292a8688c9ce1c8533ab8000f495a4cc2e55f5531303a6a1542be1e2b6a0e6f37fe2f3f2d60d39b7516f831cb9a3811e82f2a2f1825467b24b96006ee5f494e7469b5a599ec6ab885df02d0ead0926ca45c4f2a1b",
-            "_BLSG1PublicKey": "0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c8121e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869",
-            "_UncompressedBLSPublicKey": "LIfJiHzVr04zzwmwp8SED4e1O/5aIdnhgFEihXf7GRYVu543SyYl8R5Hc3KSqGiMnOHIUzq4AA9JWkzC5V9VMTA6ahVCvh4rag5vN/4vPy1g05t1Fvgxy5o4EegvKi8YJUZ7JLlgBu5fSU50abWlmexquIXfAtDq0JJspFxPKhs="
+            "_BLSPublicKey": "0x14f821e131ea6c273607d704a4458408776354c2451ede5ba2c1e5195ec3929a109cc2d5a9487bf1a0a7b498678da54284509df5a2f74e03f8965707273dc4c70a6f29acb7b49f2e9f629c410a0923b516d23f3858611c500304a8f5c80454140ab032a87cf62167d7f16b05d7ad644a3862d1b9bb08e3baa9c39798ba1f0efa",
+            "_BLSG1PublicKey": "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
+            "_UncompressedBLSPublicKey": "FPgh4THqbCc2B9cEpEWECHdjVMJFHt5bosHlGV7DkpoQnMLVqUh78aCntJhnjaVChFCd9aL3TgP4llcHJz3ExwpvKay3tJ8un2KcQQoJI7UW0j84WGEcUAMEqPXIBFQUCrAyqHz2IWfX8WsF161kSjhi0bm7COO6qcOXmLofDvo="
         },
         {
-            "address": "0x65b3fee569bf82ff148bdded9c3793fb685f9333",
+            "address": "0xb243f68e8e3245464d21b79c7ceae347ecc08ea6",
             "weight": 1,
             "g1_pub_key": {
-                "x": "0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6",
-                "y": "0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"
+                "x": "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
+                "y": "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37"
             },
-            "_BLSPublicKey": "0x138cf64f20414eed4eb6e5b1b0e08b03944d368d2df78461b493c16cee52fca12741fc9a64ca55a6c08987eba75fc1d1e13a64b9e1e6f6a4413acda3b4997adf184ae5b75a5bd807d5d03d698cd0366d443786276749d2831416dd497d3e53170b14f7028a3245c0383e378130ed3c439aff3b29be9195d778c13e462e4a4afa",
-            "_BLSG1PublicKey": "0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea60dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311",
-            "_UncompressedBLSPublicKey": "E4z2TyBBTu1OtuWxsOCLA5RNNo0t94RhtJPBbO5S/KEnQfyaZMpVpsCJh+unX8HR4TpkueHm9qRBOs2jtJl63xhK5bdaW9gH1dA9aYzQNm1EN4YnZ0nSgxQW3Ul9PlMXCxT3AooyRcA4PjeBMO08Q5r/Oym+kZXXeME+Ri5KSvo="
+            "_BLSPublicKey": "0x1acabcd4e2298c91e1752620a9e99e9c49513eaebde1aad381bf2946a40214f0071c72a02e910cf0318f954e3d09588af4d0ea5fec65a0c6511b0cb6423dc76d06e0d787fac2b683fa6f19f734dfbdd8bde1cb92924695679d81e265cded37cd07a3abe53e82f957db92a4dc279a3b7a5591c775fc1fb79a8185d95bbb93b2bb",
+            "_BLSG1PublicKey": "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
+            "_UncompressedBLSPublicKey": "Gsq81OIpjJHhdSYgqemenElRPq694arTgb8pRqQCFPAHHHKgLpEM8DGPlU49CViK9NDqX+xloMZRGwy2Qj3HbQbg14f6wraD+m8Z9zTfvdi94cuSkkaVZ52B4mXN7TfNB6Or5T6C+VfbkqTcJ5o7elWRx3X8H7eagYXZW7uTsrs="
         }
     ]
 }
