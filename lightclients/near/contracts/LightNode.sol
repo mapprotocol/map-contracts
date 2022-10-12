@@ -42,8 +42,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         _;
     }
 
-    event UpdateBlockHeader(bytes32 indexed epochId, uint256 blockHeight);
-
     //  event SetBlockProducers(bytes32[100] keys);
 
     constructor() {}
@@ -209,7 +207,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
             setBlockProducers(nearBlock.next_bps.blockProducers, nextEpoch);
 
-            emit UpdateBlockHeader(nearBlock.inner_lite.epoch_id, curHeight);
+            emit UpdateBlockHeader(tx.origin, curHeight); 
         }
     }
 
