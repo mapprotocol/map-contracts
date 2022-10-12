@@ -407,7 +407,8 @@ impl MapCrossChainService {
                     .with_static_gas(FINISH_TRANSFER_IN_GAS)
                     .with_attached_deposit(ret_deposit)
                     .finish_transfer_in(event))
-        } else if self.fungible_tokens.get(&to_chain_token).is_some() {
+        } else {
+            // to_chain_token is fungible token
             let min_storage_balance = self.fungible_tokens_storage_balance.get(&to_chain_token).unwrap();
             if ret_deposit < min_storage_balance + 1 {
                 return self.process_transfer_in_failure(cur_deposit, event,
@@ -428,9 +429,6 @@ impl MapCrossChainService {
                     .with_static_gas(FINISH_TRANSFER_IN_GAS)
                     .with_attached_deposit(ret_deposit)
                     .finish_transfer_in(event))
-        } else {
-            self.process_transfer_in_failure(cur_deposit, event,
-                                             format!("unknown to_chain_token {} to transfer in", to_chain_token))
         }
     }
 

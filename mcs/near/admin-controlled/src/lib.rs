@@ -18,6 +18,6 @@ pub trait AdminControlled {
     }
 
     fn check_not_paused(&self, flag: Mask) {
-        assert!(!self.is_paused(flag));
+        assert!(!self.is_paused(flag), "current function is paused");
     }
 }
