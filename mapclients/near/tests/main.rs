@@ -79,7 +79,7 @@ const HEADER_0_012: &str = r#"{
                 "gasLimit":"0x0",
                 "gasUsed":"0x5208",
                 "time":"0x5c47775c",
-                "extra":"0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841abb150fcf44735d6df641c0b3f29f3a6b5088542031734e70ab48beec303aaff4e0a56372af7774be1df2240916de4b329dd747b38b53e258ff79af6ac93f3d901f84407b840262c29d794b767971c4bad1d409a12f1aefeea93c1a08a6d50585e90f6497c5105810086251448d011d7010b4c97f82756ff7c0d3e4b82f59b725971972c685d01c3808080",
+                "extra":"0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b840276d8fe5533b4d570fbe9bc0b104022f9c67f5210d493c9558aef517db0713e0255250efd11d89993aac000054bcebd3bea74665a163030555bfd0ad01d8bedf01c3808080",
                 "minDigest":"0x0000000000000000000000000000000000000000000000000000000000000000",
                 "nonce":"0x0000000000000000",
                 "baseFee":"0x0"
@@ -118,7 +118,8 @@ async fn test_initialize() -> anyhow::Result<()> {
     let result: bool = res.json()?;
     assert!(!result, "contract should not be initialized");
 
-    let init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    let file = fs::File::open("./tests/data/init_value.json").unwrap();
+    let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
     let res = contract
         .call(&worker, "new")
         .args_json(json!(init_args))?
@@ -169,70 +170,6 @@ async fn test_update_block_header() -> anyhow::Result<()> {
         .await?;
 
     assert!(res.is_success(), "update_block_header failed");
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_update_block_header_38000() -> anyhow::Result<()> {
-    let (worker, contract) = deploy_contract().await?;
-
-    let file = fs::File::open("./tests/data/init_value.json").unwrap();
-    let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
-    init_args["epoch"] = json!(38);
-    let res = contract
-        .call(&worker, "new")
-        .args_json(json!(init_args))?
-        .gas(300_000_000_000_000)
-        .transact()
-        .await?;
-
-    assert!(res.is_success(), "init contract failed!");
-
-    let file = fs::File::open("./tests/data/headers.json").unwrap();
-    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
-
-    let res = contract
-        .call(&worker, "update_block_header")
-        .args_json(json!(headers["38000"]))?
-        .gas(300_000_000_000_000)
-        .transact()
-        .await?;
-
-    println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "update_block_header 38000 failed");
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_update_block_header_93000() -> anyhow::Result<()> {
-    let (worker, contract) = deploy_contract().await?;
-
-    let file = fs::File::open("./tests/data/init_value.json").unwrap();
-    let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
-    init_args["epoch"] = json!(93);
-    let res = contract
-        .call(&worker, "new")
-        .args_json(json!(init_args))?
-        .gas(300_000_000_000_000)
-        .transact()
-        .await?;
-
-    assert!(res.is_success(), "init contract failed!");
-
-    let file = fs::File::open("./tests/data/headers.json").unwrap();
-    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
-
-    let res = contract
-        .call(&worker, "update_block_header")
-        .args_json(json!(headers["93000"]))?
-        .gas(300_000_000_000_000)
-        .transact()
-        .await?;
-
-    println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "update_block_header 93000 failed");
 
     Ok(())
 }
@@ -330,7 +267,7 @@ async fn test_update_block_bad_ecdsa_signer() -> anyhow::Result<()> {
     let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
     // use extra with ecdsa signature signed by another validator
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841b166f38dd2c80eaf82c185ae6fbfb3c4ad34eb24e784e2277f9427540b9d066804868983df05e962c72cc43e3f865a0d4e36eeef08ac4a5dcea2d286ba79540e01f84407b84006772298021df72315132405e180c495c7d010e4ed5cf633de743c38fd4a17b21b7f1a608e9b71925a8daae486eb103292a00a4e12f344b2312974dc773b644101c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841b166f38dd2c80eaf82c185ae6fbfb3c4ad34eb24e784e2277f9427540b9d066804868983df05e962c72cc43e3f865a0d4e36eeef08ac4a5dcea2d286ba79540e01f84407b8400aa853e8c8f65c21d9722a08b169376ebbad4eb13d210f563b6759a14bc8361f173ccc5db2a85c10e7e58b51bb90cd5da0b2120b0b8d899624268f66882d452c01c3808080");
     let res = contract
         .call(&worker, "update_block_header")
         .args_json(json!({
@@ -364,7 +301,7 @@ async fn test_update_block_bad_threshold() -> anyhow::Result<()> {
     let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_01).unwrap();
     // use extra with agg seal signed by validator 01
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841abb150fcf44735d6df641c0b3f29f3a6b5088542031734e70ab48beec303aaff4e0a56372af7774be1df2240916de4b329dd747b38b53e258ff79af6ac93f3d901f84403b8401a55b4a158281a57b587072ef196e0482c445a2b0942ad1349b1b221416a53be1c0eb2b4c284c49c8ebed1bb3eb52a3bc56bab4d3da12ecd6860c7920eb9c20e01c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841abb150fcf44735d6df641c0b3f29f3a6b5088542031734e70ab48beec303aaff4e0a56372af7774be1df2240916de4b329dd747b38b53e258ff79af6ac93f3d901f84403b84018d5eb4a531049c047c9003f6c7dd9b30e9d7183bbb71d687836d863b24408471b338f2fcfa2ac4b21e1fa3447a82e8353b6513d458cdcc4a6a15d74b5cc6f0801c3808080");
     let res = contract
         .call(&worker, "update_block_header")
         .args_json(json!({
@@ -430,7 +367,7 @@ async fn test_verify_proof_single_receipt() -> anyhow::Result<()> {
     let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
     header["receiptHash"] = json!("0xc502fb6c3ccb075c3e4425885ce26c3b00dba0cf86f4016abcc375eb79dedfab");
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b84151bcd0f46fa9ec5d0d8ba37741e6336b7bf3c4de7077121f86f36c007690a5fe21db3dc88866bfd4a7455242f7ad7bf5e8484c5376d7495aac7b7c07b8ebfe2f00f84407b8401a32291646f4bc327b2d75cd670c5c523653a3aa70c82501d6c95feb4c9000e322791113b87d7a09043516e40cf22abeb20066e57918e32ab7d62973f47c375001c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b84151bcd0f46fa9ec5d0d8ba37741e6336b7bf3c4de7077121f86f36c007690a5fe21db3dc88866bfd4a7455242f7ad7bf5e8484c5376d7495aac7b7c07b8ebfe2f00f84407b8402f7688147b3ee1e630e16b891d9ec9c8ab7c84021f9973877fd09493ef1925e81dd8906dcc2686feb95ae438c63b1009fe75f54d43dd7cb32ed5d61f9438b85f01c3808080");
     let res = contract
         .call(&worker, "verify_proof_data")
         .args_json(json!({
@@ -524,7 +461,7 @@ async fn test_validator_remove_01() -> anyhow::Result<()> {
     let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
     // remove validator 0
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b84028e45d0dc6167e5db2aed90517e162eae66bb68ca701b15a17173f92eeaadda810320ba7313ad99cdefb70e90347a7b55472f9cca8fe47b663d218bc01433ef701c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b840276d8fe5533b4d570fbe9bc0b104022f9c67f5210d493c9558aef517db0713e0255250efd11d89993aac000054bcebd3bea74665a163030555bfd0ad01d8bedf01c3808080");
     let res = contract
         .call(&worker, "update_block_header")
         .args_json(json!({
@@ -539,7 +476,7 @@ async fn test_validator_remove_01() -> anyhow::Result<()> {
 
     header["number"] = json!("0x7d0");
     // use agg seal signed by validator 1 and 2, but ecdsa signed by validator 0
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b8417865a77a9d1cbe9ed0e38806cb06c469514f4f2cc9fecd38e7e5cb7787b8694534a65cb0a9377e5935131acbc34a94076e0a746f9f4887983e244b573cfdff4401f84406b84020d8e519b3df674ac821de4a8de5a3e27a0b0a6c4ef17a3f302c5ed98c3c2eef28d02b4f4c01beaeecbb061d91f21cb4851c0ee77727dbb51e509521b9f1ae5d01c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f9016cd594908d0fdaeaefbb209bdcb540c2891e75616154b3f882b8802d692ebfd5b28f869cf87b12688504f1fd2194ad68d0bcbdde5f03ec45e98ef82e4114565378770ff9b81cc4488bbe93ba4dfaadf7a54c088560397588c1ab7c0de7dc40658ca64443100d757e9236555e7e1929edc3f398fa508ab5926bf1510eeabadcda0e475fcc4274349bdabdbf3c3855cc37548e2ebf7b0314436bee29f842b840285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e380b841bbc844fe92738c7ba8f2840a1cd95413a5630edf9d3b8985c6a7aff390e8b64f43e67a6640217a0af86cf1162f67d3e363e483e0afcff94d44dee170bcaed5d400f84403b84002af3de2d2a5ce5233a20b115839500a402939074446237a7336f7b00baab37011ac4324d2e763caa19e21b2b06daa6e6ee1a7f1df3e308f51f0e7db62be2c5f01c3808080");
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_12).unwrap();
     let res = contract
         .call(&worker, "update_block_header")
@@ -572,7 +509,7 @@ async fn test_validator_remove_02() -> anyhow::Result<()> {
     let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
     // remove validator 0
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b84028e45d0dc6167e5db2aed90517e162eae66bb68ca701b15a17173f92eeaadda810320ba7313ad99cdefb70e90347a7b55472f9cca8fe47b663d218bc01433ef701c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b840276d8fe5533b4d570fbe9bc0b104022f9c67f5210d493c9558aef517db0713e0255250efd11d89993aac000054bcebd3bea74665a163030555bfd0ad01d8bedf01c3808080");
     let res = contract
         .call(&worker, "update_block_header")
         .args_json(json!({
@@ -588,7 +525,7 @@ async fn test_validator_remove_02() -> anyhow::Result<()> {
     header["number"] = json!("0x7d0");
     header["coinbase"] = json!("0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A");
     // use agg seal signed by validator 1 and 2, and ecdsa signed by validator 1
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b8415bc867a42c6c2db1b8a5e0d809903be9eb3d6b8435cb7d5cb373aa4755ba6b5a42c0ba3ec97b3b527eb6fa7659dc3ee05ba0b3f2ecd976aa51ea048b1fc480b000f84403b840121fc9c9d9dc5742b0d4b6fa26007a232e4f5ca407035741d8c964745bf9dd4a29fa3f4a508ee9eafa8543a473b61650ff5a8d98b020d63513daa1e7df4b5a6001c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f9016cd594908d0fdaeaefbb209bdcb540c2891e75616154b3f882b8802d692ebfd5b28f869cf87b12688504f1fd2194ad68d0bcbdde5f03ec45e98ef82e4114565378770ff9b81cc4488bbe93ba4dfaadf7a54c088560397588c1ab7c0de7dc40658ca64443100d757e9236555e7e1929edc3f398fa508ab5926bf1510eeabadcda0e475fcc4274349bdabdbf3c3855cc37548e2ebf7b0314436bee29f842b840285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e380b841bbc844fe92738c7ba8f2840a1cd95413a5630edf9d3b8985c6a7aff390e8b64f43e67a6640217a0af86cf1162f67d3e363e483e0afcff94d44dee170bcaed5d400f84403b84002af3de2d2a5ce5233a20b115839500a402939074446237a7336f7b00baab37011ac4324d2e763caa19e21b2b06daa6e6ee1a7f1df3e308f51f0e7db62be2c5f01c3808080");
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_12).unwrap();
     let res = contract
         .call(&worker, "update_block_header")
@@ -621,7 +558,7 @@ async fn test_validator_remove_add() -> anyhow::Result<()> {
     let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
     // remove validator 0
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b84028e45d0dc6167e5db2aed90517e162eae66bb68ca701b15a17173f92eeaadda810320ba7313ad99cdefb70e90347a7b55472f9cca8fe47b663d218bc01433ef701c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b840276d8fe5533b4d570fbe9bc0b104022f9c67f5210d493c9558aef517db0713e0255250efd11d89993aac000054bcebd3bea74665a163030555bfd0ad01d8bedf01c3808080");
     let res = contract
         .call(&worker, "update_block_header")
         .args_json(json!({
@@ -637,7 +574,7 @@ async fn test_validator_remove_add() -> anyhow::Result<()> {
     header["number"] = json!("0x7d0");
     header["coinbase"] = json!("0xEbf0E9FbC6210F199d1C34f2418b64129e7FF78A");
     // use agg seal signed by validator 1 and 2, ecdsa signed by validator 1, and add validator 0 back
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f9016cd594908d0fdaeaefbb209bdcb540c2891e75616154b3f882b8802d692ebfd5b28f869cf87b12688504f1fd2194ad68d0bcbdde5f03ec45e98ef82e4114565378770ff9b81cc4488bbe93ba4dfaadf7a54c088560397588c1ab7c0de7dc40658ca64443100d757e9236555e7e1929edc3f398fa508ab5926bf1510eeabadcda0e475fcc4274349bdabdbf3c3855cc37548e2ebf7b0314436bee29f842b840285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e380b841bbc844fe92738c7ba8f2840a1cd95413a5630edf9d3b8985c6a7aff390e8b64f43e67a6640217a0af86cf1162f67d3e363e483e0afcff94d44dee170bcaed5d400f84403b8400fac2e71b35a6c1e4a4ef8e9c5bfc9816f910e69d736db21da38fcc798b6dfbf1abd32c9ea55d0c33a52179d6e202201beb3b3e0556b797ec11970a82227149301c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f9016cd594908d0fdaeaefbb209bdcb540c2891e75616154b3f882b8802d692ebfd5b28f869cf87b12688504f1fd2194ad68d0bcbdde5f03ec45e98ef82e4114565378770ff9b81cc4488bbe93ba4dfaadf7a54c088560397588c1ab7c0de7dc40658ca64443100d757e9236555e7e1929edc3f398fa508ab5926bf1510eeabadcda0e475fcc4274349bdabdbf3c3855cc37548e2ebf7b0314436bee29f842b840285b454a87ab802bca118adb5d36ec205e0aa2f373afc03555d91e41cbfffbae218a5545ea930860c0b99462596ee86f3278a5207c42bd63cb8dfaa54e0d68e380b841bbc844fe92738c7ba8f2840a1cd95413a5630edf9d3b8985c6a7aff390e8b64f43e67a6640217a0af86cf1162f67d3e363e483e0afcff94d44dee170bcaed5d400f84403b84002af3de2d2a5ce5233a20b115839500a402939074446237a7336f7b00baab37011ac4324d2e763caa19e21b2b06daa6e6ee1a7f1df3e308f51f0e7db62be2c5f01c3808080");
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_12).unwrap();
     let res = contract
         .call(&worker, "update_block_header")
@@ -653,7 +590,7 @@ async fn test_validator_remove_add() -> anyhow::Result<()> {
 
     header["number"] = json!("0xbb8");
     // use agg seal signed by validator 1 and 2, and ecdsa signed by validator 1
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b8418f5825e9457a87e3a31ae7f25d46a5f9d6c33825738692dbc521dd47b36b2d8b2c80caad3e284a153d666a03005556a389379792fc9d99355aadbf49e73c3a2400f84406b8401f646b2bc9fe13cb7da308b06eb45b56ee277113b0803cb44e96b48f21eede8f199d6137fee9b5493a34c3acae3add7da337039b1a2d438bc17023943d6a325401c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b8418f5825e9457a87e3a31ae7f25d46a5f9d6c33825738692dbc521dd47b36b2d8b2c80caad3e284a153d666a03005556a389379792fc9d99355aadbf49e73c3a2400f84403b8400f79b4ce695d451eddce75bd00fa75213256c8bfb1f4e1cf95e0905e4fbb31030ce249b6a22b361b36d004cdaf05d2d2d6774fdc2d8028f3ce63584d3c36bc3e01c3808080");
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_12).unwrap();
     let res = contract
         .call(&worker, "update_block_header")
@@ -665,11 +602,12 @@ async fn test_validator_remove_add() -> anyhow::Result<()> {
         .await;
 
     assert!(res.is_err(), "update_block_header should fail");
+    println!("error: {}", res.as_ref().err().unwrap());
     assert!(res.err().unwrap().to_string().contains("threshold is not satisfied"), "get unexpected error");
 
     // use agg seal signed by validator 0, 1 and 2, and ecdsa signed by validator 0
     header["coinbase"] = json!("0x908D0FDaEAEFbb209BDcb540C2891e75616154b3");
-    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841903f61c9fa76fbd761e4a6ed2b86b4e9c1944f5ca7fb90cf91f40b8a1621adfd401a2147b83e32489d05449ad4f41bbcbd76a8fd987231f0ce2e4ebeb096dff500f8440bb8402f1dc01d96f11bd515e6003a61cca36f86be9fef5f39ed71f488c9b526e89bab1a2c7fea45ee55cf39388c46e12996f4f3891346634f90843377e8137e8993e001c3808080");
+    header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b841903f61c9fa76fbd761e4a6ed2b86b4e9c1944f5ca7fb90cf91f40b8a1621adfd401a2147b83e32489d05449ad4f41bbcbd76a8fd987231f0ce2e4ebeb096dff500f8440bb8401f531bae5b23fcb998c11240dc657482614d3e3bf959c7d354d397bef86bbdd114ceee2042ed3e0c6d3d10d4d1af18bbfa1c6bb2ffb9c746372a91aecdc8a58701c3808080");
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
     let res = contract
         .call(&worker, "update_block_header")
@@ -818,11 +756,11 @@ async fn test_update_validator_for_20_epochs() -> anyhow::Result<()> {
 
     assert!(res.is_success(), "init contract failed!");
 
-    let file = fs::File::open("./tests/data/headers.json").unwrap();
+    let file = fs::File::open("./tests/data/header.json").unwrap();
     let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
 
-    let mut block = 1000;
-    while block <= 20000 {
+    let mut block = 3000;
+    while block <= 23000 {
         let value = headers[block.to_string()].clone();
         let res = contract
             .call(&worker, "update_block_header")
@@ -837,25 +775,48 @@ async fn test_update_validator_for_20_epochs() -> anyhow::Result<()> {
         block += 1000;
     }
 
+    let record_opt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 3
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(record_opt.is_none(), "epoch 3 should have no record");
+
+    let record_opt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 4
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(record_opt.is_none(), "epoch 4 should have no record");
+
+    let record_opt: Option<EpochRecord> = contract
+        .call(&worker, "get_record_for_epoch")
+        .args_json(json!({
+            "epoch": 5
+        }))?
+        .view()
+        .await?
+        .json()?;
+
+    assert!(record_opt.is_some(), "epoch 5 should have record");
     Ok(())
 }
 
 #[tokio::test]
-async fn test_update_validator_for_21_epochs() -> anyhow::Result<()> {
+async fn test_verify_proof() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
-    let validators = r#"[{"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"},
-{"g1_pub_key":{"x":"0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58","y":"0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"},"weight":1,"address":"0x7a3a26123dbd9cfefc1725fe7779580b987251cb"},
-{"g1_pub_key":{"x":"0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812","y":"0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"},"weight":1,"address":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"},
-{"g1_pub_key":{"x":"0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6","y":"0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"},"weight":1,"address":"0x65b3fee569bf82ff148bdded9c3793fb685f9333"},
-{"g1_pub_key":{"x":"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a","y":"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"},"weight":1,"address":"0x98efa292822eb7b3045c491e8ae4e82b3b1ac005"},
-{"g1_pub_key":{"x":"0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d","y":"0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"},"weight":1,"address":"0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"}]
-"#;
     let file = fs::File::open("./tests/data/init_value.json").unwrap();
     let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
-    init_args["validators"] = serde_json::from_str(validators).unwrap();
-    init_args["epoch"] = json!(180);
-    init_args["threshold"] = json!(4);
+    init_args["epoch"] = json!(187);
     let res = contract
         .call(&worker, "new")
         .args_json(json!(init_args))?
@@ -864,176 +825,53 @@ async fn test_update_validator_for_21_epochs() -> anyhow::Result<()> {
         .await?;
 
     assert!(res.is_success(), "init contract failed!");
-
-    let file = fs::File::open("./tests/data/headers.json").unwrap();
-    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
-
-    let mut block = 180000;
-    while block <= 200000 {
-        let value = headers[block.to_string()].clone();
-        let res = contract
-            .call(&worker, "update_block_header")
-            .args_json(json!(value))?
-            .gas(300_000_000_000_000)
-            .transact()
-            .await?;
-
-        println!("logs {:?}", res.logs());
-        assert!(res.is_success(), "update_block_header {} failed", block);
-
-        block += 1000;
-    }
-
-    let record_opt: Option<EpochRecord> = contract
-        .call(&worker, "get_record_for_epoch")
-        .args_json(json!({
-            "epoch": 180
-        }))?
-        .view()
-        .await?
-        .json()?;
-
-    assert!(record_opt.is_none(), "epoch 180 should have no record");
-
-    let record_opt: Option<EpochRecord> = contract
-        .call(&worker, "get_record_for_epoch")
-        .args_json(json!({
-            "epoch": 181
-        }))?
-        .view()
-        .await?
-        .json()?;
-
-    assert!(record_opt.is_none(), "epoch 181 should have  no record");
-
-    let record_opt: Option<EpochRecord> = contract
-        .call(&worker, "get_record_for_epoch")
-        .args_json(json!({
-            "epoch": 182
-        }))?
-        .view()
-        .await?
-        .json()?;
-
-    assert!(record_opt.is_some(), "epoch 182 should have record");
-
-    let record = record_opt.unwrap();
-    let validators = &init_args["validators"].as_array().unwrap();
-    assert_eq!(4, record.threshold, "threshold check failed");
-    assert_eq!(182, record.epoch, "epoch check failed");
-    assert_eq!(validators.len(), record.validators.len(), "no validator should be added/removed");
-
-    let record_opt: Option<EpochRecord> = contract
-        .call(&worker, "get_record_for_epoch")
-        .args_json(json!({
-            "epoch": 201
-        }))?
-        .view()
-        .await?
-        .json()?;
-
-    assert!(record_opt.is_some(), "epoch 201 should have record");
-
-    let record = record_opt.unwrap();
-    let validators = &init_args["validators"].as_array().unwrap();
-    assert_eq!(4, record.threshold, "threshold check failed");
-    assert_eq!(201, record.epoch, "epoch check failed");
-    assert_eq!(validators.len() - 1, record.validators.len(), "one validator should be removed");
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_verify_proof_in_diff_epochs() -> anyhow::Result<()> {
-    let (worker, contract) = deploy_contract().await?;
-
-    let file = fs::File::open("./tests/data/init_value.json").unwrap();
-    let init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
-    let res = contract
-        .call(&worker, "new")
-        .args_json(json!(init_args))?
-        .gas(300_000_000_000_000)
-        .transact()
-        .await?;
-
-    assert!(res.is_success(), "init contract failed!");
-
-    let file = fs::File::open("./tests/data/headers.json").unwrap();
-    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
-
-    let mut block = 1000;
-    while block <= 3000 {
-        let value = headers[block.to_string()].clone();
-        let res = contract
-            .call(&worker, "update_block_header")
-            .args_json(json!( value))?
-            .gas(300_000_000_000_000)
-            .transact()
-            .await?;
-
-        println!("logs {:?}", res.logs());
-        assert!(res.is_success(), "update_block_header {} failed", block);
-
-        block += 1000;
-    }
 
     let file = fs::File::open("./tests/data/proof.json").unwrap();
     let proofs: serde_json::Value = serde_json::from_reader(file).unwrap();
 
     let res = contract
         .call(&worker, "verify_proof_data")
-        .args_json(json!({"receipt_proof": proofs["2568"]}))?
-        .gas(300_000_000_000_000)
-        .transact()
-        .await?;
-
-    println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "verify_proof_data for block 2568 failed");
-
-    let res = contract
-        .call(&worker, "verify_proof_data")
-        .args_json(json!({"receipt_proof": proofs["4108"]}))?
+        .args_json(json!({"receipt_proof": proofs["187133"]}))?
         .gas(300_000_000_000_000)
         .transact()
         .await;
 
-    assert!(res.is_err(), "verify_proof_data for block 4108 should fail");
+    assert!(res.is_err(), "verify_proof_data for block 187133 should fail");
 
-    while block <= 5000 {
-        let value = headers[block.to_string()].clone();
-        let res = contract
-            .call(&worker, "update_block_header")
-            .args_json(json!( value))?
-            .gas(300_000_000_000_000)
-            .transact()
-            .await?;
-
-        println!("logs {:?}", res.logs());
-        assert!(res.is_success(), "update_block_header {} failed", block);
-
-        block += 1000;
-    }
+    let file = fs::File::open("./tests/data/header.json").unwrap();
+    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
 
     let res = contract
-        .call(&worker, "verify_proof_data")
-        .args_json(json!({"receipt_proof": proofs["4108"]}))?
+        .call(&worker, "update_block_header")
+        .args_json(json!( headers["187000"]))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
 
     println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "verify_proof_data for block 4108 should success");
+    assert!(res.is_success(), "update_block_header 187000 failed");
+
+    let res = contract
+        .call(&worker, "verify_proof_data")
+        .args_json(json!({"receipt_proof": proofs["187133"]}))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    println!("logs {:?}", res.logs());
+    assert!(res.is_success(), "verify_proof_data for block 187133 failed");
 
     Ok(())
 }
 
 #[tokio::test]
 async fn test_add_validator() -> anyhow::Result<()> {
+    let added_val = r#"{"g1_pub_key":{"x":"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a","y":"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"},"weight":1,"address":"0x98efa292822eb7b3045c491e8ae4e82b3b1ac005"}"#;
     let (worker, contract) = deploy_contract().await?;
 
     let file = fs::File::open("./tests/data/init_value.json").unwrap();
     let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
-    init_args["epoch"] = json!(124);
+    init_args["epoch"] =  json!(188);
     let res = contract
         .call(&worker, "new")
         .args_json(json!(init_args))?
@@ -1043,10 +881,10 @@ async fn test_add_validator() -> anyhow::Result<()> {
 
     assert!(res.is_success(), "init contract failed!");
 
-    let file = fs::File::open("./tests/data/headers.json").unwrap();
+    let file = fs::File::open("./tests/data/header.json").unwrap();
     let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
 
-    let header = headers["124000"].clone();
+    let header = headers["188000"].clone();
     let res = contract
         .call(&worker, "update_block_header")
         .args_json(json!(header))?
@@ -1054,54 +892,29 @@ async fn test_add_validator() -> anyhow::Result<()> {
         .transact()
         .await?;
     println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "update_block_header 124000 failed");
+    assert!(res.is_success(), "update_block_header 188000 failed");
 
     let record_opt: Option<EpochRecord> = contract
         .call(&worker, "get_record_for_epoch")
         .args_json(json!({
-            "epoch": 125
+            "epoch": 189
         }))?
         .view()
         .await?
         .json()?;
 
-    assert!(record_opt.is_some(), "epoch 125 should have record");
+    assert!(record_opt.is_some(), "epoch 189 should have record");
     let record = record_opt.unwrap();
     let validators = &init_args["validators"].as_array().unwrap();
     assert_eq!(4, record.threshold, "threshold check failed");
-    assert_eq!(125, record.epoch, "epoch check failed");
+    assert_eq!(189, record.epoch, "epoch check failed");
     assert_eq!(validators.len() + 1, record.validators.len(), "one validator should be added");
-
-
-    let header = headers["125000"].clone();
-    let res = contract
-        .call(&worker, "update_block_header")
-        .args_json(json!(header))?
-        .gas(300_000_000_000_000)
-        .transact()
-        .await?;
-    println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "update_block_header 125000 failed");
-
-    let recordOpt: Option<EpochRecord> = contract
-        .call(&worker, "get_record_for_epoch")
-        .args_json(json!({
-            "epoch": 126
-        }))?
-        .view()
-        .await?
-        .json()?;
-
-    assert!(recordOpt.is_some(), "epoch 126 should have record");
-    let record = recordOpt.unwrap();
-    let validators = &init_args["validators"].as_array().unwrap();
-    assert_eq!(4, record.threshold, "threshold check failed");
-    assert_eq!(126, record.epoch, "epoch check failed");
-    assert_eq!(validators.len() + 2, record.validators.len(), "one validator should be added");
 
     for validator in record.validators.iter() {
         println!("{}", serde_json::to_string(validator).unwrap())
     }
+
+    assert_eq!(added_val, serde_json::to_string(record.validators.last().unwrap()).unwrap());
 
     Ok(())
 }
@@ -1110,16 +923,16 @@ async fn test_add_validator() -> anyhow::Result<()> {
 async fn test_remove_validator() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
-    let validators = r#"[{"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"},
-{"g1_pub_key":{"x":"0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58","y":"0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"},"weight":1,"address":"0x7a3a26123dbd9cfefc1725fe7779580b987251cb"},
-{"g1_pub_key":{"x":"0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812","y":"0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"},"weight":1,"address":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"},
-{"g1_pub_key":{"x":"0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6","y":"0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"},"weight":1,"address":"0x65b3fee569bf82ff148bdded9c3793fb685f9333"},
-{"g1_pub_key":{"x":"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a","y":"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"},"weight":1,"address":"0x98efa292822eb7b3045c491e8ae4e82b3b1ac005"},
-{"g1_pub_key":{"x":"0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d","y":"0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"},"weight":1,"address":"0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"}]
+    let del_val = r#"{"g1_pub_key":{"x":"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a","y":"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"},"weight":1,"address":"0x98efa292822eb7b3045c491e8ae4e82b3b1ac005"}"#;
+    let validators = r#"[{"g1_pub_key":{"x":"0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1","y":"0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287"},"weight":1,"address":"0x053af2b1ccbacba47c659b977e93571c89c49654"},
+{"g1_pub_key":{"x":"0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69","y":"0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7"},"weight":1,"address":"0xb47adf1e504601ff7682b68ba7990410b92cd958"},
+{"g1_pub_key":{"x":"0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835","y":"0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042"},"weight":1,"address":"0xf655fc7c95c70a118f98b46ca5028746284349a5"},
+{"g1_pub_key":{"x":"0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b","y":"0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37"},"weight":1,"address":"0xb243f68e8e3245464d21b79c7ceae347ecc08ea6"},
+{"g1_pub_key":{"x":"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a","y":"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"},"weight":1,"address":"0x98efa292822eb7b3045c491e8ae4e82b3b1ac005"}]
 "#;
     let file = fs::File::open("./tests/data/init_value.json").unwrap();
     let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
-    init_args["epoch"] = json!(190);
+    init_args["epoch"] = json!(203);
     init_args["validators"] = serde_json::from_str(validators).unwrap();
     init_args["threshold"] = json!(4);
     println!("validators:{}", init_args["validators"]);
@@ -1132,10 +945,10 @@ async fn test_remove_validator() -> anyhow::Result<()> {
 
     assert!(res.is_success(), "init contract failed!");
 
-    let file = fs::File::open("./tests/data/headers.json").unwrap();
+    let file = fs::File::open("./tests/data/header.json").unwrap();
     let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
 
-    let header = headers["190000"].clone();
+    let header = headers["203000"].clone();
     let res = contract
         .call(&worker, "update_block_header")
         .args_json(json!(header))?
@@ -1143,47 +956,48 @@ async fn test_remove_validator() -> anyhow::Result<()> {
         .transact()
         .await?;
     println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "update_block_header 190000 failed");
+    assert!(res.is_success(), "update_block_header 203000 failed");
 
     let record_opt: Option<EpochRecord> = contract
         .call(&worker, "get_record_for_epoch")
         .args_json(json!({
-            "epoch": 191
+            "epoch": 204
         }))?
         .view()
         .await?
         .json()?;
 
-    assert!(record_opt.is_some(), "epoch 191 should have record");
+    assert!(record_opt.is_some(), "epoch 204 should have record");
     let record = record_opt.unwrap();
     let validators = &init_args["validators"].as_array().unwrap();
-    assert_eq!(4, record.threshold, "threshold check failed");
-    assert_eq!(191, record.epoch, "epoch check failed");
+    assert_eq!(3, record.threshold, "threshold check failed");
+    assert_eq!(204, record.epoch, "epoch check failed");
     assert_eq!(validators.len() - 1, record.validators.len(), "one validator should be removed");
 
     for validator in record.validators.iter() {
-        println!("{}", serde_json::to_string(validator).unwrap())
+        println!("{}", serde_json::to_string(validator).unwrap());
+        assert_ne!(del_val, serde_json::to_string(validator).unwrap());
     }
 
     Ok(())
 }
 
 #[tokio::test]
-async fn test_verify_proof_after_add_remove_validators_001() -> anyhow::Result<()> {
+async fn test_verify_proof_after_add_validator() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
-    let validators = r#"[
-    {"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"},
-    {"g1_pub_key":{"x":"0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58","y":"0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"},"weight":1,"address":"0x7a3a26123dbd9cfefc1725fe7779580b987251cb"},
-    {"g1_pub_key":{"x":"0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812","y":"0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"},"weight":1,"address":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"},
-    {"g1_pub_key":{"x":"0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6","y":"0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"},"weight":1,"address":"0x65b3fee569bf82ff148bdded9c3793fb685f9333"},
-    {"g1_pub_key":{"x":"0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d","y":"0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"},"weight":1,"address":"0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"}
-]"#;
+    let validators = r#"[{"g1_pub_key":{"x":"0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1","y":"0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287"},"weight":1,"address":"0x053af2b1ccbacba47c659b977e93571c89c49654"},
+{"g1_pub_key":{"x":"0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69","y":"0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7"},"weight":1,"address":"0xb47adf1e504601ff7682b68ba7990410b92cd958"},
+{"g1_pub_key":{"x":"0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835","y":"0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042"},"weight":1,"address":"0xf655fc7c95c70a118f98b46ca5028746284349a5"},
+{"g1_pub_key":{"x":"0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b","y":"0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37"},"weight":1,"address":"0xb243f68e8e3245464d21b79c7ceae347ecc08ea6"},
+{"g1_pub_key":{"x":"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a","y":"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"},"weight":1,"address":"0x98efa292822eb7b3045c491e8ae4e82b3b1ac005"}]
+"#;
     let file = fs::File::open("./tests/data/init_value.json").unwrap();
     let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
     init_args["epoch"] = json!(203);
     init_args["validators"] = serde_json::from_str(validators).unwrap();
     println!("validators:{}", init_args["validators"]);
+    init_args["threshold"] = json!(4);
     let res = contract
         .call(&worker, "new")
         .args_json(json!(init_args))?
@@ -1198,32 +1012,23 @@ async fn test_verify_proof_after_add_remove_validators_001() -> anyhow::Result<(
 
     let res = contract
         .call(&worker, "verify_proof_data")
-        .args_json(json!({"receipt_proof": proofs["202351"]}))?
+        .args_json(json!({"receipt_proof": proofs["202554"]}))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
     println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "verify_proof_data on block 202351 failed");
+    assert!(res.is_success(), "verify_proof_data on block 202554 failed");
 
     Ok(())
 }
 
 #[tokio::test]
-async fn test_verify_proof_after_add_remove_validators_002() -> anyhow::Result<()> {
+async fn test_verify_proof_after_remove_validator() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
-    let validators = r#"[
-    {"g1_pub_key":{"x":"0x13524ec450b9ac611fb332a25b6c2eb436d13ac8a540f69a50d6ff8d4fe9f249","y":"0x2b7d0f6e80e80e9b5f9c7a9fa2d482c2e8ea6c1657057c5548b7e30412d48bc3"},"weight":1,"address":"0xb4e1bc0856f70a55764fd6b3f8dd27f2162108e9"},
-    {"g1_pub_key":{"x":"0x0e3450c5b583e57d8fe736d276e9e4bb2ce4b38a5e9ac77b1289ba14a5e9cf58","y":"0x1ce786f52d5bd0e77c1eacfa3dd5df0e22464888fa4bfab6eff9f29e8f86084b"},"weight":1,"address":"0x7a3a26123dbd9cfefc1725fe7779580b987251cb"},
-    {"g1_pub_key":{"x":"0x2f6dd4eda4296d9cf85064adbe2507901fcd4ece425cc996827ba4a2c111c812","y":"0x1e6fe59e1d18c107d480077debf3ea265a52325725a853a710f7ec3af5e32869"},"weight":1,"address":"0x7607c9cdd733d8cda0a644839ec2bac5fa180ed4"},
-    {"g1_pub_key":{"x":"0x05fde1416ab5b30e4b140ad4a29a52cd9bc85ca27bd4662ba842a2e22118bea6","y":"0x0dc32694f317d886daac5419b39412a33ee89e07d39d557e4e2b0e48696ac311"},"weight":1,"address":"0x65b3fee569bf82ff148bdded9c3793fb685f9333"},
-    {"g1_pub_key":{"x":"0x11902b17829937be3f969e58f386ddfd7ef19065da959cba0caeda87a298ce2d","y":"0x2f79adf719a0099297bb8fb503f25b5d5c52fad67ab7a4a03cb74fe450f4decd"},"weight":1,"address":"0x4ca1a81e4c46b90ec52371c063d5721df61e7e12"}
-]"#;
     let file = fs::File::open("./tests/data/init_value.json").unwrap();
     let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
-    init_args["epoch"] = json!(450);
-    init_args["validators"] = serde_json::from_str(validators).unwrap();
-    println!("validators:{}", init_args["validators"]);
+    init_args["epoch"] = json!(206);
     let res = contract
         .call(&worker, "new")
         .args_json(json!(init_args))?
@@ -1238,12 +1043,12 @@ async fn test_verify_proof_after_add_remove_validators_002() -> anyhow::Result<(
 
     let res = contract
         .call(&worker, "verify_proof_data")
-        .args_json(json!({"receipt_proof": proofs["449308"]}))?
+        .args_json(json!({"receipt_proof": proofs["205002"]}))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
     println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "verify_proof_data on block 449308 failed");
+    assert!(res.is_success(), "verify_proof_data on block 205002 failed");
 
     Ok(())
 }
