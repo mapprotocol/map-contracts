@@ -43,6 +43,7 @@ contract MAPVaultToken is VERC20, IVault, Role {
         }
         uint allCorrespond = correspondBalance();
         uint allVToken = totalSupply();
+        require(allCorrespond > 0, "getVTokenQuantity/correspondBalance is zero");
         return amount.mul(allVToken).div(allCorrespond);
     }
 
@@ -72,7 +73,7 @@ contract MAPVaultToken is VERC20, IVault, Role {
         uint correspondAmount = getCorrespondQuantity(amount);
         require(correspondBalance().sub(correspondAmount) > 0, "take too much");
         _burn(msg.sender, amount);
-        TransferHelper.safeTransferFrom(correspond, address(this),msg.sender, amount);
+        TransferHelper.safeTransferFrom(correspond, address(this),msg.sender, correspondAmount);
         emit VaultWithdraw(correspondAmount, amount);
     }
 }

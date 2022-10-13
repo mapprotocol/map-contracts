@@ -75,6 +75,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     public
     view
     returns(G1[] memory){
+        require(id < 20,"validator id error");
         return validators[id].pairKeys;
     }
 
@@ -272,14 +273,11 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         bytes32 hash = verifyTool.getBlockHash(bh);
         if (round == 0) {
             result = abi.encodePacked(hash, uint8(2));
-        } else if (round < 256) {
-            result = abi.encodePacked(hash, uint8(round), uint8(2));
-        } else if (round < 65536) {
-            result = abi.encodePacked(hash, uint16(round), uint8(2));
         } else {
-            result = abi.encodePacked(hash, uint24(round), uint8(2));
+            result = abi.encodePacked(hash, getLengthInBytes(round), uint8(2));
         }
     }
+
 
     function getLengthInBytes(uint256 num)
     internal

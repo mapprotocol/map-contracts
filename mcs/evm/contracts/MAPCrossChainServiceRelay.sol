@@ -206,7 +206,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         return tokenRegister.getTargetToken(fromChain, fromToken, selfChainId);
     }
 
-    function collectChainFee(uint256 amount, address token) public {
+    function collectChainFee(uint256 amount, address token) private {
         address transferToken = token;
         if (token == address(0)) {
             transferToken = wToken;
@@ -349,10 +349,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
                 TransferHelper.safeWithdraw(wToken, outAmount);
                 TransferHelper.safeTransferETH(to, outAmount);
             } else if (checkAuthToken(token)) {
-                IMAPToken(token).mint(address(this), amount);
-                TransferHelper.safeTransfer(token, to, amount);
+                IMAPToken(token).mint(address(this), outAmount);
+                TransferHelper.safeTransfer(token, to, outAmount);
             } else {
-                require(IERC20(token).balanceOf(address(this)) >= amount, "balance too low");
+                require(IERC20(token).balanceOf(address(this)) >= outAmount, "balance too low");
                 TransferHelper.safeTransfer(token, to, outAmount);
             }
             collectChainFee(fee, token);
