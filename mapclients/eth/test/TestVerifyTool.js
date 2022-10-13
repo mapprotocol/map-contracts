@@ -49,7 +49,7 @@ describe('VerifyTools', function () {
     it("VerifyTools verify ", async () => {
         // assert(await verifyToolContract.getVerifyTrieProof2(proofs.proofOk));
 
-        assert(await verifyToolContract.getVerifyTrieProof2(proofs.proofError3));
+        // assert(await verifyToolContract.getVerifyTrieProof2(proofs.proofError3));
 
         // console.log(index2key(0,2));
         // console.log(index2key(0,2));

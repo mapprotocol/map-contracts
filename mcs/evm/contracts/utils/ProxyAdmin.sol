@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
 
 contract ProxyAdminImport is ProxyAdmin{
     function getInitCallData(address wCoin, address map) public pure returns (bytes memory){
-        bytes4 fun = bytes4(keccak256(bytes('initialize(address,address)')));
+        bytes4 fun = "0x485cc955";
         return abi.encodeWithSelector(fun,wCoin,map);
     }
 }
