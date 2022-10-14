@@ -12,11 +12,8 @@ import {
 } from "../utils/Util"
 
 
-let uri = process.env.BSCURI;
-
 let chainId = process.env.CHAINID;
 
-let epochNum = 200;
 let minEpochBlockExtraDataLen = process.env.MinEpochBlockExtraDataLen
 describe("LightNode", function () {
     // We define a fixture to reuse the same setup in every test.
