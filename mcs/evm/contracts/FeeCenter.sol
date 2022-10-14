@@ -5,13 +5,13 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interface/IFeeCenter.sol";
-import "./utils/Role.sol";
 import "./utils/TransferHelper.sol";
 
 
 
-contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
+contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
     uint immutable chainId = block.chainid;
     using SafeMath for uint;
     mapping(uint => mapping (address => gasFee)) chainTokenGasFee;
@@ -22,13 +22,13 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
     mapping(uint => Rate) distributeRate;
 
 
-    function setChainTokenGasFee(uint to, address token, uint lowest, uint highest,uint proportion) external onlyManager {
+    function setChainTokenGasFee(uint to, address token, uint lowest, uint highest,uint proportion) external onlyOwner {
         require(highest >= lowest, 'Invalid highest and lowest');
         require(proportion <= 10000, 'Invalid proportion value');
         chainTokenGasFee[to][token] = gasFee(lowest,highest,proportion);
     }
 
-    function setTokenVault(address token,address tVault) external onlyManager{
+    function setTokenVault(address token,address tVault) external onlyOwner{
         tokenVault[token] = tVault;
     }
 
@@ -69,7 +69,7 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
         return(rate.feeAddress, rate.rate);
     }
 
-    function setDistributeRate(uint id, address to, uint rate) external onlyManager{
+    function setDistributeRate(uint id, address to, uint rate) external onlyOwner{
         require(rate <= 10000, 'Invalid rate value');
         distributeRate[id] = Rate(to,rate);
     }

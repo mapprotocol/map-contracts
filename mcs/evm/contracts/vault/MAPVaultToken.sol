@@ -4,13 +4,13 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./VERC20.sol";
 import "../interface/IVault.sol";
-import "../utils/Role.sol";
 import "../utils/TransferHelper.sol";
 
 
-contract MAPVaultToken is VERC20, IVault, Role {
+contract MAPVaultToken is VERC20, IVault, Ownable {
     using SafeMath for uint;
     uint accrualBlockNumber;
     mapping(address => uint) public userStakingAmount;
@@ -29,8 +29,6 @@ contract MAPVaultToken is VERC20, IVault, Role {
         correspond = correspond_;
         correspondToken = IERC20(correspond);
         init(name_, symbol_, decimals_);
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(MANAGER_ROLE, msg.sender);
     }
 
     function correspondBalance() public view returns (uint){
@@ -39,6 +37,7 @@ contract MAPVaultToken is VERC20, IVault, Role {
 
     function getVTokenQuantity(uint amount) public view returns (uint){
         if (totalSupply() == 0) {
+
             return amount;
         }
         uint allCorrespond = correspondBalance();
@@ -63,7 +62,7 @@ contract MAPVaultToken is VERC20, IVault, Role {
         emit VaultStaking(amount, vtoken);
     }
 
-    function stakingTo(uint amount, address to) external override onlyManager {
+    function stakingTo(uint amount, address to) external override onlyOwner {
         uint vtoken = getVTokenQuantity(amount);
         _mint(to, vtoken);
         emit VaultStaking(amount, vtoken);

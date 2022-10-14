@@ -7,16 +7,17 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "./utils/Role.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interface/ILightClientManager.sol";
 import "./interface/ILightNode.sol";
 
 
-contract LightClientManager is ILightClientManager,Role {
+
+contract LightClientManager is ILightClientManager,Ownable {
     mapping(uint256 => address) public lightClientContract;
     mapping(uint256 => address) public updateBlockContract;
 
-    function register(uint256 _chainId, address _contract,address _blockContract) external override onlyManager{
+    function register(uint256 _chainId, address _contract,address _blockContract) external override onlyOwner{
         lightClientContract[_chainId] = _contract;
         updateBlockContract[_chainId] = _blockContract;
     }

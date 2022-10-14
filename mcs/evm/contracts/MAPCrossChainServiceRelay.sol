@@ -13,7 +13,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./interface/IFeeCenter.sol";
-import "./utils/Role.sol";
 import "./interface/IVault.sol";
 import "./utils/TransferHelper.sol";
 import "./interface/IMCSRelay.sol";
@@ -22,7 +21,7 @@ import "./interface/ITokenRegister.sol";
 import "./interface/ILightClientManager.sol";
 
 
-contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Pausable, IMCSRelay {
+contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, IMCSRelay, Ownable {
     using SafeMath for uint;
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
@@ -99,8 +98,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         mapDepositOutTopic = keccak256(bytes('mapDepositOut(bytes,address,bytes,bytes32,uint256)'));
         nearTransferOut = 0x4e87426fdd31a6df84975ed344b2c3fbd45109085f1557dff1156b300f135df8;
         nearDepositOut = '';
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(MANAGER_ROLE, msg.sender);
     }
 
     receive() external payable {
@@ -114,39 +111,39 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         _;
     }
 
-    function setVaultBalance(uint256 tochain, address token, uint256 amount) external onlyManager {
+    function setVaultBalance(uint256 tochain, address token, uint256 amount) external onlyOwner {
         vaultBalance[tochain][token] = amount;
     }
 
-    function setTokenRegister(address _register) external onlyManager {
+    function setTokenRegister(address _register) external onlyOwner {
         tokenRegister = ITokenRegister(_register);
     }
 
-    function setLightClientManager(address _managerAddress) external onlyManager {
+    function setLightClientManager(address _managerAddress) external onlyOwner {
         lightClientManager = ILightClientManager(_managerAddress);
     }
 
-    function setBridageAddress(uint256 _chainId, bytes memory _addr) external onlyManager {
+    function setBridageAddress(uint256 _chainId, bytes memory _addr) external onlyOwner {
         bridgeAddress[_addr] = _chainId;
     }
 
-    function setIdTable(uint256 _chainId, uint256 _id) external onlyManager {
+    function setIdTable(uint256 _chainId, uint256 _id) external onlyOwner {
         ChainIdTable[_id] = _chainId;
     }
 
-    function setNearHash(bytes32 _hash) external onlyManager {
+    function setNearHash(bytes32 _hash) external onlyOwner {
         nearTransferOut = _hash;
     }
 
-    function setPause() external onlyManager {
+    function setPause() external onlyOwner {
         _pause();
     }
 
-    function setUnpause() external onlyManager {
+    function setUnpause() external onlyOwner {
         _unpause();
     }
 
-    function setTokenOtherChainDecimals(bytes memory selfToken, uint256 chainId, uint256 decimals) external onlyManager {
+    function setTokenOtherChainDecimals(bytes memory selfToken, uint256 chainId, uint256 decimals) external onlyOwner {
         tokenOtherChainDecimals[selfToken][chainId] = decimals;
     }
 
@@ -154,17 +151,17 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
 
-    function setFeeCenter(address fee) external onlyManager {
+    function setFeeCenter(address fee) external onlyOwner {
         feeCenter = IFeeCenter(fee);
     }
 
-    function addAuthToken(address[] memory token) external onlyManager {
+    function addAuthToken(address[] memory token) external onlyOwner {
         for (uint256 i = 0; i < token.length; i++) {
             authToken[token[i]] = true;
         }
     }
 
-    function removeAuthToken(address[] memory token) external onlyManager {
+    function removeAuthToken(address[] memory token) external onlyOwner {
         for (uint256 i = 0; i < token.length; i++) {
             authToken[token[i]] = false;
         }
@@ -401,7 +398,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Role, Initializable, Paus
     }
 
 
-    function withdraw(address token, address payable receiver, uint256 amount) public onlyManager {
+    function withdraw(address token, address payable receiver, uint256 amount) public onlyOwner {
         if (token == address(0)) {
             IWToken(wToken).withdraw(amount);
             receiver.transfer(amount);

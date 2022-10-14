@@ -11,7 +11,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
-import "./utils/Role.sol";
 import "./interface/IFeeCenter.sol";
 import "./utils/TransferHelper.sol";
 import "./interface/IMCS.sol";
