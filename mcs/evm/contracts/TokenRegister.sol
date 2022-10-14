@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interface/ITokenRegister.sol";
-import "./utils/Role.sol";
 
-contract TokenRegister is Role {
+contract TokenRegister is Ownable {
     uint public immutable chainID = block.chainid;
 
     constructor(){
@@ -21,13 +21,13 @@ contract TokenRegister is Role {
     function regToken(
         uint256 sourceChain, bytes memory sourceMapToken, bytes memory mapToken
     ) external
-    onlyManager{
+    onlyOwner{
         sourceCorrespond[sourceChain][sourceMapToken] = mapToken;
         mapCorrespond[sourceChain][mapToken] = sourceMapToken;
     }
 
     function regTokenSource(bytes memory sourceToken, bytes memory sourceMapToken) external
-    onlyManager{
+    onlyOwner{
         sourceBinding[chainID][sourceMapToken] = sourceToken;
     }
 
