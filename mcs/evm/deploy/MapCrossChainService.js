@@ -1,8 +1,12 @@
 const BigNumber = require('bignumber.js')
 BigNumber.config({ROUNDING_MODE: BigNumber.ROUND_FLOOR})
 
-let lightNodeAddress = "0x80Be41aEBFdaDBD58a65aa549cB266dAFb6b8304";
-let mcsRelayAddress = "0x23b51D50782c42Ac2dcda362E5243795205a02a4";
+//let lightNodeAddress = "0xF71F0007dDb539e2A506D770bB3a3eE83bD939B9";
+let lightNodeAddress = "0x1eD5058d28fCD3ae7b9cfFD0B0B3282d939c4034";
+
+let weth = "0xB59B98DF47432371A36A8F83fC7fd8371ec1300B";
+let usdt = "0xdBf63a81d44DA9645498E371A856F9754F4f2c2B";
+let mapToken = "0xb245609e5b2a0E52191Cba6314b47C73a0f9f023";
 
 module.exports = async function ({ethers, deployments}) {
     const {deploy} = deployments
@@ -17,19 +21,26 @@ module.exports = async function ({ethers, deployments}) {
         contract: 'MapCrossChainService',
     })
 
+
     let mcss = await ethers.getContract('MapCrossChainService');
+
 
     console.log("MapCrossChainService address:",mcss.address);
 
-
-    await (await mcss.initialize(wcoin.address,mapcoin.address,lightNodeAddress)).wait();
+    let data = await mcss.initialize(weth,mapToken,lightNodeAddress)
     console.log("MapCrossChainService initialize success");
 
-    await (await mcss.setBridge(mcsRelayAddress,212)).wait();
+    await deploy('MapCrossChainServiceProxy', {
+        from: deployer.address,
+        args: [mcss.address,data.data],
+        log: true,
+        contract: 'MapCrossChainServiceProxy',
+    })
 
-    await (await mcss.setCanBridgeToken("0x0000000000000000000000000000000000000000",212,true)).wait();
+    let mcssP = await ethers.getContract('MapCrossChainServiceProxy');
 
-    await (await mcss.setCanBridgeToken("0x0000000000000000000000000000000000000000",1313161555,true)).wait();
+    console.log("MapCrossChainServiceProxy address:",mcssP.address)
+
 
 
 }
