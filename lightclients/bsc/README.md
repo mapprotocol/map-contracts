@@ -1,6 +1,6 @@
 # Brief Description
 
-The LightNode.sol contract is an custom implementation of BSC light client on map chain. It operate by periodically fetching instances of LightClientBlockView from Near and verify its validity.
+The LightNode.sol contract is an custom implementation of BSC light client on map chain. It operate by periodically fetching instances of LightClientBlockView from bsc and verify its validity.
 
 The LightNodeProxy.sol contract is an proxy contract of LightNode.sol.
 

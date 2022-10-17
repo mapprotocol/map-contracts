@@ -28,11 +28,12 @@ async function main() {
   await lightNodeProxy.deployed();
   console.log("lightNodeProxy deployed to .....", lightNodeProxy.address);
 
-  const proxy = LightNode.attach(lightNodeProxy.address);
+  // if is map network we can open it
+  // const proxy = LightNode.attach(lightNodeProxy.address);
 
-  await (await proxy.updateBlockHeader(borshify(require('./data/addBlock.json')), { gasLimit: 20000000 })).wait();
+  // await (await proxy.updateBlockHeader(borshify(require('./data/addBlock.json')), { gasLimit: 20000000 })).wait();
 
-  console.log(await proxy.headerHeight());
+  // console.log(await proxy.headerHeight());
 
 }
 
