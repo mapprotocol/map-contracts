@@ -4,17 +4,11 @@ The LightNode.sol contract is an custom implementation of Near light client on m
 
 The LightNodeProxy.sol contract is an proxy contract of LightNode.sol.
 
-
-
 # Contract Deployment Workflow
 
 ## Pre-requirement
 
-Since all of the contracts are developed in Hardhat development environment, developers need to install Hardhat before working through our contracts. The hardhat installation tutorial can be found here 
-
-[Hardhat]: https://hardhat.org/hardhat-runner/docs/getting-started#installation	"Hardhat installation"
-
-
+Since all of the contracts are developed in Hardhat development environment, developers need to install Hardhat before working through our contracts. The hardhat installation tutorial can be found here
 
 ### Compiling contracts
 
@@ -28,15 +22,15 @@ Compiled 1 contract successfully
 
 The compiled artifacts will be saved in the `artifacts/` directory by default
 
-
-
 ## Testing contracts
 
-Our test cases are separated into two files: 
+Our test cases are separated into two files:
 
-**LightNode.sol** including test cases related to basic functions and some configuration functions
+**LightNode.js** including test cases related to basic functions and some configuration functions
 
 we can use hardhat basic test task to run through it:
+
+(Make sure you have closed /test/oncjainTest.js before you begin)
 
 ```
 $ npx hardhat test
@@ -61,9 +55,9 @@ lightNodeProxy deployed to ..... 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 
 ```
 
-**onChainTest.sol** including test cases related to proof validation. It also contains proof validation using map pre-compiled Ed25519 contracts.
+**onChainTest.js** including test cases related to proof validation. It also contains proof validation using map pre-compiled Ed25519 contracts.
 
-This test requires a different setup since it is tested on map testnet.  
+This test requires a different setup since it is tested on map testnet.
 
 We need to first enter a funded account mnemonic and put it into a newly created .env file. The example content for .env file is in env-example.txt.
 
@@ -90,11 +84,13 @@ Then we need to add custom map_test network settings in hardhat config file.
 
 The result will be printed out with a true value in success field.
 
-
-
 All the data used in test cases are stored in data folder and they are extracted from Near blockchain history transactions.
 
+(Make sure you have opened /test/oncjainTest.js before you begin)
 
+```
+npx hardhat run ./test/onChainTest.js --network map_test
+```
 
 ## Deploy contracts
 
@@ -105,5 +101,4 @@ npx hardhat run --network map_test scripts/deploy.js
 ```
 
 
-
-​	
+[Hardhat]: https://hardhat.org/hardhat-runner/docs/getting-started#installation

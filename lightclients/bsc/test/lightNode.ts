@@ -12,7 +12,7 @@ import {
 } from "../utils/Util"
 
 
-let chainId = process.env.CHAINID;
+let chainId = 56; //test data from bsc mainnet
 
 let minEpochBlockExtraDataLen = process.env.MinEpochBlockExtraDataLen
 describe("LightNode", function () {

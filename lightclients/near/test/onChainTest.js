@@ -7,9 +7,7 @@ const sleep = promisify(setTimeout);
 
 async function main() {
 
-  await verifyProofData();
-
-  // await test();
+ // await verifyProofData();
 
 }
 
