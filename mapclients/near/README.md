@@ -2,9 +2,36 @@
 
 # Pre-requisites
 
-Make sure Rust development environment is installed and configured. 
+1. rust
 
-See [here](https://www.rust-lang.org/tools/install) about how to install.
+Follow [these instructions](https://doc.rust-lang.org/book/ch01-01-installation.html) for setting up Rust.
+Then, add the **wasm32-unknown-unknown** toolchain which enables compiling Rust to Web Assembly (wasm), the low-level language used by the NEAR platform.
+
+```shell
+# Get Rust in linux and MacOS
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+source $HOME/.cargo/env
+
+# Add the wasm toolchain
+rustup target add wasm32-unknown-unknown
+```
+
+2. near-cli
+
+The NEAR Command Line Interface (CLI) is a tool that enables to interact with the NEAR network directly from the shell.
+Follow [here](https://docs.near.org/tools/near-cli) for installing near-cli.
+Then, select the network and login with your master account.
+
+```shell
+# Install near-cli in linux and McsOS
+npm install -g near-cli
+
+# The default network for near-cli is testnet, change the network by setting NEAR_ENV
+# export NEAR_ENV=mainnet
+
+# login with your master account
+near login
+```
 
 # Build the contracts
 
