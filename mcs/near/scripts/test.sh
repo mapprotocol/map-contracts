@@ -73,7 +73,7 @@ function init() {
 
   echo "preparing factory contract"
   $SCRIPT_DIR/manage_factory.sh deploy
-  echo "creating map light client, multisig and mcs contrac"
+  echo "creating map light client, multisig and mcs contract"
   $SCRIPT_DIR/manage_factory.sh create
 }
 

@@ -1,4 +1,4 @@
-RELEASE=false  # set to true before building release version
+RELEASE=true  # set to true before building release version
 MASTER_ACCOUNT="map003.testnet"
 MAP_BRIDGE_ADDRESS="F579c89C22DAc92E9816C0b39856cA9281Bd7BE0"
 WNEAR_ACCOUNT="wrap.testnet"
