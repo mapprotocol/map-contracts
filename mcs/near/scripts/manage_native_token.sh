@@ -8,23 +8,11 @@ function printHelp() {
   echo "Usage:"
   echo "  $FILE_NAME <command>"
   echo "Commands:"
-  echo "  add <to chain>                             add to chain of native token"
-  echo "  remove <to chain>                          remove to chain of native token"
   echo "  list                                       view registered native tokens to chains"
   echo "  transfer <to chain> <from> <to> <amount>   transfer out native token"
   echo "  deposit  <from> <to> <amount>              deposit out native token"
   echo "  balance  <account>                         view account balance of native token"
   echo "  help                                       show help"
-}
-
-function add_to_chain() {
-  echo "adding native token to_chain $1 to mcs contract"
-  near call $MCS_ACCOUNT add_native_to_chain '{ "to_chain": '$1'}' --accountId $MCS_ACCOUNT --gas 120000000000000
-}
-
-function remove_to_chain() {
-  echo "removing native token to_chain $1 from mcs contract"
-  near call $MCS_ACCOUNT remove_native_to_chain '{ "to_chain": '$1'}' --accountId $MCS_ACCOUNT
 }
 
 function list_to_chains() {

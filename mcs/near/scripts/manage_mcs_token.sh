@@ -9,9 +9,6 @@ function printHelp() {
   echo "  $FILE_NAME <command>"
   echo "Commands:"
   echo "  deploy <token name>                               deploy mcs token"
-  echo "  metadata <token name> <decimal>                   set metadata of mcs token"
-  echo "  add <token name> <to chain>                       add to chain of mcs token"
-  echo "  remove <token name> <to chain>                    remove to chain of mcs token"
   echo "  list                                              view deployed mcs tokens and their to chains"
   echo "  transfer <token> <to chain> <from> <to> <amount>  transfer out mcs token"
   echo "  deposit <token> <from> <to> <amount>              deposit out mcs token"
@@ -20,23 +17,9 @@ function printHelp() {
 }
 
 function deploy() {
-    echo "deploying $1 contract"
-    near call $MCS_ACCOUNT deploy_mcs_token '{"address": "'$1'"}'  --accountId $MASTER_ACCOUNT --deposit 10 --gas 80000000000000
-}
-
-function metadata() {
-    echo "set decimal metadata of token $1 to $2"
-    near call $MCS_ACCOUNT set_metadata '{"address": "'$1'", "decimals": '$2'}'  --accountId $MCS_ACCOUNT --gas 80000000000000
-}
-
-function add_to_chain() {
-  echo "adding $1 to_chain $2 to mcs contract"
-  near call $MCS_ACCOUNT add_mcs_token_to_chain '{"token": "'$1'", "to_chain": '$2'}' --accountId $MCS_ACCOUNT
-}
-
-function remove_to_chain() {
-  echo "removing $1 to_chain $2 from mcs contract"
-  near call $MCS_ACCOUNT remove_mcs_token_to_chain '{"token": "'$1'", "to_chain": '$2'}' --accountId $MCS_ACCOUNT
+    echo "deploying $1 contract by $2"
+    echo near call $MCS_ACCOUNT deploy_mcs_token '{"address": "'$1'"}'  --accountId $2 --deposit 10 --gas 80000000000000
+    near call $MCS_ACCOUNT deploy_mcs_token '{"address": "'$1'"}'  --accountId $2 --deposit 10 --gas 80000000000000
 }
 
 function list_tokens() {
@@ -63,8 +46,8 @@ function balance() {
 if [[ $# -gt 0 ]]; then
   case $1 in
     deploy)
-      if [[ $# == 2 ]]; then
-        deploy $2
+      if [[ $# == 3 ]]; then
+        deploy $2 $3
       else
         printHelp
         exit 1

@@ -18,7 +18,6 @@ impl Factory {
     pub fn create_map_client(
         &mut self,
         name: String,
-        owner: AccountId,
         threshold: u64,
         validators: Vec<Validator>,
         epoch: u64,
@@ -31,7 +30,7 @@ impl Factory {
             .transfer(env::attached_deposit())
             .function_call(
                 "new".to_string(),
-                json!({ "owner": owner,
+                json!({
                     "threshold": threshold,
                     "validators": validators,
                     "epoch": epoch,

@@ -115,15 +115,15 @@ function prepare() {
 }
 
 function clean() {
-#  echo "upgrading mcs token $MCS_TOKEN to mock map client"
-#  $SCRIPT_DIR/manage_multisig.sh request_and_confirm upgrade_mcs_token $MCS_TOKEN $SCRIPT_DIR/res/mock_map_client.wasm
-#  echo "deleting mcs toke $MCS_TOKEN"
-#  near call $MCS_TOKEN delete_self '{"beneficiary":"'$MASTER_ACCOUNT'"}' --accountId $MASTER_ACCOUNT
-#
-#  echo "upgrading mcs contract $MCS_ACCOUNT to mock map client"
-#  $SCRIPT_DIR/manage_multisig.sh request_and_confirm upgrade_mcs $SCRIPT_DIR/res/mock_map_client.wasm
-#  echo "deleting mcs contract $MCS_ACCOUNT"
-#  near call $MCS_ACCOUNT delete_self '{"beneficiary":"'$MASTER_ACCOUNT'"}' --accountId $MASTER_ACCOUNT
+  echo "upgrading mcs token $MCS_TOKEN to mock map client"
+  $SCRIPT_DIR/manage_multisig.sh request_and_confirm upgrade_mcs_token $MCS_TOKEN $SCRIPT_DIR/res/mock_map_client.wasm
+  echo "deleting mcs toke $MCS_TOKEN"
+  near call $MCS_TOKEN delete_self '{"beneficiary":"'$MASTER_ACCOUNT'"}' --accountId $MASTER_ACCOUNT
+
+  echo "upgrading mcs contract $MCS_ACCOUNT to mock map client"
+  $SCRIPT_DIR/manage_multisig.sh request_and_confirm upgrade_mcs $SCRIPT_DIR/res/mock_map_client.wasm
+  echo "deleting mcs contract $MCS_ACCOUNT"
+  near call $MCS_ACCOUNT delete_self '{"beneficiary":"'$MASTER_ACCOUNT'"}' --accountId $MASTER_ACCOUNT
 
   echo "upgrading map light client contract $CLIENT_ACCOUNT to mock map client"
   $SCRIPT_DIR/manage_multisig.sh request_and_confirm upgrade_client $SCRIPT_DIR/res/mock_map_client.wasm

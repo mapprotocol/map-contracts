@@ -1,5 +1,4 @@
 {
-    "owner": "owner.near",
     "threshold": 3,
     "epoch": 3,
     "epoch_size": 1000,

@@ -35,22 +35,31 @@ near login
 
 # Build the contracts
 
-Run below command to build:
+Run below script to build:
 
-```shell
-cargo build --workspace --target wasm32-unknown-unknown --release
-```
-
-or you can simply run 
 ```shell
 ./scripts/build.sh
 ```
-2 wasm files will be generated in directory ./target/wasm32-unknown-unknown/release:
+2 wasm files will be generated in directory ./script/res:
 1. **map_light_client.wasm**: this is the MAP light client contract
 2. **map_client_factory.wasm**: this is the factory contract to deploy and initialize the MAP light client contract and make the MAP light contract account in locked state.
 
 # Deploy the contracts
-See [here](../../mcs/near/README.md) for details.
+
+1. Configure below parameters in ./scripts/config.sh
+```shell
+MASTER_ACCOUNT=map001.testnet # make sure the account is already created on NEAR blockchain
+FACTORY_NAME=fac # the name of map client factory contract to be created, the account ID will be $FACTORY_NAME.$MASTER_ACCOUNT
+CLIENT_NAME=client # the name of MAP light client contract to be created, the account ID will be $CLIENT_NAME.$FACTORY_NAME
+MAP_RPC_URL=http://3.0.19.66:7445  # the RPC url of MAP blockchain
+EPOCH_ID=300  # get the information of this epoch id to initialize the MAP light client contract
+```
+
+2. Deploy factory contract and MAP light client contract, and initialize it with below command:
+```shell
+    ./scripts/deploy.sh
+```
+
 
 # Testing
 
