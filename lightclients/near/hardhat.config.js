@@ -1,26 +1,31 @@
 require("@nomicfoundation/hardhat-toolbox");
+require('hardhat-deploy');
 require("dotenv").config();
 
 
 
 module.exports = {
   solidity: {
-		compilers: [
-			{ version: "0.8.4", settings: { optimizer: { enabled: true, runs: 200 } } },
-		],
-	},
+    compilers: [
+      { version: "0.8.4", settings: { optimizer: { enabled: true, runs: 200 } } },
+    ],
+  },
+  namedAccounts: {
+    deployer: 0,
+  },
   networks: {
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
+    makalu: {
+      chainId: 212,
+      url: 'https://testnet-rpc.maplabs.io',
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    map_test: {
-      chainId: 212,
-      url: process.env.ROPSTEN_URL || "http://18.142.54.137:7445",
-      accounts: { mnemonic: process.env.MNEMONIC},
+    map: {
+      chainId: 22776,
+      url: "https://rpc.maplabs.io",
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    
+
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,

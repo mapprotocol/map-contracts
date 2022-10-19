@@ -133,6 +133,7 @@ async function verifyProofData() {
   ]
 
   await sleep(30000);
+  //fail invalid block proof
   result = await proxy.verifyProofData(ethers.utils.defaultAbiCoder.encode(types, values), { gasLimit: 20000000 });
   console.log(result);
 

@@ -1,4 +1,4 @@
-MNEMONIC = 
+PRIVATE_KEY = 
 # bsc rpc url
 BSCURI = 
 # mainnet 56 testnet 97

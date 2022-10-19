@@ -1,10 +1,13 @@
 {
-  "name": "hardhat-project",
+  "name": "bsc_light_node",
+  "version": "0.0.1",
+  "description": "bsc light node in the solidity implementation",
   "dependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.2",
     "@openzeppelin/contracts": "^4.6.0",
     "dotenv": "^16.0.0",
     "eth-proof": "^2.1.6",
+    "hardhat-deploy": "^0.11.18",
     "sha3": "^2.1.4"
   },
   "devDependencies": {
