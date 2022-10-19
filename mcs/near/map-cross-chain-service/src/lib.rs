@@ -858,6 +858,19 @@ impl MapCrossChainService {
         }
     }
 
+    pub fn set_owner(&mut self, new_owner: AccountId) {
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
+        self.owner = new_owner;
+    }
+
+    pub fn set_map_light_client(&mut self, map_client_account: AccountId) {
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_paused(PAUSE_TRANSFER_IN),
+                "transfer in should be paused when setting map light client account");
+
+        self.map_client_account = map_client_account;
+    }
+
     pub fn upgrade_self(&mut self, code: Base64VecU8) {
         assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
 

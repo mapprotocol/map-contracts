@@ -36,7 +36,6 @@ pub struct MapLightClient {
     epoch_records: UnorderedMap<u64, EpochRecord>,
     epoch_size: u64,
     header_height: u64,
-    owner: AccountId,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
@@ -59,8 +58,7 @@ pub struct Validator {
 #[near_bindgen]
 impl MapLightClient {
     #[init]
-    pub fn new(owner: AccountId,
-               threshold: u64,
+    pub fn new(threshold: u64,
                validators: Vec<Validator>,
                epoch: u64,
                epoch_size: u64) -> Self {
@@ -89,7 +87,6 @@ impl MapLightClient {
             epoch_records: val_records,
             epoch_size,
             header_height: (epoch - 1) * epoch_size,
-            owner
         }
     }
 
@@ -256,20 +253,5 @@ impl MapLightClient {
             let epoch_to_remove = next_epoch - MAX_RECORD;
             self.epoch_records.remove(&epoch_to_remove);
         }
-    }
-
-    pub fn upgrade(&mut self, code: Base64VecU8) {
-        assert_eq!(self.owner, env::predecessor_account_id(), "unexpected caller {}", env::predecessor_account_id());
-
-        let current_id = env::current_account_id();
-        let promise_id = env::promise_batch_create(&current_id);
-        env::promise_batch_action_deploy_contract(promise_id, &code.0);
-        env::promise_batch_action_function_call(
-            promise_id,
-            "migrate",
-            &[],
-            0,
-            env::prepaid_gas() - env::used_gas() - GAS_FOR_UPGRADE_SELF_DEPLOY,
-        );
     }
 }

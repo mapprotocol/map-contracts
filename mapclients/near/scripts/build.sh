@@ -15,4 +15,5 @@ echo "start to build map light client"
 cargo build --workspace --target wasm32-unknown-unknown --release
 
 mkdir $RES_DIR
+cp $RELEASE_DIR/map_client_factory.wasm $RES_DIR
 cp $RELEASE_DIR/map_light_client.wasm $RES_DIR
