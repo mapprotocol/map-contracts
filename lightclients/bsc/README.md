@@ -8,12 +8,25 @@ The LightNodeProxy.sol contract is an proxy contract of LightNode.sol.
 
 ## Pre-requirement
 
-Since all of the contracts are developed in Hardhat development environment, developers need to install Hardhat before working through our contracts. The hardhat installation tutorial can be found here
+Since all of the contracts are developed in Hardhat development environment, developers need to install Hardhat before working through our contracts. The hardhat installation tutorial can be found here[hardhat](https://hardhat.org/hardhat-runner/docs/getting-started#installation)
 
-[Hardhat][Hardhat]: https://hardhat.org/hardhat-runner/docs/getting-started#installation
+### install
 
 ```
 npm install
+```
+
+create an .env file and fill following in the contents
+
+```
+#your ethereum account private key
+PRIVATE_KEY = 
+# bsc rpc url
+BSCURI = 
+# mainnet 56 testnet 97
+CHAINID = 
+# bsc mainnet 317 testnet 197
+MinEpochBlockExtraDataLen = 317
 ```
 
 ### Compiling contracts
@@ -55,8 +68,31 @@ lightNodeProxy deployed to ..... 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 
 ## Deploy contracts
 
-The deploy script is located in script folder and is named deploy.js. We can run the following command to target deployment on map testnet which is added in Hardhat config.
+The deploy script is located in deploy folder . We can run the following command to deploy.
 
 ```
-npx hardhat run --network map_test scripts/deploy.ts
+//deploy MPTVerify
+npx hardhat deploy --tags MPTVerify
+
+//deploy MPTVerify on makalu network
+npx hardhat deploy --tags MPTVerify --network makalu
+
+//deploy lightNode implementation
+npx hardhat deploy --tags LightNode
+
+//deploy lightNode implementation on makalu network
+npx hardhat deploy --tags LightNode --network makalu
+
+//deploy lightNode proxy 
+npx hardhat deploy --tags Proxy
+
+//deploy lightNode proxy on makalu network
+npx hardhat deploy --tags Proxy --network makalu
+
+// upgrade 
+npx hardhat deploy --tags Upgrade --network makalu
 ```
+
+[more details about hardhat-depoly are available](https://github.com/wighawag/hardhat-deploy)
+
+[makalu faucet ](https://faucet.maplabs.io/)

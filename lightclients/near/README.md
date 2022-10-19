@@ -8,7 +8,20 @@ The LightNodeProxy.sol contract is an proxy contract of LightNode.sol.
 
 ## Pre-requirement
 
-Since all of the contracts are developed in Hardhat development environment, developers need to install Hardhat before working through our contracts. The hardhat installation tutorial can be found here
+Since all of the contracts are developed in Hardhat development environment, developers need to install Hardhat before working through our contracts. The hardhat installation tutorial can be found here[hardhat](https://hardhat.org/hardhat-runner/docs/getting-started#installation)
+
+### install
+
+```
+npm install
+```
+
+create an .env file and fill following in the contents
+
+```
+#your ethereum account private key
+PRIVATE_KEY = 
+```
 
 ### Compiling contracts
 
@@ -57,30 +70,7 @@ lightNodeProxy deployed to ..... 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 
 **onChainTest.js** including test cases related to proof validation. It also contains proof validation using map pre-compiled Ed25519 contracts.
 
-This test requires a different setup since it is tested on map testnet.
-
-We need to first enter a funded account mnemonic and put it into a newly created .env file. The example content for .env file is in env-example.txt.
-
-```
-MNEMONIC = test test orphan test illegal father test pupil test forward mammal cinnamon
-```
-
-Then we need to add custom map_test network settings in hardhat config file.
-
-```json
- networks: {
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
-    },
-    map_test: {
-      chainId: 212,
-      url: process.env.ROPSTEN_URL || "http://18.142.54.137:7445",
-      accounts: { mnemonic: process.env.MNEMONIC},
-    },
-  },
-```
+This test requires a different setup since it is tested on makalu([faucet](https://faucet.maplabs.io/)).
 
 The result will be printed out with a true value in success field.
 
@@ -89,16 +79,30 @@ All the data used in test cases are stored in data folder and they are extracted
 (Make sure you have opened /test/oncjainTest.js before you begin)
 
 ```
-npx hardhat run ./test/onChainTest.js --network map_test
+npx hardhat run ./test/onChainTest.js --network makalu
 ```
 
 ## Deploy contracts
 
-The deploy script is located in script folder and is named deploy.js. We can run the following command to target deployment on map testnet which is added in Hardhat config.
+The deploy script is located in deploy folder . We can run the following command to deploy.
 
 ```
-npx hardhat run --network map_test scripts/deploy.js
+//deploy lightNode implementation
+npx hardhat deploy --tags LightNode
+
+//deploy lightNode implementation on makalu network
+npx hardhat deploy --tags LightNode --network makalu
+
+//deploy lightNode proxy 
+npx hardhat deploy --tags Proxy
+
+//deploy lightNode proxy on makalu network
+npx hardhat deploy --tags Proxy --network makalu
+
+// upgrade 
+npx hardhat deploy --tags Upgrade --network makalu
 ```
 
+[more details about hardhat-depoly are available](https://github.com/wighawag/hardhat-deploy)
 
-[Hardhat]: https://hardhat.org/hardhat-runner/docs/getting-started#installation
+[makalu faucet ](https://faucet.maplabs.io/)
