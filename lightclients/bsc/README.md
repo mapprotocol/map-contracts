@@ -4,6 +4,8 @@ The LightNode.sol contract is an custom implementation of BSC light client on ma
 
 The LightNodeProxy.sol contract is an proxy contract of LightNode.sol.
 
+The MPTVerify.sol contract is receipt MerklePatriciaProof verify util.
+
 # Contract Deployment Workflow
 
 ## Pre-requirement
