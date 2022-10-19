@@ -1406,10 +1406,7 @@ dependencies = [
 name = "mock-map-client"
 version = "0.1.0"
 dependencies = [
- "hex 0.4.3",
  "near-sdk",
- "num",
- "num-bigint 0.4.3",
 ]
 
 [[package]]
