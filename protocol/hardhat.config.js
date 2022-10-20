@@ -13,62 +13,8 @@ const { PRIVATE_KEY, INFURA_KEY} = process.env;
 
 
 let accounts = [];
-// task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
-//   const accounts = await hre.ethers.getSigners();
-//
-//   for (const account of accounts) {
-//     console.log(account.address);
-//   }
-// });
-accounts.push(PRIVATE_KEY);
 
-var fs = require("fs");
-var read = require('read');
-var util = require('util');
-const keythereum = require("keythereum");
-const prompt = require('prompt-sync')();
-(async function() {
-  try {
-    const root = '.keystore';
-    var pa = fs.readdirSync(root);
-    for (let index = 0; index < pa.length; index ++) {
-      let ele = pa[index];
-      let fullPath = root + '/' + ele;
-      var info = fs.statSync(fullPath);
-      //console.dir(ele);
-      if(!info.isDirectory() && ele.endsWith(".keystore")){
-        const content = fs.readFileSync(fullPath, 'utf8');
-        const json = JSON.parse(content);
-        const password = prompt('Input password for 0x' + json.address + ': ', {echo: '*'});
-        //console.dir(password);
-        const privatekey = keythereum.recover(password, json).toString('hex');
-        //console.dir(privatekey);
-        accounts.push('0x' + privatekey);
-        //console.dir(keystore);
-      }
-    }
-  } catch (ex) {
-  }
-  try {
-    const file = '.secret';
-    var info = fs.statSync(file);
-    if (!info.isDirectory()) {
-      const content = fs.readFileSync(file, 'utf8');
-      let lines = content.split('\n');
-      for (let index = 0; index < lines.length; index ++) {
-        let line = lines[index];
-        if (line == undefined || line == '') {
-          continue;
-        }
-        if (!line.startsWith('0x') || !line.startsWith('0x')) {
-          line = '0x' + line;
-        }
-        accounts.push(line);
-      }
-    }
-  } catch (ex) {
-  }
-})();
+accounts.push(PRIVATE_KEY);
 
 
 module.exports = {
@@ -78,19 +24,6 @@ module.exports = {
     clear: false,
     flat: true,
   },
-  namedAccounts: {
-    deployer: {
-      default: 0,
-      0: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
-      1: '0x038BCF8d2d48C084B661E3f2B3c514b4244B4D90',
-      3: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
-      56: '0x038BCF8d2d48C084B661E3f2B3c514b4244B4D90',
-      97: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
-      137:'0x038BCF8d2d48C084B661E3f2B3c514b4244B4D90',
-      22776: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
-    },
-  },
-
   networks: {
     hardhat: {
       forking: {
