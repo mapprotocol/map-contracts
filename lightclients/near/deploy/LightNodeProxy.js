@@ -1,6 +1,7 @@
 const { borshify, borshifyInitialValidators, borshifyOutcomeProof } = require('../test/utils/borsh');
 
 
+let network = process.env.NETWORK;
 module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 
     const { deployer } = await getNamedAccounts();
@@ -13,8 +14,16 @@ module.exports = async ({ getNamedAccounts, deployments, ethers }) => {
 
     ]);
 
-    let block = '0x' + borshify(require('../scripts/data/block.json')).toString('hex');
-    let validators = '0x' + borshifyInitialValidators(require('../scripts/data/validators.json').next_bps).toString('hex');
+    let block;
+    let validators;
+    if ('testnet' == network.toString().toLowerCase()) {
+        block = '0x' + borshify(require('../scripts/data/testnet/block.json')).toString('hex');
+        validators = '0x' + borshifyInitialValidators(require('../scripts/data/testnet/validators.json').next_bps).toString('hex');
+    } else {
+        block = '0x' + borshify(require('../scripts/data/mainnet/block.json')).toString('hex');
+        validators = '0x' + borshifyInitialValidators(require('../scripts/data/mainnet/validators.json').next_bps).toString('hex');
+    }
+
     let arr = [validators, block];
     let data = iface.encodeFunctionData("initialize", [deployer, arr]);
 

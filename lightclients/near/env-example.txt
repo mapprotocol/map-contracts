@@ -1,1 +1,5 @@
 PRIVATE_KEY = 
+// near rpc url
+RPC_URL = 
+//mainnet or testnet. mainnet means syncing near mainnet light block,testnet means syncing testnet block,make sure rpc_url with the network is same
+NETWORK = 

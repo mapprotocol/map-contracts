@@ -162,7 +162,7 @@ MAP Cross Chain Service Relay parameter setting
 - Set other chain msc contract address for verification
 
   ```solidity
-  function setBridageAddress(uint256 _chainId, bytes memory _addr) external onlyManager {
+  function setBridgeAddress(uint256 _chainId, bytes memory _addr) external onlyManager {
       bridgeAddress[_addr] = _chainId;
   }
   ```

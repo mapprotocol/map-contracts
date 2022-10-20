@@ -8,6 +8,7 @@ typechain
 #Hardhat files
 cache
 artifacts
+abi
 deployments
 /mapclients/near/scripts/res/
 /mcs/near/scripts/res/
