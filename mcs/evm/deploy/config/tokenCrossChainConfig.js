@@ -37,7 +37,7 @@ let relayVaultTokenSymbol = "MOTVT";
 let minFee = "1000000000000000"
 //The maximum fee charged
 let maxFee = "10000000000000000000"
-// 手续费比例 /10000
+// Fee ratio /10000
 let rateFee = "1500"
 //Allowed token cross-chain quota, initial value
 let relayToMcsLimit = "1000000000000000000000000";

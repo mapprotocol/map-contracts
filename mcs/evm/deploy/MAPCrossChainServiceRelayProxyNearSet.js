@@ -12,7 +12,7 @@ module.exports = async function ({ethers, deployments}) {
 
     await (await mcssRelayProxy.connect(deployer).setChainId(configData.mcsNearChainId)).wait();
 
-    await (await mcssRelayProxy.connect(deployer).setBridageAddress(configData.mcsNearChainId,configData.nearExecuteId)).wait();
+    await (await mcssRelayProxy.connect(deployer).setBridgeAddress(configData.mcsNearChainId,configData.nearExecuteId)).wait();
 
     console.log("mcssRelay set near cross success");
 
