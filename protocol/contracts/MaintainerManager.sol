@@ -7,9 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "./utils/Role.sol";
 
-contract MaintainerManager is Role, UUPSUpgradeable,Initializable {
+
+contract MaintainerManager is UUPSUpgradeable,Initializable {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
     // Info of each pool.
@@ -51,8 +51,6 @@ contract MaintainerManager is Role, UUPSUpgradeable,Initializable {
     external
     initializer {
         _changeAdmin(msg.sender);
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(MANAGER_ROLE, msg.sender);
     }
 
 
@@ -137,18 +135,18 @@ contract MaintainerManager is Role, UUPSUpgradeable,Initializable {
     }
 
     // Withdraw reward. EMERGENCY ONLY.
-    function emergencyRewardWithdraw(uint256 _amount) public onlyManager {
+    function emergencyRewardWithdraw(uint256 _amount) public onlyOwner {
         require(_amount < address(this).balance.sub(pool.allStake), 'not enough token');
         payable(msg.sender).transfer(_amount);
         pool.allStake = pool.allStake.sub(_amount);
     }
 
-    function addWhiteList(address _address) external onlyManager {
+    function addWhiteList(address _address) external onlyOwner {
         whiteList[_address] = true;
         emit WhiteList(_address, 1);
     }
 
-    function removeWhiteList(address _address) external onlyManager {
+    function removeWhiteList(address _address) external onlyOwner {
         whiteList[_address] = false;
         emit WhiteList(_address, 0);
     }
@@ -159,12 +157,17 @@ contract MaintainerManager is Role, UUPSUpgradeable,Initializable {
         workerUser[_worker] = msg.sender;
     }
 
-    function checkWorker(address _worker) external returns (address user){
+    function checkWorker(address _worker) external view returns (address user){
         user = workerUser[_worker];
         if(user != address(0) && whiteList[user]){
             return user;
         }
         return address(0);
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == _getAdmin(), "lightnode :: only admin");
+        _;
     }
 
 
@@ -176,9 +179,8 @@ contract MaintainerManager is Role, UUPSUpgradeable,Initializable {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 
-    function changeAdmin(address _admin) public onlyManager {
+    function changeAdmin(address _admin) public onlyOwner {
         require(_admin != address(0), "zero address");
-
         _changeAdmin(_admin);
     }
 
