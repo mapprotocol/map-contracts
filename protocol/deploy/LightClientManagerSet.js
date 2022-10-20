@@ -11,17 +11,12 @@ module.exports = async function ({ethers, deployments}) {
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
-
-    await deploy('LightClientManager', {
-        from: deployer.address,
-        args: [],
-        log: true,
-        contract: 'LightClientManager',
-    })
-
     let LightClientManager = await ethers.getContract('LightClientManager');
 
-    console.log("LightClientManager",LightClientManager.address)
+    let chainId = 0;
+    let contract ="";
+
+    await LightClientManager.register(chainId,contract);
 }
 
 module.exports.tags = ['LightClientManager']

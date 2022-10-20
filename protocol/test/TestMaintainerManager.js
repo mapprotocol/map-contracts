@@ -15,6 +15,7 @@ describe('MaintainerManager', function () {
         let MaintainerManager = await hre.ethers.getContractFactory("MaintainerManager");
         mm = await MaintainerManager.deploy();
         await mm.deployed();
+        mm.initialize();
         owner = await ethers.getSigners();
         console.log(mm.address)
 
