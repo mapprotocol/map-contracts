@@ -9,7 +9,7 @@ require('@nomiclabs/hardhat-etherscan')
 require('solidity-coverage')
 
 
-const { PRIVATE_KEY, ETH_INFURA_KEY, INFURA_KEY, HECO_SCAN_KEY} = process.env;
+const { PRIVATE_KEY, ETH_INFURA_KEY} = process.env;
 
 
 let accounts = [];
@@ -87,40 +87,6 @@ module.exports = {
       97: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
       137:'0x038BCF8d2d48C084B661E3f2B3c514b4244B4D90',
       22776: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
-    },
-    wcoin: {
-      default: 0,
-      1: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
-      3: '0xf70949bc9b52deffcda63b0d15608d601e3a7c49',
-      56: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
-      97: '0xf984Ad9299B0102426a646aF72e2052a3A7eD0E2',
-      22776: '0x13cb04d4a5dfb6398fc5ab005a6c84337256ee23',
-      137: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
-    },
-    mapcoin: {
-      default: 0,
-      1: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
-      3: '0x47f423C44976Fbe745588020b85B09A56458f9C0',
-      56: '0x8105ECe4ce08B6B6449539A5db23e23b973DfA8f',
-      97: '0x624F96Ea37bBbEA15Df489f9083Fe786BAf15723',
-      22776: '0x0000000000000000000000000000000000000000',
-      137: '0x659BC6aD25AEea579f3eA91086fDbc7ac0432Dc4',
-    },
-    usdt: {
-      default: 0,
-      22776: '0x33daba9618a75a7aff103e53afe530fbacf4a3dd',
-    },
-    usdc: {
-      default: 0,
-      22776: '0x9f722b2cb30093f766221fd0d37964949ed66918',
-    },
-    eth: {
-      default: 0,
-      22776: '0x05ab928d446d8ce6761e368c8e7be03c3168a9ec',
-    },
-    idv: {
-      default: 0,
-      22776: '0xeac6cfd6e9e2fa033d85b7abdb6b14fe8aa71f2a',
     }
   },
 
@@ -180,18 +146,13 @@ module.exports = {
       chainId : 11155111,
       accounts: accounts
     },
-    Ropsten: {
-      url: `https://ropsten.infura.io/v3/` + INFURA_KEY,
-      chainId : 3,
-      accounts: accounts
-    },
     Map: {
-      url: `https://poc2-rpc.maplabs.io`,
+      url: `https://rpc.maplabs.io`,
       chainId : 22776,
       accounts: accounts
     },
-    Map2: {
-      url: `http://18.142.54.137:7445`,
+    Makalu: {
+      url: `https://testnet-rpc.maplabs.io/`,
       chainId : 212,
       accounts: accounts
     },
@@ -205,23 +166,8 @@ module.exports = {
       chainId : 97,
       accounts: accounts,
       gasPrice: 11 * 1000000000
-    },
-    BscTest2: {
-      url: `https://data-seed-prebsc-2-s2.binance.org:8545/`,
-      chainId : 97,
-      accounts: accounts,
-      gasPrice: 11 * 1000000000
-    },
-    Abey: {
-      url: `http://54.169.112.1:8545`,
-      chainId : 179,
-      accounts: accounts
-    },
-    True: {
-      url: `https://rpc.truescan.network/`,
-      chainId : 19330,
-      accounts: accounts
-    },
+    }
+
   },
   solidity: {
     compilers: [

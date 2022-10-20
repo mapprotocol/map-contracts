@@ -1,5 +1,6 @@
 const BigNumber = require('bignumber.js')
 BigNumber.config({ROUNDING_MODE: BigNumber.ROUND_FLOOR})
+const  initializeData = require('./config');
 module.exports = async function ({ethers, deployments}) {
     const {deploy} = deployments
     const {deployer} = await ethers.getNamedSigners()
@@ -21,14 +22,10 @@ module.exports = async function ({ethers, deployments}) {
 
     let lightNode = await ethers.getContract('LightNode');
 
-    let proxy = await  ethers.getContract("LightNodeProxy");
-
     console.log(lightNode.address)
-    console.log(proxy.address)
+    let lightNodeProxy = await ethers.getContractAt("LightNode",initializeData.lightNodeProxyAddress);
 
-    let lightNodeProxy = await ethers.getContractAt("LightNode",proxy.address);
-
-    await  lightNodeProxy.upgradeTo(lightNode.address);
+    await (await  lightNodeProxy.upgradeTo(lightNode.address)).wait();
 
     console.log("LightNodeUp ok")
 }

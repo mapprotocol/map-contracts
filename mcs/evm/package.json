@@ -1,21 +1,21 @@
 {
-  "name": "relayer-contract",
+  "name": "MapCrossChainServiceRelay",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "map:deploy:bridgerelay": "npx hardhat deploy --tags MAPBridgeRelayV1 --network Map"
+    "map:deploy:bridgerelay": "npx hardhat deploy --tags MAPCrossChainServiceRelay --network Map"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mapprotocol/contracts.git"
+    "url": "https://github.com/mapprotocol/map-contracts.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mapprotocol/contracts/issues"
+    "url": "https://github.com/mapprotocol/map-contracts/issues"
   },
-  "homepage": "https://github.com/mapprotocol/contracts#readme",
+  "homepage": "https://github.com/mapprotocol/map-contracts#readme.md",
   "dependencies": {
     "@nomiclabs/hardhat-etherscan": "^2.1.8",
     "ajv": "^8.8.2",

@@ -1,4 +1,4 @@
-
+const configData = require("./config/deployConfig.js");
 
 module.exports = async function ({ethers, deployments}) {
     const {deploy} = deployments
@@ -6,17 +6,18 @@ module.exports = async function ({ethers, deployments}) {
 
     console.log("deployer address:",deployer.address);
 
-    await deploy('FeeCenter', {
+
+    await deploy('WETH9', {
         from: deployer.address,
         args: [],
         log: true,
-        contract: 'FeeCenter',
+        contract: 'WETH9',
     })
 
-    let feeCenter = await ethers.getContract('FeeCenter');
+    let weth = await ethers.getContract('WETH9');
 
-    console.log("feeCenter address:",feeCenter.address);
+    console.log("WETH address:",weth.address);
 
 }
 
-module.exports.tags = ['FeeCenter']
+module.exports.tags = ['WETH']
