@@ -1,8 +1,13 @@
- MAP chain light client contract, will be deployed on NEAR blockchain.
+# MAP light client
 
-# Pre-requisites
+This is MAP blockchain light client contract, which will be deployed on NEAR blockchain. The off-chain program called
+maintainer submits the MAP chain block header to the light client contract per epoch and the light client will keep the
+validators after verifying it successfully. So that the light client can be used to verify the event happened on 
+MAP blockchain.
 
-1. rust
+## Pre-requisites
+
+**1. rust**
 
 Follow [these instructions](https://doc.rust-lang.org/book/ch01-01-installation.html) for setting up Rust.
 Then, add the **wasm32-unknown-unknown** toolchain which enables compiling Rust to Web Assembly (wasm), the low-level language used by the NEAR platform.
@@ -16,7 +21,7 @@ source $HOME/.cargo/env
 rustup target add wasm32-unknown-unknown
 ```
 
-2. near-cli
+**2. near-cli**
 
 The NEAR Command Line Interface (CLI) is a tool that enables to interact with the NEAR network directly from the shell.
 Follow [here](https://docs.near.org/tools/near-cli) for installing near-cli.
@@ -33,7 +38,11 @@ npm install -g near-cli
 near login
 ```
 
-# Build the contracts
+**3. jq**
+
+Jq is a lightweight and flexible command-line JSON processor. Follow [here](https://stedolan.github.io/jq/download/) to install it.
+
+## Build the contracts
 
 Run below script to build:
 
@@ -44,7 +53,7 @@ Run below script to build:
 1. **map_light_client.wasm**: this is the MAP light client contract
 2. **map_client_factory.wasm**: this is the factory contract to deploy and initialize the MAP light client contract and make the MAP light contract account in locked state.
 
-# Deploy the contracts
+## Deploy the contracts
 
 1. Configure below parameters in ./scripts/config.sh
 ```shell
@@ -61,7 +70,7 @@ EPOCH_ID=300  # get the information of this epoch id to initialize the MAP light
 ```
 
 
-# Testing
+## Testing
 
 1. run the unit testing
 ```shell
