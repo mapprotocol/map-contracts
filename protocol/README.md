@@ -45,6 +45,42 @@ npx hardhat deploy --tags LightClientManager --network Map
 npx hardhat deploy --tags MaintainerManagerUp --network Map
 ```
 
+
+## Parameter setting
+
+### LightClientManager contract
+
+#### Add a chain of LightNode contracts
+open `LightClientManagerSet.js`
+
+change parameters
+```js
+ let chainId = 0; //chain id to add
+ let contract =""; //lightNode contract to add
+```
+run
+
+```shell
+ npx hardhat deploy --tags LightClientManagerSet --network Map
+```
+
+### MaintainerManager contract
+
+#### Add or remove a Maintainer
+
+open `MaintainerManagerSet.js`
+
+change parameters
+```js
+ let maintainer = ""; //maintainer address to add or remove
+ let add = true;      //add as true remove as false
+```
+run
+
+```shell
+ npx hardhat deploy --tags MaintainerManagerSet --network Map
+```
+
 ## The contracts main
 
 ```shell
