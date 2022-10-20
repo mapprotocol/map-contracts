@@ -1,3 +1,4 @@
+# MAP cross-chain service
 
 The project includes 4 types of contracts, which are:
 1. **multisig contract**: owner account of map light client contract and mcs contract to avoid centralization risk
@@ -5,7 +6,7 @@ The project includes 4 types of contracts, which are:
 3. **mcs contract**: MAP cross chain service contract
 4. **mcs token contract**: NEP-141 token created by mcs contract
 
-# Pre-requisites
+## Pre-requisites
 
 **1. rust**
 
@@ -38,7 +39,11 @@ npm install -g near-cli
 near login
 ```
 
-# Build the contracts
+**3. jq**
+
+Jq is a lightweight and flexible command-line JSON processor. Follow [here](https://stedolan.github.io/jq/download/) to install it.
+
+## Build the contracts
 
 Run below script to build:
 
@@ -54,7 +59,7 @@ Run below script to build:
 5. **multisig.wasm**: multisig contract
 
 
-# Deploy the contracts
+## Deploy the contracts
 **1. Configure below parameters in ./scripts/config.sh**
 
 ```shell
@@ -84,7 +89,7 @@ CLIENT_ACCOUNT="client.fac.map002.testnet" # the account ID of the map light cli
 ```
 
 
-# Usage
+## Usage
 
 We can use the shell scripts in directory ./script to simplify the steps. First run below command to set environment variables:
 
@@ -209,6 +214,7 @@ If you want to add target chain ID to native token, run below commands:
 
 
 **3. Transfer mcs/ft/native token to another blockchain through MCS service**
+
 Transfer mcs token to another blockchain:
 
 ```shell
@@ -264,11 +270,14 @@ Transfer native token to another blockchain:
     ./scripts/manage_native_token.sh balance $FROM
 ```
 
-# Upgrade the contracts
+## Upgrade the contracts
 
 The mcs contract and mcs token contract can be upgraded through multisig contract.
 
 **1. Upgrade mcs contract**
+
+**NOTE**: currently the script works on MacOS only.
+
 ```shell
 MCS_WASM_FILE=/path/to/mcs/contract  # new mcs contract wasm file
 
@@ -286,6 +295,8 @@ REQUEST_ID=
 ```
 
 **2. Upgrade mcs token contract**
+
+**NOTE**: currently the script works on MacOS only.
 ```shell
 MCS_TOKEN_WASM_FILE=/path/to/mcs/token/contract  # new mcs token contract wasm file
 MCS_TOKEN="mcs_token_0".$MCS_ACCOUNT
@@ -363,7 +374,7 @@ REQUEST_ID=
 # ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
 ```
 
-# Testing
+## Testing
 1. How to run unit testing?
 
 ```shell

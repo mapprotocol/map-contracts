@@ -21,6 +21,10 @@ create an .env file and fill following in the contents
 ```
 #your ethereum account private key
 PRIVATE_KEY = 
+// near rpc url
+RPC_URL = 
+//mainnet or testnet mainnet means syncing near mainnet light block,testnet means syncing testnet block,make sure rpc_url with the network is same
+NETWORK = 
 ```
 
 ### Compiling contracts
@@ -83,6 +87,16 @@ npx hardhat run ./test/onChainTest.js --network makalu
 ```
 
 ## Deploy contracts
+
+before deploy you can refresh init data by run the following command
+
+```
+npx hardhat run ./scripts/refresh.js
+```
+
+It may fail, but it doesn't matter. Try it again.It also doesn't matter if it never works out,you can still
+
+deploy.
 
 The deploy script is located in deploy folder . We can run the following command to deploy.
 

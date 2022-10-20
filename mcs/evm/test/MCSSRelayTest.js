@@ -114,9 +114,9 @@ describe("MAPCrossChainServiceRelay start test", function () {
         //await mcssR.setTokenRegister(mcsRelayData.tokenregister);
         expect(await mcssR.tokenRegister()).to.equal(tokenRegister.address);
 
-        await mcssR.setBridageAddress(34434,mcsRelayData.mcsETH);
+        await mcssR.setBridgeAddress(34434,mcsRelayData.mcsETH);
 
-        await mcssR.setBridageAddress(1313161555,mcsRelayData.mcsNear);
+        await mcssR.setBridgeAddress(1313161555,mcsRelayData.mcsNear);
 
         await mcssR.setIdTable(1313161555,1);
 
@@ -280,7 +280,7 @@ describe("MAPCrossChainServiceRelay start test", function () {
         expect(await mapVaultU.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4")).to.equal("150000000000000000")
         expect(await mapVaultU.totalSupply()).to.equal("150000000000000000");
 
-        await mcssR.setBridageAddress(34434,"0xAC25DeA31A410900238c8669eD9973f328919160");
+        await mcssR.setBridgeAddress(34434,"0xAC25DeA31A410900238c8669eD9973f328919160");
 
         await feeCenter.setTokenVault(standardToken.address,mapVault.address)
 
