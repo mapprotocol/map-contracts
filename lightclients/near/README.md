@@ -88,13 +88,15 @@ npx hardhat run ./test/onChainTest.js --network makalu
 
 ## Deploy contracts
 
-before deploy you can refresh init data by run he following command
+before deploy you can refresh init data by run the following command
 
 ```
 npx hardhat run ./scripts/refresh.js
 ```
 
-It may fail, but it doesn't matter. Try it again.
+It may fail, but it doesn't matter. Try it again.It also doesn't matter if it never works out,you can still
+
+deploy.
 
 The deploy script is located in deploy folder . We can run the following command to deploy.
 
