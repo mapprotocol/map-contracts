@@ -1,27 +1,28 @@
 // SPDX-License-Identifier: MIT
 
+
+
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./utils/Role.sol";
 import "./interface/ILightClientManager.sol";
 import "./interface/ILightNode.sol";
 
 
-contract LightClientManager is ILightClientManager,Role {
+contract LightClientManager is ILightClientManager, Ownable {
     mapping(uint256 => address) lightClientContract;
-    mapping(uint256 => address) updateBlockContract;
 
-    function register(uint256 _chainId, address _contract,address _blockContract) external override onlyManager{
+    function register(uint256 _chainId, address _contract) external override onlyOwner {
         lightClientContract[_chainId] = _contract;
-        updateBlockContract[_chainId] = _blockContract;
     }
 
     function updateBlockHeader(uint256 _chainId, bytes memory _blockHeader) external override {
-        require(updateBlockContract[_chainId] != address(0), "not register");
-        ILightNode lightNode = ILightNode(updateBlockContract[_chainId]);
+        require(lightClientContract[_chainId] != address(0), "not register");
+        ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         lightNode.updateBlockHeader(_blockHeader);
     }
 
@@ -34,11 +35,11 @@ contract LightClientManager is ILightClientManager,Role {
 
     function headerHeight(uint256 _chainId) external view override returns (uint256){
         require(lightClientContract[_chainId] != address(0), "not register");
-        ILightNode lightNode = ILightNode(updateBlockContract[_chainId]);
-        if(_chainId == 34434){
+        ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
+        if (_chainId == 34434) {
             (uint256 number,) = lightNode.currentNumberAndHash(_chainId);
             return number;
-        }else{
+        } else {
             return lightNode.headerHeight();
         }
 

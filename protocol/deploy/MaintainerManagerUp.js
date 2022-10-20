@@ -21,23 +21,17 @@ module.exports = async function ({ethers, deployments}) {
 
     let MaintainerManager = await ethers.getContract('MaintainerManager');
 
-    console.log("MaintainerManager",MaintainerManager.address)
-    console.log("MaintainerManager admin",await MaintainerManager.getAdmin())
-
-    await deploy('MaintainerManagerProxy', {
-        from: deployer.address,
-        args: [MaintainerManager.address,"0x"],
-        log: true,
-        contract: 'MaintainerManagerProxy',
-    })
-
     let MaintainerManagerProxy = await ethers.getContract('MaintainerManagerProxy');
     console.log("MaintainerManagerProxy",MaintainerManagerProxy.address)
 
-    MaintainerManagerProxy = await ethers.getContractAt("MaintainerManager",MaintainerManagerProxy.address)
-    await MaintainerManagerProxy.initialize();
+    console.log(MaintainerManager.address)
+    console.log(MaintainerManagerProxy.address)
 
-    console.log("MaintainerManager admin",await MaintainerManagerProxy.getAdmin())
+    let ManagerProxy = await ethers.getContractAt("MaintainerManager",MaintainerManagerProxy.address);
+
+    await  ManagerProxy.upgradeTo(MaintainerManager.address);
+
+    console.log("LightNodeUp ok")
 }
 
-module.exports.tags = ['MaintainerManager']
+module.exports.tags = ['MaintainerManagerUp']
