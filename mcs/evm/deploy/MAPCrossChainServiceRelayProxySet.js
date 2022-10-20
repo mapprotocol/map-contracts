@@ -14,16 +14,16 @@ module.exports = async function ({ethers, deployments}) {
     await (await mcssRelayProxy.connect(deployer).setTokenRegister(configData.relayTokenRegisterAddress)).wait();
 
     if (configData.mcsNearChainId === ""){
-        await (await mcssRelayProxy.connect(deployer).setBridageAddress(configData.mcsChainId,configData.mcsAddress)).wait();
+        await (await mcssRelayProxy.connect(deployer).setBridgeAddress(configData.mcsChainId,configData.mcsAddress)).wait();
         console.log("mcssRelay set evm cross success");
     }else {
-        await (await mcssRelayProxy.connect(deployer).setBridageAddress(configData.mcsChainId,configData.mcsAddress)).wait();
+        await (await mcssRelayProxy.connect(deployer).setBridgeAddress(configData.mcsChainId,configData.mcsAddress)).wait();
 
         await (await mcssRelayProxy.connect(deployer).setIdTable(configData.mcsNearChainId,1)).wait();
 
         await (await mcssRelayProxy.connect(deployer).setChainId(configData.mcsNearChainId)).wait();
 
-        await (await mcssRelayProxy.connect(deployer).setBridageAddress(configData.mcsNearChainId,configData.nearExecuteId)).wait();
+        await (await mcssRelayProxy.connect(deployer).setBridgeAddress(configData.mcsNearChainId,configData.nearExecuteId)).wait();
 
         console.log("mcssRelay set evm and near cross success");
     }

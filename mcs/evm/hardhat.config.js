@@ -104,6 +104,7 @@ module.exports = {
       saveDeployments: false,
       tags: ['local'],
       timeout: 2000000,
+      chainId:212
     },
     Map: {
       url: `https://rpc.maplabs.io/`,
