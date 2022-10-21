@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: MIT
 
+
+
+
+
+
+
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
@@ -52,10 +58,11 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     external
     override
     initializer {
+        require(_epoch > 0,"Error initializing epco");
         _changeAdmin(msg.sender);
         maxValidators = 20;
         epochSize = 1000;
-        headerHeight = 0;
+        headerHeight = (_epoch -1) * _epochSize;
         epochSize = _epochSize;
         validatorAddress = _validatorAddress;
         setStateInternal(_threshold, _pairKeys, _weights, _epoch);
