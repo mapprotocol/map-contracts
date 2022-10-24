@@ -1,9 +1,8 @@
-const BigNumber = require('bignumber.js')
-BigNumber.config({ROUNDING_MODE: BigNumber.ROUND_FLOOR})
-const  initializeData = require('./config');
+
 module.exports = async function ({ethers, deployments}) {
     const {deploy} = deployments
-    const {deployer} = await ethers.getNamedSigners()
+    const accounts = await ethers.getSigners()
+    const deployer = accounts[0];
 
     console.log(
         "Deploying contracts with the account:",
@@ -23,11 +22,13 @@ module.exports = async function ({ethers, deployments}) {
     let lightNode = await ethers.getContract('LightNode');
 
     console.log(lightNode.address)
-    let lightNodeProxy = await ethers.getContractAt("LightNode",initializeData.lightNodeProxyAddress);
+    let proxy =  await deployments.get("LightNodeProxy")
+
+    let lightNodeProxy = await ethers.getContractAt("LightNode",proxy.address);
 
     await (await  lightNodeProxy.upgradeTo(lightNode.address)).wait();
 
-    console.log("LightNodeUp ok")
+    console.log("LightNodeUp success")
 }
 
 module.exports.tags = ['LightNodeUp']

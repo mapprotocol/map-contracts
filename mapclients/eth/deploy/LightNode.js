@@ -3,10 +3,10 @@ BigNumber.config({ROUNDING_MODE: BigNumber.ROUND_FLOOR})
 
 const  initializeData = require('./config');
 
-
 module.exports = async function ({ethers, deployments}) {
     const {deploy} = deployments
-    const {deployer} = await ethers.getNamedSigners()
+    const accounts = await ethers.getSigners()
+    const deployer = accounts[0];
 
     console.log(
         "Deploying contracts with the account:",
@@ -14,7 +14,7 @@ module.exports = async function ({ethers, deployments}) {
     );
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
-
+   // console.log(initializeData.initData)
     await deploy('VerifyTool', {
         from: deployer.address,
         args: [],
@@ -34,7 +34,8 @@ module.exports = async function ({ethers, deployments}) {
     let lightNode = await ethers.getContract('LightNode');
 
     console.log(lightNode.address)
-    let validatorNum = initializeData.initData.validators;
+    //let validatorNum = initializeData.initData.validators;
+    let validatorNum = initializeData.validators;
     let g1List = [];
     let addresss = [];
     let weights = []
@@ -45,11 +46,11 @@ module.exports = async function ({ethers, deployments}) {
         weights.push((validatorNum[i].weight));
     }
 
-    let threshold = initializeData.initData.threshold;
+    let threshold = initializeData.threshold;
 
-    let epoch = initializeData.initData.epoch;
+    let epoch = initializeData.epoch;
 
-    let epochSize = initializeData.initData.epoch_size;
+    let epochSize = initializeData.epoch_size;
 
     let initD = await lightNode.initialize(threshold, addresss, g1List, weights, epoch, epochSize,verifyTool.address);
     console.log("initialize success")

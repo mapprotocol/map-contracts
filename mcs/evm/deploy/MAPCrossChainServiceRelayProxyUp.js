@@ -1,9 +1,9 @@
 
-const configData = require("./config/initiateConfig.js");
 
 module.exports = async function ({ethers, deployments}) {
     const {deploy} = deployments
-    const {deployer} = await ethers.getNamedSigners()
+    const accounts = await ethers.getSigners()
+    const deployer = accounts[0];
 
     console.log("deployer address:",deployer.address);
 
@@ -18,7 +18,9 @@ module.exports = async function ({ethers, deployments}) {
 
     console.log("MAPCrossChainServiceRelay up address:",mcssRelay.address);
 
-    let mcssRelayP = await ethers.getContractAt('MAPCrossChainServiceRelay',configData.relayAddress);
+    let proxy = await deployments.get("MAPCrossChainServiceRelayProxy")
+
+    let mcssRelayP = await ethers.getContractAt('MAPCrossChainServiceRelay',proxy.address);
 
     await (await mcssRelayP.upgradeTo(mcssRelay.address)).wait();
 

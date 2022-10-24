@@ -1,11 +1,8 @@
-const BigNumber = require('bignumber.js')
-BigNumber.config({ROUNDING_MODE: BigNumber.ROUND_FLOOR})
-
-const configData = require("./config/initiateConfig.js");
 
 module.exports = async function ({ethers, deployments}) {
     const {deploy} = deployments
-    const {deployer} = await ethers.getNamedSigners()
+    const accounts = await ethers.getSigners()
+    const deployer = accounts[0];
 
     console.log("deployer address:",deployer.address);
 
@@ -21,8 +18,9 @@ module.exports = async function ({ethers, deployments}) {
 
     console.log("MapCrossChainService up address:",mcss.address);
 
+    let proxy = await deployments.get("MapCrossChainServiceProxy");
 
-    let mcssProxy = await ethers.getContractAt('MapCrossChainService',configData.mcsAddress);
+    let mcssProxy = await ethers.getContractAt('MapCrossChainService',proxy.address);
 
     await (await mcssProxy.upgradeTo(mcss.address)).wait();
 
