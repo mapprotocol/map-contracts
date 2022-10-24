@@ -1,7 +1,5 @@
-const BigNumber = require('bignumber.js')
-BigNumber.config({ROUNDING_MODE: BigNumber.ROUND_FLOOR})
-module.exports = async function ({ethers, deployments}) {
-    const {deploy} = deployments
+
+module.exports = async (taskArgs,hre) => {
     const accounts = await ethers.getSigners()
     const deployer = accounts[0];
 
@@ -11,8 +9,6 @@ module.exports = async function ({ethers, deployments}) {
     );
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
-
-
     let MaintainerManager = await ethers.getContract('MaintainerManager');
 
     console.log("MaintainerManager",MaintainerManager.address)
@@ -22,16 +18,11 @@ module.exports = async function ({ethers, deployments}) {
 
     MaintainerManager = await ethers.getContractAt("MaintainerManager",MaintainerManagerProxy.address)
 
-    let maintainer = "";
-    let add = true;
-
-
-    if (add) {
-       await MaintainerManager.addWhiteList(maintainer);
+    if (taskArgs.add) {
+        await MaintainerManager.addWhiteList(taskArgs.address);
     }else{
-        await MaintainerManager.removeWhiteList(maintainer);
+        await MaintainerManager.removeWhiteList(taskArgs.address);
     }
 
+    console.log("success")
 }
-
-module.exports.tags = ['MaintainerManagerSet']

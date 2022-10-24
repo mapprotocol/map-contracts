@@ -1,12 +1,13 @@
-require('@nomiclabs/hardhat-waffle')
-require('hardhat-gas-reporter')
-require('hardhat-spdx-license-identifier')
-require('hardhat-deploy')
-require('hardhat-abi-exporter')
-require('@nomiclabs/hardhat-ethers')
-require('dotenv/config')
-require('@nomiclabs/hardhat-etherscan')
-require('solidity-coverage')
+require('hardhat-gas-reporter');
+require('hardhat-spdx-license-identifier');
+require('hardhat-deploy');
+require('hardhat-abi-exporter');
+require('@nomiclabs/hardhat-ethers');
+require('dotenv/config');
+require('@nomiclabs/hardhat-etherscan');
+require('hardhat-contract-sizer');
+require("hardhat-log-remover");
+require("./tasks")
 
 
 const { PRIVATE_KEY, INFURA_KEY} = process.env;

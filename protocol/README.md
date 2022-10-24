@@ -68,7 +68,7 @@ run
 
 #### Add or remove a Maintainer
 
-open `MaintainerManagerSet.js`
+open `MaintainerWhileListSet.js`
 
 change parameters
 ```js
