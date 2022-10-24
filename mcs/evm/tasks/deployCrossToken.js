@@ -1,15 +1,14 @@
-const configData = require("./config/deployConfig.js");
 
-module.exports = async function ({ethers, deployments}) {
-    const {deploy} = deployments
-    const {deployer} = await ethers.getNamedSigners()
+module.exports = async (taskArgs,hre) => {
+    const {deploy} = hre.deployments
+    const accounts = await ethers.getSigners()
+    const deployer = accounts[0];
 
     console.log("deployer address:",deployer.address);
 
-
     await deploy('StandardToken', {
         from: deployer.address,
-        args: [configData.mccTokenName,configData.mccTokenSymbol],
+        args: [taskArgs.name,taskArgs.symbol],
         log: true,
         contract: 'StandardToken',
     })
@@ -19,5 +18,3 @@ module.exports = async function ({ethers, deployments}) {
     console.log("MakaluCrossChainToken address:",mccToken.address);
 
 }
-
-module.exports.tags = ['MakaluCrossChainToken']

@@ -1,15 +1,8 @@
 
-const configData = require("./config/deployConfig.js");
-//let lightNodeAddress = "0xF71F0007dDb539e2A506D770bB3a3eE83bD939B9";
-// let lightNodeAddress = "0x1eD5058d28fCD3ae7b9cfFD0B0B3282d939c4034";
-//
-// let weth = "0xB59B98DF47432371A36A8F83fC7fd8371ec1300B";
-// let usdt = "0xdBf63a81d44DA9645498E371A856F9754F4f2c2B";
-// let mapToken = "0xb245609e5b2a0E52191Cba6314b47C73a0f9f023";
-
-module.exports = async function ({ethers, deployments}) {
-    const {deploy} = deployments
-    const {deployer} = await ethers.getNamedSigners()
+module.exports = async (taskArgs,hre) => {
+    const {deploy} = hre.deployments
+    const accounts = await ethers.getSigners()
+    const deployer = accounts[0];
 
     console.log("deployer address:",deployer.address);
 
@@ -22,10 +15,10 @@ module.exports = async function ({ethers, deployments}) {
 
     let mcss = await ethers.getContract('MapCrossChainService');
 
-
     console.log("MapCrossChainService address:",mcss.address);
 
-    let data = await mcss.initialize(configData.mcsWethAddress,configData.mcsMapTokenAddress,configData.mcsLightNodeAddress)
+    let data = await mcss.initialize(taskArgs.weth,taskArgs.maptoken,taskArgs.lightnode)
+
     console.log("MapCrossChainService initialize success");
 
     await deploy('MapCrossChainServiceProxy', {
@@ -40,7 +33,4 @@ module.exports = async function ({ethers, deployments}) {
     console.log("MapCrossChainServiceProxy address:",mcssP.address)
 
 
-
 }
-
-module.exports.tags = ['MapCrossChainService']

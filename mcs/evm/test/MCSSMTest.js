@@ -2,9 +2,7 @@ const { ethers } = require("hardhat");
 const { expect } = require("chai");
 const mcsData = require('./mcsData');
 require("solidity-coverage");
-const { BigNumber, BytesLike, Contract, ContractTransaction } = require("ethers");
-const {weiToHumanReadableString} = require("hardhat/internal/util/wei-values");
-const {address} = require("hardhat/internal/core/config/config-validation");
+const { BigNumber} = require("ethers");
 
 describe("MAPCrossChainService start test", function () {
 
@@ -14,7 +12,7 @@ describe("MAPCrossChainService start test", function () {
     let addr3;
     let addr4;
     let addr5;
-    let addrs;
+    let addr6;
 
     let MCSS;
     let mcss;
@@ -38,12 +36,12 @@ describe("MAPCrossChainService start test", function () {
 
     beforeEach(async function () {
 
-        [deployer,owner, addr1, addr2, addr3, addr4, addr5,...addrs] = await ethers.getSigners();
+        [addr6,owner, addr1, addr2, addr3, addr4, addr5,...addrs] = await ethers.getSigners();
 
     });
 
     it("constract deploy init", async function () {
-        console.log("deployer address:",deployer.address);
+        console.log("addr6 address:",addr6.address);
         MCSS = await ethers.getContractFactory("MapCrossChainService");
         // mcss = await ethers.getContractAt("MapCrossChainService",mcsData.mcs);
         mcss = await MCSS.deploy();
@@ -74,7 +72,7 @@ describe("MAPCrossChainService start test", function () {
         let mcssp = await MapCrossChainServiceProxy.deploy(mcss.address,initData);
         await mcssp.deployed()
 
-        mcss = MCSS.connect(deployer).attach(mcssp.address);
+        mcss = MCSS.connect(addr6).attach(mcssp.address);
 
     });
 

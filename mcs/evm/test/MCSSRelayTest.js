@@ -1,12 +1,8 @@
 const { ethers } = require("hardhat");
-const { expect,assert } = require("chai");
+const { expect } = require("chai");
 const mcsRelayData = require('./mcsRelayData');
 require("solidity-coverage");
-//const { BigNumber, BytesLike, Contract, ContractTransaction } = require("ethers");
-const {tokenregister} = require("./mcsRelayData");
-const mcsData = require("./mcsData");
-const {lightnode} = require("./mcsData");
-const {address} = require("hardhat/internal/core/config/config-validation");
+
 
 describe("MAPCrossChainServiceRelay start test", function () {
 

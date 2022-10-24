@@ -48,48 +48,6 @@ describe("LightNode start test", function () {
 
     });
 
-    // it('initialize ', async function () {
-    //     let g1Hex = [
-    //         "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c12b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
-    //         "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a692685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
-    //         "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
-    //         "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37"
-    //     ]
-    //
-    //     blsCode = await ethers.getContractFactory("BlsCode");
-    //     bc = await blsCode.deploy();
-    //     await bc.deployed();
-    //
-    //     const g0 = await bc.decodeG1(g1Hex[0]);
-    //     const g1 = await bc.decodeG1(g1Hex[1]);
-    //     const g2 = await bc.decodeG1(g1Hex[2]);
-    //     const g3 = await bc.decodeG1(g1Hex[3]);
-    //     g1List = [
-    //         g0,
-    //         g1,
-    //         g2,
-    //         g3,
-    //     ]
-    //
-    //     let addresss = [
-    //         "0x053af2b1ccbacba47c659b977e93571c89c49654",
-    //         "0xb47adf1e504601ff7682b68ba7990410b92cd958",
-    //         "0xf655fc7c95c70a118f98b46ca5028746284349a5",
-    //         "0xb243f68e8e3245464d21b79c7ceae347ecc08ea6"
-    //     ]
-    //     let _weights = [1, 1, 1, 1]
-    //
-    //     let _threshold = 3;
-    //
-    //     let _epoch = 205;
-    //
-    //     let _epochSize = 1000;
-    //
-    //    let data =  await lightClient.initialize(_threshold, addresss, g1List, _weights, _epoch, _epochSize,verifyToolContractAddress);
-    //    datInit = data.data;
-    //
-    // });
-
     it('initialize ', async function () {
         let g1Hex = [
             "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c12b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
