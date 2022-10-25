@@ -1,40 +1,47 @@
 
-task("deployCrossToken",
+task("deployToken",
     "Deploy a token with role control",
-    require("./deployCrossToken")
+    require("./deployToken")
 )
     .addParam("name", "token name")
     .addParam("symbol", "token symbol")
+    .addParam("balance", "init balance")
 
-task("deployMapCrossChainServiceProxy",
-    "Deploy the upgradeable MapCrossChainServiceProxy contract and initialize",
+task("grantToken",
+    "Grant a mintable token mint role",
+    require("./grantToken")
+)
+    .addParam("token", "token address")
+    .addParam("minter", "address/relay/mos, grant address can be an address or relay/mos")
+
+task("deployMCS",
+    "Deploy the upgradeable MapCrossChainService contract and initialize it",
     require("./deployMapCrossChainServiceProxy")
 )
-    .addParam("weth", "weth token address")
+    .addParam("wrapped", "native wrapped token address")
     .addParam("maptoken", "map token address")
     .addParam("lightnode", "lightNode contract address")
 
-task("deployMapCrossChainServiceRelayProxy",
-    "Deploy the upgradeable MapCrossChainServiceRelayProxy contract and initialize",
+task("deployRelay",
+    "Deploy the upgradeable MapCrossChainServiceRelay contract and initialize it",
     require("./deployMapCrossChainServiceRelayProxy")
 )
-    .addParam("weth", "weth token address")
-    .addParam("maptoken", "map token address")
+    .addParam("wrapped", "native wrapped token address")
     .addParam("lightnode", "lightNodeManager contract address")
 
-task("mapCrossChainServiceSet",
-    "Do some basic settings for MapCrossChainService",
+task("initMCS",
+    "Initialize MapCrossChainServiceRelay address for MapCrossChainService",
     require("./mapCrossChainServiceSet")
 )
-    .addParam("relayaddress", "map chain relay contract address")
-    .addParam("chainid", "map chain id")
+    .addParam("relay", "map chain relay contract address")
+    .addParam("chain", "map chain id")
 
-task("mapCrossChainServiceRelaySet",
-    "Do some basic settings for MapCrossChainServiceRelay",
+task("initRelay",
+    "Initialize MapCrossChainServiceRelay contract",
     require("./mapCrossChainServiceRelaySet")
 )
-    .addParam("feecenter", "feeCenter contract address")
-    .addParam("registertoken", "registertoken contract address")
+    .addParam("feecenter", "fee center contract address")
+    .addParam("register", "token register contract address")
 
 task("mapCrossChainServiceSetCanBridgeToken",
     "MapCrossChainService settings allow cross-chain tokens",
@@ -44,12 +51,12 @@ task("mapCrossChainServiceSetCanBridgeToken",
     .addParam("ids", "The chain id that is allowed to cross can be filled with multiple ',' separated by example (1,2,3)")
 
 
-task("mapCrossChainServiceRelaySetBridgeAddress",
-    "Receive cross-chain request addresses from other MapCrossChainService addresses",
+task("registerMCS",
+    "Register AltChain MapCrossChainService to MapCrossChainServiceRelay",
     require("./mapCrossChainServiceRelaySetBridgeAddress")
 )
-    .addParam("mcsaddr", "MapCrossChainService contract address")
-    .addParam("mcsid", "The id of the chain where MapCrossChainService is located")
+    .addParam("address", "MapCrossChainService contract address")
+    .addParam("chain", "The chain id where MapCrossChainService is located")
 
 
 task("mapCrossChainServiceInitNear",

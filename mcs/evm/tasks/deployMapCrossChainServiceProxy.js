@@ -17,7 +17,7 @@ module.exports = async (taskArgs,hre) => {
 
     console.log("MapCrossChainService address:",mcss.address);
 
-    let data = await mcss.initialize(taskArgs.weth,taskArgs.maptoken,taskArgs.lightnode)
+    let data = await mcss.initialize(taskArgs.wrapped ,taskArgs.maptoken, taskArgs.lightnode)
 
     console.log("MapCrossChainService initialize success");
 

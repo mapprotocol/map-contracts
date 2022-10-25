@@ -7,16 +7,16 @@ module.exports = async function ({ethers, deployments}) {
     console.log("deployer address:",deployer.address);
 
 
-    await deploy('WETH9', {
+    await deploy('Wrapped', {
         from: deployer.address,
         args: [],
         log: true,
-        contract: 'WETH9',
+        contract: 'Wrapped',
     })
 
-    let weth = await ethers.getContract('WETH9');
+    let weth = await ethers.getContract('Wrapped');
 
-    console.log("WETH address:",weth.address);
+    console.log("Wrapped address:",weth.address);
 
 }
 

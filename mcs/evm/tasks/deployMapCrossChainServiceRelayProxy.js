@@ -13,22 +13,24 @@ module.exports = async (taskArgs,hre) => {
         contract: 'MAPCrossChainServiceRelay',
     })
 
-    let mcssRelay = await ethers.getContract('MAPCrossChainServiceRelay');
+    let mcsRelay = await ethers.getContract('MAPCrossChainServiceRelay');
 
-    console.log("MAPCrossChainServiceRelay address:",mcssRelay.address);
+    console.log("MAPCrossChainServiceRelay address:",mcsRelay.address);
 
-    let data = await mcssRelay.initialize(taskArgs.weth,taskArgs.maptoken,taskArgs.lightnode);
-    console.log("init success");
+    let data;
+    await ( data = await mcsRelay.initialize(taskArgs.wrapped,taskArgs.wrapped,taskArgs.lightnode)).wait();
+    //let data = await mcsRelay.initialize(taskArgs.wrapped, taskArgs.wrapped, taskArgs.lightnode);
+    console.log("MAPCrossChainServiceRelay init success");
 
     await deploy('MAPCrossChainServiceRelayProxy', {
         from: deployer.address,
-        args: [mcssRelay.address,data.data],
+        args: [mcsRelay.address,data.data],
         log: true,
         contract: 'MAPCrossChainServiceRelayProxy',
     })
 
-    let mcssRelayP = await ethers.getContract('MAPCrossChainServiceRelayProxy');
+    let mcsRelayProxy = await ethers.getContract('MAPCrossChainServiceRelayProxy');
 
-    console.log("MAPCrossChainServiceRelayProxy address:",mcssRelayP.address);
+    console.log("MAPCrossChainServiceRelayProxy address:",mcsRelayProxy.address);
 
 }

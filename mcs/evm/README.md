@@ -150,94 +150,6 @@ npx hardhat mapCrossChainServiceRelaySetTokenDecimals --tokenaddress <token addr
 npx hardhat mapCrossChainServiceRelaySetVaultBalance --chain <MapCrossChainService chainId> --tokenaddress <token address> --tokennumber <Cross-chain quota> --network <network>
 ````
 
-### 7.There is a final step, execute the following command to allow the token of MapCrossChainService to cross-chain to other chains
-Note the ids field allows multiple chainIds to be separated by ',' (eg 1, 2, 96, 58)
-```
-npx hardhat mapCrossChainServiceSetCanBridgeToken --tokenaddress <token address> --ids <cross-chain id> --network <network>
-```
-
-
-### 2.The following commands can deploy some cross-chain tokens, please use the correct parameters and network to deploy
-
-````
-npx hardhat deploy --tags WETH --network <network>
-npx hardhat deployCrossToken --name <token name > --symbol <token symbol> --network <network>
-````
-Note that if you need multiple tokens, you can execute the second command multiple times by changing the parameters
-
-### 3.We have deployed the basic token contract, now we will deploy the cross-chain contract
-Note you'll need some testnet funds in your wallet to deploy the contract.
-
-The following four commands are generally applicable to Map mainnet and Makalu testnet
-```
-npx hardhat deploy --tags FeeCenter --network <network>
-npx hardhat deploy --tags TokenRegister --network <network>
-npx hardhat deploy --tags MAPVaultToken --network <network>
-```
-````
-npx hardhat deployMapCrossChainServiceRelayProxy --weth <weth address> --maptoken <maptoken address> --lightnode <lightNodeManager address> --network <network>
-````
-The following commands are for EVM compatible blockchains
-```
-npx hardhat deployMapCrossChainServiceProxy --weth <weth address> --maptoken <maptoken address> --lightnode <lightnode address> --network <network>
-```
-### 4.Ok, now our cross-chain contract is basically deployed, let me do some basic settings of the contract
-
-The following command on the EVM compatible chain
-```
-npx hardhat mapCrossChainServiceSet --relayaddress <mapCrossChainServiceRelay address> --chainid <map chainId> --network <network>
-```
-The following command applies to the cross-chain contract configuration of Map mainnet and Makalu testnet
-```
-npx hardhat mapCrossChainServiceRelaySet --feecenter <feeCenter address> --registertoken <registertoken address> --network <network>
-npx hardhat mapCrossChainServiceRelaySetBridgeAddress --mcsaddr <mapCrossChainService address> --mcsid <mapCrossChainService chainId> --network <network>
-```
-### 5.If you want to use the near chain, use the following command to configure the near chain
-
-The following four commands are generally applicable to Map mainnet and Makalu testnet
-```
-npx hardhat mapCrossChainServiceRelayInitNear --nearid <near chainId> --network <network>
-```
-Note that sequence number 5 is not required
-
-### 6.Earlier we made a basic configuration of a cross-chain contract. Next, we will do a cross-chain setup of a token.
-Note the following four commands are generally applicable to Map mainnet and Makalu testnet
-1. Bind the token address on the map chain to the vault and initialize it, and execute the following command
-````
-npx hardhat vaultTokenInit --correspond <mapchain mapping token address> --vaultname <vault token name> --vaultsymbol <vault token symbol> --network <network>
-````
-2. FeeCenter sets up the treasury and token binding
-````
-npx hardhat feeCenterSetTokenVault --vaulttoken <vault address> --crosstoken <mapchain mapping token address> --network <network>
-````
-3. FeeCenter sets fee distribution
-````
-npx hardhat feeCenterSetDistributeRate --vaulttoken <vault address> --ratenumber <rate 0-10000> --network <network>
-````
-4. FeeCenter sets the token cross-chain fee ratio
-````
-npx hardhat feeCenterSetChainTokenGasFee --mcschainid <MapCrossChainService chainId> --crosstoken <mapchain mapping token address> --minfee <minimum value> --maxfee <maximum value> --ratefee <rate 0-10000> --network <network>
-````
-5. Bind the token mapping relationship between the two chains that requires cross-chain
-````
-npx hardhat tokenRegister --crossid <cross-chain id> --crosstoken <cross-chain token> --maptoken <mapchain mapping token address> --network <network>
-````
-6. MapCrossChainServiceRelay sets the decimal for cross-chain tokens
-Note the mcsids and tokendecimals parameters can be filled with one or more words separated by ',' (eg 1,2,96 18,18,24)
-````
-npx hardhat mapCrossChainServiceRelaySetTokenDecimals --tokenaddress <token address> --mcsids <Multiple chainIds (1,2,96)> --tokendecimals <token decimals (18,18,24)> --network <network>
-````
-7. MapCrossChainServiceRelay sets the quota for cross-chain tokens to other chains
-````
-npx hardhat mapCrossChainServiceRelaySetVaultBalance --mcsid <MapCrossChainService chainId> --tokenaddress <token address> --tokennumber <Cross-chain quota> --network <network>
-````
-
-### 7.There is a final step, execute the following command to allow the token of MapCrossChainService to cross-chain to other chains
-Note the ids field allows multiple chainIds to be separated by ',' (eg 1, 2, 96, 58)
-```
-npx hardhat mapCrossChainServiceSetCanBridgeToken --tokenaddress <token address> --ids <cross-chain id> --network <network>
-```
-
 
 ## Upgrade
 
@@ -255,7 +167,7 @@ npx hardhat deploy --tags MAPCrossChainServiceRelayProxyUp --network <network>
 ```
 
 
-MAP Cross Chain Service parameter setting
+## MOS parameter setting
 
 - Setting a Token can be cross-chain or canceled
 
