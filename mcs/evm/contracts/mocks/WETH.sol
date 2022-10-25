@@ -21,9 +21,9 @@
 
 pragma solidity ^0.4.18;
 
-contract WETH9 {
-    string public name     = "Wrapped Ether";
-    string public symbol   = "WETH";
+contract Wrapped {
+    string public name     = "Wrapped MAP";
+    string public symbol   = "WMAP";
     uint8  public decimals = 18;
 
     event  Approval(address indexed src, address indexed guy, uint wad);
