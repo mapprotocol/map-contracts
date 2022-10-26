@@ -18,8 +18,7 @@ module.exports = async (taskArgs,hre) => {
     console.log("MAPCrossChainServiceRelay address:",mcsRelay.address);
 
     let data;
-    await ( data = await mcsRelay.initialize(taskArgs.wrapped,taskArgs.wrapped,taskArgs.lightnode)).wait();
-    //let data = await mcsRelay.initialize(taskArgs.wrapped, taskArgs.wrapped, taskArgs.lightnode);
+    await ( data = await mcsRelay.initialize(taskArgs.wrapped,taskArgs.lightnode)).wait();
     console.log("MAPCrossChainServiceRelay init success");
 
     await deploy('MAPCrossChainServiceRelayProxy', {

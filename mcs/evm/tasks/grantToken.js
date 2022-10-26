@@ -11,10 +11,10 @@ module.exports = async (taskArgs,hre) => {
     console.log("Mintable Token address:",token.address);
 
     let minter;
-    if (taskArgs.minter == "relay") {
+    if (taskArgs.minter === "relay") {
         let mcs = await ethers.getContract('MapCrossChainServiceRelayProxy');
         minter = mcs.address;
-    } else if (taskArgs.minter == "mos") {
+    } else if (taskArgs.minter === "mos") {
         let mcs = await ethers.getContract('MapCrossChainServiceProxy');
         minter = mcs.address;
     } else {

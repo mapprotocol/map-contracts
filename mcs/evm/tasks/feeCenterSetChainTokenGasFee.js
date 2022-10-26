@@ -10,11 +10,11 @@ module.exports = async (taskArgs,hre) => {
     let feeCenter = await ethers.getContractAt('FeeCenter',proxy.address);
 
     await (await feeCenter.connect(deployer).setChainTokenGasFee(
-            taskArgs.mcschainid,
-            taskArgs.crosstoken,
-            taskArgs.minfee,
-            taskArgs.maxfee,
-            taskArgs.ratefee)
+            taskArgs.chain,
+            taskArgs.token,
+            taskArgs.min,
+            taskArgs.max,
+            taskArgs.rate)
     ).wait();
 
     console.log("FeeCenter set chainTokenGasFee success")

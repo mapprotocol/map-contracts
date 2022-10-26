@@ -7,12 +7,12 @@ module.exports = async (taskArgs,hre) => {
 
     let proxy = await hre.deployments.get("MAPCrossChainServiceRelayProxy")
 
-    let mcssRelayProxy = await ethers.getContractAt('MAPCrossChainServiceRelay',proxy.address);
+    let relayProxy = await ethers.getContractAt('MAPCrossChainServiceRelay',proxy.address);
 
-    await (await mcssRelayProxy.connect(deployer).setVaultBalance(
-        taskArgs.mcsid,
-        taskArgs.tokenaddress,
-        taskArgs.tokennumber
+    await (await relayProxy.connect(deployer).setVaultBalance(
+        taskArgs.chain,
+        taskArgs.token,
+        taskArgs.balance
     )).wait()
     console.log("MAPCrossChainServiceRelay set relay to mcs setVaultBalance success")
 

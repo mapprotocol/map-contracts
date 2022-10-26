@@ -19,7 +19,6 @@ task("deployMCS",
     require("./deployMapCrossChainServiceProxy")
 )
     .addParam("wrapped", "native wrapped token address")
-    .addParam("maptoken", "map token address")
     .addParam("lightnode", "lightNode contract address")
 
 task("deployRelay",
@@ -40,15 +39,16 @@ task("initRelay",
     "Initialize MapCrossChainServiceRelay contract",
     require("./mapCrossChainServiceRelaySet")
 )
-    .addParam("feecenter", "fee center contract address")
-    .addParam("register", "token register contract address")
+    .addParam("feeCenter","feeCenter contract")
+    .addParam("tokenRegister","tokenRegister contract")
 
-task("mapCrossChainServiceSetCanBridgeToken",
+
+task("SetCanBridgeToken",
     "MapCrossChainService settings allow cross-chain tokens",
     require("./mapCrossChainServiceSetCanBridgeToken")
 )
-    .addParam("tokenaddress", "token address")
-    .addParam("ids", "The chain id that is allowed to cross can be filled with multiple ',' separated by example (1,2,3)")
+    .addParam("token", "token address")
+    .addParam("chains", "The chain id that is allowed to cross can be filled with multiple ',' separated by example (1,2,3)")
 
 
 task("registerMCS",
@@ -59,70 +59,72 @@ task("registerMCS",
     .addParam("chain", "The chain id where MapCrossChainService is located")
 
 
-task("mapCrossChainServiceInitNear",
+task("mcsSetChain",
     "MapCrossChainService initializes near chain settings",
-    require("./mapCrossChainServiceInitNear")
+    require("./mapCrossChainServiceSetChain")
 )
-    .addParam("nearid", "near chain id")
+    .addParam("chain", "chain id")
+    .addParam("name", "chain name")
 
-task("mapCrossChainServiceRelayInitNear",
+task("mapCrossChainServiceRelaySetChain",
     "MapCrossChainServiceRelay initializes near chain settings",
-    require("./mapCrossChainServiceRelayInitNear")
+    require("./mapCrossChainServiceRelaySetChain")
 )
-    .addParam("nearid", "near chain id")
+    .addParam("chain", "chain id")
+    .addParam("name","chain name")
 
 task("mapCrossChainServiceRelaySetTokenDecimals",
     "Set the decimals of maptoken corresponding to other chains",
-    require("./mapCrossChainServiceRelaySetTokenDecimals")
+    require("./tokenRegisterSetTokenDecimals")
 )
-    .addParam("tokenaddress", "Token address")
-    .addParam("mcsids", "Cross-chain chainId")
-    .addParam("tokendecimals", "Token decimals")
+    .addParam("token", "Token address")
+    .addParam("chains", "Cross-chain chainId")
+    .addParam("decimals", "Token decimals")
 
-task("mapCrossChainServiceRelaySetVaultBalance",
+task("mcsRelaySetVaultBalance",
     "MapCrossChainServiceRelay sets cross-chain token quota",
     require("./mapCrossChainServiceRelaySetVaultBalance")
 )
-    .addParam("mcsid", "Chain id that allows cross-chain")
-    .addParam("tokenaddress", "Token address")
-    .addParam("tokennumber", "Allowed Amount")
+    .addParam("chain", "Chain id that allows cross-chain")
+    .addParam("token", "Token address")
+    .addParam("balance", "Allowed Amount")
 
 task("feeCenterSetTokenVault",
     "Binding fee address to provide liquidity vault address",
     require("./feeCenterSetTokenVault")
 )
-    .addParam("vaulttoken", "vault address")
-    .addParam("crosstoken", "The maptoken address corresponding to the cross-chain token")
+    .addParam("vault", "vault address")
+    .addParam("token", "The maptoken address corresponding to the cross-chain token")
 
 task("feeCenterSetDistributeRate",
     "Set the fee to enter the vault address",
     require("./feeCenterSetDistributeRate")
 )
-    .addParam("vaulttoken", "vault address")
-    .addParam("ratenumber", "The percentage value of the fee charged")
+    .addParam("token", "vault address")
+    .addParam("rate", "The percentage value of the fee charged")
 
 task("feeCenterSetChainTokenGasFee",
     "Set fees for tokens",
     require("./feeCenterSetChainTokenGasFee")
 )
-    .addParam("mcschainid", "Allow cross-chain id")
-    .addParam("crosstoken", "token address")
-    .addParam("minfee", "One-time cross-chain charging minimum handling fee")
-    .addParam("maxfee", "One-time cross-chain charging maximum handling fee")
-    .addParam("ratefee", "The percentage value of the fee charged")
+    .addParam("chain", "Allow cross-chain id")
+    .addParam("token", "token address")
+    .addParam("min", "One-time cross-chain charging minimum handling fee")
+    .addParam("max", "One-time cross-chain charging maximum handling fee")
+    .addParam("rate", "The percentage value of the fee charged")
 
-task("tokenRegister",
+task("tokenRegisterRegToken",
     "Mapping settings for tokens that require cross-chain between two chains",
-    require("./tokenRegister")
+    require("./tokenRegisterRegToken")
 )
-    .addParam("crossid", "cross-chain id")
-    .addParam("crosstoken", "cross-chain token")
-    .addParam("maptoken", "Map token corresponding to map chain")
+    .addParam("chain", "cross-chain id")
+    .addParam("token", "cross-chain token")
+    .addParam("mapToken", "Map token corresponding to map chain")
 
 task("vaultTokenInit",
     "Initialize the vaultToken",
     require("./vaultTokenInit")
 )
-    .addParam("correspond", "The token address mapped by the cross-chain token on the map chain")
-    .addParam("vaultname", "The name of the vault token")
-    .addParam("vaultsymbol", "The symbol of the vault token")
+    .addParam("token", "The token address mapped by the cross-chain token on the map chain")
+    .addParam("name", "The name of the vault token")
+    .addParam("symbol", "The symbol of the vault token")

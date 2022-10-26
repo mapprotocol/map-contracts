@@ -9,11 +9,11 @@ module.exports = async (taskArgs,hre) => {
 
     let mcssProxy = await ethers.getContractAt('MapCrossChainService',proxy.address);
 
-    let id = taskArgs.ids.split(",");
+    let id = taskArgs.chains.split(",");
 
     for (let i = 0; i < id.length; i++){
         await (await mcssProxy.connect(deployer).setCanBridgeToken(
-            taskArgs.tokenaddress,
+            taskArgs.token,
             id[i],
             true
         )).wait();

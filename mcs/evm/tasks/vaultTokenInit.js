@@ -10,9 +10,9 @@ module.exports = async (taskArgs,hre) => {
     let vaultToken = await ethers.getContractAt('MAPVaultToken',proxy.address);
 
     await (await vaultToken.connect(deployer).initialize(
-            taskArgs.correspond,
-            taskArgs.vaultname,
-            taskArgs.vaultsymbol,
+            taskArgs.token,
+            taskArgs.name,
+            taskArgs.symbol,
             "18")
     ).wait();
     console.log("MAPVaultToken initialize success")

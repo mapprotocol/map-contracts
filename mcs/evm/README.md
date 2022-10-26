@@ -70,7 +70,7 @@ npx hardhat deployRelay --wrapped <wrapped token> --lightnode <lightNodeManager 
 
 3. Init MOS Relay
 ```
-npx hardhat initRelay --feecenter <feeCenter address> --register <token register address> --network <network>
+npx hardhat initRelay --feeCenter <feeCenter address> --tokenRegister <token register address> --network <network>
 ````
 
 ### MOS on EVM Chains
@@ -92,12 +92,12 @@ npx hardhat initMCS --relay <Relay address> --chain <map chainId> --network <net
 npx hardhat registerMCS --address <mapCrossChainService address> --chain <mapCrossChainService chainId> --network <network>
 ```
 
-### MOS on Near
+### MOS on other chain
 
 
 The following four commands are generally applicable to Map mainnet and Makalu testnet
 ```
-npx hardhat mapCrossChainServiceRelayInitNear --nearid <near chainId> --network <network>
+npx hardhat mcsSetChain --name <chain name> --chain <chain id> --network <network>
 ```
 
 
@@ -124,30 +124,30 @@ npx hardhat initVaultToken --token <mapchain mapping token address> --name <vaul
 ````
 2. FeeCenter sets up the treasury and token binding
 ````
-npx hardhat feeCenterSetTokenVault --vaulttoken <vault address> --crosstoken <mapchain mapping token address> --network <network>
+npx hardhat feeCenterSetTokenVault --vault <vault address> --token <mapchain mapping token address> --network <network>
 ````
 
 3. FeeCenter sets fee distribution
 ````
-npx hardhat feeCenterSetDistributeRate --vaulttoken <vault address> --ratenumber <rate 0-10000> --network <network>
+npx hardhat feeCenterSetDistributeRate --token <vault address> --rate <rate 0-10000> --network <network>
 ````
 
 4. FeeCenter sets the token cross-chain fee ratio
 ````
-npx hardhat feeCenterSetChainTokenGasFee --mcschainid <MapCrossChainService chainId> --crosstoken <mapchain mapping token address> --minfee <minimum value> --maxfee <maximum value> --ratefee <rate 0-10000> --network <network>
+npx hardhat feeCenterSetChainTokenGasFee --chain <MapCrossChainService chainId> --token <mapchain mapping token address> --min <minimum value> --max <maximum value> --rate <rate 0-10000> --network <network>
 ````
 5. Bind the token mapping relationship between the two chains that requires cross-chain
 ````
-npx hardhat tokenRegister --crossid <cross-chain id> --crosstoken <cross-chain token> --maptoken <mapchain mapping token address> --network <network>
+npx hardhat tokenRegisterRegToken --chain <cross-chain id> --token <cross-chain token> --mapToken <mapchain mapping token address> --network <network>
 ````
 6. MapCrossChainServiceRelay sets the decimal for cross-chain tokens
    Note the mcsids and tokendecimals parameters can be filled with one or more words separated by ',' (eg 1,2,96 18,18,24)
 ````
-npx hardhat mapCrossChainServiceRelaySetTokenDecimals --tokenaddress <token address> --chains <Multiple chainIds (1,2,96)> --tokendecimals <token decimals (18,18,24)> --network <network>
+npx hardhat tokenRegisterSetTokenDecimals --token <token address> --chains <Multiple chainIds (1,2,96)> --decimals <token decimals (18,18,24)> --network <network>
 ````
 7. MapCrossChainServiceRelay sets the quota for cross-chain tokens to other chains
 ````
-npx hardhat mapCrossChainServiceRelaySetVaultBalance --chain <MapCrossChainService chainId> --tokenaddress <token address> --tokennumber <Cross-chain quota> --network <network>
+npx hardhat mcsRelaySetVaultBalance --chain <MapCrossChainService chainId> --token <token address> --balance <Cross-chain quota> --network <network>
 ````
 
 

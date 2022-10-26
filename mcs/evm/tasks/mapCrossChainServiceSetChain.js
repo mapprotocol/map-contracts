@@ -11,10 +11,11 @@ module.exports = async (taskArgs,hre) => {
 
     let mcssProxy = await ethers.getContractAt('MapCrossChainService',proxy.address);
 
-    await (await mcssProxy.connect(deployer).setChainId(
-        taskArgs.nearid
+    await (await mcssProxy.connect(deployer).setChain(
+        taskArgs.name,
+        taskArgs.chain
     )).wait();
 
-    console.log(`MapCrossChainService init near chain successfully `);
+    console.log(`MapCrossChainService setChain successfully `);
 
 }

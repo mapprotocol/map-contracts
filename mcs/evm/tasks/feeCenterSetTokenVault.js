@@ -10,8 +10,8 @@ module.exports = async (taskArgs,hre) => {
     let feeCenter = await ethers.getContractAt('FeeCenter',proxy.address);
 
     await (await feeCenter.connect(deployer).setTokenVault(
-        taskArgs.crosstoken,
-        taskArgs.vaulttoken
+        taskArgs.token,
+        taskArgs.vault
     )).wait();
 
     console.log("FeeCenter set setTokenVault success")

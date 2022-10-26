@@ -25,26 +25,20 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     using RLPReader for RLPReader.RLPItem;
 
     uint public nonce;
-    IERC20 public mapToken;
     ILightNode public lightNode;
     address public wToken;          // native wrapped token
 
     uint public immutable selfChainId = block.chainid;
-    uint public nearChainId;
 
-    mapping(bytes32 => address) public tokenRegister;
-    //Gas transfer fee charged by the target chain
-    mapping(uint => uint) public chainGasFee;
     mapping(bytes32 => bool) public orderList;
-
-    uint public chainGasFees;
     mapping(address => bool) public authToken;
 
-    mapping(address => uint256) public bridgeAddress;
+    address public mscRelay;
 
     //Can storage tokens be cross-chain?
     mapping(address => mapping(uint => bool)) canBridgeToken;
 
+    mapping(string => uint256) chainTable;
 
     struct txLog {
         address addr;
@@ -57,23 +51,20 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     event mapTransferIn(address indexed token, bytes indexed from, bytes32 indexed orderId,
         uint fromChain, uint toChain, address to, uint amount);
 
-    event mapTransferOutData(bytes indexed toContract, address indexed from, bytes32 indexed orderId,
-        uint fromChain, uint toChain, bytes data);
-    event mapTransferInData(bytes indexed toContract, address indexed from, bytes32 indexed orderId,
-        uint fromChain, uint toChain, bytes data);
-
-    event mapTokenRegister(bytes32 tokenID, address token);
     event mapDepositOut(address token, bytes from, bytes32 orderId, address to, uint256 amount);
 
+    bytes32 public constant mapTransferOutTopic
+    = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
 
-    //bytes32 public mapTransferOutTopic = keccak256(bytes('mapTransferOut(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
-    bytes32 public constant mapTransferOutTopic = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
-    //    bytes mapTransferInTopic = keccak256(bytes('mapTransferIn(address,address,bytes32,uint,uint,bytes,uint,bytes)'));
+    modifier checkAddress(address _address){
+        require(_address != Address(0), "address is zero");
+        _;
+    }
 
-    function initialize(address _wToken, address _mapToken, address _lightNode) public initializer {
+    function initialize(address _wToken, address _lightNode)
+    public initializer checkAddress(_wToken) checkAddress(_lightNode){
         wToken = _wToken;
-        nearChainId = 1313161555;
-        mapToken = IERC20(_mapToken);
+        chainTable["near"] = 1313161555;
         lightNode = ILightNode(_lightNode);
         _changeAdmin(msg.sender);
     }
@@ -122,8 +113,8 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         }
     }
 
-    function setBridge(address _bridge, uint256 _num) public onlyOwner {
-        bridgeAddress[_bridge] = _num;
+    function setMcsRelay(address _relay) public onlyOwner checkAddress(_relay) {
+        mscRelay = _relay;
     }
 
     function checkAuthToken(address token) public view returns (bool) {
@@ -134,11 +125,10 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         canBridgeToken[token][chainId] = canBridge;
     }
 
-    function setChainId(uint256 _id) public onlyOwner {
-        require(_id > 0,"id error");
-        nearChainId = _id;
+    function setChain(string memory name,uint256 chain) public onlyOwner {
+        require(chain > 0,"id error");
+        chainTable[name] = chain;
     }
-
 
     function transferIn(uint, bytes memory receiptProof) external override nonReentrant whenNotPaused {
         (bool sucess,string memory message,bytes memory logArray) = lightNode.verifyProofData(receiptProof);
@@ -149,10 +139,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
             txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
             if (topic == mapTransferOutTopic) {
-                require(bridgeAddress[log.addr] > 0, "Illegal across the chain");
-                //                address token = abi.decode(log.topics[1], (address));
-                // address from = abi.decode(log.topics[2], (address));
-                // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
+                require(mscRelay == log.addr, "Illegal across the chain");
                 (,bytes memory from,bytes32 orderId,uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
                 = abi.decode(log.data, (bytes, bytes, bytes32, uint, uint, bytes, uint, bytes));
                 address token = _bytesToAddress(toChainToken);
@@ -172,7 +159,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     whenNotPaused
     checkCanBridge(token, toChain)
     {
-        if(toChain == nearChainId){
+        if(toChain == chainTable["near"]){
             require(toAddress.length >=2 || toAddress.length <= 64,"near address error");
         }else {
             require(toAddress.length == 20,"address error");
@@ -192,7 +179,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     external override payable
     whenNotPaused
     checkCanBridge(address(0), toChain) {
-        if(toChain == nearChainId){
+        if(toChain == chainTable["near"]){
             require(toAddress.length >=2 || toAddress.length <= 64,"near address error");
         }else {
             require(toAddress.length == 20,"address error");
@@ -295,23 +282,6 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
 
     function getImplementation() external view returns (address) {
         return _getImplementation();
-    }
-
-    function getInfo(bytes memory hash) public view returns(
-        address to,
-        uint256 value,
-        bytes memory data,
-    //        uint256 operation,
-    //        uint256 safeTxGas,
-    //        uint256 baseGas,
-    //        uint256 gasPrice,
-        address gasToken,
-        address  refundReceiver,
-        bytes memory signatures){
-        //to,value,data
-        (to,value,data,,,,,gasToken,refundReceiver,signatures) = abi.decode(hash,(
-            address,uint256,bytes,uint256,uint256,uint256,uint256,address,address,bytes
-            ));
     }
 
 }
