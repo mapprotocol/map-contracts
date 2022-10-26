@@ -23,8 +23,8 @@ describe("MAPCrossChainService start test", function () {
     let UToken;
     let usdt;
 
-    let WETH;
-    let weth;
+    let Wrapped;
+    let wrapped;
 
     let LightNode;
     let lightNode;
@@ -43,25 +43,24 @@ describe("MAPCrossChainService start test", function () {
     it("constract deploy init", async function () {
         console.log("addr6 address:",addr6.address);
         MCSS = await ethers.getContractFactory("MapCrossChainService");
-        // mcss = await ethers.getContractAt("MapCrossChainService",mcsData.mcs);
         mcss = await MCSS.deploy();
         console.log("mcss address:",mcss.address);
         StandardToken = await ethers.getContractFactory("StandardToken");
-        standardToken = await  StandardToken.deploy("MapToken","MP");
+        standardToken = await StandardToken.deploy("MapToken","MP");
         console.log("StandardToken:",standardToken.address);
 
         UToken = await ethers.getContractFactory("StandardToken");
         usdt = await  UToken.deploy("U Toeken","USDT");
         console.log("UToken:",usdt.address);
 
-        WETH = await ethers.getContractFactory("WETH9");
-        weth = await  WETH.deploy();
-        console.log("WETH:",weth.address);
+        Wrapped = await ethers.getContractFactory("Wrapped");
+        wrapped = await Wrapped.deploy();
+        console.log("Wrapped:",Wrapped.address);
 
         LightNode = await ethers.getContractFactory("LightNode");
         lightNode = await  LightNode.deploy();
 
-        let data  = await mcss.initialize(weth.address,standardToken.address,lightNode.address);
+        let data  = await mcss.initialize(wrapped.address,lightNode.address);
 
         initData = data.data;
 
@@ -71,22 +70,20 @@ describe("MAPCrossChainService start test", function () {
         const MapCrossChainServiceProxy = await ethers.getContractFactory("MapCrossChainServiceProxy");
         let mcssp = await MapCrossChainServiceProxy.deploy(mcss.address,initData);
         await mcssp.deployed()
-
         mcss = MCSS.connect(addr6).attach(mcssp.address);
-
     });
 
     it('mcs set', async function () {
 
         await mcss.addAuthToken([standardToken.address]);
 
-        await mcss.setBridge(mcsData.mcsRelay,212);
+        await mcss.setMcsRelay(mcsData.mcsRelay);
 
         await mcss.setCanBridgeToken(standardToken.address,212,"true");
 
         await mcss.setCanBridgeToken(standardToken.address,1313161555,"true");
 
-        let mintRole = await  standardToken.MINTER_ROLE();
+        let mintRole = await standardToken.MINTER_ROLE();
 
         await standardToken.grantRole(mintRole,mcss.address);
 
@@ -131,12 +128,12 @@ describe("MAPCrossChainService start test", function () {
         expect(await standardToken.totalSupply()).to.equal("99900000100000000000000000");
         expect(await usdt.balanceOf(mcss.address)).to.equal("0");
 
-        await weth.deposit({value:"300000000000000000"});
-        await weth.transfer(mcss.address,"300000000000000000");
+        await wrapped.deposit({value:"300000000000000000"});
+        await wrapped.transfer(mcss.address,"300000000000000000");
 
         await mcss.transferIn(212,mcsData.map2ethNative);
 
-        expect(await weth.balanceOf(mcss.address)).to.equal("0");
+        expect(await wrapped.balanceOf(mcss.address)).to.equal("0");
 
         await usdt.mint(mcss.address,"5000000000000000000")
 
@@ -165,7 +162,7 @@ describe("MAPCrossChainService start test", function () {
         )
 
         // expect(await ethers.provider.getBalance(mcss.address)).to.equal("9998999928426602550800");
-        expect(await weth.balanceOf(mcss.address)).to.equal("1000000000000000000")
+        expect(await wrapped.balanceOf(mcss.address)).to.equal("1000000000000000000")
     });
 
     it('near transferIn test ', async function () {
@@ -185,19 +182,17 @@ describe("MAPCrossChainService start test", function () {
 
         await mcss.transferIn(212,mcsData.near2et000);
 
-        expect(await weth.balanceOf(mcss.address)).to.equal("750000000000000000");
+        expect(await wrapped.balanceOf(mcss.address)).to.equal("750000000000000000");
 
     });
 
 
     it('transferOutNative', async function () {
-        //wethEthToken = await ethers.getContractAt("StandardToken",mcsData.weth);
-
         await mcss.setCanBridgeToken("0x0000000000000000000000000000000000000000",1313161555,"true");
 
         await mcss.connect(owner).transferOutNative(address2Bytes,1313161555,{value:"100000000000000000"});
 
-        expect(await weth.balanceOf(mcss.address)).to.equal("850000000000000000")
+        expect(await wrapped.balanceOf(mcss.address)).to.equal("850000000000000000")
 
     });
 

@@ -11,8 +11,8 @@ module.exports = async (taskArgs,hre) => {
 
     await (await feeCenter.connect(deployer).setDistributeRate(
         "1",
-        taskArgs.vaulttoken,
-        taskArgs.ratenumber
+        taskArgs.token,
+        taskArgs.rate
     )).wait();
 
 

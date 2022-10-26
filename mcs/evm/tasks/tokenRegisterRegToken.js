@@ -10,9 +10,9 @@ module.exports = async (taskArgs,hre) => {
     let tokenRegister = await ethers.getContractAt('TokenRegister',proxy.address);
 
     await (await tokenRegister.connect(deployer).regToken(
-        taskArgs.crossid,
-        taskArgs.crosstoken,
-        taskArgs.maptoken
+        taskArgs.chain,
+        taskArgs.token,
+        taskArgs.mapToken
     )).wait()
 
     console.log("TokenRegister success ")
