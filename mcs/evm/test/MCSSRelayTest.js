@@ -330,7 +330,7 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
     it('admin test', async function () {
 
-        await expect(mcssR.changeAdmin("0x0000000000000000000000000000000000000000")).to.be.revertedWith("zero address")
+        await expect(mcssR.changeAdmin("0x0000000000000000000000000000000000000000")).to.be.revertedWith("address is zero")
 
         await mcssR.changeAdmin(addr5.address);
 

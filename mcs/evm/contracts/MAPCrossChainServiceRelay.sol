@@ -115,11 +115,11 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     }
 
     modifier checkAddress(address _address){
-        require(_address != Address(0), "address is zero");
+        require(_address != address(0), "address is zero");
         _;
     }
 
-    function setVaultBalance(uint256 tochain, address token, uint256 amount) external onlyOwner checkAddress(token) {
+    function setVaultBalance(uint256 tochain, address token, uint256 amount) external onlyOwner {
         vaultBalance[tochain][token] = amount;
     }
 
@@ -131,7 +131,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         lightClientManager = ILightClientManager(_managerAddress);
     }
 
-    function setMcsContract(uint256 _chainId, bytes memory _address) external onlyOwner checkAddress(_address){
+    function setMcsContract(uint256 _chainId, bytes memory _address) external onlyOwner{
         mcsContracts[_address] = _chainId;
     }
 
@@ -596,7 +596,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     function changeAdmin(address _admin)
     public onlyOwner
-    checkAuthToken(_admin){
+    checkAddress(_admin){
         _changeAdmin(_admin);
     }
 

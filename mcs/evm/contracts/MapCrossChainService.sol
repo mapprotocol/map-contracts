@@ -57,7 +57,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
 
     modifier checkAddress(address _address){
-        require(_address != Address(0), "address is zero");
+        require(_address != address (0), "address is zero");
         _;
     }
 
