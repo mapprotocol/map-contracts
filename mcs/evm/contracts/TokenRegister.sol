@@ -60,7 +60,7 @@ contract TokenRegister is Ownable, ITokenRegister {
     external
     onlyOwner {
         for (uint256 i = 0; i < token.length; i++) {
-            require(token[i] != Address(0),"token is zero");
+            require(token[i] != address (0),"token is zero");
             authToken[token[i]] = true;
         }
     }
