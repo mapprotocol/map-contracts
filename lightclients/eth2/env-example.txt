@@ -1,0 +1,7 @@
+PRIVATE_KEY = 
+# bsc rpc url
+BSCURI = 
+# mainnet 56 testnet 97
+CHAINID = 
+# bsc mainnet 317 testnet 197
+MinEpochBlockExtraDataLen = 317
