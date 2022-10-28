@@ -109,17 +109,16 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
         expect(await mcssR.tokenRegister()).to.equal(tokenRegister.address);
 
-        await mcssR.setMcsContract(34434,mcsRelayData.mcsETH);
+        await mcssR.setMcsContract(34434,mcsRelayData.mcsETH,1);
 
-        await mcssR.setMcsContract(1313161555,mcsRelayData.mcsNear);
+        await mcssR.setMcsContract(1313161555,mcsRelayData.mcsNear,2);
 
-        await mcssR.setChain("near",1313161555);
 
         await mcssR.setFeeCenter(feeCenter.address);
         //await mcssR.setFeeCenter(mcsRelayData.feeCenter);
         expect(await mcssR.feeCenter()).to.equal(feeCenter.address);
 
-        await tokenRegister.addAuthToken([standardToken.address]);
+        await mcssR.addAuthToken([standardToken.address]);
 
         await mapVault.addManager(mcssR.address);
         await mapVaultU.addManager(mcssR.address);
@@ -202,7 +201,7 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
         await standardToken.mint(owner.address,"1000000000000000000");
 
-        await tokenRegister.removeAuthToken([standardToken.address]);
+        await mcssR.removeAuthToken([standardToken.address]);
 
         await mcssR.connect(owner).transferOutToken(standardToken.address,address2Bytes,"1000000000000000000",1313161555)
 
@@ -221,7 +220,7 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
     it('transferIn test ', async function () {
 
-        await tokenRegister.addAuthToken([standardToken.address]);
+        await mcssR.addAuthToken([standardToken.address]);
         //console.log(await tokenRegister.getTargetToken(1313161555,212))
 
         console.log(await usdt.balanceOf(mcssR.address));
@@ -275,7 +274,7 @@ describe("MAPCrossChainServiceRelay start test", function () {
         expect(await mapVaultU.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4")).to.equal("150000000000000000")
         expect(await mapVaultU.totalSupply()).to.equal("150000000000000000");
 
-        await mcssR.setMcsContract(34434,"0xAC25DeA31A410900238c8669eD9973f328919160");
+        await mcssR.setMcsContract(34434,"0xAC25DeA31A410900238c8669eD9973f328919160",1);
 
         await feeCenter.setTokenVault(standardToken.address,mapVault.address)
 

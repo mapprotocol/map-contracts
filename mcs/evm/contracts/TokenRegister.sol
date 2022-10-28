@@ -10,9 +10,8 @@ contract TokenRegister is Ownable, ITokenRegister {
     using SafeMath for uint;
     uint public immutable chainID = block.chainid;
 
-    mapping(bytes => mapping(uint256 => uint256)) tokenOtherChainDecimals;
-
-    mapping(address => bool) public authToken;
+    //chainId token decimals
+    mapping(uint256 => mapping(bytes => uint256)) tokenOtherChainDecimals;
 
     //Source chain to MAP chain
     mapping(uint256 => mapping(bytes => bytes)) public sourceCorrespond;
@@ -43,7 +42,7 @@ contract TokenRegister is Ownable, ITokenRegister {
     function setTokenOtherChainDecimals(bytes memory selfToken, uint256 chainId, uint256 decimals)
     external
     onlyOwner {
-        tokenOtherChainDecimals[selfToken][chainId] = decimals;
+        tokenOtherChainDecimals[chainId][selfToken] = decimals;
     }
 
 
@@ -51,31 +50,8 @@ contract TokenRegister is Ownable, ITokenRegister {
     external override
     view
     returns (uint256){
-        uint256 decimalsFrom = tokenOtherChainDecimals[token][fromChain];
-        uint256 decimalsTo = tokenOtherChainDecimals[token][toChain];
+        uint256 decimalsFrom = tokenOtherChainDecimals[fromChain][token];
+        uint256 decimalsTo = tokenOtherChainDecimals[toChain][token];
         return amount.mul(10 ** decimalsTo).div(10 ** decimalsFrom);
-    }
-
-    function addAuthToken(address[] memory token)
-    external
-    onlyOwner {
-        for (uint256 i = 0; i < token.length; i++) {
-            require(token[i] != address (0),"token is zero");
-            authToken[token[i]] = true;
-        }
-    }
-
-    function removeAuthToken(address[] memory token)
-    external
-    onlyOwner {
-        for (uint256 i = 0; i < token.length; i++) {
-            authToken[token[i]] = false;
-        }
-    }
-
-    function checkAuthToken(address token)
-    external override
-    view returns (bool) {
-        return authToken[token];
     }
 }

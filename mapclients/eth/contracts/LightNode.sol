@@ -11,7 +11,7 @@ import "./bls/BGLS.sol";
 import "./interface/IVerifyTool.sol";
 
 
-contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
+contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
     uint256 public maxValidators;
     uint256 public epochSize;
@@ -52,11 +52,11 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     external
     override
     initializer {
-        require(_epoch > 0,"Error initializing epco");
+        require(_epoch > 0, "Error initializing epco");
         _changeAdmin(msg.sender);
         maxValidators = 20;
         epochSize = 1000;
-        headerHeight = (_epoch -1) * _epochSize;
+        headerHeight = (_epoch - 1) * _epochSize;
         epochSize = _epochSize;
         validatorAddress = _validatorAddress;
         setStateInternal(_threshold, _pairKeys, _weights, _epoch);
@@ -72,11 +72,11 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         emit mapInitializeValidators(_threshold, _pairKeys, _weights, _epoch);
     }
 
-    function getValidator(uint id )
+    function getValidator(uint id)
     public
     view
-    returns(G1[] memory){
-        require(id < 20,"validator id error");
+    returns (G1[] memory){
+        require(id < 20, "validator id error");
         return validators[id].pairKeys;
     }
 
@@ -87,7 +87,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         return maxValidators;
     }
 
-    function getBytes(receiptProof memory _receiptProof) public pure returns(bytes memory){
+    function getBytes(receiptProof memory _receiptProof) public pure returns (bytes memory){
         return abi.encode(_receiptProof);
     }
 
@@ -95,27 +95,27 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     external
     view
     override
-    returns (bool success, string memory message,bytes memory logsHash) {
-        receiptProof memory _receiptProof = abi.decode(_receiptProofBytes,(receiptProof));
+    returns (bool success, string memory message, bytes memory logsHash) {
+        receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
         logsHash = verifyTool.encodeTxLog(_receiptProof.receipt.logs);
-        (success, message) =verifyTool.getVerifyTrieProof(_receiptProof);
+        (success, message) = verifyTool.getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
-            return (success, message,logsHash);
+            return (success, message, logsHash);
         }
         bytes32 hash;
         bytes memory headerRlp = verifyTool.encodeHeader(_receiptProof.header);
         (success, hash) = verifyTool.verifyHeader(headerRlp);
         if (!success) {
             message = "verifyHeader error";
-            return (success, message,logsHash);
+            return (success, message, logsHash);
         }
         istanbulExtra memory ist = verifyTool.decodeExtraData(_receiptProof.header.extraData);
         success = checkSig(_receiptProof.header, ist, _receiptProof.aggPk);
         if (!success) {
             message = "bls error";
         }
-        return (success, message,logsHash);
+        return (success, message, logsHash);
     }
 
     function updateBlockHeader(blockHeader memory bh, G2 memory aggPk)
@@ -183,9 +183,9 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
         validator storage v = validators[id];
         v.epoch = epoch;
         uint _weight = 0;
-        if (v.pairKeys.length >0){
-            delete(v.weights);
-            delete(v.pairKeys);
+        if (v.pairKeys.length > 0) {
+            delete (v.weights);
+            delete (v.pairKeys);
         }
 
         for (uint256 i = 0; i < vPre.pairKeys.length; i++) {
@@ -211,7 +211,7 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
                 _weight = _weight + _weights[i];
             }
         }
-        v.threshold = _weight - _weight/3;
+        v.threshold = _weight - _weight / 3;
     }
 
 
@@ -284,8 +284,9 @@ contract LightNode is UUPSUpgradeable,Initializable, ILightNode,BGLS {
     internal
     pure
     returns (bytes memory){
+        require(num < 2 ** 24, "num is too large");
         bytes memory result;
-        if (num < 256){
+        if (num < 256) {
             result = abi.encodePacked(uint8(num));
         } else if (num < 65536) {
             result = abi.encodePacked(uint16(num));
