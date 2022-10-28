@@ -34,6 +34,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     address public wToken;        // native wrapped token
 
+    mapping(address => bool) public authToken;
+
     uint public immutable selfChainId = block.chainid;
 
     mapping(bytes32 => bool) public orderList;
@@ -42,9 +44,14 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     mapping(uint256 => mapping(address => uint)) public vaultBalance;
 
-    mapping(bytes => uint256) mcsContracts;
+    mapping(uint256 => bytes) mcsContracts;
 
-    mapping(string => uint256) chainTable;
+    enum chainType{
+        NULL,
+        EVM,
+        NEAR
+    }
+    mapping (uint256 => chainType) chainTypes;
 
     struct txLog {
         address addr;
@@ -94,7 +101,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         mapDepositOutTopic = keccak256(bytes('mapDepositOut(address,bytes,bytes32,address,uint256)'));
         nearTransferOut = 0x4e87426fdd31a6df84975ed344b2c3fbd45109085f1557dff1156b300f135df8;
         nearDepositOut = 0x3ad224e3e42a516df08d1fca74990eac30205afb5287a46132a6975ce0b2cede;
-        chainTable["near"] = 1313161555;
         _changeAdmin(msg.sender);
     }
 
@@ -131,8 +137,9 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         lightClientManager = ILightClientManager(_managerAddress);
     }
 
-    function setMcsContract(uint256 _chainId, bytes memory _address) external onlyOwner{
-        mcsContracts[_address] = _chainId;
+    function setMcsContract(uint256 _chainId, bytes memory _address, chainType _type) external onlyOwner{
+        mcsContracts[_chainId] = _address;
+        chainTypes[_chainId] = _type;
     }
 
     function setPause() external onlyOwner {
@@ -141,6 +148,29 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     function setUnpause() external onlyOwner {
         _unpause();
+    }
+
+    function addAuthToken(address[] memory token)
+    external
+    onlyOwner {
+        for (uint256 i = 0; i < token.length; i++) {
+            require(token[i] != address (0),"token is zero");
+            authToken[token[i]] = true;
+        }
+    }
+
+    function removeAuthToken(address[] memory token)
+    external
+    onlyOwner {
+        for (uint256 i = 0; i < token.length; i++) {
+            authToken[token[i]] = false;
+        }
+    }
+
+    function checkAuthToken(address token)
+    internal
+    view returns (bool) {
+        return authToken[token];
     }
 
     function getOrderID(address token, address from, bytes memory to, uint256 amount, uint256 toChainID) internal returns (bytes32){
@@ -154,10 +184,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     function getFeeValue(uint256 amount, uint256 rate) pure public returns (uint){
         require(rate <= 1000000, 'Invalid rate value');
         return amount.mul(rate).div(1000000);
-    }
-
-    function checkAuthToken(address token) internal view returns (bool) {
-        return tokenRegister.checkAuthToken(token);
     }
 
     function getToChainAmount(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
@@ -217,17 +243,12 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         return feeCenter.getTokenFee(toChainId, token, amount);
     }
 
-    function setChain(string memory name,uint256 chain) public onlyOwner {
-        require(chain > 0,"id error");
-        chainTable[name] = chain;
-    }
-
     function transferIn(uint256 chainId, bytes memory receiptProof) external override {
         (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(chainId, receiptProof);
         require(sucess, message);
-        if (chainId == chainTable["near"]) {
+        if (chainTypes[chainId] == chainType.NEAR) {
             (bytes memory mcsContract,nearTransferOutEvent memory _outEvent) = decodeNearLog(logArray);
-            require(mcsContracts[mcsContract] > 0, "Illegal across the chain");
+            require(checkBytes(mcsContract,mcsContracts[chainId]), "Illegal across the chain");
             bytes memory toChainToken = tokenRegister.getTargetToken(_outEvent.from_chain, _outEvent.token, _outEvent.to_chain);
             uint256 outAmount = getToChainAmountOther(_outEvent.token, _outEvent.from_chain, _outEvent.to_chain, _outEvent.amount);
             if (_outEvent.to_chain == selfChainId) {
@@ -238,17 +259,14 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
                 _transferInOtherChain(_outEvent.token, _outEvent.from, _outEvent.to, outAmount,
                     bytes32(_outEvent.order_id), _outEvent.from_chain, _outEvent.to_chain, toChainToken);
             }
-        } else {
+        } else if (chainTypes[chainId] == chainType.EVM){
             txLog[] memory logs = decodeTxLog(logArray);
             for (uint256 i = 0; i < logs.length; i++) {
                 txLog memory log = logs[i];
                 bytes32 topic = abi.decode(log.topics[0], (bytes32));
-                bytes memory mcsAddress = _addressToBytes(log.addr);
+                bytes memory mcsContract = _addressToBytes(log.addr);
                 if (topic == mapTransferOutTopic) {
-                    require(mcsContracts[mcsAddress] > 0, "Illegal across the chain");
-                    //                address token = abi.decode(log.topics[1], (address));
-                    // address from = abi.decode(log.topics[2], (address));
-                    // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
+                    require(checkBytes(mcsContract,mcsContracts[chainId]), "Illegal across the chain");
                     (bytes memory fromToken,bytes memory from,bytes32 orderId,uint256 fromChain,
                     uint256 toChain, bytes memory to, uint256 amount,)
                     = abi.decode(log.data, (bytes, bytes, bytes32, uint, uint, bytes, uint, bytes));
@@ -271,11 +289,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     function transferOutToken(address token, bytes memory to, uint256 amount, uint256 toChainId) external override whenNotPaused {
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
-        if(toChainId == chainTable["near"]){
-            require(to.length >=2 || to.length <= 64,"near address error");
-        }else {
-            require(to.length == 20,"address error");
-        }
         TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         uint256 fee = getChainFee(toChainId, token, amount);
         uint256 outAmount = amount.sub(fee,"sub error");
@@ -292,11 +305,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     }
 
     function transferOutNative(bytes memory to, uint256 toChainId) external override payable whenNotPaused {
-        if(toChainId == chainTable["near"]){
-            require(to.length >=2 || to.length <= 64,"near address error");
-        }else {
-            require(to.length == 20,"address error");
-        }
         uint256 amount = msg.value;
         require(amount > 0, "value too low");
         IWToken(wToken).deposit{value : amount}();
@@ -348,24 +356,27 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     }
 
 
+    function checkBytes(bytes memory b1, bytes memory b2) internal view returns(bool){
+        return keccak256(b1) == keccak256(b2);
+    }
+
     function depositIn(uint256 _fromChain, bytes memory receiptProof) external payable override nonReentrant whenNotPaused {
         (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_fromChain, receiptProof);
         require(sucess, message);
 
-        if (_fromChain == chainTable["near"]) {
+        if (chainTypes[_fromChain] == chainType.NEAR) {
             (bytes memory mcsContract,nearDepositOutEvent memory _outEvent) = decodeNearDepositLog(logArray);
-            require(mcsContracts[mcsContract] > 0, "Illegal across the chain");
+            require(checkBytes(mcsContract,mcsContracts[_fromChain]), "Illegal across the chain");
             uint256 fromChain = _fromChain;
             bytes memory toChainToken = tokenRegister.getTargetToken(fromChain, _outEvent.token,selfChainId);
             uint256 outAmount = getToChainAmountOther(_outEvent.token,fromChain, selfChainId, _outEvent.amount);
             address payable toAddress = payable(_bytesToAddress(_outEvent.to));
             _depositIn(_bytesToAddress(toChainToken), _outEvent.from, toAddress, outAmount,bytes32(_outEvent.order_id), fromChain);
-        } else {
+        } else if (chainTypes[_fromChain] == chainType.EVM){
             txLog[] memory logs = decodeTxLog(logArray);
-
             for (uint256 i = 0; i < logs.length; i++) {
                 if (abi.decode(logs[i].topics[0], (bytes32)) == mapDepositOutTopic) {
-                    require(mcsContracts[_addressToBytes(logs[i].addr)] > 0, "Illegal across the chain");
+                    require(logs[i].addr == _bytesToAddress(mcsContracts[_fromChain]), "Illegal across the chain");
                     (address fromToken, bytes memory from,bytes32 orderId,address to,uint256 amount)
                     = abi.decode(logs[i].data, (address, bytes,bytes32, address,  uint256));
                     uint256 fromChain = _fromChain;
