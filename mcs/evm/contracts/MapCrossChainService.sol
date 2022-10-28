@@ -78,7 +78,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     }
 
     modifier checkCanBridge(address token, uint chainId) {
-        require(mcsToken[chainId][token], "token not can bridge");
+        require(mcsToken[chainId][token], "token not register");
         _;
     }
 
@@ -159,23 +159,26 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         } else {
             TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         }
-        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
+        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(wToken));
     }
 
 
     function transferOutNative(bytes memory toAddress, uint toChain)
     external override payable
     whenNotPaused
-    checkCanBridge(address(0), toChain) {
+    checkCanBridge(wToken, toChain) {
         uint amount = msg.value;
         require(amount > 0, "balance is zero");
-        bytes32 orderId = getOrderID(address(0), msg.sender, toAddress, amount, toChain);
+        bytes32 orderId = getOrderID(wToken, msg.sender, toAddress, amount, toChain);
         IWToken(wToken).deposit{value : amount}();
-        emit mapTransferOut(_addressToBytes(address(0)), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
+        emit mapTransferOut(_addressToBytes(wToken), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(wToken));
     }
 
 
-    function depositOutToken(address token, address from, address to, uint amount) external override payable whenNotPaused {
+    function depositOutToken(address token, address from, address to, uint amount)
+    external override payable
+    whenNotPaused
+    checkCanBridge(token,mcsRelayChainId){
         require(msg.sender == from, "from only sender");
         bytes32 orderId = getOrderID(token, from, _addressToBytes(to), amount, mcsRelayChainId);
         //        require(IERC20(token).balanceOf(from) >= amount, "balance too low");
@@ -186,15 +189,15 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     function depositOutNative(address from, address to) external override payable whenNotPaused {
         require(msg.sender == from, "from only sender");
         uint amount = msg.value;
-        bytes32 orderId = getOrderID(address(0), from, _addressToBytes(to), amount, mcsRelayChainId);
+        bytes32 orderId = getOrderID(wToken, from, _addressToBytes(to), amount, mcsRelayChainId);
         require(msg.value >= amount, "balance too low");
         IWToken(wToken).deposit{value : amount}();
-        emit mapDepositOut(address(0), _addressToBytes(from), orderId, to, amount);
+        emit mapDepositOut(wToken, _addressToBytes(from), orderId, to, amount);
     }
 
     function _transferIn(address token, bytes memory from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     internal checkOrder(orderId) {
-        if (token == address(0)) {
+        if (token == wToken) {
             TransferHelper.safeWithdraw(wToken, amount);
             TransferHelper.safeTransferETH(to, amount);
         } else if (checkAuthToken(token)) {
@@ -207,7 +210,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
 
 
     function withdraw(address token, address payable receiver, uint256 amount) public onlyOwner {
-        if (token == address(0)) {
+        if (token == wToken) {
             TransferHelper.safeWithdraw(wToken, amount);
             TransferHelper.safeTransferETH(receiver, amount);
         } else {
@@ -253,9 +256,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 
-    function changeAdmin(address _admin) public onlyOwner {
-        require(_admin != address(0), "zero address");
-
+    function changeAdmin(address _admin) public onlyOwner checkAddress(_admin){
         _changeAdmin(_admin);
     }
 

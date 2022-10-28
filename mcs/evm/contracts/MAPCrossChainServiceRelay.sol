@@ -51,7 +51,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         EVM,
         NEAR
     }
-    mapping (uint256 => chainType) chainTypes;
+    mapping (uint256 => chainType) public chainTypes;
 
     struct txLog {
         address addr;
@@ -205,14 +205,11 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     function collectChainFee(uint256 amount, address token) private {
         address transferToken = token;
-        if (token == address(0)) {
-            transferToken = wToken;
-        }
         uint256 remaining = amount;
         if (amount > 0) {
             (address feeToken,uint256 rate) = feeCenter.getDistribute(0, token);
             uint256 out = getFeeValue(amount, rate);
-            if (feeToken != address(0)) {
+            if (feeToken != address(0)){
                 TransferHelper.safeTransfer(transferToken, feeToken, out);
                 remaining -= out;
             }
@@ -237,9 +234,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
 
     function getChainFee(uint256 toChainId, address token, uint256 amount) public view returns (uint256 out){
-        if (token == address(0)) {
-            token = wToken;
-        }
         return feeCenter.getTokenFee(toChainId, token, amount);
     }
 
@@ -288,6 +282,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     }
 
     function transferOutToken(address token, bytes memory to, uint256 amount, uint256 toChainId) external override whenNotPaused {
+        bytes memory toToken = tokenRegister.getTargetToken(selfChainId, _addressToBytes(token), toChainId);
+        require(!checkBytes(toToken,bytes("")),"token not register");
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
         TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         uint256 fee = getChainFee(toChainId, token, amount);
@@ -299,24 +295,24 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         setVaultValue(amount, selfChainId, toChainId, token);
-        bytes memory toTokenAddress = tokenRegister.getTargetToken(selfChainId, _addressToBytes(token), toChainId);
         outAmount = getToChainAmount(_addressToBytes(token), selfChainId, toChainId, outAmount);
-        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, toTokenAddress);
+        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, toToken);
     }
 
     function transferOutNative(bytes memory to, uint256 toChainId) external override payable whenNotPaused {
+        bytes memory token = tokenRegister.getTargetToken(selfChainId, _addressToBytes(wToken), toChainId);
+        require(!checkBytes(token,bytes("")),"token not register");
         uint256 amount = msg.value;
         require(amount > 0, "value too low");
         IWToken(wToken).deposit{value : amount}();
-        uint256 fee = getChainFee(toChainId, address(0), amount);
+        uint256 fee = getChainFee(toChainId, wToken, amount);
         uint256 outAmount = amount.sub(fee);
-        collectChainFee(fee, address(0));
-        transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
-        bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
-        setVaultValue(amount, selfChainId, toChainId, address(0));
-        bytes memory token = tokenRegister.getTargetToken(selfChainId, _addressToBytes(address(0)), toChainId);
-        outAmount = getToChainAmount(_addressToBytes(address(0)), selfChainId, toChainId, outAmount);
-        emit mapTransferOut(_addressToBytes(address(0)), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, token);
+        collectChainFee(fee, wToken);
+        transferFeeList[wToken] = transferFeeList[wToken].add(amount).sub(outAmount);
+        bytes32 orderId = getOrderID(wToken, msg.sender, to, outAmount, toChainId);
+        setVaultValue(amount, selfChainId, toChainId, wToken);
+        outAmount = getToChainAmount(_addressToBytes(wToken), selfChainId, toChainId, outAmount);
+        emit mapTransferOut(_addressToBytes(wToken), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, token);
     }
 
     function _transferIn(address token, bytes memory from, address payable to, uint256 amount, bytes32 orderId, uint256 fromChain, uint256 toChain)
@@ -324,7 +320,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         uint256 fee = getChainFee(toChain, token, amount);
         uint256 outAmount = amount.sub(fee);
         if (toChain == selfChainId) {
-            if (token == address(0)) {
+            if (token == wToken) {
                 TransferHelper.safeWithdraw(wToken, outAmount);
                 TransferHelper.safeTransferETH(to, outAmount);
             } else if (checkAuthToken(token)) {
@@ -392,12 +388,11 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     function _depositIn(address token, bytes memory from, address payable to, uint256 amount, bytes32 orderId, uint256 fromChain)
     internal checkOrder(orderId) {
-        if (token == address(0)) {
+        if (token == wToken) {
             IWToken(wToken).deposit{value : amount}();
-            token = wToken;
         }
         address vaultTokenAddress = feeCenter.getVaultToken(token);
-        require(vaultTokenAddress != address(0), "only vault token");
+        require(vaultTokenAddress != wToken, "only vault token");
         if (checkAuthToken(token)) {
             IMAPToken(token).mint(vaultTokenAddress, amount);
         } else {
@@ -410,7 +405,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
 
     function withdraw(address token, address payable receiver, uint256 amount) public onlyOwner {
-        if (token == address(0)) {
+        if (token == wToken) {
             TransferHelper.safeWithdraw(wToken, amount);
             TransferHelper.safeTransferETH(receiver, amount);
         } else {
