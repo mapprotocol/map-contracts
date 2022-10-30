@@ -159,7 +159,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         } else {
             TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         }
-        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(wToken));
+        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
     }
 
 
@@ -171,7 +171,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         require(amount > 0, "balance is zero");
         bytes32 orderId = getOrderID(wToken, msg.sender, toAddress, amount, toChain);
         IWToken(wToken).deposit{value : amount}();
-        emit mapTransferOut(_addressToBytes(wToken), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(wToken));
+        emit mapTransferOut(_addressToBytes(wToken), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
     }
 
 
