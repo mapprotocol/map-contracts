@@ -762,7 +762,7 @@ impl MapCrossChainService {
             _ => panic_str(&*format!("storage deposit to token {} for mcs failed", token)),
         };
 
-        let mut to_chain_set = self.fungible_tokens.get(&token).unwrap_or(Default::default());
+        let mut to_chain_set = self.fungible_tokens.get(&token).unwrap_or_default();
         to_chain_set.insert(to_chain);
         self.fungible_tokens.insert(&token, &to_chain_set);
         self.fungible_tokens_storage_balance.insert(&token, &min_bound);
@@ -1058,7 +1058,7 @@ mod tests {
             native_to_chains: Default::default(),
             chain_id_type_map: UnorderedMap::new(b"c".to_vec()),
             used_events: UnorderedSet::new(b"u".to_vec()),
-            owner_pk: env::signer_account_pk(),
+            owner: env::signer_account_id(),
             mcs_storage_transfer_in_required: STORAGE_BALANCE,
             wrapped_token: wrap_token(),
             near_chain_id: NEAR_CHAIN_ID,  // 1313161555 for testnet

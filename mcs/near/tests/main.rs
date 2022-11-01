@@ -3,6 +3,7 @@ use std::fmt::format;
 use std::fs;
 use std::ops::Index;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 use hex;
 use near_sdk::json_types::U128;
 use near_sdk::{Balance, log, serde};
@@ -22,6 +23,7 @@ use workspaces::types::{KeyType, SecretKey};
 use map_light_client::{EpochRecord, Validator};
 
 const MOCK_MAP_CLIENT_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/mock_map_client.wasm";
+const MULTISIG_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/multisig.wasm";
 const MCS_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/mcs.wasm";
 const MCS_TOKEN_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/mcs_token.wasm";
 const WNEAR_WASM_FILEPATH: &str = "./tests/data/w_near.wasm";
@@ -49,6 +51,66 @@ pub struct FungibleTokenMsg {
 pub enum ChainType {
     EvmChain,
     Unknown,
+}
+
+#[tokio::test]
+async fn test_multisig_access_key_methods() -> anyhow::Result<()> {
+    let worker = init_worker().await?;
+    let receiver = worker.dev_create_account().await?;
+    let sk0 = SecretKey::from_seed(KeyType::ED25519, "sk0");
+    let sk1 = SecretKey::from_seed(KeyType::ED25519, "sk1");
+
+    let init_value = r#"{
+        "members": [{ "public_key": ""}],
+        "num_confirmations": 1,
+        "request_lock": 5000000000
+    }"#;
+    let mut init_args: serde_json::Value = serde_json::from_str(init_value).unwrap();
+    init_args["members"][0]["public_key"] = json!(sk0.public_key());
+
+    let multisig = deploy_and_init_multisig(&worker, init_args).await?;
+    let member = new_account(multisig.id(), &sk0);
+    println!("account: {:?}", member.id());
+
+    let request_value = r#"{
+        "receiver_id": "",
+        "actions": [{"type": "Transfer", "amount": "1000"}]
+    }"#;
+    let mut request: serde_json::Value = serde_json::from_str(request_value).unwrap();
+    request["receiver_id"] = json!(receiver.id());
+    let request_id = gen_call_transaction_by_account(&worker, &member, &multisig, "add_request", json!({"request": request}), false)
+        .transact()
+        .await?
+        .json::<u32>()?;
+
+    let res = gen_call_transaction_by_account(&worker, &member, &multisig, "confirm", json!({"request_id": request_id}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "confirm should succeed");
+
+    worker.fast_forward(1000).await?;
+
+    let res = gen_call_transaction_by_account(&worker, &member, &multisig, "delete_request", json!({"request_id": request_id}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "delete_request should succeed");
+
+    let request_id = gen_call_transaction_by_account(&worker, &member, &multisig, "add_request_and_confirm", json!({"request": request}), false)
+        .transact()
+        .await?
+        .json::<u32>()?;
+    assert!(res.is_success(), "add_request_and_confirm should succeed");
+
+    worker.fast_forward(1000).await?;
+
+    let res = gen_call_transaction_by_account(&worker, &member, &multisig, "execute", json!({"request_id": request_id}), false)
+        .transact()
+        .await;
+    assert!(res.is_err(), "call execute should fail");
+    println!("err: {}", res.as_ref().err().unwrap());
+    assert!(res.err().unwrap().to_string().contains("InvalidAccessKeyError"));
+
+    Ok(())
 }
 
 #[tokio::test]
@@ -4363,7 +4425,7 @@ async fn test_deposit_out_mcs_token_no_to_chain() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn gen_call_transaction<'a, U: serde::Serialize>(worker: &'a Worker<impl DevNetwork>, contract: &'a Contract, function: &'a str, args: U, deposit: bool) -> CallTransaction<'a, 'a, impl DevNetwork> {
+fn gen_call_transaction<'a, U: serde::Serialize>(worker: &'a Worker<Sandbox>, contract: &'a Contract, function: &'a str, args: U, deposit: bool) -> CallTransaction<'a, 'a, impl DevNetwork> {
     let call_tx = contract
         .call(&worker, function)
         .args_json(args)
@@ -4376,7 +4438,7 @@ fn gen_call_transaction<'a, U: serde::Serialize>(worker: &'a Worker<impl DevNetw
     }
 }
 
-fn gen_call_transaction_by_account<'a, U: serde::Serialize>(worker: &'a Worker<impl DevNetwork>, account: &Account, contract: &'a Contract, function: &'a str, args: U, deposit: bool) -> CallTransaction<'a, 'a, impl DevNetwork> {
+fn gen_call_transaction_by_account<'a, U: serde::Serialize>(worker: &'a Worker<Sandbox>, account: &Account, contract: &'a Contract, function: &'a str, args: U, deposit: bool) -> CallTransaction<'a, 'a, impl DevNetwork> {
     let call_tx = account
         .call(&worker, &contract.id(), function)
         .args_json(args)
@@ -4389,7 +4451,28 @@ fn gen_call_transaction_by_account<'a, U: serde::Serialize>(worker: &'a Worker<i
     }
 }
 
-async fn deploy_and_init_wnear(worker: &Worker<impl DevNetwork>) -> anyhow::Result<Contract> {
+fn new_account(account_id: &AccountId, sk: &SecretKey) -> Account {
+    let account_value = r#"{
+    "account_id": "",
+    "public_key": "ed25519:5WMgq6gKZbAr7xBZmXJHjnj4C3UZkNJ4F5odisUBFcRh",
+    "secret_key": "ed25519:3KyUucv7xFhA7xcjvS8owYeTotN2zYPc8AWhcRDkMG9ejac4gQsdVqDRrhh1v22ccuSK1JEFkhL7mzoKSuHKVyBH"
+}"#;
+
+    let mut account_json: serde_json::Value = serde_json::from_str(account_value).unwrap();
+    account_json["account_id"] = json!(account_id);
+    account_json["public_key"] = json!(sk.public_key());
+    account_json["secret_key"] = json!(sk);
+
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let path = format!("/tmp/test-account-{:?}.json", timestamp.as_millis());
+    // let path = "/tmp/map-test-account.json";
+    let file = fs::File::create(path.clone()).unwrap();
+    serde_json::to_writer(file, &account_json).unwrap();
+
+    Account::from_file(path)
+}
+
+async fn deploy_and_init_wnear(worker: &Worker<Sandbox>) -> anyhow::Result<Contract> {
     let contract = worker.dev_deploy(&std::fs::read(WNEAR_WASM_FILEPATH)?).await?;
     println!("deploy wnear contract id: {:?}", contract.id());
 
@@ -4404,7 +4487,7 @@ async fn deploy_and_init_wnear(worker: &Worker<impl DevNetwork>) -> anyhow::Resu
     Ok(contract)
 }
 
-async fn deploy_mcs_token_and_set_decimals(worker: &Worker<impl DevNetwork>, mcs: &Contract, token_name: String, decimals: u8) -> anyhow::Result<()> {
+async fn deploy_mcs_token_and_set_decimals(worker: &Worker<Sandbox>, mcs: &Contract, token_name: String, decimals: u8) -> anyhow::Result<()> {
     let res = gen_call_transaction(worker, mcs, "deploy_mcs_token", json!({"address": token_name}), true)
         .transact()
         .await?;
@@ -4420,11 +4503,11 @@ async fn deploy_mcs_token_and_set_decimals(worker: &Worker<impl DevNetwork>, mcs
     Ok(())
 }
 
-async fn deploy_and_init_ft(worker: &Worker<impl DevNetwork>) -> anyhow::Result<Contract> {
+async fn deploy_and_init_ft(worker: &Worker<Sandbox>) -> anyhow::Result<Contract> {
     deploy_and_init_ft_with_decimal(worker, 24).await
 }
 
-async fn deploy_and_init_ft_with_decimal(worker: &Worker<impl DevNetwork>, decimal: u8) -> anyhow::Result<Contract> {
+async fn deploy_and_init_ft_with_decimal(worker: &Worker<Sandbox>, decimal: u8) -> anyhow::Result<Contract> {
     let contract = worker.dev_deploy(&std::fs::read(MCS_TOKEN_WASM_FILEPATH)?).await?;
     println!("deploy ft contract id: {:?}", contract.id());
 
@@ -4445,7 +4528,7 @@ async fn deploy_and_init_ft_with_decimal(worker: &Worker<impl DevNetwork>, decim
     Ok(contract)
 }
 
-async fn deploy_and_init_ft_with_account(worker: &Worker<impl DevNetwork>, account: &Account) -> anyhow::Result<Contract> {
+async fn deploy_and_init_ft_with_account(worker: &Worker<Sandbox>, account: &Account) -> anyhow::Result<Contract> {
     let contract = account.deploy(&worker, &std::fs::read(MCS_TOKEN_WASM_FILEPATH)?).await?.unwrap();
     println!("deploy ft contract id: {:?}", contract.id());
 
@@ -4461,7 +4544,7 @@ async fn deploy_and_init_ft_with_account(worker: &Worker<impl DevNetwork>, accou
     Ok(contract)
 }
 
-async fn deploy_and_init_mcs(worker: &Worker<impl DevNetwork>, map_light_client: String, map_bridge_address: String, wrapped_token: String) -> anyhow::Result<Contract> {
+async fn deploy_and_init_mcs(worker: &Worker<Sandbox>, map_light_client: String, map_bridge_address: String, wrapped_token: String) -> anyhow::Result<Contract> {
     let token_account: AccountId = "mcs.test.near".parse().unwrap();
     let sk = SecretKey::from_seed(KeyType::ED25519, DEV_ACCOUNT_SEED);
     let account = worker.create_tla(token_account.clone(), sk).await?.unwrap();
@@ -4485,7 +4568,7 @@ async fn deploy_and_init_mcs(worker: &Worker<impl DevNetwork>, map_light_client:
     Ok(contract)
 }
 
-async fn deploy_and_init_light_client(worker: &Worker<impl DevNetwork>) -> anyhow::Result<Contract> {
+async fn deploy_and_init_light_client(worker: &Worker<Sandbox>) -> anyhow::Result<Contract> {
     let contract = worker.dev_deploy(&std::fs::read(MOCK_MAP_CLIENT_WASM_FILEPATH)?).await?;
     println!("deploy map light client contract id: {:?}", contract.id());
 
@@ -4503,7 +4586,23 @@ async fn deploy_and_init_light_client(worker: &Worker<impl DevNetwork>) -> anyho
     Ok(contract)
 }
 
-async fn init_worker() -> anyhow::Result<Worker<impl DevNetwork>> {
+async fn deploy_and_init_multisig(worker: &Worker<Sandbox>, init_args: serde_json::Value) -> anyhow::Result<Contract> {
+    let contract = worker.dev_deploy(&std::fs::read(MULTISIG_WASM_FILEPATH)?).await?;
+    println!("deploy multisig contract id: {:?}", contract.id());
+
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "init contract failed!");
+
+    Ok(contract)
+}
+
+async fn init_worker() -> anyhow::Result<Worker<Sandbox>> {
     std::env::var(NEAR_SANDBOX_BIN_PATH).expect("environment variable NEAR_SANDBOX_BIN_PATH should be set");
 
     let worker = workspaces::sandbox().await?;
