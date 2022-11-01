@@ -42,7 +42,7 @@ contract MAPVaultToken is VERC20, IVault, Role {
         return amount.mul(allVToken).div(correspondBalance);
     }
 
-    function getCorrespondQuantity(uint amount) public view returns (uint){
+    function getCorrespondQuantity(uint amount) public override view returns (uint){
         uint allVToken = totalSupply();
         if (allVToken == 0) {
             return amount;
@@ -61,8 +61,9 @@ contract MAPVaultToken is VERC20, IVault, Role {
         correspondBalance += amount;
     }
 
-    function withdraw(uint amount) external override onlyManager {
-        _burn(msg.sender, amount);
+    function withdraw(uint amount, address to) external override onlyManager {
+        _burn(to, amount);
+        correspondBalance -= amount;
         emit VaultWithdraw(getCorrespondQuantity(amount), amount);
     }
 }

@@ -417,7 +417,16 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     }
 
 
-    function withdraw(address token, address payable receiver, uint256 amount) public onlyOwner {
+    function withdraw(address token, uint256 vaultAmount) external {
+        address vaultTokenAddress = feeCenter.getVaultToken(token);
+        require(vaultTokenAddress != wToken, "only vault token");
+        TransferHelper.safeTransfer(vaultTokenAddress,address(this),vaultAmount);
+        uint correspond = IVault(vaultTokenAddress).getCorrespondQuantity(vaultAmount);
+        IVault(vaultTokenAddress).withdraw(correspond, msg.sender);
+    }
+
+
+    function emergencyWithdraw(address token, address payable receiver, uint256 amount) public onlyOwner {
         if (token == wToken) {
             TransferHelper.safeWithdraw(wToken, amount);
             TransferHelper.safeTransferETH(receiver, amount);
