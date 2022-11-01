@@ -18,6 +18,8 @@ import "./utils/TransferHelper.sol";
 import "./interface/IMCS.sol";
 import "./interface/ILightNode.sol";
 import "./utils/RLPReader.sol";
+import "./utils/AddressUtils.sol";
+
 
 contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS, UUPSUpgradeable {
     using SafeMath for uint;
@@ -136,8 +138,8 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
                 require(mcsRelayContract == log.addr, "Illegal across the chain");
                 (,bytes memory from,bytes32 orderId,uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
                 = abi.decode(log.data, (bytes, bytes, bytes32, uint, uint, bytes, uint, bytes));
-                address token = _bytesToAddress(toChainToken);
-                address payable toAddress = payable(_bytesToAddress(to));
+                address token = AddressUtils.fromBytes(toChainToken);
+                address payable toAddress = payable(AddressUtils.fromBytes(to));
                 _transferIn(token, from, toAddress, amount, orderId, fromChain, toChain);
             }
         }
@@ -159,7 +161,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         } else {
             TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         }
-        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
+        emit mapTransferOut(AddressUtils.toBytes(token), AddressUtils.toBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, AddressUtils.toBytes(address(0)));
     }
 
 
@@ -171,7 +173,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         require(amount > 0, "balance is zero");
         bytes32 orderId = getOrderID(wToken, msg.sender, toAddress, amount, toChain);
         IWToken(wToken).deposit{value : amount}();
-        emit mapTransferOut(_addressToBytes(wToken), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
+        emit mapTransferOut(AddressUtils.toBytes(wToken), AddressUtils.toBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, AddressUtils.toBytes(address(0)));
     }
 
 
@@ -180,19 +182,19 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     whenNotPaused
     checkCanBridge(token,mcsRelayChainId){
         require(msg.sender == from, "from only sender");
-        bytes32 orderId = getOrderID(token, from, _addressToBytes(to), amount, mcsRelayChainId);
+        bytes32 orderId = getOrderID(token, from, AddressUtils.toBytes(to), amount, mcsRelayChainId);
         //        require(IERC20(token).balanceOf(from) >= amount, "balance too low");
         TransferHelper.safeTransferFrom(token, from, address(this), amount);
-        emit mapDepositOut(token, _addressToBytes(from), orderId, to, amount);
+        emit mapDepositOut(token, AddressUtils.toBytes(from), orderId, to, amount);
     }
 
     function depositOutNative(address from, address to) external override payable whenNotPaused {
         require(msg.sender == from, "from only sender");
         uint amount = msg.value;
-        bytes32 orderId = getOrderID(wToken, from, _addressToBytes(to), amount, mcsRelayChainId);
+        bytes32 orderId = getOrderID(wToken, from, AddressUtils.toBytes(to), amount, mcsRelayChainId);
         require(msg.value >= amount, "balance too low");
         IWToken(wToken).deposit{value : amount}();
-        emit mapDepositOut(wToken, _addressToBytes(from), orderId, to, amount);
+        emit mapDepositOut(wToken, AddressUtils.toBytes(from), orderId, to, amount);
     }
 
     function _transferIn(address token, bytes memory from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
@@ -217,17 +219,6 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
             IERC20(token).transfer(receiver, amount);
         }
     }
-
-    function _bytesToAddress(bytes memory bys) internal pure returns (address addr){
-        assembly {
-            addr := mload(add(bys, 20))
-        }
-    }
-
-    function _addressToBytes(address self) internal pure returns (bytes memory b) {
-        b = abi.encodePacked(self);
-    }
-
 
     function decodeTxLog(bytes memory logsHash)
     internal
