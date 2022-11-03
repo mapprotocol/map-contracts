@@ -45,7 +45,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     mapping(uint256 => mapping(address => int256)) public vaultBalance;
 
-    mapping(bytes => uint256) bridgeAddress;
+    mapping(uint256 => bytes) bridgeAddress;
 
     mapping(uint256 => uint) ChainIdTable;
 
@@ -136,7 +136,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     }
 
     function setBridgeAddress(uint256 _chainId, bytes memory _addr) external onlyOwner {
-        bridgeAddress[_addr] = _chainId;
+        bridgeAddress[_chainId] = _addr;
     }
 
     function setIdTable(uint256 _chainId, uint256 _id) external onlyOwner {
@@ -247,7 +247,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         require(sucess, message);
         if (chainId == ChainIdTable[1]) {
             (bytes memory mcsContract, transferOutEvent memory _outEvent) = decodeNearLog(logArray);
-            require(bridgeAddress[mcsContract] > 0, "Illegal across the chain");
+            require(_checkBytes(mcsContract, bridgeAddress[chainId]), "Illegal across the chain");
             bytes memory toChainToken = tokenRegister.getTargetToken(_outEvent.from_chain, _outEvent.token, _outEvent.to_chain);
             uint256 outAmount = getToChainAmountOther(_outEvent.token, _outEvent.from_chain, _outEvent.to_chain, _outEvent.amount);
             if (_outEvent.to_chain == selfChainId) {
@@ -264,7 +264,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
                 bytes32 topic = abi.decode(log.topics[0], (bytes32));
                 bytes memory mcsAddress = _addressToBytes(log.addr);
                 if (topic == mapTransferOutTopic) {
-                    require(bridgeAddress[mcsAddress] > 0, "Illegal across the chain");
+                    require(_checkBytes(mcsAddress, bridgeAddress[chainId]), "Illegal across the chain");
                     transferOutEvent memory _outEvent;
                     (_outEvent.token, _outEvent.from, _outEvent.order_id, _outEvent.from_chain,
                     _outEvent.to_chain, _outEvent.to, _outEvent.amount,)
@@ -376,10 +376,11 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_fromChain, receiptProof);
         require(sucess, message);
 
-        if (_fromChain == ChainIdTable[1]) {
+        uint256 fromChain = _fromChain;
+        if (fromChain == ChainIdTable[1]) {
             (bytes memory mcsContract,nearDepositOutEvent memory _outEvent) = decodeNearDepositLog(logArray);
-            require(bridgeAddress[mcsContract] > 0, "Illegal across the chain");
-            uint256 fromChain = _fromChain;
+            require(_checkBytes(mcsContract, bridgeAddress[fromChain]), "Illegal across the chain");
+
             bytes memory toChainToken = tokenRegister.getTargetToken(fromChain, _outEvent.token,selfChainId);
             uint256 outAmount = getToChainAmountOther(_outEvent.token,fromChain, selfChainId, _outEvent.amount);
             address payable toAddress = payable(_bytesToAddress(_outEvent.to));
@@ -389,10 +390,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
             for (uint256 i = 0; i < logs.length; i++) {
                 if (abi.decode(logs[i].topics[0], (bytes32)) == mapDepositOutTopic) {
-                    require(bridgeAddress[_addressToBytes(logs[i].addr)] > 0, "Illegal across the chain");
+                    require( _checkBytes(_addressToBytes(logs[i].addr), bridgeAddress[fromChain]), "Illegal across the chain");
                     (address fromToken, bytes memory from,bytes32 orderId,address to,uint256 amount)
                     = abi.decode(logs[i].data, (address, bytes,bytes32, address,  uint256));
-                    uint256 fromChain = _fromChain;
+
                     bytes memory _fromBytes = _addressToBytes(fromToken);
                     uint256 outAmount = getToChainAmountOther(_fromBytes, fromChain, selfChainId, amount);
                     _fromBytes = tokenRegister.getTargetToken(fromChain, _fromBytes, selfChainId);
@@ -454,6 +455,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         } else {
             TransferHelper.safeTransfer(token, receiver, amount);
         }
+    }
+
+    function _checkBytes(bytes memory b1, bytes memory b2) internal pure returns (bool){
+        return keccak256(b1) == keccak256(b2);
     }
 
     function _bytesToAddress(bytes memory bys) internal pure returns (address addr){
