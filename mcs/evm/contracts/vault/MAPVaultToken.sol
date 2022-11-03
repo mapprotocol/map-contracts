@@ -12,11 +12,11 @@ import "../utils/TransferHelper.sol";
 
 contract MAPVaultToken is VERC20, IVault, Role {
     using SafeMath for uint;
-    uint accrualBlockNumber;
     mapping(address => uint) public userStakingAmount;
 
     address public correspond;
-    IERC20 correspondToken;
+    IERC20 public correspondToken;
+    uint256 public correspondBalance;
 
     event VaultStaking(uint correspondAmount, uint vAmount);
     event VaultWithdraw(uint correspondAmount, uint vAmount);
@@ -33,47 +33,37 @@ contract MAPVaultToken is VERC20, IVault, Role {
         _setupRole(MANAGER_ROLE, msg.sender);
     }
 
-    function correspondBalance() public view returns (uint){
-        return IERC20(correspond).balanceOf(address(this));
-    }
-
     function getVTokenQuantity(uint amount) public view returns (uint){
         if (totalSupply() == 0) {
             return amount;
         }
-        uint allCorrespond = correspondBalance();
         uint allVToken = totalSupply();
-        require(allCorrespond > 0, "getVTokenQuantity/correspondBalance is zero");
-        return amount.mul(allVToken).div(allCorrespond);
+        require(correspondBalance > 0, "getVTokenQuantity/correspondBalance is zero");
+        return amount.mul(allVToken).div(correspondBalance);
     }
 
-    function getCorrespondQuantity(uint amount) public view returns (uint){
-        uint allCorrespond = correspondBalance();
+    function getCorrespondQuantity(uint amount) public override view returns (uint){
         uint allVToken = totalSupply();
         if (allVToken == 0) {
             return amount;
         }
-        return amount.mul(allCorrespond).div(allVToken);
-    }
-
-    function staking(uint amount) external override {
-        uint vtoken = getVTokenQuantity(amount);
-        TransferHelper.safeTransferFrom(correspond, msg.sender, address(this), amount);
-        _mint(msg.sender, vtoken);
-        emit VaultStaking(amount, vtoken);
+        return amount.mul(correspondBalance).div(allVToken);
     }
 
     function stakingTo(uint amount, address to) external override onlyManager {
-        uint vtoken = getVTokenQuantity(amount);
-        _mint(to, vtoken);
-        emit VaultStaking(amount, vtoken);
+        uint vToken = getVTokenQuantity(amount);
+        _mint(to, vToken);
+        correspondBalance += amount;
+        emit VaultStaking(amount, vToken);
     }
 
-    function withdraw(uint amount) external override {
-        uint correspondAmount = getCorrespondQuantity(amount);
-        require(correspondBalance().sub(correspondAmount) > 0, "take too much");
-        _burn(msg.sender, amount);
-        TransferHelper.safeTransferFrom(correspond, address(this),msg.sender, correspondAmount);
-        emit VaultWithdraw(correspondAmount, amount);
+    function addFee(uint amount) external override onlyManager {
+        correspondBalance += amount;
+    }
+
+    function withdraw(uint amount, address to) external override onlyManager {
+        _burn(to, amount);
+        correspondBalance -= amount;
+        emit VaultWithdraw(getCorrespondQuantity(amount), amount);
     }
 }

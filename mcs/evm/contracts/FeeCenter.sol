@@ -24,7 +24,7 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
 
     function setChainTokenGasFee(uint to, address token, uint lowest, uint highest,uint proportion) external onlyOwner {
         require(highest >= lowest, 'Invalid highest and lowest');
-        require(proportion <= 10000, 'Invalid proportion value');
+        require(proportion <= 1000000, 'Invalid proportion value');
         chainTokenGasFee[to][token] = gasFee(lowest,highest,proportion);
     }
 
@@ -34,7 +34,7 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
 
     function getTokenFee(uint to, address token, uint amount) external view override returns (uint){
         gasFee memory gf =  chainTokenGasFee[to][token];
-        uint fee = amount.mul(gf.proportion).div(10000);
+        uint fee = amount.mul(gf.proportion).div(1000000);
         if (fee > gf.highest){
             return gf.highest;
         }else if (fee < gf.lowest){
@@ -52,11 +52,11 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
         require(vaultAddress != address(0), "vault not set");
 
         Rate memory vaultRate = distributeRate[0];
-        uint vaultAmount = amount.mul(vaultRate.rate).div(10000);
+        uint vaultAmount = amount.mul(vaultRate.rate).div(1000000);
         TransferHelper.safeTransfer(token,vaultAddress,vaultAmount);
 
         Rate memory relayerRate = distributeRate[1];
-        uint relayerAmount = amount.mul(relayerRate.rate).div(10000);
+        uint relayerAmount = amount.mul(relayerRate.rate).div(1000000);
         TransferHelper.safeTransfer(token,relayerRate.feeAddress,relayerAmount);
     }
 
@@ -69,9 +69,9 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
         return(rate.feeAddress, rate.rate);
     }
 
-    function setDistributeRate(uint id, address to, uint rate) external onlyOwner{
-        require(rate <= 10000, 'Invalid rate value');
-        distributeRate[id] = Rate(to,rate);
+    function setDistributeRate(uint id, address to, uint rate) external onlyOwner {
+        require(rate.add(distributeRate[0].rate).add(distributeRate[1].rate).sub(distributeRate[id].rate)<= 1000000, 'Invalid rate value');
+        distributeRate[id] = Rate(to, rate);
     }
 
 }
