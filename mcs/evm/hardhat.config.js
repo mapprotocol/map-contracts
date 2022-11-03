@@ -30,6 +30,7 @@ module.exports = {
         //url: `https://bsc-dataseed.eme-node.com`,
         //url: `https://bsc-dataseed2.defibit.io/`,
       },
+      allowUnlimitedContractSize: true,
       live: true,
       saveDeployments: false,
       tags: ['local'],
