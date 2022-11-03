@@ -43,7 +43,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     mapping(address => bool) public authToken;
 
-    mapping(uint256 => mapping(address => uint)) public vaultBalance;
+    mapping(uint256 => mapping(address => int256)) public vaultBalance;
 
     mapping(bytes => uint256) bridgeAddress;
 
@@ -124,7 +124,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     }
 
     function setVaultBalance(uint256 tochain, address token, uint256 amount) external onlyOwner {
-        vaultBalance[tochain][token] = amount;
+        vaultBalance[tochain][token] = int256(amount);
     }
 
     function setTokenRegister(address _register) external onlyOwner {
@@ -213,9 +213,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
             (address feeToken,uint256 rate) = feeCenter.getDistribute(0, token);
             uint256 out = getFeeValue(amount, rate);
             if (feeToken != address(0)) {
-
                 IVault(feeToken).addFee(out);
-                vaultBalance[selfChainId][token] += out;
+                vaultBalance[selfChainId][token] += int256(out);
                 remaining -= out;
             }
             (feeToken, rate) = feeCenter.getDistribute(1, token);
@@ -225,9 +224,9 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         }
     }
 
-    function setVaultValue(uint256 amount, uint256 fromChain, uint256 toChain, address token) internal {
-        vaultBalance[fromChain][token] += amount;
-        vaultBalance[toChain][token] -= amount;
+    function setVaultValue(uint256 amount, uint256 outAmount, uint256 fromChain, uint256 toChain, address token) internal {
+        vaultBalance[fromChain][token] += int256(amount);
+        vaultBalance[toChain][token] -= int256(outAmount);
     }
 
 
@@ -289,6 +288,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     }
 
     function transferOutToken(address token, bytes memory to, uint256 amount, uint256 toChainId) external override whenNotPaused {
+        require(toChainId != selfChainId, "only other chain");
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
         if(toChainId == nearChainId){
             require(to.length >=2 || to.length <= 64,"near address error");
@@ -304,13 +304,14 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         collectChainFee(fee, token);
         transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
-        setVaultValue(amount, selfChainId, toChainId, token);
+        setVaultValue(amount, outAmount, selfChainId, toChainId, token);
         bytes memory toTokenAddress = tokenRegister.getTargetToken(selfChainId, _addressToBytes(token), toChainId);
         outAmount = getToChainAmount(_addressToBytes(token), selfChainId, toChainId, outAmount);
         emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, toTokenAddress);
     }
 
     function transferOutNative(bytes memory to, uint256 toChainId) external override payable whenNotPaused {
+        require(toChainId != selfChainId, "only other chain");
         if(toChainId == nearChainId){
             require(to.length >=2 || to.length <= 64,"near address error");
         }else {
@@ -324,7 +325,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         collectChainFee(fee, address(0));
         transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
-        setVaultValue(amount, selfChainId, toChainId, address(0));
+        setVaultValue(amount, outAmount, selfChainId, toChainId, address(0));
         bytes memory token = tokenRegister.getTargetToken(selfChainId, _addressToBytes(address(0)), toChainId);
         outAmount = getToChainAmount(_addressToBytes(address(0)), selfChainId, toChainId, outAmount);
         emit mapTransferOut(_addressToBytes(address(0)), _addressToBytes(msg.sender), orderId, selfChainId, toChainId, to, outAmount, token);
@@ -339,7 +340,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
                 TransferHelper.safeWithdraw(wToken, outAmount);
                 TransferHelper.safeTransferETH(to, outAmount);
             } else if (checkAuthToken(token)) {
-                IMAPToken(token).mint(address(this), outAmount);
+                IMAPToken(token).mint(address(this), amount);
                 TransferHelper.safeTransfer(token, to, outAmount);
             } else {
                 require(IERC20(token).balanceOf(address(this)) >= outAmount, "balance too low");
@@ -348,7 +349,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
             collectChainFee(fee, token);
             emit mapTransferIn(token, from, orderId, fromChain, toChain, to, outAmount);
         }
-        setVaultValue(amount, fromChain, toChain, token);
+        setVaultValue(amount, outAmount, fromChain, toChain, token);
     }
 
     function _transferInOtherChain(transferOutEvent memory outEvent, uint256 outAmount, bytes memory toChainToken)
@@ -365,7 +366,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
             IMAPToken(mapTokenAddress).burn(outMap.sub(feeMap));
         }
         collectChainFee(feeMap, mapTokenAddress);
-        setVaultValue(outMap, outEvent.from_chain, outEvent.to_chain, mapTokenAddress);
+        setVaultValue(outMap, outMap.sub(feeMap), outEvent.from_chain, outEvent.to_chain, mapTokenAddress);
         emit mapTransferOut(outEvent.token, outEvent.from, outEvent.order_id, outEvent.from_chain, outEvent.to_chain,
             outEvent.to, outAmount, toChainToken);
     }
@@ -405,31 +406,44 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     function _depositIn(address token, bytes memory from, address payable to, uint256 amount, bytes32 orderId, uint256 fromChain)
     internal checkOrder(orderId) {
         if (token == address(0)) {
-            IWToken(wToken).deposit{value : amount}();
+            //IWToken(wToken).deposit{value : amount}();
             token == wToken;
         }
         address vaultTokenAddress = feeCenter.getVaultToken(token);
         require(vaultTokenAddress != address(0), "only vault token");
         if (checkAuthToken(token)) {
-            IMAPToken(token).mint(vaultTokenAddress, amount);
-        } else {
-            TransferHelper.safeTransfer(token, vaultTokenAddress, amount);
+            IMAPToken(token).mint(address(this), amount);
         }
         IVault(vaultTokenAddress).stakingTo(amount, to);
-        vaultBalance[fromChain][token] += amount;
+        vaultBalance[fromChain][token] += int256(amount);
         emit mapDepositIn(token, from, to, orderId, amount, fromChain);
+    }
+
+    function deposit(address token, address payable to, uint256 amount) external checkAddress(token)  {
+        TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
+
+        address vaultTokenAddress = feeCenter.getVaultToken(token);
+        require(vaultTokenAddress != address(0), "only vault token");
+        if (checkAuthToken(token)) {
+            IMAPToken(token).mint(address(this), amount);
+        }
+        IVault(vaultTokenAddress).stakingTo(amount, to);
+        vaultBalance[selfChainId][token] += int256(amount);
+        emit mapDepositIn(token, _addressToBytes(msg.sender), to, bytes32(""), amount, selfChainId);
     }
 
     function withdraw(address token, uint256 vaultAmount) external {
         address vaultTokenAddress = feeCenter.getVaultToken(token);
         require(vaultTokenAddress != address(0), "only vault token");
-        TransferHelper.safeTransfer(vaultTokenAddress,address(this),vaultAmount);
+        //TransferHelper.safeTransfer(vaultTokenAddress,address(this),vaultAmount);
         uint correspond = IVault(vaultTokenAddress).getCorrespondQuantity(vaultAmount);
+        IVault(vaultTokenAddress).withdraw(vaultAmount, msg.sender);
+        vaultBalance[selfChainId][token] -= int256(correspond);
         if(token == wToken){
             TransferHelper.safeWithdraw(wToken, correspond);
             TransferHelper.safeTransferETH(msg.sender, correspond);
         }else{
-            IVault(vaultTokenAddress).withdraw(correspond, msg.sender);
+            TransferHelper.safeTransfer(token, msg.sender, correspond);
         }
     }
 

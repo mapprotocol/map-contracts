@@ -126,7 +126,8 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         mcsToken[chainId][token] = canBridge;
     }
 
-    function transferIn(uint, bytes memory receiptProof) external override nonReentrant whenNotPaused {
+    function transferIn(uint chainId, bytes memory receiptProof) external override nonReentrant whenNotPaused {
+        require(chainId == mcsRelayChainId, "only relay chain");
         (bool sucess,string memory message,bytes memory logArray) = lightNode.verifyProofData(receiptProof);
         require(sucess, message);
         txLog[] memory logs = decodeTxLog(logArray);
@@ -154,6 +155,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     external override
     whenNotPaused
     checkCanBridge(token, toChain) {
+        require(toChain != selfChainId, "only other chain");
         bytes32 orderId = getOrderID(token, msg.sender, toAddress, amount, toChain);
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
         if (checkAuthToken(token)) {
@@ -169,6 +171,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     external override payable
     whenNotPaused
     checkCanBridge(wToken, toChain) {
+        require(toChain != selfChainId, "only other chain");
         uint amount = msg.value;
         require(amount > 0, "balance is zero");
         bytes32 orderId = getOrderID(wToken, msg.sender, toAddress, amount, toChain);
@@ -188,7 +191,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         emit mapDepositOut(token, AddressUtils.toBytes(from), orderId, to, amount);
     }
 
-    function depositOutNative(address from, address to) external override payable whenNotPaused {
+    function depositOutNative(address from, address to) external override payable whenNotPaused checkCanBridge(wToken,mcsRelayChainId){
         require(msg.sender == from, "from only sender");
         uint amount = msg.value;
         bytes32 orderId = getOrderID(wToken, from, AddressUtils.toBytes(to), amount, mcsRelayChainId);
