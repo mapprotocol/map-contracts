@@ -1,0 +1,6 @@
+PRIVATE_KEY = 
+# matic rpc url
+MATICURI = 
+//MPTVerify address
+MPT_VERIFY = 
+
