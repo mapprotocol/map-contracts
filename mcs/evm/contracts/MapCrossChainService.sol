@@ -34,11 +34,13 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
 
     mapping(address => bool) public authToken;
 
-    address public mcsRelayContract;
-    uint256 public mcsRelayChainId;
+    //mapping(address => uint256) public bridgeAddress;
+    address public relayContract;
+    uint256 public relayChainId;
 
     //Can storage tokens be cross-chain?
-    mapping(uint256 => mapping(address => bool)) mcsToken;
+    mapping(uing256 => mapping(address => bool)) canBridgeToken;
+
 
     struct txLog {
         address addr;
@@ -58,10 +60,6 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
 
     bytes32 public constant mapTransferOutTopic = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
 
-    modifier checkAddress(address _address){
-        require(_address != address(0), "address is zero");
-        _;
-    }
 
     function initialize(address _wToken, address _lightNode)
     public initializer checkAddress(_wToken) checkAddress(_lightNode) {
@@ -80,8 +78,14 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         _;
     }
 
+    modifier checkAddress(address _address){
+        require(_address != address(0), "address is zero");
+        _;
+    }
+
+
     modifier checkCanBridge(address token, uint chainId) {
-        require(mcsToken[chainId][token], "token not register");
+        require(canBridgeToken[chainId][token], "token not can bridge");
         _;
     }
 
@@ -114,9 +118,9 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         }
     }
 
-    function setMcsRelay(uint256 _chainId,address _relay) public onlyOwner checkAddress(_relay) {
-        mcsRelayContract = _relay;
-        mcsRelayChainId = _chainId;
+    function setBridge(address _bridge, uint256 _num) public onlyOwner checkAddress(_bridge) {
+        relayChainId = _num;
+        relayContract = _bridge;
     }
 
     function checkAuthToken(address token) public view returns (bool) {
@@ -124,20 +128,22 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     }
 
     function setCanBridgeToken(address token, uint chainId, bool canBridge) public onlyOwner {
-        mcsToken[chainId][token] = canBridge;
+        canBridgeToken[chainId][token] = canBridge;
     }
 
 
-    function transferIn(uint, bytes memory receiptProof) external override nonReentrant whenNotPaused {
+    function transferIn(uint chainId, bytes memory receiptProof) external override nonReentrant whenNotPaused {
         (bool sucess,string memory message,bytes memory logArray) = lightNode.verifyProofData(receiptProof);
         require(sucess, message);
         txLog[] memory logs = decodeTxLog(logArray);
+
+        require(chainId == relayChainId, "Illegal across the chain id");
 
         for (uint i = 0; i < logs.length; i++) {
             txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
             if (topic == mapTransferOutTopic) {
-                require(mcsRelayContract == log.addr, "Illegal across the chain");
+                require(log.addr == relayContract, "Illegal across the chain");
                 //                address token = abi.decode(log.topics[1], (address));
                 // address from = abi.decode(log.topics[2], (address));
                 // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
@@ -183,10 +189,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     }
 
 
-    function depositOutToken(address token, address from, address to, uint amount)
-    external override payable
-    whenNotPaused
-    checkCanBridge(token,mcsRelayChainId){
+    function depositOutToken(address token, address from, address to, uint amount) external override payable whenNotPaused checkCanBridge(token, relayChainId){
         require(msg.sender == from, "from only sender");
         bytes32 orderId = getOrderID(token, from, _addressToBytes(to), amount, 22776);
         //        require(IERC20(token).balanceOf(from) >= amount, "balance too low");
@@ -194,9 +197,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         emit mapDepositOut(token, _addressToBytes(from),orderId,to,amount);
     }
 
-    function depositOutNative(address from, address to)
-    external override payable whenNotPaused
-    checkCanBridge(address(0),mcsRelayChainId){
+    function depositOutNative(address from, address to) external override payable whenNotPaused checkCanBridge(address(0), relayChainId){
         require(msg.sender == from, "from only sender");
         uint amount = msg.value;
         bytes32 orderId = getOrderID(address(0), from, _addressToBytes(to), amount, 22776);
