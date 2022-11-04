@@ -376,11 +376,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_fromChain, receiptProof);
         require(sucess, message);
 
-        uint256 fromChain = _fromChain;
-        if (fromChain == ChainIdTable[1]) {
+        if (_fromChain == ChainIdTable[1]) {
             (bytes memory mcsContract,nearDepositOutEvent memory _outEvent) = decodeNearDepositLog(logArray);
-            require(_checkBytes(mcsContract, bridgeAddress[fromChain]), "Illegal across the chain");
-
+            require(_checkBytes(mcsContract, bridgeAddress[_fromChain]), "Illegal across the chain");
+            uint256 fromChain = _fromChain;
             bytes memory toChainToken = tokenRegister.getTargetToken(fromChain, _outEvent.token,selfChainId);
             uint256 outAmount = getToChainAmountOther(_outEvent.token,fromChain, selfChainId, _outEvent.amount);
             address payable toAddress = payable(_bytesToAddress(_outEvent.to));
@@ -390,10 +389,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
             for (uint256 i = 0; i < logs.length; i++) {
                 if (abi.decode(logs[i].topics[0], (bytes32)) == mapDepositOutTopic) {
-                    require( _checkBytes(_addressToBytes(logs[i].addr), bridgeAddress[fromChain]), "Illegal across the chain");
+                    require( _checkBytes(_addressToBytes(logs[i].addr), bridgeAddress[_fromChain]), "Illegal across the chain");
                     (address fromToken, bytes memory from,bytes32 orderId,address to,uint256 amount)
                     = abi.decode(logs[i].data, (address, bytes,bytes32, address,  uint256));
-
+                    uint256 fromChain = _fromChain;
                     bytes memory _fromBytes = _addressToBytes(fromToken);
                     uint256 outAmount = getToChainAmountOther(_fromBytes, fromChain, selfChainId, amount);
                     _fromBytes = tokenRegister.getTargetToken(fromChain, _fromBytes, selfChainId);
