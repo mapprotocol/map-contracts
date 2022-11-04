@@ -356,9 +356,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     internal checkOrder(outEvent.order_id) nonReentrant whenNotPaused {
         bytes memory mapToken = getMapToken(outEvent.token, outEvent.from_chain);
         address mapTokenAddress = _bytesToAddress(mapToken);
-        uint256 fee = getChainFee(outEvent.to_chain, mapTokenAddress, outAmount);
         uint256 outMap = getToChainAmount(mapToken, outEvent.to_chain, selfChainId, outAmount);
-        uint256 feeMap = getToChainAmount(mapToken, outEvent.to_chain, selfChainId, fee);
+        uint256 feeMap = getChainFee(outEvent.to_chain, mapTokenAddress, outMap);
+
+        uint256 fee = getToChainAmount(mapToken, selfChainId, outEvent.to_chain, feeMap);
 
         outAmount = outAmount.sub(fee);
         if (checkAuthToken(mapTokenAddress)) {
@@ -407,7 +408,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     internal checkOrder(orderId) {
         if (token == address(0)) {
             //IWToken(wToken).deposit{value : amount}();
-            token == wToken;
+            token = wToken;
         }
         address vaultTokenAddress = feeCenter.getVaultToken(token);
         require(vaultTokenAddress != address(0), "only vault token");
@@ -435,9 +436,9 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     function withdraw(address token, uint256 vaultAmount) external {
         address vaultTokenAddress = feeCenter.getVaultToken(token);
         require(vaultTokenAddress != address(0), "only vault token");
-        //TransferHelper.safeTransfer(vaultTokenAddress,address(this),vaultAmount);
+        TransferHelper.safeTransferFrom(vaultTokenAddress,address(this),vaultAmount);
         uint correspond = IVault(vaultTokenAddress).getCorrespondQuantity(vaultAmount);
-        IVault(vaultTokenAddress).withdraw(vaultAmount, msg.sender);
+        IVault(vaultTokenAddress).withdraw(vaultAmount, address(this));
         vaultBalance[selfChainId][token] -= int256(correspond);
         if(token == wToken){
             TransferHelper.safeWithdraw(wToken, correspond);

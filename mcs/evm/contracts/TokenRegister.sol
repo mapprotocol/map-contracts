@@ -18,7 +18,7 @@ contract TokenRegister is Role {
     //Source token binding
     mapping(uint256 => mapping(bytes => bytes)) public sourceBinding;
 
-    function regToken(
+    function registerToken(
         uint256 sourceChain, bytes memory sourceMapToken, bytes memory mapToken
     ) external
     onlyManager{
