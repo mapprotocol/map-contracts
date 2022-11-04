@@ -18,10 +18,8 @@ import "./utils/TransferHelper.sol";
 import "./interface/IMCS.sol";
 import "./interface/ILightNode.sol";
 import "./utils/RLPReader.sol";
-import "./utils/AddressUtils.sol";
 
-
-contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS, UUPSUpgradeable {
+contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,UUPSUpgradeable {
     using SafeMath for uint;
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
@@ -33,6 +31,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     uint public immutable selfChainId = block.chainid;
 
     mapping(bytes32 => bool) public orderList;
+
     mapping(address => bool) public authToken;
 
     address public mcsRelayContract;
@@ -52,10 +51,12 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     event mapTransferIn(address indexed token, bytes indexed from, bytes32 indexed orderId,
         uint fromChain, uint toChain, address to, uint amount);
 
+
+    event mapTokenRegister(bytes32 tokenID, address token);
     event mapDepositOut(address token, bytes from, bytes32 orderId, address to, uint256 amount);
 
-    bytes32 public constant mapTransferOutTopic
-    = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
+
+    bytes32 public constant mapTransferOutTopic = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
 
     modifier checkAddress(address _address){
         require(_address != address(0), "address is zero");
@@ -126,8 +127,8 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         mcsToken[chainId][token] = canBridge;
     }
 
-    function transferIn(uint chainId, bytes memory receiptProof) external override nonReentrant whenNotPaused {
-        require(chainId == mcsRelayChainId, "only relay chain");
+
+    function transferIn(uint, bytes memory receiptProof) external override nonReentrant whenNotPaused {
         (bool sucess,string memory message,bytes memory logArray) = lightNode.verifyProofData(receiptProof);
         require(sucess, message);
         txLog[] memory logs = decodeTxLog(logArray);
@@ -137,10 +138,13 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
             if (topic == mapTransferOutTopic) {
                 require(mcsRelayContract == log.addr, "Illegal across the chain");
+                //                address token = abi.decode(log.topics[1], (address));
+                // address from = abi.decode(log.topics[2], (address));
+                // bytes32 orderId = abi.decode(log.topics[3], (bytes32));
                 (,bytes memory from,bytes32 orderId,uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
                 = abi.decode(log.data, (bytes, bytes, bytes32, uint, uint, bytes, uint, bytes));
-                address token = AddressUtils.fromBytes(toChainToken);
-                address payable toAddress = payable(AddressUtils.fromBytes(to));
+                address token = _bytesToAddress(toChainToken);
+                address payable toAddress = payable(_bytesToAddress(to));
                 _transferIn(token, from, toAddress, amount, orderId, fromChain, toChain);
             }
         }
@@ -163,20 +167,19 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         } else {
             TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         }
-        emit mapTransferOut(AddressUtils.toBytes(token), AddressUtils.toBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, AddressUtils.toBytes(address(0)));
+        emit mapTransferOut(_addressToBytes(token), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
     }
 
 
     function transferOutNative(bytes memory toAddress, uint toChain)
     external override payable
     whenNotPaused
-    checkCanBridge(wToken, toChain) {
-        require(toChain != selfChainId, "only other chain");
+    checkCanBridge(address(0), toChain) {
         uint amount = msg.value;
         require(amount > 0, "balance is zero");
-        bytes32 orderId = getOrderID(wToken, msg.sender, toAddress, amount, toChain);
+        bytes32 orderId = getOrderID(address(0), msg.sender, toAddress, amount, toChain);
         IWToken(wToken).deposit{value : amount}();
-        emit mapTransferOut(AddressUtils.toBytes(wToken), AddressUtils.toBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, AddressUtils.toBytes(address(0)));
+        emit mapTransferOut(_addressToBytes(address(0)), _addressToBytes(msg.sender), orderId, selfChainId, toChain, toAddress, amount, _addressToBytes(address(0)));
     }
 
 
@@ -185,24 +188,26 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     whenNotPaused
     checkCanBridge(token,mcsRelayChainId){
         require(msg.sender == from, "from only sender");
-        bytes32 orderId = getOrderID(token, from, AddressUtils.toBytes(to), amount, mcsRelayChainId);
+        bytes32 orderId = getOrderID(token, from, _addressToBytes(to), amount, 22776);
         //        require(IERC20(token).balanceOf(from) >= amount, "balance too low");
         TransferHelper.safeTransferFrom(token, from, address(this), amount);
-        emit mapDepositOut(token, AddressUtils.toBytes(from), orderId, to, amount);
+        emit mapDepositOut(token, _addressToBytes(from),orderId,to,amount);
     }
 
-    function depositOutNative(address from, address to) external override payable whenNotPaused checkCanBridge(wToken,mcsRelayChainId){
+    function depositOutNative(address from, address to)
+    external override payable whenNotPaused
+    checkCanBridge(address(0),mcsRelayChainId){
         require(msg.sender == from, "from only sender");
         uint amount = msg.value;
-        bytes32 orderId = getOrderID(wToken, from, AddressUtils.toBytes(to), amount, mcsRelayChainId);
+        bytes32 orderId = getOrderID(address(0), from, _addressToBytes(to), amount, 22776);
         require(msg.value >= amount, "balance too low");
         IWToken(wToken).deposit{value : amount}();
-        emit mapDepositOut(wToken, AddressUtils.toBytes(from), orderId, to, amount);
+        emit mapDepositOut(address(0), _addressToBytes(from),orderId, to, amount);
     }
 
     function _transferIn(address token, bytes memory from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     internal checkOrder(orderId) {
-        if (token == wToken) {
+        if (token == address(0)) {
             TransferHelper.safeWithdraw(wToken, amount);
             TransferHelper.safeTransferETH(to, amount);
         } else if (checkAuthToken(token)) {
@@ -215,13 +220,24 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
 
 
     function withdraw(address token, address payable receiver, uint256 amount) public onlyOwner {
-        if (token == wToken) {
+        if (token == address(0)) {
             TransferHelper.safeWithdraw(wToken, amount);
             TransferHelper.safeTransferETH(receiver, amount);
         } else {
             IERC20(token).transfer(receiver, amount);
         }
     }
+
+    function _bytesToAddress(bytes memory bys) internal pure returns (address addr){
+        assembly {
+            addr := mload(add(bys, 20))
+        }
+    }
+
+    function _addressToBytes(address self) internal pure returns (bytes memory b) {
+        b = abi.encodePacked(self);
+    }
+
 
     function decodeTxLog(bytes memory logsHash)
     internal
@@ -261,5 +277,4 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     function getImplementation() external view returns (address) {
         return _getImplementation();
     }
-
 }
