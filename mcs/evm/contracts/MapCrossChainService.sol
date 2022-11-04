@@ -39,7 +39,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     uint256 public relayChainId;
 
     //Can storage tokens be cross-chain?
-    mapping(uing256 => mapping(address => bool)) canBridgeToken;
+    mapping(uint256 => mapping(address => bool)) canBridgeToken;
 
 
     struct txLog {
