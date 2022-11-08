@@ -125,11 +125,12 @@ npx hardhat tokenGrant --token <token address > --minter <adress/mos/relay> --ne
 
 1. Relay Chain Create VaultToken
 
-
 ````
 npx hardhat deploy --tags MAPVaultToken --network <network>
 
 npx hardhat vaultInitToken --token <relaychain token address> --name <vault token name> --symbol <vault token symbol> --network <network>
+
+npx hardhat vaultAddManager --vault <vault token address> --manager <relay/manager address> --network <network>
 ````
 2. Relay Chain FeeCenter sets up the treasury and token binding
 ````
@@ -142,10 +143,17 @@ npx hardhat feeSetTokenVault --token <relaychain mapping token address> --vault 
 npx hardhat relaySetTokenDecimals --token <token address> --chains <Multiple chainIds (1,2,96)> --decimals <token decimals (18,18,24)> --network <network>
 ````
 
-4. Relay chain sets the token mintable
+4. Relay chain sets the token mintable if needed
+
+```
+npx hardhat relaySetMintableToken --token <token address> --mintable <true/false> --network <network>
+```
+
 
 5. Relay chain set fee ratio to relay chain
-
+```
+npx hardhat feeSetTokenFee --token <token address> --chain <relay chain id>  --min <minimum fee value (WEI)> --max <maximum fee value (WEI)> --rate <fee rate 0-1000000> --network <network>
+```
 
 ### Add Cross-chain Token
 
