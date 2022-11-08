@@ -135,9 +135,9 @@ task("vaultInitToken",
     .addParam("name", "The name of the vault token")
     .addParam("symbol", "The symbol of the vault token")
 
-task("transfer",
+task("relayTransfer",
     "Cross-chain transfer token",
-    require("./transfer")
+    require("./relayTransfer")
 )
     .addParam("token", "The token address")
     .addParam("address", "The receiver address")
