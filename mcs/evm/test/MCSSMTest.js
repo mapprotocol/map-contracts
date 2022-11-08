@@ -77,11 +77,13 @@ describe("MAPCrossChainService start test", function () {
 
         await mcss.addAuthToken([standardToken.address]);
 
-        await mcss.setBridge(mcsData.mcsRelay, 212);
+        await mcss.setBridge(mcsData.mcsRelay, 34434);
 
-        await mcss.setCanBridgeToken(standardToken.address,212,"true");
+        await mcss.setCanBridgeToken(standardToken.address,34434,"true");
+        await mcss.setCanBridgeToken("0x0000000000000000000000000000000000000000",34434,"true");
 
         await mcss.setCanBridgeToken(standardToken.address,1313161555,"true");
+        await mcss.setCanBridgeToken("0x0000000000000000000000000000000000000000",1313161555,"true");
 
         let mintRole = await standardToken.MINTER_ROLE();
 
@@ -99,7 +101,7 @@ describe("MAPCrossChainService start test", function () {
 
         await standardToken.connect(addr1).approve(mcss.address,"10000000000000000000000000000000000")
 
-        await mcss.connect(addr1).transferOutToken(standardToken.address,address2Bytes,"100000000000000000000000",212);
+        await mcss.connect(addr1).transferOutToken(standardToken.address,address2Bytes,"100000000000000000000000",34434);
 
         expect(await standardToken.totalSupply()).to.equal(BigNumber.from("99900000000000000000000000"));
 
@@ -107,7 +109,7 @@ describe("MAPCrossChainService start test", function () {
 
         expect(await mcss.checkAuthToken(standardToken.address)).to.equal(false);
 
-        await mcss.connect(addr1).transferOutToken(standardToken.address,address2Bytes,"900000000000000000000000",212);
+        await mcss.connect(addr1).transferOutToken(standardToken.address,address2Bytes,"900000000000000000000000",34434);
 
         expect(await standardToken.totalSupply()).to.equal(BigNumber.from("99900000000000000000000000"));
         expect(await standardToken.connect(addr1).balanceOf(addr1.address)).to.equal("99000000000000000000000000")
@@ -117,13 +119,13 @@ describe("MAPCrossChainService start test", function () {
     it('map transferIn test ', async function () {
         await mcss.addAuthToken([standardToken.address]);
 
-        await mcss.transferIn(212,mcsData.map2ethStandardToken);
+        await mcss.transferIn(34434,mcsData.map2ethStandardToken);
 
         expect(await standardToken.totalSupply()).to.equal("99900000100000000000000000");
 
         expect(await usdt.balanceOf(mcss.address)).to.equal("0");
 
-        await mcss.transferIn(212,mcsData.map2ethMapToken0);
+        await mcss.transferIn(34434,mcsData.map2ethMapToken0);
 
         expect(await standardToken.totalSupply()).to.equal("99900000100000000000000000");
         expect(await usdt.balanceOf(mcss.address)).to.equal("0");
@@ -131,13 +133,13 @@ describe("MAPCrossChainService start test", function () {
         await wrapped.deposit({value:"300000000000000000"});
         await wrapped.transfer(mcss.address,"300000000000000000");
 
-        await mcss.transferIn(212,mcsData.map2ethNative);
+        await mcss.transferIn(34434,mcsData.map2ethNative);
 
         expect(await wrapped.balanceOf(mcss.address)).to.equal("0");
 
         await usdt.mint(mcss.address,"5000000000000000000")
 
-        await mcss.transferIn(212,mcsData.map2ethMapToken);
+        await mcss.transferIn(34434,mcsData.map2ethMapToken);
         expect(await usdt.balanceOf(mcss.address)).to.equal("0");
         expect(await usdt.totalSupply()).to.equal("5000000000000000000");
 
@@ -169,18 +171,18 @@ describe("MAPCrossChainService start test", function () {
 
         //250000000000000000
         await usdt.mint(mcss.address,"250000000000000000")
-        await mcss.transferIn(212,mcsData.near2ethW);
+        await mcss.transferIn(34434,mcsData.near2ethW);
         expect(await usdt.totalSupply()).to.equal("5250000000000000000");
         expect(await usdt.balanceOf(mcss.address)).to.equal("0");
         // console.log(await standardToken.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4"));
 
         expect(await standardToken.totalSupply()).to.equal("99900000100000000000000000");
 
-        await mcss.transferIn(212,mcsData.near2eth001);
+        await mcss.transferIn(34434,mcsData.near2eth001);
 
         expect(await standardToken.totalSupply()).to.equal("99900000350000000000000000");
 
-        await mcss.transferIn(212,mcsData.near2et000);
+        await mcss.transferIn(34434,mcsData.near2et000);
 
         expect(await wrapped.balanceOf(mcss.address)).to.equal("750000000000000000");
 
@@ -200,7 +202,7 @@ describe("MAPCrossChainService start test", function () {
         console.log(await ethers.provider.getBalance(mcss.address));
 
         await mcss.withdraw(
-            wrapped.address,
+            "0x0000000000000000000000000000000000000000",
             addr5.address,
             "850000000000000000"
         )
@@ -245,7 +247,7 @@ describe("MAPCrossChainService start test", function () {
 
         expect(await mcss.getImplementation()).to.equal(mcssUpGrade.address);
 
-        await expect(mcss.transferIn(212,mcsData.near2et000)).to.be.revertedWith("order exist");
+        await expect(mcss.transferIn(34434,mcsData.near2et000)).to.be.revertedWith("order exist");
 
     });
 })
