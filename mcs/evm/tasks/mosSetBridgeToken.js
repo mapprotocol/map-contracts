@@ -20,7 +20,7 @@ module.exports = async (taskArgs,hre) => {
             true
         )).wait();
 
-        console.log(`MapCrossChainService set token ${taskArgs.token} to chain id[i] success`);
+        console.log(`MapCrossChainService set token ${taskArgs.token} to chain ${id[i]} success`);
     }
 
     console.log("MapCrossChainService setCanBridgeToken success");

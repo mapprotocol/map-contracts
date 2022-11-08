@@ -75,7 +75,7 @@ task("relayInitNear",
     "MapCrossChainServiceRelay initializes near chain settings",
     require("./relayInitNear")
 )
-    .addParam("chain", "chain id")
+    .addParam("chain", "near chain id, testnet 5566818579631833089, mainnet 5566818579631833088")
 
 task("relaySetTokenDecimals",
     "Set the decimals of maptoken corresponding to other chains",

@@ -103,7 +103,7 @@ npx hardhat registerMCS --address <mapCrossChainService address> --chain <mapCro
 
 The following four commands are generally applicable to Map mainnet and Makalu testnet
 ```
-npx hardhat mcsSetChain --name <chain name> --chain <chain id> --network <network>
+npx hardhat relayInitNear --chain <near chain id, testnet 5566818579631833089, mainnet 5566818579631833088> --network <network>
 ```
 
 
