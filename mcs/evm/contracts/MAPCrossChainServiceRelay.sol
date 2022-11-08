@@ -21,7 +21,7 @@ import "./utils/RLPReader.sol";
 import "./interface/ITokenRegister.sol";
 import "./interface/ILightClientManager.sol";
 
-contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, IMCSRelay,UUPSUpgradeable {
+contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, IMCSRelay, UUPSUpgradeable {
     using SafeMath for uint;
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
@@ -93,7 +93,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     bytes32 public nearDepositOut;
 
     function initialize(address _wToken, address _managerAddress)
-    public initializer checkAddress(_wToken) checkAddress(_managerAddress){
+    public initializer checkAddress(_wToken) checkAddress(_managerAddress) {
         wToken = _wToken;
         lightClientManager = ILightClientManager(_managerAddress);
         mapTransferOutTopic = keccak256(bytes('mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)'));
@@ -128,11 +128,11 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         vaultBalance[tochain][token] = amount;
     }
 
-    function setTokenRegister(address _register) external onlyOwner checkAddress(_register){
+    function setTokenRegister(address _register) external onlyOwner checkAddress(_register) {
         tokenRegister = ITokenRegister(_register);
     }
 
-    function setLightClientManager(address _managerAddress) external onlyOwner checkAddress(_managerAddress){
+    function setLightClientManager(address _managerAddress) external onlyOwner checkAddress(_managerAddress) {
         lightClientManager = ILightClientManager(_managerAddress);
     }
 
@@ -166,7 +166,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     function addAuthToken(address[] memory token) external onlyOwner {
         for (uint256 i = 0; i < token.length; i++) {
-            require(token[i] != address(0),"address is zero");
+            require(token[i] != address(0), "address is zero");
             authToken[token[i]] = true;
         }
     }
@@ -196,7 +196,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     function getToChainAmountOther(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
     internal view returns (uint256){
         bytes memory tokenMap = getMapToken(token, fromChain);
-        require(tokenMap.length > 0,"Token no register");
+        require(tokenMap.length > 0, "Token no register");
         return getToChainAmount(tokenMap, fromChain, toChain, amount);
     }
 
@@ -243,7 +243,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     }
 
     function setChainId(uint256 _id) public onlyOwner {
-        require(_id > 0,"id error");
+        require(_id > 0, "id error");
         nearChainId = _id;
     }
 
@@ -291,14 +291,14 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     function transferOutToken(address token, bytes memory to, uint256 amount, uint256 toChainId) external override whenNotPaused {
         require(toChainId != selfChainId, "only other chain");
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
-        if(toChainId == nearChainId){
-            require(to.length >=2 || to.length <= 64,"near address error");
-        }else {
-            require(to.length == 20,"address error");
+        if (toChainId == nearChainId) {
+            require(to.length >= 2 || to.length <= 64, "near address error");
+        } else {
+            require(to.length == 20, "address error");
         }
         TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         uint256 fee = getChainFee(toChainId, token, amount);
-        uint256 outAmount = amount.sub(fee,"sub error");
+        uint256 outAmount = amount.sub(fee, "sub error");
         if (checkAuthToken(token)) {
             IMAPToken(token).burn(outAmount);
         }
@@ -313,10 +313,10 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     function transferOutNative(bytes memory to, uint256 toChainId) external override payable whenNotPaused {
         require(toChainId != selfChainId, "only other chain");
-        if(toChainId == nearChainId){
-            require(to.length >=2 || to.length <= 64,"near address error");
-        }else {
-            require(to.length == 20,"address error");
+        if (toChainId == nearChainId) {
+            require(to.length >= 2 || to.length <= 64, "near address error");
+        } else {
+            require(to.length == 20, "address error");
         }
         uint256 amount = msg.value;
         require(amount > 0, "value too low");
@@ -382,18 +382,18 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
             (bytes memory mcsContract,nearDepositOutEvent memory _outEvent) = decodeNearDepositLog(logArray);
             require(_checkBytes(mcsContract, bridgeAddress[_fromChain]), "Illegal across the chain");
             uint256 fromChain = _fromChain;
-            bytes memory toChainToken = tokenRegister.getTargetToken(fromChain, _outEvent.token,selfChainId);
-            uint256 outAmount = getToChainAmountOther(_outEvent.token,fromChain, selfChainId, _outEvent.amount);
+            bytes memory toChainToken = tokenRegister.getTargetToken(fromChain, _outEvent.token, selfChainId);
+            uint256 outAmount = getToChainAmountOther(_outEvent.token, fromChain, selfChainId, _outEvent.amount);
             address payable toAddress = payable(_bytesToAddress(_outEvent.to));
-            _depositIn(_bytesToAddress(toChainToken), _outEvent.from, toAddress, outAmount,bytes32(_outEvent.order_id), fromChain);
+            _depositIn(_bytesToAddress(toChainToken), _outEvent.from, toAddress, outAmount, bytes32(_outEvent.order_id), fromChain);
         } else {
             txLog[] memory logs = decodeTxLog(logArray);
 
             for (uint256 i = 0; i < logs.length; i++) {
                 if (abi.decode(logs[i].topics[0], (bytes32)) == mapDepositOutTopic) {
-                    require( _checkBytes(_addressToBytes(logs[i].addr), bridgeAddress[_fromChain]), "Illegal across the chain");
+                    require(_checkBytes(_addressToBytes(logs[i].addr), bridgeAddress[_fromChain]), "Illegal across the chain");
                     (address fromToken, bytes memory from,bytes32 orderId,address to,uint256 amount)
-                    = abi.decode(logs[i].data, (address, bytes,bytes32, address,  uint256));
+                    = abi.decode(logs[i].data, (address, bytes, bytes32, address, uint256));
                     uint256 fromChain = _fromChain;
                     bytes memory _fromBytes = _addressToBytes(fromToken);
                     uint256 outAmount = getToChainAmountOther(_fromBytes, fromChain, selfChainId, amount);
@@ -424,13 +424,13 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     function withdraw(address token, uint256 vaultAmount) external {
         address vaultTokenAddress = feeCenter.getVaultToken(token);
         require(vaultTokenAddress != address(0), "only vault token");
-        TransferHelper.safeTransferFrom(vaultTokenAddress, msg.sender, address(this),vaultAmount);
+        TransferHelper.safeTransferFrom(vaultTokenAddress, msg.sender, address(this), vaultAmount);
         uint correspond = IVault(vaultTokenAddress).getCorrespondQuantity(vaultAmount);
         IVault(vaultTokenAddress).withdraw(vaultAmount, address(this));
-        if(token == wToken){
+        if (token == wToken) {
             TransferHelper.safeWithdraw(wToken, correspond);
             TransferHelper.safeTransferETH(msg.sender, correspond);
-        }else{
+        } else {
             TransferHelper.safeTransfer(token, msg.sender, correspond);
         }
     }
@@ -465,15 +465,16 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
         _txLogs = new txLog[](ls.length);
         for (uint256 i = 0; i < ls.length; i++) {
-            RLPItem item = ls[i].toList();
-            bytes[] memory topic = new bytes[](ls[i].toList()[1].toList().length);
-            for (uint256 j = 0; j < ls[i].toList()[1].toList().length; j++) {
-                topic[j] = ls[i].toList()[1].toList()[j].toBytes();
+            RLPReader.RLPItem[] memory item = ls[i].toList();
+            RLPReader.RLPItem[] memory firstItemList = item[1].toList();
+            bytes[] memory topic = new bytes[](firstItemList.length);
+            for (uint256 j = 0; j < firstItemList.length; j++) {
+                topic[j] = firstItemList[j].toBytes();
             }
             _txLogs[i] = txLog({
-            addr : ls[i].toList()[0].toAddress(),
+            addr : item[0].toAddress(),
             topics : topic,
-            data : ls[i].toList()[2].toBytes()
+            data : item[2].toBytes()
             });
         }
     }
@@ -621,7 +622,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     internal
     pure
     returns (bytes memory newExtra){
-        require(extra.length >= 64,"Invalid extra result type");
+        require(extra.length >= 64, "Invalid extra result type");
         newExtra = new bytes(64);
         for (uint256 i = 0; i < 64; i++) {
             newExtra[i] = extra[i];
@@ -649,7 +650,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     function getImplementation() external view returns (address) {
         return _getImplementation();
     }
-
 
 
 }
