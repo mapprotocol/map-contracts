@@ -133,8 +133,8 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
 
 
     function transferIn(uint chainId, bytes memory receiptProof) external override nonReentrant whenNotPaused {
-        (bool sucess,string memory message,bytes memory logArray) = lightNode.verifyProofData(receiptProof);
-        require(sucess, message);
+        (bool success,string memory message,bytes memory logArray) = lightNode.verifyProofData(receiptProof);
+        require(success, message);
         txLog[] memory logs = decodeTxLog(logArray);
 
         require(chainId == relayChainId, "Illegal across the chain id");
@@ -154,11 +154,6 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
                 _transferIn(token, from, toAddress, amount, orderId, fromChain, toChain);
             }
         }
-    }
-
-
-    function transferOut(address toContract, uint toChain, bytes memory data) external override whenNotPaused {
-
     }
 
     function transferOutToken(address token, bytes memory toAddress, uint amount, uint toChain)
@@ -201,7 +196,6 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         require(msg.sender == from, "from only sender");
         uint amount = msg.value;
         bytes32 orderId = getOrderID(address(0), from, _addressToBytes(to), amount, 22776);
-        require(msg.value >= amount, "balance too low");
         IWToken(wToken).deposit{value : amount}();
         emit mapDepositOut(address(0), _addressToBytes(from),orderId, to, amount);
     }

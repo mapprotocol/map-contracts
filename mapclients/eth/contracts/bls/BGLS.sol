@@ -41,9 +41,9 @@ contract BGLS is IBLSPoint {
         uint[2] memory result;
         bool success = false;
         assembly {
-            success := staticcall(gas(), 6,input, 0x80, result, 0x40)
+            success := staticcall(gas(), 6, input, 0x80, result, 0x40)
         }
-        require(success);
+        require(success, "add points fail");
         return G1(result[0], result[1]);
     }
 
@@ -81,7 +81,7 @@ contract BGLS is IBLSPoint {
         assembly {
             success := staticcall(gas(), 8, input, 0x180, result, 0x20)
         }
-        require(success);
+        require(success, "pairing check fail");
         return result[0] == 1;
 
     }

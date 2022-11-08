@@ -20,7 +20,7 @@ interface ILightNode is ILightNodePoint{
         //The total weight of votes
         uint256 _threshold,
         //committee members
-        address[] memory validaters,
+        address[] memory validators,
         //G1 public key corresponding to the committee member
         G1[] memory _pairKeys,
         //Weights corresponding to committee members

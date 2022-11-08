@@ -92,7 +92,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     bytes32 public mapDepositOutTopic;
     bytes32 public nearDepositOut;
 
-    function initialize(address _wToken, address _managerAddress) public initializer {
+    function initialize(address _wToken, address _managerAddress)
+    public initializer checkAddress(_wToken) checkAddress(_managerAddress){
         wToken = _wToken;
         lightClientManager = ILightClientManager(_managerAddress);
         mapTransferOutTopic = keccak256(bytes('mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)'));
@@ -127,11 +128,11 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         vaultBalance[tochain][token] = amount;
     }
 
-    function setTokenRegister(address _register) external onlyOwner {
+    function setTokenRegister(address _register) external onlyOwner checkAddress(_register){
         tokenRegister = ITokenRegister(_register);
     }
 
-    function setLightClientManager(address _managerAddress) external onlyOwner {
+    function setLightClientManager(address _managerAddress) external onlyOwner checkAddress(_managerAddress){
         lightClientManager = ILightClientManager(_managerAddress);
     }
 
@@ -155,16 +156,17 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         tokenOtherChainDecimals[selfToken][chainId] = decimals;
     }
 
-    function getOrderID(address token, address from, bytes memory to, uint256 amount, uint256 toChainID) public returns (bytes32){
+    function getOrderID(address token, address from, bytes memory to, uint256 amount, uint256 toChainID) internal returns (bytes32){
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
 
-    function setFeeCenter(address fee) external onlyOwner {
+    function setFeeCenter(address fee) external onlyOwner checkAddress(fee) {
         feeCenter = IFeeCenter(fee);
     }
 
     function addAuthToken(address[] memory token) external onlyOwner {
         for (uint256 i = 0; i < token.length; i++) {
+            require(token[i] != address(0),"address is zero");
             authToken[token[i]] = true;
         }
     }
@@ -246,8 +248,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     }
 
     function transferIn(uint256 chainId, bytes memory receiptProof) external override {
-        (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(chainId, receiptProof);
-        require(sucess, message);
+        (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(chainId, receiptProof);
+        require(success, message);
         if (chainId == ChainIdTable[1]) {
             (bytes memory mcsContract, transferOutEvent memory _outEvent) = decodeNearLog(logArray);
             require(_checkBytes(mcsContract, bridgeAddress[chainId]), "Illegal across the chain");
@@ -284,10 +286,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
                 }
             }
         }
-    }
-
-    function transferOut(address toContract, uint256 toChain, bytes memory data) external override {
-
     }
 
     function transferOutToken(address token, bytes memory to, uint256 amount, uint256 toChainId) external override whenNotPaused {
@@ -377,8 +375,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
 
     function depositIn(uint256 _fromChain, bytes memory receiptProof) external payable override nonReentrant whenNotPaused {
-        (bool sucess,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_fromChain, receiptProof);
-        require(sucess, message);
+        (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_fromChain, receiptProof);
+        require(success, message);
 
         if (_fromChain == ChainIdTable[1]) {
             (bytes memory mcsContract,nearDepositOutEvent memory _outEvent) = decodeNearDepositLog(logArray);
@@ -467,6 +465,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
         _txLogs = new txLog[](ls.length);
         for (uint256 i = 0; i < ls.length; i++) {
+            RLPItem item = ls[i].toList();
             bytes[] memory topic = new bytes[](ls[i].toList()[1].toList().length);
             for (uint256 j = 0; j < ls[i].toList()[1].toList().length; j++) {
                 topic[j] = ls[i].toList()[1].toList()[j].toBytes();

@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 library TransferHelper {
     function safeWithdraw(address wtoken, uint value) internal {
         (bool success, bytes memory data) = wtoken.call(abi.encodeWithSelector(0x2e1a7d4d, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), 'TransferHelper: WiTHDRAW_FAILED');
+        require(success && (data.length == 0 || abi.decode(data, (bool))), 'TransferHelper: WITHDRAW_FAILED');
     }
 
     function safeApprove(address token, address to, uint value) internal {
