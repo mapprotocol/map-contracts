@@ -77,7 +77,7 @@ describe("MAPCrossChainService start test", function () {
 
         await mcss.addAuthToken([standardToken.address]);
 
-        await mcss.setMcsRelay(212,mcsData.mcsRelay);
+        await mcss.setBridge(mcsData.mcsRelay, 212);
 
         await mcss.setCanBridgeToken(standardToken.address,212,"true");
 

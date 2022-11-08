@@ -47,7 +47,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     mapping(uint256 => bytes) bridgeAddress;
 
-    mapping(uint256 => uint) ChainIdTable;
+    mapping(uint256 => uint256) ChainIdTable;
 
     mapping(bytes => mapping(uint256 => uint256)) tokenOtherChainDecimals;
 

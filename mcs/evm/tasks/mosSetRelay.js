@@ -12,7 +12,7 @@ module.exports = async (taskArgs,hre) => {
     let mcsProxy = await ethers.getContractAt('MapCrossChainService',proxy.address);
 
 
-    let relayProxy = await hre.deployments.get("MapCrossChainServiceRelayProxy");
+    //let relayProxy = await hre.deployments.get("MapCrossChainServiceRelayProxy");
 
     await (await mcsProxy.connect(deployer).setBridge(taskArgs.relay, taskArgs.chain)).wait();
 

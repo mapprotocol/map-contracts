@@ -7,15 +7,17 @@ module.exports = async (taskArgs,hre) => {
 
     let proxy = await hre.deployments.get("TokenRegister");
 
+    console.log("token register address:", proxy.address);
+
     let tokenRegister = await ethers.getContractAt('TokenRegister',proxy.address);
 
-    await (await tokenRegister.connect(deployer).regToken(
+    await (await tokenRegister.connect(deployer).registerToken(
         taskArgs.chain,
-        taskArgs.token,
-        taskArgs.mapToken
+        taskArgs.chaintoken,
+        taskArgs.token
     )).wait()
 
-    console.log("TokenRegister success ")
+    console.log(`TokenRegister register ${taskArgs.token} with chain ${taskArgs.chain} token ${taskArgs.chaintoken} success `)
 
 
 }

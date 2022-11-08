@@ -7,6 +7,8 @@ module.exports = async (taskArgs,hre) => {
 
     let proxy = await hre.deployments.get("MapCrossChainServiceProxy");
 
+    console.log("mos address:", proxy.address);
+
     let mcssProxy = await ethers.getContractAt('MapCrossChainService',proxy.address);
 
     let id = taskArgs.chains.split(",");
@@ -17,9 +19,9 @@ module.exports = async (taskArgs,hre) => {
             id[i],
             true
         )).wait();
+
+        console.log(`MapCrossChainService set token ${taskArgs.token} to chain id[i] success`);
     }
 
     console.log("MapCrossChainService setCanBridgeToken success");
-
-
 }

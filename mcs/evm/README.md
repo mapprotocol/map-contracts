@@ -62,7 +62,7 @@ npx hardhat deploy --tags TokenRegister --network <network>
 2. Deploy MOS Relay
 
 ```
-npx hardhat deployRelay --wrapped <wrapped token> --lightnode <lightNodeManager address> --network <network>
+npx hardhat relayDeploy --wrapped <wrapped token> --lightnode <lightNodeManager address> --network <network>
 ````
 
 * `wrapped token` is wrapped MAP token address on MAP mainnet or MAP Makalu.
@@ -70,20 +70,26 @@ npx hardhat deployRelay --wrapped <wrapped token> --lightnode <lightNodeManager 
 
 3. Init MOS Relay
 ```
-npx hardhat initRelay --feeCenter <feeCenter address> --tokenRegister <token register address> --network <network>
+npx hardhat relayInit --feecenter <feeCenter address> --tokenregister <token register address> --network <network>
+````
+
+
+4. FeeCenter sets fee distribution
+````
+npx hardhat feeSetDistributeRate --type <0 to the token vault, 1 to specified receiver> --address <fee receiver address> --rate <rate 0-1000000, uni 0.000001> --network <network>
 ````
 
 ### MOS on EVM Chains
 
 1. Deploy
 ```
-npx hardhat deployMCS --wrapped <native wrapped address> --maptoken <maptoken address> --lightnode <lightnode address> --network <network>
+npx hardhat mosDeploy --wrapped <native wrapped address> --lightnode <lightnode address> --network <network>
 ```
 
 2. Set MOS Relay Address
 The following command on the EVM compatible chain
 ```
-npx hardhat initMCS --relay <Relay address> --chain <map chainId> --network <network>
+npx hardhat mosSetRelay --relay <Relay address> --chain <map chainId> --network <network>
 ```
 
 3. Register
@@ -107,48 +113,70 @@ npx hardhat mcsSetChain --name <chain name> --chain <chain id> --network <networ
 
 1. Deploy a mintable Token
 ````
-npx hardhat deployToken --name <token name > --symbol <token symbol> --balance <init balance> --network <network>
+npx hardhat tokenDeploy --name <token name > --symbol <token symbol> --balance <init balance, unit is 1e18 WEI> --network <network>
 ````
 
-2. Grant Mint Role
+2. Grant Mint Role to relay or mos contract
 ````
-npx hardhat grantToken --token <token address > --minter <adress/mos/relay> --network <network>
-````
-
-### Token Register
-
-1. Create VaultToken
-
-````
-npx hardhat initVaultToken --token <mapchain mapping token address> --name <vault token name> --symbol <vault token symbol> --network <network>
-````
-2. FeeCenter sets up the treasury and token binding
-````
-npx hardhat feeCenterSetTokenVault --vault <vault address> --token <mapchain mapping token address> --network <network>
+npx hardhat tokenGrant --token <token address > --minter <adress/mos/relay> --network <network>
 ````
 
-3. FeeCenter sets fee distribution
+### Register Token
+
+1. Relay Chain Create VaultToken
+
+
 ````
-npx hardhat feeCenterSetDistributeRate --token <vault address> --rate <rate 0-10000> --network <network>
+npx hardhat deploy --tags MAPVaultToken --network <network>
+
+npx hardhat vaultInitToken --token <relaychain token address> --name <vault token name> --symbol <vault token symbol> --network <network>
+````
+2. Relay Chain FeeCenter sets up the treasury and token binding
+````
+npx hardhat feeSetTokenVault --token <relaychain mapping token address> --vault <vault token address> --network <network>
 ````
 
-4. FeeCenter sets the token cross-chain fee ratio
+3. Relay Chain sets the token decimal
+   Note the chains and decimals parameters can be filled with one or more words separated by ',' (eg 1,2,96 18,18,24)
 ````
-npx hardhat feeCenterSetChainTokenGasFee --chain <MapCrossChainService chainId> --token <mapchain mapping token address> --min <minimum value> --max <maximum value> --rate <rate 0-10000> --network <network>
+npx hardhat relaySetTokenDecimals --token <token address> --chains <Multiple chainIds (1,2,96)> --decimals <token decimals (18,18,24)> --network <network>
 ````
-5. Bind the token mapping relationship between the two chains that requires cross-chain
+
+4. Relay chain sets the token mintable
+
+5. Relay chain set fee ratio to relay chain
+
+
+### Add Cross-chain Token
+
+1. Relay Chain FeeCenter sets the token cross-chain fee ratio
 ````
-npx hardhat tokenRegisterRegToken --chain <cross-chain id> --token <cross-chain token> --mapToken <mapchain mapping token address> --network <network>
+npx hardhat feeSetTokenFee --token <token address> --chain <target chain id>  --min <minimum fee value (WEI)> --max <maximum fee value (WEI)> --rate <fee rate 0-1000000> --network <network>
 ````
-6. MapCrossChainServiceRelay sets the decimal for cross-chain tokens
-   Note the mcsids and tokendecimals parameters can be filled with one or more words separated by ',' (eg 1,2,96 18,18,24)
+
+2. Relay Chain Bind the token mapping relationship between the two chains that requires cross-chain
 ````
-npx hardhat tokenRegisterSetTokenDecimals --token <token address> --chains <Multiple chainIds (1,2,96)> --decimals <token decimals (18,18,24)> --network <network>
+npx hardhat registerToken --token <relay chain token address> --chain <cross-chain id> --chaintoken <cross-chain token>  --network <network>
 ````
-7. MapCrossChainServiceRelay sets the quota for cross-chain tokens to other chains
+
+3. Relay Chain sets the decimal for cross-chain tokens
+   Note the mcsids and tokendecimals parameters can be filled with one or more words separated by ','  eg. (1,2,96 18,18,24)
 ````
-npx hardhat mcsRelaySetVaultBalance --chain <MapCrossChainService chainId> --token <token address> --balance <Cross-chain quota> --network <network>
+npx hardhat relaySetTokenDecimals --token <token address> --chains <Multiple chainIds (1,2,96)> --decimals <token decimals (18,18,24)> --network <network>
 ````
+
+4. Altchain sets token mintable
+If set the token mintable, the token must grant the minter role to mos contract.
+````
+npx hardhat mosSetMintableToken --token <token address> --mintable <true/false> --network <network>
+````
+
+5. Altchain sets bridge token
+
+````
+npx hardhat mosSetBridgeToken --token <token address> --chains <Multiple chainIds (1,2,96)> --network <network>
+````
+
 
 
 ## Upgrade

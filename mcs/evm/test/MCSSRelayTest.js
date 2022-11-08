@@ -110,11 +110,13 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
         expect(await mcssR.tokenRegister()).to.equal(tokenRegister.address);
 
-        await mcssR.setMcsContract(34434,mcsRelayData.mcsETH,1);
+        await mcssR.setBridgeAddress(34434,mcsRelayData.mcsETH);
 
-        await mcssR.setMcsContract(1313161555,mcsRelayData.mcsNear,2);
+        await mcssR.setBridgeAddress(1313161555,mcsRelayData.mcsNear);
 
-        expect(await mcssR.chainTypes(34434)).to.equal(1)
+        await mcssR.setIdTable(1313161555, 1);
+
+        expect(await mcssR.ChainIdTable(1)).to.equal(1313161555)
 
         await mcssR.setFeeCenter(feeCenter.address);
         //await mcssR.setFeeCenter(mcsRelayData.feeCenter);
@@ -133,15 +135,15 @@ describe("MAPCrossChainServiceRelay start test", function () {
     });
 
     it('TokenRegister set', async function () {
-        await tokenRegister.regToken(34434,mcsRelayData.ethUsdtToken,usdt.address);
-        await tokenRegister.regToken(34434,mcsRelayData.ethStanardToken,standardToken.address);
-        await tokenRegister.regToken(212,usdt.address,mcsRelayData.ethUsdtToken);
-        await tokenRegister.regToken(212,standardToken.address,mcsRelayData.ethStanardToken);
-        await tokenRegister.regToken(1313161555,mcsRelayData.nearUsdtToken,usdt.address);
-        await tokenRegister.regToken(1313161555,mcsRelayData.nearWethToken,standardToken.address);
-        await tokenRegister.regToken(1313161555,"0x0000000000000000000000000000000000000000",wrapped.address);
-        await tokenRegister.regToken(212,wrapped.address,"0x0000000000000000000000000000000000000000");
-        await tokenRegister.regToken(34434,"0x0000000000000000000000000000000000000000",wrapped.address);
+        await tokenRegister.registerToken(34434,mcsRelayData.ethUsdtToken,usdt.address);
+        await tokenRegister.registerToken(34434,mcsRelayData.ethStanardToken,standardToken.address);
+        await tokenRegister.registerToken(212,usdt.address,mcsRelayData.ethUsdtToken);
+        await tokenRegister.registerToken(212,standardToken.address,mcsRelayData.ethStanardToken);
+        await tokenRegister.registerToken(1313161555,mcsRelayData.nearUsdtToken,usdt.address);
+        await tokenRegister.registerToken(1313161555,mcsRelayData.nearWethToken,standardToken.address);
+        await tokenRegister.registerToken(1313161555,"0x0000000000000000000000000000000000000000",wrapped.address);
+        await tokenRegister.registerToken(212,wrapped.address,"0x0000000000000000000000000000000000000000");
+        await tokenRegister.registerToken(34434,"0x0000000000000000000000000000000000000000",wrapped.address);
     });
 
     it('mcsRelay setVaultBalance', async function () {
@@ -165,21 +167,21 @@ describe("MAPCrossChainServiceRelay start test", function () {
     });
 
     it('mcsRelay set token decimals', async function () {
-        await tokenRegister.setTokenOtherChainDecimals(standardToken.address,212,18);
-        await tokenRegister.setTokenOtherChainDecimals(standardToken.address,34434,18);
-        await tokenRegister.setTokenOtherChainDecimals(standardToken.address,1313161555,24);
+        await mcssR.setTokenOtherChainDecimals(standardToken.address,212,18);
+        await mcssR.setTokenOtherChainDecimals(standardToken.address,34434,18);
+        await mcssR.setTokenOtherChainDecimals(standardToken.address,1313161555,24);
 
-        await tokenRegister.setTokenOtherChainDecimals(wrapped.address,212,18);
-        await tokenRegister.setTokenOtherChainDecimals(wrapped.address,34434,18);
-        await tokenRegister.setTokenOtherChainDecimals(wrapped.address,1313161555,24);
+        await mcssR.setTokenOtherChainDecimals(wrapped.address,212,18);
+        await mcssR.setTokenOtherChainDecimals(wrapped.address,34434,18);
+        await mcssR.setTokenOtherChainDecimals(wrapped.address,1313161555,24);
 
-        await tokenRegister.setTokenOtherChainDecimals(usdt.address,212,18);
-        await tokenRegister.setTokenOtherChainDecimals(usdt.address,34434,18);
-        await tokenRegister.setTokenOtherChainDecimals(usdt.address,1313161555,24);
+        await mcssR.setTokenOtherChainDecimals(usdt.address,212,18);
+        await mcssR.setTokenOtherChainDecimals(usdt.address,34434,18);
+        await mcssR.setTokenOtherChainDecimals(usdt.address,1313161555,24);
 
-        await tokenRegister.setTokenOtherChainDecimals("0x0000000000000000000000000000000000000000",212,18);
-        await tokenRegister.setTokenOtherChainDecimals("0x0000000000000000000000000000000000000000",34434,18);
-        await tokenRegister.setTokenOtherChainDecimals("0x0000000000000000000000000000000000000000",1313161555,24);
+        await mcssR.setTokenOtherChainDecimals("0x0000000000000000000000000000000000000000",212,18);
+        await mcssR.setTokenOtherChainDecimals("0x0000000000000000000000000000000000000000",34434,18);
+        await mcssR.setTokenOtherChainDecimals("0x0000000000000000000000000000000000000000",1313161555,24);
 
     });
 

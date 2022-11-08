@@ -17,7 +17,7 @@ module.exports = async (taskArgs,hre) => {
 
     let token = await ethers.getContract('StandardToken');
 
-    console.log("Token address:", token.address);
+    console.log(`Deply token '${taskArgs.symbol}' address:`, token.address);
 
     if (taskArgs.balance > 0) {
 

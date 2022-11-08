@@ -1,130 +1,145 @@
 
-task("deployToken",
+task("tokenDeploy",
     "Deploy a token with role control",
-    require("./deployToken")
+    require("./tokenDeploy")
 )
     .addParam("name", "token name")
     .addParam("symbol", "token symbol")
     .addParam("balance", "init balance")
 
-task("grantToken",
+task("tokenGrant",
     "Grant a mintable token mint role",
-    require("./grantToken")
+    require("./tokenGrant")
 )
     .addParam("token", "token address")
     .addParam("minter", "address/relay/mos, grant address can be an address or relay/mos")
 
-task("deployMCS",
+task("mosDeploy",
     "Deploy the upgradeable MapCrossChainService contract and initialize it",
-    require("./deployMapCrossChainServiceProxy")
+    require("./mosDeploy")
 )
     .addParam("wrapped", "native wrapped token address")
     .addParam("lightnode", "lightNode contract address")
 
-task("deployRelay",
+task("relayDeploy",
     "Deploy the upgradeable MapCrossChainServiceRelay contract and initialize it",
-    require("./deployMapCrossChainServiceRelayProxy")
+    require("./relayDeploy")
 )
     .addParam("wrapped", "native wrapped token address")
     .addParam("lightnode", "lightNodeManager contract address")
 
-task("initMCS",
+task("mosSetRelay",
     "Initialize MapCrossChainServiceRelay address for MapCrossChainService",
-    require("./mapCrossChainServiceSet")
+    require("./mosSetRelay")
 )
     .addParam("relay", "map chain relay contract address")
     .addParam("chain", "map chain id")
 
-task("initRelay",
-    "Initialize MapCrossChainServiceRelay contract",
-    require("./mapCrossChainServiceRelaySet")
-)
-    .addParam("feeCenter","feeCenter contract")
-    .addParam("tokenRegister","tokenRegister contract")
-
-
-task("SetCanBridgeToken",
+task("mosSetBridgeToken",
     "MapCrossChainService settings allow cross-chain tokens",
-    require("./mapCrossChainServiceSetCanBridgeToken")
+    require("./mosSetBridgeToken")
 )
     .addParam("token", "token address")
     .addParam("chains", "The chain id that is allowed to cross can be filled with multiple ',' separated by example (1,2,3)")
 
+task("mosSetMintableToken",
+    "MapCrossChainService settings mintable token",
+    require("./mosSetMintableToken")
+)
+    .addParam("token", "token address")
+    .addParam("mintable", "true or false")
 
-task("registerMCS",
-    "Register AltChain MapCrossChainService to MapCrossChainServiceRelay",
-    require("./mapCrossChainServiceRelaySetBridgeAddress")
+task("relayInit",
+    "Initialize MapCrossChainServiceRelay contract",
+    require("./relayInit")
+)
+    .addParam("feecenter","feeCenter contract")
+    .addParam("tokenregister","tokenRegister contract")
+
+task("relaySetMintableToken",
+    "MapCrossChainServiceRelay settings mintable token",
+    require("./relaySetMintableToken")
+)
+    .addParam("token", "token address")
+    .addParam("mintable", "true or false")
+
+
+task("relayRegisterChain",
+    "Register altchain MapCrossChainService to MapCrossChainServiceRelay",
+    require("./relayRegisterChain")
 )
     .addParam("address", "MapCrossChainService contract address")
-    .addParam("chain", "The chain id where MapCrossChainService is located")
+    .addParam("chain", "MapCrossChainService chain id")
 
-
-task("mcsSetChain",
-    "MapCrossChainService initializes near chain settings",
-    require("./mapCrossChainServiceSetChain")
-)
-    .addParam("chain", "chain id")
-    .addParam("name", "chain name")
-
-task("mapCrossChainServiceRelaySetChain",
+task("relayInitNear",
     "MapCrossChainServiceRelay initializes near chain settings",
-    require("./mapCrossChainServiceRelaySetChain")
+    require("./relayInitNear")
 )
     .addParam("chain", "chain id")
-    .addParam("name","chain name")
 
-task("mapCrossChainServiceRelaySetTokenDecimals",
+task("relaySetTokenDecimals",
     "Set the decimals of maptoken corresponding to other chains",
-    require("./tokenRegisterSetTokenDecimals")
+    require("./relaySetTokenDecimals")
 )
     .addParam("token", "Token address")
-    .addParam("chains", "Cross-chain chainId")
+    .addParam("chain", "Cross-chain chainId")
     .addParam("decimals", "Token decimals")
 
-task("mcsRelaySetVaultBalance",
+task("relaySetVaultBalance",
     "MapCrossChainServiceRelay sets cross-chain token quota",
-    require("./mapCrossChainServiceRelaySetVaultBalance")
+    require("./relaySetVaultBalance")
 )
     .addParam("chain", "Chain id that allows cross-chain")
     .addParam("token", "Token address")
     .addParam("balance", "Allowed Amount")
 
-task("feeCenterSetTokenVault",
+task("feeBindTokenVault",
     "Binding fee address to provide liquidity vault address",
-    require("./feeCenterSetTokenVault")
+    require("./feeBindTokenVault")
 )
     .addParam("vault", "vault address")
     .addParam("token", "The maptoken address corresponding to the cross-chain token")
 
-task("feeCenterSetDistributeRate",
-    "Set the fee to enter the vault address",
-    require("./feeCenterSetDistributeRate")
+task("feeSetDistributeRate",
+    "Set the fee distribution rate, when getting fee from every crosschain transaction, the fee will be distributed to specified address",
+    require("./feeSetDistributeRate")
 )
-    .addParam("token", "vault address")
-    .addParam("rate", "The percentage value of the fee charged")
+    .addParam("type", "0 or 1, type 0 is vault")
+    .addParam("address", "vault address")
+    .addParam("rate", "The percentage value of the fee charged, 0-1000000, unit is 0.000001")
 
-task("feeCenterSetChainTokenGasFee",
-    "Set fees for tokens",
-    require("./feeCenterSetChainTokenGasFee")
+task("feeSetTokenFee",
+    "Set token fee to target chain",
+    require("./feeSetTokenFee")
 )
-    .addParam("chain", "Allow cross-chain id")
-    .addParam("token", "token address")
+    .addParam("token", "relay chain token address")
+    .addParam("chain", "target chain id")
     .addParam("min", "One-time cross-chain charging minimum handling fee")
     .addParam("max", "One-time cross-chain charging maximum handling fee")
     .addParam("rate", "The percentage value of the fee charged")
 
-task("tokenRegisterRegToken",
+task("registerToken",
     "Mapping settings for tokens that require cross-chain between two chains",
-    require("./tokenRegisterRegToken")
+    require("./registerToken")
 )
+    .addParam("token", "relay chain token address")
     .addParam("chain", "cross-chain id")
-    .addParam("token", "cross-chain token")
-    .addParam("mapToken", "Map token corresponding to map chain")
+    .addParam("chaintoken", "cross-chain token")
 
-task("vaultTokenInit",
+
+task("vaultInitToken",
     "Initialize the vaultToken",
-    require("./vaultTokenInit")
+    require("./vaultInitToken")
 )
     .addParam("token", "The token address mapped by the cross-chain token on the map chain")
     .addParam("name", "The name of the vault token")
     .addParam("symbol", "The symbol of the vault token")
+
+task("transfer",
+    "Cross-chain transfer token",
+    require("./transfer")
+)
+    .addParam("token", "The token address")
+    .addParam("address", "The receiver address")
+    .addParam("value", "transfer value, unit WEI")
+    .addParam("chain", "target chain id")

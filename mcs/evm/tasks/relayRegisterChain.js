@@ -9,9 +9,10 @@ module.exports = async (taskArgs,hre) => {
 
     let mcssRelayProxy = await ethers.getContractAt('MAPCrossChainServiceRelay',proxy.address);
 
-    await (await mcssRelayProxy.connect(deployer).setFeeCenter(taskArgs.feecenter)).wait();
 
-    await (await mcssRelayProxy.connect(deployer).setTokenRegister(taskArgs.registertoken)).wait();
+    await (await mcssRelayProxy.connect(deployer).setBridgeAddress(taskArgs.chain, taskArgs.address)).wait();
+
+    console.log(`MAPCrossChainServiceRelay register chain ${taskArgs.chain} mos address ${taskArgs.address} success`);
 
 
 }
