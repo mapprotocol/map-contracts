@@ -12,10 +12,8 @@ import "../utils/TransferHelper.sol";
 
 contract MAPVaultToken is VERC20, IVault, Role {
     using SafeMath for uint;
-    mapping(address => uint) public userStakingAmount;
 
     address public correspond;
-    IERC20 public correspondToken;
     uint256 public correspondBalance;
 
     event VaultStaking(uint correspondAmount, uint vAmount);
@@ -27,7 +25,6 @@ contract MAPVaultToken is VERC20, IVault, Role {
         string memory symbol_,
         uint8 decimals_) external {
         correspond = correspond_;
-        correspondToken = IERC20(correspond);
         init(name_, symbol_, decimals_);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);

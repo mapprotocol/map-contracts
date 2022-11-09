@@ -12,7 +12,6 @@ import "./utils/TransferHelper.sol";
 
 
 contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
-    uint immutable chainId = block.chainid;
     using SafeMath for uint;
     mapping(uint => mapping (address => gasFee)) chainTokenGasFee;
     //token to vtoken
@@ -40,6 +39,7 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
         }else if (fee < gf.lowest){
             return gf.lowest;
         }
+        require(fee <= amount, "amount too small");
         return fee;
     }
 
@@ -47,7 +47,7 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
         return tokenVault[token];
     }
 
-    function doDistribute(address token,uint amount) external override{
+    function doDistribute(address token,uint amount) external override onlyOwner{
         address vaultAddress = tokenVault[token];
         require(vaultAddress != address(0), "vault not set");
 
