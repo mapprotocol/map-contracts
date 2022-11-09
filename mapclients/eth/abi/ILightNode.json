@@ -1,5 +1,24 @@
 [
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "blockHeight",
+        "type": "uint256"
+      }
+    ],
+    "name": "UpdateBlockHeader",
+    "type": "event"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -8,7 +27,7 @@
       },
       {
         "internalType": "address[]",
-        "name": "validaters",
+        "name": "validators",
         "type": "address[]"
       },
       {
