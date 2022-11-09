@@ -140,6 +140,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         bytes memory bits = abi.encodePacked(uint8(ist.removeList));
         uint256 epoch = getEpochNumber(bh.number) + 1;
         updateValidators(_pairKeysAdd, _weights, epoch, bits);
+        emit UpdateBlockHeader(msg.sender, bh.number);
         emit MapUpdateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 

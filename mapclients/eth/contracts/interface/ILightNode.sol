@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "./ILightNodePoint.sol";
 
 interface ILightNode is ILightNodePoint{
+    event UpdateBlockHeader(address indexed account, uint256 indexed blockHeight);
 
     //Verify the validity of the transaction according to the header, receipt, and aggPk
     //The interface will be updated later to return logs
