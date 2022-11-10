@@ -60,7 +60,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         bytes32[] memory syncCommitteePubkeyHashes, // divide 512 pubkeys into 3 parts: 171 + 171 + 170
         bool _verifyUpdate
     ) public initializer {
-        require(!initialized, "contract is initialized");
+        require(!initialized, "contract is initialized!");
         require(_controller != address(0), "invalid controller address");
         require(_mptVerify != address(0), "invalid mptVerify address");
         require(syncCommitteePubkeyHashes.length == 6, "invalid syncCommitteePubkeyHashes length");
@@ -218,10 +218,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             bytesReceipt
         );
 
-        if (success)
+        if (success) {
+            if (proof.txReceipt.receiptType != 0) {
+                bytesReceipt = getBytesSlice(bytesReceipt, 1, bytesReceipt.length - 1);
+            }
             logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).toBytes();
-
-        if (!success) {
+        } else {
             message = "mpt verify failed";
         }
     }
@@ -335,12 +337,37 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
-    function getBytes(ReceiptProof memory receiptProof) public pure returns(bytes memory){
+    function getBytes(ReceiptProof memory receiptProof) public pure returns (bytes memory){
         return abi.encode(receiptProof);
     }
 
+    function bytesToBytes32(bytes memory b, uint256 offset)
+    private
+    pure
+    returns (bytes32) {
+        bytes32 out;
 
-    /** UUPS *********************************************************/
+        for (uint256 i = 0; i < 32; i++) {
+            out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);
+        }
+        return out;
+    }
+
+    function getBytesSlice(bytes memory b, uint256 start, uint256 length)
+    private
+    pure
+    returns (bytes memory) {
+        bytes memory out = new bytes(length);
+
+        for (uint256 i = 0; i < length; i++) {
+            out[i] = b[start + i];
+        }
+
+        return out;
+    }
+
+
+/** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
@@ -357,18 +384,5 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     function getImplementation() external view returns (address) {
         return _getImplementation();
-    }
-
-    function bytesToBytes32(bytes memory b, uint256 offset)
-    private
-    pure
-    returns (bytes32)
-    {
-        bytes32 out;
-
-        for (uint256 i = 0; i < 32; i++) {
-            out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);
-        }
-        return out;
     }
 }

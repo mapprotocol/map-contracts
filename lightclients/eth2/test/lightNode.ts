@@ -1,9 +1,8 @@
-import {loadFixture, time} from "@nomicfoundation/hardhat-network-helpers";
+import {loadFixture} from "@nomicfoundation/hardhat-network-helpers";
 import {expect} from "chai";
 import {Contract} from "ethers";
 import {ethers} from "hardhat";
 import config from "../hardhat.config";
-import {DProofData, ReceiptProof} from "../utils/Util";
 
 let period619 = require("../data/mainnet/init_arg_period619.js");
 let period620 = require("../data/mainnet/period620.js");
@@ -74,7 +73,7 @@ describe("LightNode", function () {
         return proxy;
     }
 
-    describe("Deployment", function () {
+    describe("Initialization", function () {
 
         it("initialization should be OK", async function () {
             let lightNode = await loadFixture(deployFixture);
@@ -88,6 +87,82 @@ describe("LightNode", function () {
             let initialized = await lightNode.initialized();
             expect(initialized).true;
         });
+
+        it("can not initialization sync committee after contract is initialized", async function () {
+            let lightNode = await loadFixture(deployFixture);
+
+            let initStage = await lightNode.initStage();
+            expect(initStage).to.eq(6);
+
+            let initialized = await lightNode.initialized();
+            expect(initialized).true;
+
+            await expect(lightNode.initSyncCommitteePubkey(period619.curSyncCommitteePubkeys[0]))
+                .to.be.revertedWith('contract is initialized!');
+        });
+
+        it("re-initialization should fail", async function () {
+            let [wallet] = await ethers.getSigners();
+            let lightNode = await loadFixture(deployFixture);
+
+            let initStage = await lightNode.initStage();
+            expect(initStage).to.eq(6);
+
+            let initialized = await lightNode.initialized();
+            expect(initialized).true;
+
+            await expect(lightNode.initialize(
+                chainId,
+                wallet.address,
+                wallet.address,
+                period619.finalizedBeaconHeader,
+                period619.finalizedExeHeaderNumber,
+                period619.finalizedExeHeaderHash,
+                period619.curSyncCommitteAggPubkey,
+                period619.nextSyncCommitteAggPubkey,
+                period619.syncCommitteePubkeyHashes,
+                false
+            )).to.be.revertedWith('Initializable: contract is already initialized');
+        });
+
+        it("initialization with wrong sync committee keys should be fail", async function () {
+            let [wallet] = await ethers.getSigners();
+            const MPTVerify = await ethers.getContractFactory("MPTVerify");
+            const mPTVerify = await MPTVerify.deploy();
+            await mPTVerify.connect(wallet).deployed();
+
+            const LightNode = await ethers.getContractFactory("LightNode");
+            const lightNode = await LightNode.deploy();
+            await lightNode.connect(wallet).deployed();
+
+            const LightNodeProxy = await ethers.getContractFactory("LightNodeProxy");
+            let initData = LightNode.interface.encodeFunctionData(
+                "initialize",
+                [chainId,
+                    wallet.address,
+                    mPTVerify.address,
+                    period619.finalizedBeaconHeader,
+                    period619.finalizedExeHeaderNumber,
+                    period619.finalizedExeHeaderHash,
+                    period619.curSyncCommitteAggPubkey,
+                    period619.nextSyncCommitteAggPubkey,
+                    period619.syncCommitteePubkeyHashes,
+                    false
+                ]
+            );
+            const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
+            await lightNodeProxy.connect(wallet).deployed();
+            let proxy = LightNode.attach(lightNodeProxy.address);
+
+            await expect(proxy.initSyncCommitteePubkey(period619.curSyncCommitteePubkeys[1]))
+                .to.be.revertedWith('wrong syncCommitteePubkeyPart hash');
+
+            let initialized = await lightNode.initialized();
+            expect(initialized).false;
+        });
+    });
+
+    describe("Upgrade", function () {
 
         it("Implementation upgrade must be admin", async function () {
             let [wallet, other] = await ethers.getSigners();
@@ -127,6 +202,9 @@ describe("LightNode", function () {
             expect(slot).to.eq(period619.finalizedBeaconHeader.slot)
         });
 
+    });
+
+    describe("Permission check", function () {
 
         it("Change admin", async function () {
             let [wallet, other] = await ethers.getSigners();
@@ -162,8 +240,9 @@ describe("LightNode", function () {
             await lightNode.connect(wallet).togglePause(false);
             expect(await lightNode.paused()).to.false;
         });
+    });
 
-
+    describe("Update light client", function () {
         it("updateLightClient ... paused ", async function () {
             let [wallet] = await ethers.getSigners();
             let lightNode = await deployFixture();
@@ -189,6 +268,20 @@ describe("LightNode", function () {
                 .to.eq("0xc3a1df4db9777e14f5bf8f7d8e58e3443c0e9a7b9883f463ad956e25617dce27")
         });
 
+
+        it("updateLightClient should be failed when previous exe block headers are not updated ", async function () {
+            let lightNode = await deployFixture();
+            let initialized = await lightNode.initialized();
+            expect(initialized).true;
+
+            await lightNode.updateLightClient(period620.update);
+            await lightNode.updateExeBlockHeaders(exedata.headers);
+            await expect(lightNode.updateLightClient(period620.update)).to.be.revertedWith('previous exe block headers should be updated before update light client')
+        });
+    });
+
+    describe("Update execution header", function () {
+
         it("updateExeBlockHeaders ... ok ", async function () {
             let lightNode = await loadFixture(deployFixture);
 
@@ -202,6 +295,9 @@ describe("LightNode", function () {
                 .to.eq("0x6daf8504d13564cc28bd8764226b7c8ed2ef4be236f495247c2b590fbbe72cfc")
         });
 
+    });
+
+    describe("Verify proof data", function () {
 
         it("verifyProofData ... ok ", async function () {
             let lightNode = await loadFixture(deployFixture);
@@ -214,22 +310,10 @@ describe("LightNode", function () {
             expect(exeHeaderUpdateInfo.endNumber).to.eq(15913886)
 
             let proofData = await lightNode.getBytes(exedata.receiptProof_15913887);
-
-            console.log("proofData", proofData);
             let result = await lightNode.verifyProofData(proofData, {gasLimit: 20000000});
-
             expect(result.success).to.true;
         });
 
-        it("updateLightClient should be failed when previous exe block headers are not updated ", async function () {
-            let lightNode = await deployFixture();
-            let initialized = await lightNode.initialized();
-            expect(initialized).true;
-
-            await lightNode.updateLightClient(period620.update);
-            await lightNode.updateExeBlockHeaders(exedata.headers);
-            await expect(lightNode.updateLightClient(period620.update)).to.be.revertedWith('previous exe block headers should be updated before update light client')
-        });
     });
 });
 
