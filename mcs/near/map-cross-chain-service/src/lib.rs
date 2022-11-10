@@ -235,6 +235,13 @@ impl MapCrossChainService {
         }
     }
 
+    #[private]
+    #[init(ignore_state)]
+    pub fn migrate() -> Self {
+        let this: MapCrossChainService = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
+        this
+    }
+
     pub fn version() -> &'static str {
         "0.1.1"
     }
@@ -869,6 +876,22 @@ impl MapCrossChainService {
                 "transfer in should be paused when setting map light client account");
 
         self.map_client_account = map_client_account;
+    }
+
+    pub fn set_near_chain_id(&mut self, near_chain_id: u128) {
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_paused(PAUSE_TRANSFER_IN),
+                "transfer in should be paused when setting near chain id");
+
+        self.near_chain_id = near_chain_id;
+    }
+
+    pub fn set_map_relay_address(&mut self, map_relay_address: String) {
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_paused(PAUSE_TRANSFER_IN),
+                "transfer in should be paused when setting near chain id");
+
+        self.map_bridge_address = validate_eth_address(map_relay_address);
     }
 
     pub fn upgrade_self(&mut self, code: Base64VecU8) {
