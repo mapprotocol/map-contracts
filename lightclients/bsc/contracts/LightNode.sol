@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -11,19 +11,19 @@ import "./lib/Verify.sol";
 //import "hardhat/console.sol";
 
 contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
+    uint256 internal constant EPOCH_NUM = 200;
+
     address public mptVerify;
 
-    uint256 internal constant epochNum = 200;
+    uint256 public minValidBlocknum;
+
+    uint256 public minEpochBlockExtraDataLen;
 
     mapping(uint256 => bytes) public validators;
 
     uint256 internal chainId;
 
     uint256 internal lastSyncedBlock;
-
-    uint256 public minEpochBlockExtraDataLen;
-
-    uint256 public minValidBlocknum;
 
     struct ProofData {
         Verify.BlockHeader[] headers;
@@ -34,7 +34,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         require(msg.sender == _getAdmin(), "lightnode :: only admin");
         _;
     }
-
 
     constructor(
         uint256 _chainId,
@@ -68,26 +67,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         initBlock(headers);
     }
 
-    function initBlock(Verify.BlockHeader[2] memory headers) internal {
-        require(lastSyncedBlock == 0, "already init");
-
-        require(headers[0].number + epochNum == headers[1].number);
-
-        for (uint256 i = 0; i < 2; i++) {
-            require(headers[i].number % epochNum == 0);
-
-            require(headers[i].extraData.length > minEpochBlockExtraDataLen);
-
-            validators[headers[i].number] = Verify.getValidators(
-                headers[i].extraData
-            );
-        }
-
-        minValidBlocknum = headers[1].number;
-
-        lastSyncedBlock = headers[1].number;
-    }
-
     function togglePause(bool flag) public onlyOwner returns (bool) {
         if (flag) {
             _pause();
@@ -96,6 +75,35 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
 
         return true;
+    }
+
+    function updateBlockHeader(bytes memory _blockHeadersBytes)
+        external
+        override
+        whenNotPaused
+    {
+        Verify.BlockHeader[] memory _blockHeaders = abi.decode(
+            _blockHeadersBytes,
+            (Verify.BlockHeader[])
+        );
+        lastSyncedBlock += EPOCH_NUM;
+
+        require(
+            _blockHeaders[0].number == lastSyncedBlock,
+            "invalid start block"
+        );
+
+        uint256 min = validators[lastSyncedBlock - EPOCH_NUM].length / 40 + 1;
+
+        require(_blockHeaders.length >= min, "not enough");
+
+        require(verifyBlockHeaders(_blockHeaders, min), "blocks verify fail");
+
+        validators[lastSyncedBlock] = Verify.getValidators(
+            _blockHeaders[0].extraData
+        );
+
+        emit UpdateBlockHeader(tx.origin, _blockHeaders[0].number);
     }
 
     function verifyProofData(bytes memory _receiptProof)
@@ -121,19 +129,19 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         uint256 min;
         {
             uint256 recently = headers[headers.length - 1].number -
-                (headers[headers.length - 1].number % epochNum);
+                (headers[headers.length - 1].number % EPOCH_NUM);
             if (validators[recently].length == 0) {
-                min = validators[recently - epochNum].length / 40 + 1;
+                min = validators[recently - EPOCH_NUM].length / 40 + 1;
             } else {
                 min = validators[recently].length >
-                    validators[recently - epochNum].length
-                    ? validators[recently - epochNum].length / 40 + 1
+                    validators[recently - EPOCH_NUM].length
+                    ? validators[recently - EPOCH_NUM].length / 40 + 1
                     : validators[recently].length / 40 + 1;
             }
         }
         require(headers.length >= min, "not enough");
 
-        success = verifyBlockHeaders(headers,min);
+        success = verifyBlockHeaders(headers, min);
 
         if (!success) {
             message = "invalid proof blocks";
@@ -151,40 +159,30 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
-    function updateBlockHeader(bytes memory _blockHeadersBytes)
-        external
-        override
-        whenNotPaused
-    {
-        Verify.BlockHeader[] memory _blockHeaders = abi.decode(
-            _blockHeadersBytes,
-            (Verify.BlockHeader[])
-        );
-        lastSyncedBlock += epochNum;
+    function initBlock(Verify.BlockHeader[2] memory headers) internal {
+        require(lastSyncedBlock == 0, "already init");
 
-        require(
-            _blockHeaders[0].number == lastSyncedBlock,
-            "invalid start block"
-        );
+        require(headers[0].number + EPOCH_NUM == headers[1].number);
 
-        uint256 min = validators[lastSyncedBlock - epochNum].length / 40 + 1;
+        for (uint256 i = 0; i < 2; i++) {
+            require(headers[i].number % EPOCH_NUM == 0);
 
-        require(_blockHeaders.length >= min, "not enough");
+            require(headers[i].extraData.length > minEpochBlockExtraDataLen);
 
-        require(verifyBlockHeaders(_blockHeaders,min), "blocks verify fail");
+            validators[headers[i].number] = Verify.getValidators(
+                headers[i].extraData
+            );
+        }
 
-        validators[lastSyncedBlock] = Verify.getValidators(
-            _blockHeaders[0].extraData
-        );
+        minValidBlocknum = headers[1].number;
 
-        emit UpdateBlockHeader(tx.origin,_blockHeaders[0].number);
+        lastSyncedBlock = headers[1].number;
     }
 
-    function verifyBlockHeaders(Verify.BlockHeader[] memory _blockHeaders,uint256 min)
-        internal
-        view
-        returns (bool)
-    {
+    function verifyBlockHeaders(
+        Verify.BlockHeader[] memory _blockHeaders,
+        uint256 min
+    ) internal view returns (bool) {
         address[] memory miners = new address[](_blockHeaders.length);
 
         uint256 start = _blockHeaders[0].number;
@@ -220,7 +218,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
             preBlockTime = _blockHeaders[i].timestamp;
             require(
-                Verify.validHeader(
+                Verify.validateHeader(
                     _blockHeaders[i],
                     preGasLimt,
                     minEpochBlockExtraDataLen
@@ -230,15 +228,15 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             preGasLimt = _blockHeaders[i].gasLimit;
 
             uint256 recently = _blockHeaders[i].number -
-                (_blockHeaders[i].number % epochNum);
+                (_blockHeaders[i].number % EPOCH_NUM);
 
             if (
-                _blockHeaders[i].number % epochNum >
-                validators[recently - epochNum].length / 40
+                _blockHeaders[i].number % EPOCH_NUM >
+                validators[recently - EPOCH_NUM].length / 40
             ) {
                 _validators = validators[recently];
             } else {
-                _validators = validators[recently - epochNum];
+                _validators = validators[recently - EPOCH_NUM];
             }
 
             require(
@@ -267,6 +265,20 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return true;
     }
 
+    function isRepeat(
+        address[] memory _miners,
+        address miner,
+        uint256 limit
+    ) private pure returns (bool) {
+        for (uint256 i = 0; i < limit; i++) {
+            if (_miners[i] == miner) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function getBytes(ProofData memory proof)
         public
         pure
@@ -283,20 +295,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return abi.encode(_blockHeaders);
     }
 
-    function isRepeat(
-        address[] memory _miners,
-        address miner,
-        uint256 limit
-    ) private pure returns (bool) {
-        for (uint256 i = 0; i < limit; i++) {
-            if (_miners[i] == miner) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     function headerHeight() external view override returns (uint256) {
         return lastSyncedBlock;
     }
@@ -304,7 +302,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     function maxCanVerifyNum() public view returns (uint256) {
         return
             lastSyncedBlock +
-            epochNum +
+            EPOCH_NUM +
             (validators[lastSyncedBlock].length / 40);
     }
 

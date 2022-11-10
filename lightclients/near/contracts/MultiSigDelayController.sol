@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 contract MultiSigDelayController {
     uint public constant MAX_OWNER_COUNT = 50;
