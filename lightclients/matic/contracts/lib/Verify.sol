@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 import "./RLPReader.sol";
 import "./RLPEncode.sol";
@@ -13,12 +13,12 @@ library Verify {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
 
-    bytes32 constant sha3Uncles =
+    bytes32 constant SHA3_UNCLES =
         0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
 
-    bytes8 constant nonce = 0x0000000000000000;
+    bytes8 constant NONCE = 0x0000000000000000;
 
-    bytes32 constant mixHash =
+    bytes32 constant MIX_HASH =
         0x0000000000000000000000000000000000000000000000000000000000000000;
 
     struct BlockHeader {
@@ -90,7 +90,7 @@ library Verify {
         return signer;
     }
 
-    function validHeader(
+    function validateHeader(
         BlockHeader memory header,
         uint256 minEpochBlockExtraDataLen
     ) internal pure returns (bool) {
@@ -118,16 +118,16 @@ library Verify {
 
         if (
             header.sha3Uncles.length != 32 ||
-            bytes32(header.sha3Uncles) != sha3Uncles
+            bytes32(header.sha3Uncles) != SHA3_UNCLES
         ) {
             return false;
         }
 
-        if (header.nonce.length != 8 || bytes8(header.nonce) != nonce) {
+        if (header.nonce.length != 8 || bytes8(header.nonce) != NONCE) {
             return false;
         }
 
-        if (header.mixHash.length != 32 || bytes32(header.mixHash) != mixHash) {
+        if (header.mixHash.length != 32 || bytes32(header.mixHash) != MIX_HASH) {
             return false;
         }
         //2**63 - 1 maxGasLimit minGasLimit 5000
@@ -166,31 +166,6 @@ library Verify {
         list[15] = RLPEncode.encodeUint(header.baseFeePerGas);
         output = RLPEncode.encodeList(list);
     }
-
-    // function getBlockHash(BlockHeader memory header)
-    //     internal
-    //     pure
-    //     returns (bytes32)
-    // {
-    //     bytes[] memory list = new bytes[](16);
-    //     list[0] = RLPEncode.encodeBytes(header.parentHash);
-    //     list[1] = RLPEncode.encodeBytes(header.sha3Uncles);
-    //     list[2] = RLPEncode.encodeAddress(header.miner);
-    //     list[3] = RLPEncode.encodeBytes(header.stateRoot);
-    //     list[4] = RLPEncode.encodeBytes(header.transactionsRoot);
-    //     list[5] = RLPEncode.encodeBytes(header.receiptsRoot);
-    //     list[6] = RLPEncode.encodeBytes(header.logsBloom);
-    //     list[7] = RLPEncode.encodeUint(header.difficulty);
-    //     list[8] = RLPEncode.encodeUint(header.number);
-    //     list[9] = RLPEncode.encodeUint(header.gasLimit);
-    //     list[10] = RLPEncode.encodeUint(header.gasUsed);
-    //     list[11] = RLPEncode.encodeUint(header.timestamp);
-    //     list[12] = RLPEncode.encodeBytes(header.extraData);
-    //     list[13] = RLPEncode.encodeBytes(header.mixHash);
-    //     list[14] = RLPEncode.encodeBytes(header.nonce);
-    //     list[15] = RLPEncode.encodeUint(header.baseFeePerGas);
-    //     return keccak256(RLPEncode.encodeList(list));
-    // }
 
     function validateProof(
         bytes32 receiptsRoot,

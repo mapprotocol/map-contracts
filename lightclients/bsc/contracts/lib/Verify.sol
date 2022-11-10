@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 import "./RLPReader.sol";
 import "./RLPEncode.sol";
@@ -14,12 +14,12 @@ library Verify {
     using RLPReader for RLPReader.Iterator;
     // using MPT for MPT.MerkleProof;
 
-    bytes32 constant sha3Uncles =
+    bytes32 constant SHA3_UNCLES =
         0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
 
-    bytes8 constant nonce = 0x0000000000000000;
+    bytes8 constant NONCE = 0x0000000000000000;
 
-    bytes32 constant mixHash =
+    bytes32 constant MIX_HASH =
         0x0000000000000000000000000000000000000000000000000000000000000000;
 
     struct BlockHeader {
@@ -91,7 +91,7 @@ library Verify {
         return signer == header.miner;
     }
 
-    function validHeader(
+    function validateHeader(
         BlockHeader memory header,
         uint256 parentGasLimit,
         uint256 minEpochBlockExtraDataLen
@@ -112,16 +112,16 @@ library Verify {
 
         if (
             header.sha3Uncles.length != 32 ||
-            bytes32(header.sha3Uncles) != sha3Uncles
+            bytes32(header.sha3Uncles) != SHA3_UNCLES
         ) {
             return false;
         }
 
-        if (header.nonce.length != 8 || bytes8(header.nonce) != nonce) {
+        if (header.nonce.length != 8 || bytes8(header.nonce) != NONCE) {
             return false;
         }
 
-        if (header.mixHash.length != 32 || bytes32(header.mixHash) != mixHash) {
+        if (header.mixHash.length != 32 || bytes32(header.mixHash) != MIX_HASH) {
             return false;
         }
         //2**63 - 1 maxGasLimit
