@@ -1,5 +1,6 @@
 PRIVATE_KEY = 
 // near rpc url
-RPC_URL = 
+//RPC_URL = https://archival-rpc.mainnet.near.org
+RPC_URL = https://archival-rpc.testnet.near.org
 //mainnet or testnet. mainnet means syncing near mainnet light block,testnet means syncing testnet block,make sure rpc_url with the network is same
 NETWORK = 
