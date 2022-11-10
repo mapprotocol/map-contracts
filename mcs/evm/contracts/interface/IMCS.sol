@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 interface IMCS {
     function transferIn(uint fromChain, bytes memory receiptProof) external;
