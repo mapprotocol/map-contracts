@@ -202,6 +202,30 @@ Please execute the following command on Map mainnet or Makalu testnet
 npx hardhat deploy --tags MAPCrossChainServiceRelayProxyUp --network <network>
 ```
 
+## Token cross-chain transfer deposit
+token transfer
+```
+npx hardhat transferOutToken --mos <mos or relay address> --token <token address> --address <receiver address> --value <transfer value> --chain <chain id> --network <network>
+```
+token depsit 
+```
+npx hardhat depositOutToken --mos <mos address> --token <token address> --address <receiver address> --value <transfer value> --network <network>
+```
+Note that the --token parameter is optional, the default is 0 address, if not passed, it means to transfer out Native Token The command is as follows
+```
+npx hardhat transferOutToken --mos <mos or relay address> --address <receiver address> --value <transfer value> --chain <chain id> --network <network>
+```
+```
+npx hardhat depositOutToken --mos <mos or relay address> --address <receiver address> --value <transfer value> --network <network>
+```
+Similarly --address is also an optional parameter. If it is not filled in, it will be the default caller's address.
+```
+npx hardhat transferOutToken --mos <mos or relay address> --value <transfer value> --chain <chain id> --network <network>
+```
+```
+npx hardhat depositOutToken --mos <mos or relay address> --value <transfer value>  --network <network>
+```
+
 
 ## MOS parameter setting
 
