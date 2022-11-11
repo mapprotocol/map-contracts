@@ -7,18 +7,18 @@ import "./lib/MPT.sol";
 
 contract MPTVerify is IMPTVerify {
     function verifyTrieProof(
-        bytes32 root,
-        bytes memory key,
-        bytes[] memory proof,
-        bytes memory node
+        bytes32 _root,
+        bytes memory _key,
+        bytes[] memory _proof,
+        bytes memory _node
     ) external pure override returns (bool) {
         MPT.MerkleProof memory mp = MPT.MerkleProof({
-            expectedRoot: root,
-            key: key,
-            proof: proof,
+            expectedRoot: _root,
+            key: _key,
+            proof: _proof,
             keyIndex: 0,
             proofIndex: 0,
-            expectedValue: node
+            expectedValue: _node
         });
         return MPT.verifyTrieProof(mp);
     }

@@ -1,11 +1,7 @@
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
-const { GetProof } = require('eth-proof')
 import {
   BlockHeader, getBlock,
-  TxLog, ReceiptProof,
-  TxReceipt, index2key,
-  ProofData, DProofData
 } from "../utils/Util"
 
 

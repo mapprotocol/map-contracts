@@ -12,7 +12,6 @@ library Verify {
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
-    // using MPT for MPT.MerkleProof;
 
     bytes32 constant SHA3_UNCLES =
         0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
@@ -60,16 +59,16 @@ library Verify {
         bytes data;
     }
 
-    function verifyHeaderSignature(BlockHeader memory header, uint256 chainId)
+    function verifyHeaderSignature(BlockHeader memory _header, uint256 _chainId)
         internal
         pure
         returns (bool)
     {
         (bytes memory signature, bytes memory extraData) = splitExtra(
-            header.extraData
+            _header.extraData
         );
 
-        bytes32 hash = keccak256(encodeSigHeader(header, extraData, chainId));
+        bytes32 hash = keccak256(encodeSigHeader(_header, extraData, _chainId));
 
         bytes32 r;
         bytes32 s;
@@ -88,52 +87,56 @@ library Verify {
 
         address signer = ecrecover(hash, v, r, s);
 
-        return signer == header.miner;
+        return signer == _header.miner;
     }
 
     function validateHeader(
-        BlockHeader memory header,
-        uint256 parentGasLimit,
-        uint256 minEpochBlockExtraDataLen
+        BlockHeader memory _header,
+        uint256 _parentGasLimit,
+        uint256 _minEpochBlockExtraDataLen
     ) internal pure returns (bool) {
-        if (header.extraData.length < 97) {
+        if (_header.extraData.length < 97) {
             return false;
         }
         //Epoch block
-        if (header.number % 200 == 0) {
-            if (header.extraData.length < minEpochBlockExtraDataLen) {
+        if (_header.number % 200 == 0) {
+            if (_header.extraData.length < _minEpochBlockExtraDataLen) {
                 return false;
             }
         }
 
-        if (header.difficulty != 2 && header.difficulty != 1) {
+        if (_header.difficulty != 2 && _header.difficulty != 1) {
             return false;
         }
 
         if (
-            header.sha3Uncles.length != 32 ||
-            bytes32(header.sha3Uncles) != SHA3_UNCLES
+            _header.sha3Uncles.length != 32 ||
+            bytes32(_header.sha3Uncles) != SHA3_UNCLES
         ) {
             return false;
         }
 
-        if (header.nonce.length != 8 || bytes8(header.nonce) != NONCE) {
+        if (_header.nonce.length != 8 || bytes8(_header.nonce) != NONCE) {
             return false;
         }
 
-        if (header.mixHash.length != 32 || bytes32(header.mixHash) != MIX_HASH) {
+        if (
+            _header.mixHash.length != 32 || bytes32(_header.mixHash) != MIX_HASH
+        ) {
             return false;
         }
         //2**63 - 1 maxGasLimit
-        if (header.gasLimit > 2**63 - 1 || header.gasLimit < header.gasUsed) {
+        if (
+            _header.gasLimit > 2**63 - 1 || _header.gasLimit < _header.gasUsed
+        ) {
             return false;
         }
 
-        uint256 diff = parentGasLimit > header.gasLimit
-            ? parentGasLimit - header.gasLimit
-            : header.gasLimit - parentGasLimit;
+        uint256 diff = _parentGasLimit > _header.gasLimit
+            ? _parentGasLimit - _header.gasLimit
+            : _header.gasLimit - _parentGasLimit;
         //5000 minGasLimit
-        if (diff >= parentGasLimit / 256 || header.gasLimit < 5000) {
+        if (diff >= _parentGasLimit / 256 || _header.gasLimit < 5000) {
             return false;
         }
 
@@ -141,65 +144,65 @@ library Verify {
     }
 
     function encodeSigHeader(
-        BlockHeader memory header,
-        bytes memory extraData,
-        uint256 chainId
+        BlockHeader memory _header,
+        bytes memory _extraData,
+        uint256 _chainId
     ) internal pure returns (bytes memory output) {
         bytes[] memory list = new bytes[](16);
-        list[0] = RLPEncode.encodeUint(chainId);
-        list[1] = RLPEncode.encodeBytes(header.parentHash);
-        list[2] = RLPEncode.encodeBytes(header.sha3Uncles);
-        list[3] = RLPEncode.encodeAddress(header.miner);
-        list[4] = RLPEncode.encodeBytes(header.stateRoot);
-        list[5] = RLPEncode.encodeBytes(header.transactionsRoot);
-        list[6] = RLPEncode.encodeBytes(header.receiptsRoot);
-        list[7] = RLPEncode.encodeBytes(header.logsBloom);
-        list[8] = RLPEncode.encodeUint(header.difficulty);
-        list[9] = RLPEncode.encodeUint(header.number);
-        list[10] = RLPEncode.encodeUint(header.gasLimit);
-        list[11] = RLPEncode.encodeUint(header.gasUsed);
-        list[12] = RLPEncode.encodeUint(header.timestamp);
-        list[13] = RLPEncode.encodeBytes(extraData);
-        list[14] = RLPEncode.encodeBytes(header.mixHash);
-        list[15] = RLPEncode.encodeBytes(header.nonce);
+        list[0] = RLPEncode.encodeUint(_chainId);
+        list[1] = RLPEncode.encodeBytes(_header.parentHash);
+        list[2] = RLPEncode.encodeBytes(_header.sha3Uncles);
+        list[3] = RLPEncode.encodeAddress(_header.miner);
+        list[4] = RLPEncode.encodeBytes(_header.stateRoot);
+        list[5] = RLPEncode.encodeBytes(_header.transactionsRoot);
+        list[6] = RLPEncode.encodeBytes(_header.receiptsRoot);
+        list[7] = RLPEncode.encodeBytes(_header.logsBloom);
+        list[8] = RLPEncode.encodeUint(_header.difficulty);
+        list[9] = RLPEncode.encodeUint(_header.number);
+        list[10] = RLPEncode.encodeUint(_header.gasLimit);
+        list[11] = RLPEncode.encodeUint(_header.gasUsed);
+        list[12] = RLPEncode.encodeUint(_header.timestamp);
+        list[13] = RLPEncode.encodeBytes(_extraData);
+        list[14] = RLPEncode.encodeBytes(_header.mixHash);
+        list[15] = RLPEncode.encodeBytes(_header.nonce);
         output = RLPEncode.encodeList(list);
     }
 
-    function getBlockHash(BlockHeader memory header)
+    function getBlockHash(BlockHeader memory _header)
         internal
         pure
         returns (bytes32)
     {
         bytes[] memory list = new bytes[](15);
-        list[0] = RLPEncode.encodeBytes(header.parentHash);
-        list[1] = RLPEncode.encodeBytes(header.sha3Uncles);
-        list[2] = RLPEncode.encodeAddress(header.miner);
-        list[3] = RLPEncode.encodeBytes(header.stateRoot);
-        list[4] = RLPEncode.encodeBytes(header.transactionsRoot);
-        list[5] = RLPEncode.encodeBytes(header.receiptsRoot);
-        list[6] = RLPEncode.encodeBytes(header.logsBloom);
-        list[7] = RLPEncode.encodeUint(header.difficulty);
-        list[8] = RLPEncode.encodeUint(header.number);
-        list[9] = RLPEncode.encodeUint(header.gasLimit);
-        list[10] = RLPEncode.encodeUint(header.gasUsed);
-        list[11] = RLPEncode.encodeUint(header.timestamp);
-        list[12] = RLPEncode.encodeBytes(header.extraData);
-        list[13] = RLPEncode.encodeBytes(header.mixHash);
-        list[14] = RLPEncode.encodeBytes(header.nonce);
+        list[0] = RLPEncode.encodeBytes(_header.parentHash);
+        list[1] = RLPEncode.encodeBytes(_header.sha3Uncles);
+        list[2] = RLPEncode.encodeAddress(_header.miner);
+        list[3] = RLPEncode.encodeBytes(_header.stateRoot);
+        list[4] = RLPEncode.encodeBytes(_header.transactionsRoot);
+        list[5] = RLPEncode.encodeBytes(_header.receiptsRoot);
+        list[6] = RLPEncode.encodeBytes(_header.logsBloom);
+        list[7] = RLPEncode.encodeUint(_header.difficulty);
+        list[8] = RLPEncode.encodeUint(_header.number);
+        list[9] = RLPEncode.encodeUint(_header.gasLimit);
+        list[10] = RLPEncode.encodeUint(_header.gasUsed);
+        list[11] = RLPEncode.encodeUint(_header.timestamp);
+        list[12] = RLPEncode.encodeBytes(_header.extraData);
+        list[13] = RLPEncode.encodeBytes(_header.mixHash);
+        list[14] = RLPEncode.encodeBytes(_header.nonce);
         return keccak256(RLPEncode.encodeList(list));
     }
 
     function validateProof(
-        bytes32 receiptsRoot,
-        ReceiptProof memory receipt,
-        address mptVerify
+        bytes32 _receiptsRoot,
+        ReceiptProof memory _receipt,
+        address _mptVerify
     ) internal pure returns (bool success, bytes memory logs) {
-        bytes memory bytesReceipt = encodeReceipt(receipt.txReceipt);
+        bytes memory bytesReceipt = encodeReceipt(_receipt.txReceipt);
 
-        success = IMPTVerify(mptVerify).verifyTrieProof(
-            receiptsRoot,
-            receipt.keyIndex,
-            receipt.proof,
+        success = IMPTVerify(_mptVerify).verifyTrieProof(
+            _receiptsRoot,
+            _receipt.keyIndex,
+            _receipt.proof,
             bytesReceipt
         );
 
@@ -244,56 +247,56 @@ library Verify {
         }
     }
 
-    function splitExtra(bytes memory extraData)
+    function splitExtra(bytes memory _extraData)
         internal
         pure
-        returns (bytes memory _signature, bytes memory _extraData)
+        returns (bytes memory signature, bytes memory extraData)
     {
         uint256 ptr;
         assembly {
-            ptr := extraData
+            ptr := _extraData
         }
 
         ptr += 32;
         //extraData never less than 97
-        _extraData = memoryToBytes(ptr, extraData.length - 65);
+        extraData = memoryToBytes(ptr, _extraData.length - 65);
 
-        ptr += extraData.length - 65;
+        ptr += _extraData.length - 65;
 
-        _signature = memoryToBytes(ptr, 65);
+        signature = memoryToBytes(ptr, 65);
     }
 
-    function getValidators(bytes memory extraData)
+    function getValidators(bytes memory _extraData)
         internal
         pure
         returns (bytes memory)
     {
         uint256 ptr;
         assembly {
-            ptr := extraData
+            ptr := _extraData
         }
 
         ptr += 64;
         //extraData never less than 97
-        return memoryToBytes(ptr, extraData.length - 97);
+        return memoryToBytes(ptr, _extraData.length - 97);
     }
 
     function containValidator(
-        bytes memory validators,
-        address miner,
-        uint256 index
+        bytes memory _validators,
+        address _miner,
+        uint256 _index
     ) internal pure returns (bool) {
-        uint256 m = uint256(uint160(miner));
+        uint256 m = uint256(uint160(_miner));
 
         uint256 ptr;
         assembly {
-            ptr := validators
+            ptr := _validators
         }
         ptr += 32;
-        uint256 length = validators.length / 20;
+        uint256 length = _validators.length / 20;
         for (uint256 i = 0; i < length; i++) {
             uint256 v;
-            uint256 tem = ptr + ((index + i) % length) * 20;
+            uint256 tem = ptr + ((_index + i) % length) * 20;
             assembly {
                 v := mload(tem)
             }
@@ -306,34 +309,34 @@ library Verify {
         return false;
     }
 
-    function memoryToBytes(uint ptr, uint length)
+    function memoryToBytes(uint _ptr, uint _length)
         internal
         pure
         returns (bytes memory res)
     {
-        if (length != 0) {
+        if (_length != 0) {
             assembly {
                 // 0x40 is the address of free memory pointer.
                 res := mload(0x40)
                 let end := add(
                     res,
                     and(
-                        add(length, 63),
+                        add(_length, 63),
                         0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0
                     )
                 )
                 // end = res + 32 + 32 * ceil(length / 32).
                 mstore(0x40, end)
-                mstore(res, length)
+                mstore(res, _length)
                 let destPtr := add(res, 32)
                 // prettier-ignore
                 for { } 1 { } {
-                    mstore(destPtr, mload(ptr))
+                    mstore(destPtr, mload(_ptr))
                     destPtr := add(destPtr, 32)
                     if eq(destPtr, end) {
                         break
                     }
-                    ptr := add(ptr, 32)
+                    _ptr := add(_ptr, 32)
                 }
             }
         }
