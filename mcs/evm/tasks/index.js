@@ -151,3 +151,12 @@ task("transferOutToken",
     .addOptionalParam("address", "The receiver address","",types.string)
     .addParam("value", "transfer value, unit WEI")
     .addParam("chain", "target chain id")
+
+task("depositOutToken",
+    "Cross-chain deposit token",
+    require("./depositOutToken")
+)
+    .addParam("mos", "The mos address")
+    .addOptionalParam("token", "The token address","0x0000000000000000000000000000000000000000",types.string)
+    .addOptionalParam("address", "The receiver address","",types.string)
+    .addParam("value", "deposit value, unit WEI")
