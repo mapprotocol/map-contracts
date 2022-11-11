@@ -1,0 +1,30 @@
+{
+  "data": {
+    "attested_header": {
+      "slot": "5080423",
+      "proposer_index": "90864",
+      "parent_root": "0xd20641f51aef413eca5f742c8ed113c68614be470bdeba7ff3b3f1a0d3007d22",
+      "state_root": "0xac510a6dd1fa63c62256399699f153d4df569bd387b3a9961e9587acacede17f",
+      "body_root": "0x8dff7ba519ee1354708f6db90fca7fa596e4bbe88178072082f58e1a63f1f4e9"
+    },
+    "finalized_header": {
+      "slot": "5080352",
+      "proposer_index": "307641",
+      "parent_root": "0x849a31f4d73689abd2c1e88643c30ebd5d5851beb0ecbf5b4cad9611c45fe05b",
+      "state_root": "0xcf32529472592ed117b5bf3c3347bb9317b4115de6fc39721d15a31463400c75",
+      "body_root": "0x4360e7fe10d1d6a79e10acfcb5cde1d04c21f7e0f8410838906b2e004f088db2"
+    },
+    "finality_branch": [
+      "0x296c020000000000000000000000000000000000000000000000000000000000",
+      "0xbb24282cf1457abe988627071b5f36680cff03012262084030923691972719c9",
+      "0x90205b10c69c1ac04c9aeac664d32219050843aa6dac85e8666aed4a86d06428",
+      "0xda91e9a4ed496a9e23a0d68ef794bf476d3d9759de2fe941b35aae450f9c14d3",
+      "0x3c54adf9951cbbedf8b200e5c3e23d3fd5d860172c64e78526bd8c3db990ac35",
+      "0xc4f6459c1fa112533a2259924623f07a3f0b727561cc35931e9a040f16a8cd39"
+    ],
+    "sync_aggregate": {
+      "sync_committee_bits": "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdffdfffffffffffffffffffffffffffffffffffff",
+      "sync_committee_signature": "0xb8341a3e5934f49ab33a9c390d967cef01dcff2ec8cbfd9f9e3b85fd741f26aa1da86c723ad3a1c8cdc55806c6eed6cd09b4921c4fbd715c45b5b279be9a5fbb7dbaca4515dbd6c4f346426f1936f7993b5a860c960eb96314f3db7c1a7069e4"
+    }
+  }
+}
