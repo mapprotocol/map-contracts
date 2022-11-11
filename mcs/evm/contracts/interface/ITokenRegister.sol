@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 interface ITokenRegister {
     function getTargetToken(uint256 sourceChain, bytes memory sourceToken, uint256 targetChain) external view returns (bytes memory mapToken);

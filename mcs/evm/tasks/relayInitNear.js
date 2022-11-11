@@ -9,7 +9,7 @@ module.exports = async (taskArgs,hre) => {
 
     let mosRelayProxy = await ethers.getContractAt('MAPCrossChainServiceRelay',proxy.address);
 
-    await (await mosRelayProxy.connect(deployer).setIdTablesetIdTable(taskArgs.chain, 1)).wait();
+    await (await mosRelayProxy.connect(deployer).setIdTable(taskArgs.chain, 1)).wait();
     await (await mosRelayProxy.connect(deployer).setChainId(taskArgs.chain)).wait();
 
     console.log(`MAPCrossChainServiceRelay init near chain success`);

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8;
+pragma solidity 0.8.7;
 
 import "./Utils.sol";
 
 library Ed25519Verify {
-    address constant ed25519PreCompile =
+    address constant ED_25519_PRECOMPILE =
         0x00000000000000000000000000000000000000f3;
 
     function checkBlockProducerSignatureInHead(
@@ -34,7 +34,7 @@ library Ed25519Verify {
     ) public view returns (bool) {
         bytes memory input = abi.encodePacked(k, r, s, message);
         require(input.length >= 96, "invalid-input-size");
-        (bool success, bytes memory data) = ed25519PreCompile.staticcall(input);
+        (bool success, bytes memory data) = ED_25519_PRECOMPILE.staticcall(input);
         require(success,"ed25519PreCompile call fail");
 
         return abi.decode(data, (bool));

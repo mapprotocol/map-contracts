@@ -21,8 +21,6 @@ mod bytes;
 
 const MCS_TOKEN_BINARY: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/mcs_token.wasm");
 
-const MAP_CHAIN_ID: u128 = 22776;
-
 const NO_DEPOSIT: Balance = 0;
 
 /// Initial balance for the MCSToken contract to cover storage and related.
@@ -135,8 +133,9 @@ pub struct MapCrossChainService {
     // Wrap token for near
     pub wrapped_token: String,
     // Near chain id
-    // FIXME: get from env?
     pub near_chain_id: u128,
+    // MAP chain id
+    pub map_chain_id: u128,
     // Nonce to generate order id
     pub nonce: u128,
     /// Mask determining all paused functions
@@ -193,8 +192,11 @@ impl MapCrossChainService {
     /// `map_bridge_address`: the address of the MCS contract on MAP blockchain, in hex.
     /// `wrapped_token`: the wrap near contract account id
     /// `near_chain_id`: the chain id of the near blockchain
-    pub fn init(owner: AccountId, map_light_client: String, map_bridge_address: String, wrapped_token: String, near_chain_id: u128) -> Promise {
+    pub fn init(owner: AccountId, map_light_client: String, map_bridge_address: String, wrapped_token: String, near_chain_id: String, map_chain_id: String) -> Promise {
         assert!(!env::state_exists(), "Already initialized");
+
+        let near_chain_id_u128: u128 = near_chain_id.parse().unwrap();
+        let map_chain_id_u128: u128 = map_chain_id.parse().unwrap();
 
         let storage_balance = near_contract_standards::fungible_token::FungibleToken::new(b"t".to_vec())
             .account_storage_usage as Balance * env::storage_byte_cost();
@@ -205,10 +207,10 @@ impl MapCrossChainService {
             .storage_deposit(Some(env::current_account_id()), Some(true))
             .then(Self::ext(env::current_account_id())
                 .with_static_gas(FINISH_INIT_GAS)
-                .finish_init(owner, map_light_client, map_bridge_address, wrapped_token, near_chain_id, storage_balance))
+                .finish_init(owner, map_light_client, map_bridge_address, wrapped_token, near_chain_id_u128, map_chain_id_u128, storage_balance))
     }
     #[init]
-    pub fn finish_init(owner: AccountId, map_light_client: String, map_bridge_address: String, wrapped_token: String, near_chain_id: u128, storage_balance: u128) -> Self {
+    pub fn finish_init(owner: AccountId, map_light_client: String, map_bridge_address: String, wrapped_token: String, near_chain_id: u128, map_chain_id: u128, storage_balance: u128) -> Self {
         assert_self();
         assert_eq!(env::promise_results_count(), 1, "ERR_TOO_MANY_RESULTS");
         let _balance = match env::promise_result(0) {
@@ -230,9 +232,17 @@ impl MapCrossChainService {
             mcs_storage_transfer_in_required: storage_balance,
             wrapped_token,
             near_chain_id,  // 1313161555 for testnet
+            map_chain_id,
             nonce: 0,
             paused: Mask::default(),
         }
+    }
+
+    #[private]
+    #[init(ignore_state)]
+    pub fn migrate() -> Self {
+        let this: MapCrossChainService = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
+        this
     }
 
     pub fn version() -> &'static str {
@@ -512,7 +522,7 @@ impl MapCrossChainService {
     #[payable]
     pub fn deposit_out_native(&mut self, to: Vec<u8>) {
         self.check_not_paused(PAUSE_DEPOSIT_OUT_NATIVE);
-        self.check_to_account(to.clone(), MAP_CHAIN_ID);
+        self.check_to_account(to.clone(), self.map_chain_id);
 
         let amount = env::attached_deposit();
         assert!(amount > 0, "amount should > 0");
@@ -520,7 +530,7 @@ impl MapCrossChainService {
 
         let from = env::signer_account_id().to_string();
 
-        let order_id = self.get_order_id(&self.native_token_address().1, &from, &to, amount, MAP_CHAIN_ID);
+        let order_id = self.get_order_id(&self.native_token_address().1, &from, &to, amount, self.map_chain_id);
 
         let event = DepositOutEvent {
             token: self.native_token_address().1,
@@ -814,7 +824,7 @@ impl MapCrossChainService {
     }
 
     pub fn get_chain_type(&self, chain_id: u128) -> ChainType {
-        if chain_id == MAP_CHAIN_ID {
+        if chain_id == self.map_chain_id {
             return EvmChain;
         }
         let option = self.chain_id_type_map.get(&chain_id);
@@ -863,12 +873,57 @@ impl MapCrossChainService {
         self.owner = new_owner;
     }
 
+    pub fn get_owner(&self) -> AccountId {
+        self.owner.clone()
+    }
+
     pub fn set_map_light_client(&mut self, map_client_account: AccountId) {
         assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
         assert!(self.is_paused(PAUSE_TRANSFER_IN),
                 "transfer in should be paused when setting map light client account");
 
         self.map_client_account = map_client_account;
+    }
+
+    pub fn get_map_light_client(&self) -> AccountId {
+        self.map_client_account.clone()
+    }
+
+    pub fn set_near_chain_id(&mut self, near_chain_id: String) {
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_paused(PAUSE_TRANSFER_OUT_TOKEN)
+                    && self.is_paused(PAUSE_TRANSFER_OUT_NATIVE)
+                    && self.is_paused(PAUSE_DEPOSIT_OUT_TOKEN)
+                    && self.is_paused(PAUSE_DEPOSIT_OUT_NATIVE),
+                "transfer/deposit out should be paused when setting near chain id");
+
+        self.near_chain_id = near_chain_id.parse().unwrap();
+    }
+
+    pub fn get_near_chain_id(&self) -> u128 {
+        self.near_chain_id
+    }
+
+    pub fn set_map_chain_id(&mut self, map_chain_id: String) {
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
+
+        self.map_chain_id = map_chain_id.parse().unwrap();
+    }
+
+    pub fn get_map_chain_id(&self) -> u128 {
+        self.map_chain_id
+    }
+
+    pub fn set_map_relay_address(&mut self, map_relay_address: String) {
+        assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_paused(PAUSE_TRANSFER_IN),
+                "transfer in should be paused when setting near chain id");
+
+        self.map_bridge_address = validate_eth_address(map_relay_address);
+    }
+
+    pub fn get_map_relay_address(&self) -> String {
+        hex::encode(self.map_bridge_address)
     }
 
     pub fn upgrade_self(&mut self, code: Base64VecU8) {
@@ -920,17 +975,17 @@ impl FungibleTokenReceiver for MapCrossChainService {
             log!("{}{}", TRANSFER_OUT_TYPE, event);
         } else if transfer_msg.msg_type == 1 {
             self.check_not_paused(PAUSE_DEPOSIT_OUT_TOKEN);
-            assert!(self.valid_fungible_token_out(&token, MAP_CHAIN_ID)
-                        || self.valid_mcs_token_out(&token, MAP_CHAIN_ID),
-                    "deposit token {} to chain {} is not supported", token, MAP_CHAIN_ID);
-            self.check_to_account(transfer_msg.to.clone(), MAP_CHAIN_ID);
+            assert!(self.valid_fungible_token_out(&token, self.map_chain_id)
+                        || self.valid_mcs_token_out(&token, self.map_chain_id),
+                    "deposit token {} to chain {} is not supported", token, self.map_chain_id);
+            self.check_to_account(transfer_msg.to.clone(), self.map_chain_id);
             self.check_amount(token.clone(), amount.0, false);
 
             let order_id = self.get_order_id(&token,
                                              &from,
                                              &transfer_msg.to,
                                              amount.0,
-                                             MAP_CHAIN_ID);
+                                             self.map_chain_id);
             let event = DepositOutEvent {
                 from,
                 to: transfer_msg.to,
@@ -1062,6 +1117,7 @@ mod tests {
             mcs_storage_transfer_in_required: STORAGE_BALANCE,
             wrapped_token: wrap_token(),
             near_chain_id: NEAR_CHAIN_ID,  // 1313161555 for testnet
+            map_chain_id: 0,
             nonce: 0,
             paused: Mask::default(),
         }

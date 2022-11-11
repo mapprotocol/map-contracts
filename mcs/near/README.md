@@ -80,6 +80,7 @@ MCS_NAME="mcs"  # the name of mcs contract to be created, the account ID will be
 MAP_MCS_ADDRESS="F579c89C22DAc92E9816C0b39856cA9281Bd7BE0"  # the mcs contract address on MAP relay chain
 WNEAR_ACCOUNT="wrap.testnet"  # wrapped near contract account on NEAR blockchain
 NEAR_CHAIN_ID=5566818579631833089  # NEAR testnet blockchain id, mainnet is 5566818579631833088
+MAP_CHAIN_ID=22776  # MAP blockchain ID
 CLIENT_ACCOUNT="client.fac.map002.testnet" # the account ID of the map light client contract which has already been deployed
 ```
 
