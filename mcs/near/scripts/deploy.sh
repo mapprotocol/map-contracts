@@ -26,7 +26,8 @@ INIT_ARGS_MCS='{
               "map_light_client": "'$CLIENT_ACCOUNT'",
               "map_bridge_address": "'$MAP_MCS_ADDRESS'",
               "wrapped_token": "'$WNEAR_ACCOUNT'",
-              "near_chain_id": '$NEAR_CHAIN_ID'
+              "near_chain_id": "'$NEAR_CHAIN_ID'",
+              "map_chain_id": "'$MAP_CHAIN_ID'"
             }'
 
 echo $INIT_ARGS_MCS

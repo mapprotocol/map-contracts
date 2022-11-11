@@ -175,7 +175,9 @@ async fn test_owner() -> anyhow::Result<()> {
             "map_light_client": "map_light_client.near",
             "map_bridge_address":MAP_BRIDGE_ADDRESS.to_string(),
             "wrapped_token": wnear.id().to_string(),
-            "near_chain_id": 1313161555}))?
+            "near_chain_id": "1313161555",
+            "map_chain_id": "22776",
+        }))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
@@ -263,6 +265,100 @@ async fn test_manage_to_chain_type() -> anyhow::Result<()> {
         .await?
         .json::<ChainType>()?;
     assert_eq!(chain_type, ret, "chain type should be set");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_manage_near_chain_id() -> anyhow::Result<()> {
+    let worker = init_worker().await?;
+    let wnear = deploy_and_init_wnear(&worker).await?;
+    let mcs = deploy_and_init_mcs(&worker, "map_light_client.near".to_string(),
+                                  MAP_BRIDGE_ADDRESS.to_string(),
+                                  wnear.id().to_string()).await?;
+
+    let near_chain_id = "5566818579631833088";
+    let paused_mask = 1 << 2 | 1 << 3 | 1 << 4 | 1 << 5;
+
+    let ret = gen_call_transaction(&worker, &mcs, "get_near_chain_id", json!({}), false)
+        .view()
+        .await?
+        .json::<u128>()?;
+
+    println!("get_near_chain_id {}", ret);
+    assert_eq!(5566818579631833089, ret, "get default near chain id");
+
+    let res = gen_call_transaction(&worker, &mcs, "set_near_chain_id", json!({"near_chain_id": near_chain_id}), false)
+        .transact()
+        .await;
+    assert!(res.is_err(), "set_chain_type should fail because of not paused");
+
+    let res = gen_call_transaction(&worker, &mcs, "set_paused", json!({"paused": paused_mask}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "set_paused should succeed");
+
+    let res = gen_call_transaction(&worker, &mcs, "set_near_chain_id", json!({"near_chain_id": near_chain_id}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "set_chain_type should succeed");
+
+    let ret = gen_call_transaction(&worker, &mcs, "get_near_chain_id", json!({}), false)
+        .view()
+        .await?
+        .json::<u128>()?;
+    println!("get near chain id {}", ret);
+    let s = format!("{}", ret);
+    assert_eq!(near_chain_id, s, "near chain id should be set");
+
+    println!("max u128 {}", u128::MAX);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_manage_map_relay_address() -> anyhow::Result<()> {
+    let worker = init_worker().await?;
+    let wnear = deploy_and_init_wnear(&worker).await?;
+    let mcs = deploy_and_init_mcs(&worker, "map_light_client.near".to_string(),
+                                  MAP_BRIDGE_ADDRESS.to_string(),
+                                  wnear.id().to_string()).await?;
+
+    let map_relay_address = "aaaa5a86411ab8627516cbb77d5db00b74fe610d";
+    let paused_mask = 1 << 1;
+
+    let ret = gen_call_transaction(&worker, &mcs, "get_map_relay_address", json!({}), false)
+        .view()
+        .await?
+        .json::<String>()?;
+    assert_eq!(MAP_BRIDGE_ADDRESS.to_string(), ret, "get default map relay address");
+
+    let res = gen_call_transaction(&worker, &mcs, "set_map_relay_address", json!({"map_relay_address": map_relay_address}), false)
+        .transact()
+        .await;
+    assert!(res.is_err(), "set_map_relay_address should fail because of not paused");
+
+    let res = gen_call_transaction(&worker, &mcs, "set_paused", json!({"paused": paused_mask}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "set_paused should succeed");
+
+    let res = gen_call_transaction(&worker, &mcs, "set_map_relay_address", json!({"map_relay_address": map_relay_address}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "set_map_relay_address should succeed");
+
+    let ret = gen_call_transaction(&worker, &mcs, "get_map_relay_address", json!({}), false)
+        .view()
+        .await?
+        .json::<String>()?;
+    println!("get map relay address {}", ret);
+    assert_eq!(map_relay_address.to_string(), ret, "map relay address should be set");
+
+    let res = gen_call_transaction(&worker, &mcs, "set_map_relay_address", json!({"map_relay_address": "aaaa5a86411ab8627516cbb77d5db00b74f"}), false)
+        .transact()
+        .await;
+    assert!(res.is_err(), "set_map_relay_address should fail because of invalid eth address");
 
     Ok(())
 }
@@ -4557,7 +4653,8 @@ async fn deploy_and_init_mcs(worker: &Worker<Sandbox>, map_light_client: String,
             "map_light_client": map_light_client,
             "map_bridge_address":map_bridge_address,
             "wrapped_token": wrapped_token,
-            "near_chain_id": 1313161555}))?
+            "near_chain_id": "5566818579631833089",
+        "map_chain_id": "22776"}))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
