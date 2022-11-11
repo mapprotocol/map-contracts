@@ -16,6 +16,7 @@ function printHelp() {
   echo "    add_native <chain id>                    add native token to_chain"
   echo "    add_mcs    <token> <chain id>            add mcs token to_chain"
   echo "    add_ft    <token> <chain id>             add fungible token to_chain"
+  echo "    chain_id    <near chain id>              set near chain id"
   echo "    remove_native <chain id>                 remove native token to_chain"
   echo "    remove_mcs    <token> <chain id>         remove mcs token to_chain"
   echo "    remove_ft    <token> <chain id>          remove fungible token to_chain"
@@ -128,6 +129,18 @@ function prepare_request() {
         METHOD="set_chain_type"
         ARGS=`echo '{"chain_id": '$2', "chain_type": "'$3'"}'| base64`
         MEMBER=$4
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
+    chain_id)
+      if [[ $# == 3 ]]; then
+        echo "set near chain id of chain $2"
+        RECEIVER=$MCS_ACCOUNT
+        METHOD="set_near_chain_id"
+        ARGS=`echo '{"near_chain_id": '$2'}'| base64`
+        MEMBER=$3
       else
         printHelp
         exit 1
