@@ -29,6 +29,8 @@ echo "removing old res directory"
 echo "rm -rf $RES_DIR"
 rm -rf $RES_DIR
 
+export RUSTFLAGS='-C link-arg=-s'
+
 cd $SCRIPT_DIR/../mcs-token
 echo "start to build mcs-token"
 if $RELEASE; then

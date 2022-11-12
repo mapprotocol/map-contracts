@@ -82,6 +82,24 @@ impl MCSToken {
         self.token.account_storage_usage
     }
 
+    pub fn set_owner(&mut self, new_owner: AccountId) {
+        assert_eq!(self.owner, env::predecessor_account_id(), "unexpected caller {}", env::predecessor_account_id());
+        self.owner = new_owner;
+    }
+
+    pub fn get_owner(&self) -> AccountId {
+        self.owner.clone()
+    }
+
+    pub fn set_controller(&mut self, new_controller: AccountId) {
+        assert_eq!(self.owner, env::predecessor_account_id(), "unexpected caller {}", env::predecessor_account_id());
+        self.controller = new_controller;
+    }
+
+    pub fn get_controller(&self) -> AccountId {
+        self.controller.clone()
+    }
+
     pub fn upgrade_self(&mut self, code: Base64VecU8) {
         assert_eq!(self.owner, env::predecessor_account_id(), "unexpected caller {}", env::predecessor_account_id());
 

@@ -118,17 +118,21 @@ pub struct DepositOutEvent {
     pub from: String,
     #[serde(with = "crate::bytes::hexstring")]
     pub order_id: CryptoHash,
+    pub from_chain: u128,
+    pub to_chain: u128,
     pub to: Vec<u8>,
     pub amount: u128,
 }
 
 impl Encodable for DepositOutEvent {
     fn rlp_append(&self, s: &mut RlpStream) {
-        s.begin_list(5);
+        s.begin_list(7);
 
         s.append(&self.token);
         s.append(&self.from);
         s.append(&self.order_id.as_ref());
+        s.append(&self.from_chain);
+        s.append(&self.to_chain);
         s.append(&self.to);
         s.append(&self.amount);
     }

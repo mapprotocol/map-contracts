@@ -16,7 +16,9 @@ function printHelp() {
   echo "    add_native <chain id>                    add native token to_chain"
   echo "    add_mcs    <token> <chain id>            add mcs token to_chain"
   echo "    add_ft    <token> <chain id>             add fungible token to_chain"
-  echo "    chain_id    <near chain id>              set near chain id"
+  echo "    near_chain_id    <near chain id>         set near chain id"
+  echo "    map_chain_id    <map chain id>           set map chain id"
+  echo "    map_relay_address   <map relay address>  set map relay address"
   echo "    remove_native <chain id>                 remove native token to_chain"
   echo "    remove_mcs    <token> <chain id>         remove mcs token to_chain"
   echo "    remove_ft    <token> <chain id>          remove fungible token to_chain"
@@ -134,12 +136,36 @@ function prepare_request() {
         exit 1
       fi
       ;;
-    chain_id)
+    near_chain_id)
       if [[ $# == 3 ]]; then
-        echo "set near chain id of chain $2"
+        echo "set near chain id to $2"
         RECEIVER=$MCS_ACCOUNT
         METHOD="set_near_chain_id"
-        ARGS=`echo '{"near_chain_id": '$2'}'| base64`
+        ARGS=`echo '{"near_chain_id": "'$2'"}'| base64`
+        MEMBER=$3
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
+    map_chain_id)
+      if [[ $# == 3 ]]; then
+        echo "set map chain id to $2"
+        RECEIVER=$MCS_ACCOUNT
+        METHOD="set_map_chain_id"
+        ARGS=`echo '{"map_chain_id": "'$2'"}'| base64`
+        MEMBER=$3
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
+    map_relay_address)
+      if [[ $# == 3 ]]; then
+        echo "set map relay address to $2"
+        RECEIVER=$MCS_ACCOUNT
+        METHOD="set_map_relay_address"
+        ARGS=`echo '{"map_relay_address": "'$2'"}'| base64`
         MEMBER=$3
       else
         printHelp

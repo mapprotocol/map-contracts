@@ -11,12 +11,10 @@ pub mod traits;
 mod hash;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{AccountId, env, log, near_bindgen, PanicOnDefault, serde_json};
+use near_sdk::{env, log, near_bindgen, PanicOnDefault, serde_json};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::env::keccak256;
 use near_sdk::serde::{Serialize, Deserialize};
-use near_sdk::Gas;
-use near_sdk::json_types::Base64VecU8;
 pub use crypto::{G1, G2, REGISTER_EXPECTED_ERR};
 use crate::types::{istanbul::IstanbulExtra, istanbul::get_epoch_number, header::Header};
 use crate::types::header::Address;
@@ -28,7 +26,6 @@ use crate::types::proof::{ReceiptProof, verify_trie_proof};
 const ECDSA_SIG_LENGTH: usize = 65;
 const ECDSA_REGISTER: u64 = 2;
 const MAX_RECORD: u64 = 20;
-const GAS_FOR_UPGRADE_SELF_DEPLOY: Gas = Gas(15_000_000_000_000);
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]

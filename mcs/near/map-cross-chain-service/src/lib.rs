@@ -14,10 +14,12 @@ use near_sdk::env::panic_str;
 use near_sdk::serde_json::json;
 use map_light_client::proof::ReceiptProof;
 use crate::ChainType::{EvmChain, Unknown};
+use crate::migrate::OldMapCrossChainService;
 
 mod event;
 pub mod prover;
 mod bytes;
+mod migrate;
 
 const MCS_TOKEN_BINARY: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/mcs_token.wasm");
 
@@ -139,7 +141,7 @@ pub struct MapCrossChainService {
     // Nonce to generate order id
     pub nonce: u128,
     /// Mask determining all paused functions
-    paused: Mask,
+    pub paused: Mask,
 }
 
 #[ext_contract(ext_fungible_token)]
@@ -241,8 +243,8 @@ impl MapCrossChainService {
     #[private]
     #[init(ignore_state)]
     pub fn migrate() -> Self {
-        let this: MapCrossChainService = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
-        this
+        let old_mcs: OldMapCrossChainService = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
+        old_mcs.migrate()
     }
 
     pub fn version() -> &'static str {
@@ -536,6 +538,8 @@ impl MapCrossChainService {
             token: self.native_token_address().1,
             from,
             to,
+            from_chain: self.near_chain_id,
+            to_chain: self.map_chain_id,
             order_id,
             amount,
         };
@@ -906,6 +910,9 @@ impl MapCrossChainService {
 
     pub fn set_map_chain_id(&mut self, map_chain_id: String) {
         assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_paused(PAUSE_DEPOSIT_OUT_TOKEN)
+                    && self.is_paused(PAUSE_DEPOSIT_OUT_NATIVE),
+                "deposit out should be paused when setting map chain id");
 
         self.map_chain_id = map_chain_id.parse().unwrap();
     }
@@ -928,6 +935,13 @@ impl MapCrossChainService {
 
     pub fn upgrade_self(&mut self, code: Base64VecU8) {
         assert!(self.is_owner(), "unexpected caller {}", env::predecessor_account_id());
+        assert!(self.is_paused(PAUSE_DEPLOY_TOKEN)
+                    && self.is_paused(PAUSE_TRANSFER_IN)
+                    && self.is_paused(PAUSE_TRANSFER_OUT_TOKEN)
+                    && self.is_paused(PAUSE_TRANSFER_OUT_NATIVE)
+                    && self.is_paused(PAUSE_DEPOSIT_OUT_TOKEN)
+                    && self.is_paused(PAUSE_DEPOSIT_OUT_NATIVE),
+                "everything should be paused when upgrading mcs contract");
 
         let current_id = env::current_account_id();
         let promise_id = env::promise_batch_create(&current_id);
@@ -990,6 +1004,8 @@ impl FungibleTokenReceiver for MapCrossChainService {
                 from,
                 to: transfer_msg.to,
                 order_id,
+                from_chain: self.near_chain_id,
+                to_chain: self.map_chain_id,
                 token,
                 amount: amount.0,
             };

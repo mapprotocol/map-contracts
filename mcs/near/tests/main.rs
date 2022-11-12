@@ -286,7 +286,7 @@ async fn test_manage_near_chain_id() -> anyhow::Result<()> {
         .json::<u128>()?;
 
     println!("get_near_chain_id {}", ret);
-    assert_eq!(5566818579631833089, ret, "get default near chain id");
+    assert_eq!(1313161555, ret, "get default near chain id");
 
     let res = gen_call_transaction(&worker, &mcs, "set_near_chain_id", json!({"near_chain_id": near_chain_id}), false)
         .transact()
@@ -4653,7 +4653,7 @@ async fn deploy_and_init_mcs(worker: &Worker<Sandbox>, map_light_client: String,
             "map_light_client": map_light_client,
             "map_bridge_address":map_bridge_address,
             "wrapped_token": wrapped_token,
-            "near_chain_id": "5566818579631833089",
+            "near_chain_id": "1313161555",
         "map_chain_id": "22776"}))?
         .gas(300_000_000_000_000)
         .transact()
