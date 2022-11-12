@@ -56,19 +56,19 @@ contract MapOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         require(msg.sender == wToken, "only wToken");
     }
 
-    modifier checkOrder(bytes32 orderId) {
-        require(!orderList[orderId], "order exist");
-        orderList[orderId] = true;
+    modifier checkOrder(bytes32 _orderId) {
+        require(!orderList[_orderId], "order exist");
+        orderList[_orderId] = true;
         _;
     }
 
-    modifier checkBridgeable(address token, uint chainId) {
-        require(tokenMappingList[chainId][token], "token not registered");
+    modifier checkBridgeable(address _token, uint _chainId) {
+        require(tokenMappingList[_chainId][_token], "token not registered");
         _;
     }
 
     modifier onlyOwner() {
-        require(msg.sender == _getAdmin(), "lightnode :: only admin");
+        require(msg.sender == _getAdmin(), "mos :: only admin");
         _;
     }
 
@@ -80,19 +80,19 @@ contract MapOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         _unpause();
     }
 
-    function getOrderID(address token, address from, bytes memory to, uint amount, uint toChainID) internal returns (bytes32){
-        return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
+    function getOrderID(address _token, address _from, bytes memory _to, uint _amount, uint _toChain) internal returns (bytes32){
+        return keccak256(abi.encodePacked(nonce++, _from, _to, _token, _amount, selfChainId, _toChain));
     }
 
-    function addMintableToken(address[] memory token) external onlyOwner {
-        for (uint i = 0; i < token.length; i++) {
-            mintableTokens[token[i]] = true;
+    function addMintableToken(address[] memory _token) external onlyOwner {
+        for (uint i = 0; i < _token.length; i++) {
+            mintableTokens[_token[i]] = true;
         }
     }
 
-    function removeMintableToken(address[] memory token) external onlyOwner {
-        for (uint i = 0; i < token.length; i++) {
-            mintableTokens[token[i]] = false;
+    function removeMintableToken(address[] memory _token) external onlyOwner {
+        for (uint i = 0; i < _token.length; i++) {
+            mintableTokens[_token[i]] = false;
         }
     }
 
