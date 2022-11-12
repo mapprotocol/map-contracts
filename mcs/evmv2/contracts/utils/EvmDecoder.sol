@@ -7,7 +7,7 @@ import "../interface/IEvent.sol";
 import "./RLPReader.sol";
 import "./Utils.sol";
 
-library EventDecoder {
+library EvmDecoder {
 
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
@@ -37,7 +37,7 @@ library EventDecoder {
         }
     }
 
-    function decodeTxLog(IEvent.txLog memory log)
+    function decodeTransferOutLog(IEvent.txLog memory log)
     internal
     pure
     returns (bytes memory executorId, IEvent.transferOutEvent memory outEvent){

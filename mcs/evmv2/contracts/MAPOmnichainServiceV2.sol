@@ -113,12 +113,12 @@ contract MapOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         require(_chainId == relayChainId, "invalid chain id");
         (bool sucess, string memory message, bytes memory logArray) = lightNode.verifyProofData(_receiptProof);
         require(sucess, message);
-        IEvent.txLog[] memory logs = EventDecoder.decodeTxLogs(logArray);
+        IEvent.txLog[] memory logs = EvmDecoder.decodeTxLogs(logArray);
 
         for (uint i = 0; i < logs.length; i++) {
             IEvent.txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
-            if (topic == EventDecoder.MAP_TRANSFEROUT_TOPIC) {
+            if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC) {
                 require(relayContract == log.addr, "invalid mos contract");
                 (,bytes memory from,bytes32 orderId,uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
                 = abi.decode(log.data, (bytes, bytes, bytes32, uint, uint, bytes, uint, bytes));

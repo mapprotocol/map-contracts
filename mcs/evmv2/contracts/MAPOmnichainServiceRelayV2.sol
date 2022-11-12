@@ -156,12 +156,12 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
 
             _transferIn(_chainId, outEvent);
         } else if (chainTypes[_chainId] == chainType.EVM) {
-            IEvent.txLog[] memory logs = EventDecoder.decodeTxLogs(logArray);
+            IEvent.txLog[] memory logs = EvmDecoder.decodeTxLogs(logArray);
             for (uint256 i = 0; i < logs.length; i++) {
                 IEvent.txLog memory log = logs[i];
                 bytes32 topic = abi.decode(log.topics[0], (bytes32));
-                if (topic == EventDecoder.MAP_TRANSFEROUT_TOPIC) {
-                    (bytes memory mosContract, IEvent.transferOutEvent memory outEvent) = EventDecoder.decodeTxLog(log);
+                if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC) {
+                    (bytes memory mosContract, IEvent.transferOutEvent memory outEvent) = EvmDecoder.decodeTransferOutLog(log);
                     require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
 
                     _transferIn(_chainId, outEvent);
@@ -249,10 +249,10 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
 
             _depositIn(_chainId, depositEvent);
         } else if (chainTypes[_chainId] == chainType.EVM) {
-            IEvent.txLog[] memory logs = EventDecoder.decodeTxLogs(logArray);
+            IEvent.txLog[] memory logs = EvmDecoder.decodeTxLogs(logArray);
             for (uint256 i = 0; i < logs.length; i++) {
-                if (abi.decode(logs[i].topics[0], (bytes32)) == EventDecoder.MAP_DEPOSITOUT_TOPIC) {
-                    (bytes memory mosContract, IEvent.depositOutEvent memory depositEvent) = EventDecoder.decodeDepositOutLog(logs[i]);
+                if (abi.decode(logs[i].topics[0], (bytes32)) == EvmDecoder.MAP_DEPOSITOUT_TOPIC) {
+                    (bytes memory mosContract, IEvent.depositOutEvent memory depositEvent) = EvmDecoder.decodeDepositOutLog(logs[i]);
                     require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
 
                     _depositIn(_chainId, depositEvent);
