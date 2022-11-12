@@ -107,21 +107,21 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         _unpause();
     }
 
-    function getOrderID(address token, address from, bytes memory to, uint256 amount, uint256 toChainID) internal returns (bytes32){
-        return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
+    function _getOrderId(address _token, address _from, bytes memory _to, uint256 _amount, uint256 _toChain) internal returns (bytes32){
+        return keccak256(abi.encodePacked(nonce++, _from, _to, _token, _amount, selfChainId, _toChain));
     }
 
-    function setDistributeRate(uint id, address to, uint rate) external onlyOwner checkAddress(to) {
-        require(id < 2, "Invalid rate id");
+    function setDistributeRate(uint _id, address _to, uint _rate) external onlyOwner checkAddress(_to) {
+        require(_id < 2, "Invalid rate id");
 
-        distributeRate[id] = Rate(to, rate);
+        distributeRate[_id] = Rate(_to, _rate);
 
         require((distributeRate[0].rate).add(distributeRate[1].rate) <= 1000000, 'invalid rate value');
     }
 
-    function getFee(uint256 id, uint256 amount) view public returns (uint256, address){
-        Rate memory rate = distributeRate[id];
-        return (amount.mul(rate.rate).div(1000000), rate.receiver);
+    function getFee(uint256 _id, uint256 _amount) view public returns (uint256, address){
+        Rate memory rate = distributeRate[_id];
+        return (_amount.mul(rate.rate).div(1000000), rate.receiver);
     }
 
     function _collectFee(address _token, uint256 _mapAmount, uint256 _fromChain, uint256 _toChain) internal returns (uint256, uint256) {
@@ -206,7 +206,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             IMAPToken(_token).burn(mapOutAmount);
         }
 
-        bytes32 orderId = getOrderID(_token, _from, _to, mapOutAmount, _toChain);
+        bytes32 orderId = _getOrderId(_token, _from, _to, mapOutAmount, _toChain);
         emit mapTransferOut(Utils.toBytes(_token), Utils.toBytes(_from), orderId, selfChainId, _toChain, _to, outAmount, toToken);
     }
 
