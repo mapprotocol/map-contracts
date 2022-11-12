@@ -275,15 +275,15 @@ Transfer native token to another blockchain:
 
 The mcs contract and mcs token contract can be upgraded through multisig contract.
 
-**1. Upgrade mcs contract**
+### 1. Upgrade mcs contract
 
-**NOTE**: currently the script works on MacOS only.
+**Before upgrading mcs contract, everything (transfer in, transfer out, deposit out...) should be paused.**
 
 ```shell
-MCS_WASM_FILE=/path/to/mcs/contract  # new mcs contract wasm file
+PAUSED_MASK=63  # pause everything
 
-# request to upgrade mcs contract by multisig member
-./scripts/manage_multisig.sh request_and_confirm upgrade_mcs $MCS_WASM_FILE ${MEMBERS[1]}
+# request to pause everything by multisig member
+./scripts/manage_multisig.sh request_and_confirm set_paused $PAUSED_MASK ${MEMBERS[1]}
     
 # the request ID can be obtained from the last line of last command's output
 REQUEST_ID=
@@ -295,7 +295,65 @@ REQUEST_ID=
 # ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
 ```
 
-**2. Upgrade mcs token contract**
+**Then upgrade the mcs contract code.**
+
+The first multisig member should use **[mcs upgrade tool](https://github.com/PandaRR007/mcs-upgrade-tool)** to add request and confirm.
+
+The tool output contains a link to the transaction detail. You can get the request ID from the NEAR explorer.
+
+Other multisig member can confirm and execute the request using below command:
+
+```shell
+# the request ID can be obtained from the transaction detail in NEAR explorer
+REQUEST_ID=
+    
+# confirm the request by another member
+./scripts/manage_multisig.sh confirm $REQUEST_ID ${MEMBERS[2]}
+
+# if the request is not executed because of the time lock, anyone can execute it after REQUEST_LOCK time
+# ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
+```
+
+**Set the mcs contract state if new state is added to the contract struct.**
+
+E.g, if "map_chain_id" is added, set it using below command:
+
+```shell
+MAP_CHAIN_ID="22776"  # MAP chain ID
+
+# request to set new map light client account by multisig member
+./scripts/manage_multisig.sh request_and_confirm map_chain_id $MAP_CHAIN_ID ${MEMBERS[1]}
+    
+# the request ID can be obtained from the last line of last command's output
+REQUEST_ID=
+    
+# confirm the request by another member
+./scripts/manage_multisig.sh confirm $REQUEST_ID ${MEMBERS[2]}
+
+# if the request is not executed because of the time lock, anyone can execute it after REQUEST_LOCK time
+#./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
+```
+
+**Finally, unpause everything.**
+
+```shell
+PAUSED_MASK=0  # unpause everything
+
+# request to unpause everything by multisig member
+./scripts/manage_multisig.sh request_and_confirm set_paused $PAUSED_MASK ${MEMBERS[1]}
+    
+# the request ID can be obtained from the last line of last command's output
+REQUEST_ID=
+    
+# confirm the request by another member
+./scripts/manage_multisig.sh confirm $REQUEST_ID ${MEMBERS[2]}
+
+# if the request is not executed because of the time lock, anyone can execute it after REQUEST_LOCK time
+# ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
+```
+
+
+### 2. Upgrade mcs token contract
 
 **NOTE**: currently the script works on MacOS only.
 ```shell
@@ -315,11 +373,11 @@ REQUEST_ID=
 # ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
 ```
 
-**3. Set new MAP light client contract account**
+### 3. Set new MAP light client contract account
 
 The MCS contract supports updating the MAP light client contract account to a new one if the old one is deprecated.
 
-Before setting new client, the transfer in function should be paused.
+**Before setting new client, the transfer in function should be paused.**
 
 ```shell
 PAUSED_MASK=2  # pause transfer in
@@ -337,7 +395,7 @@ REQUEST_ID=
 # ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
 ```
 
-Then set the new client account.
+**Then set the new client account.**
 
 ```shell
 NEW_CLIENT_ACCOUNT="new_client1.testnet"  # new MAP light client account ID
@@ -355,7 +413,25 @@ REQUEST_ID=
 #./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
 ```
 
-**4. Set new multisig contract account**
+**Finally, unpause transfer in function.**
+
+```shell
+PAUSED_MASK=0  # unpause everything
+
+# request to unpause everything by multisig member
+./scripts/manage_multisig.sh request_and_confirm set_paused $PAUSED_MASK ${MEMBERS[1]}
+    
+# the request ID can be obtained from the last line of last command's output
+REQUEST_ID=
+    
+# confirm the request by another member
+./scripts/manage_multisig.sh confirm $REQUEST_ID ${MEMBERS[2]}
+
+# if the request is not executed because of the time lock, anyone can execute it after REQUEST_LOCK time
+# ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
+```
+
+### 4. Set new multisig contract account
 
 The MCS contract supports updating the multisig contract account to a new one if the old one is deprecated.
 
