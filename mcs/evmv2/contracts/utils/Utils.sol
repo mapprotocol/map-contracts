@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 
 library Utils {
 
-    function checkBytes(bytes memory b1, bytes memory b2) internal view returns (bool){
+    function checkBytes(bytes memory b1, bytes memory b2) internal pure returns (bool){
         return keccak256(b1) == keccak256(b2);
     }
 

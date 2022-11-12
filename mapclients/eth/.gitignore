@@ -1,5 +1,5 @@
 node_modules
-.env
+../../mcs/evmv2/.env
 
 #Hardhat files
 cache
