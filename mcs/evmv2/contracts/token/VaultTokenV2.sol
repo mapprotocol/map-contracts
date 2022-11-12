@@ -45,12 +45,12 @@ contract VaultTokenV2 is IVaultTokenV2, AccessControlEnumerable,ERC20Burnable {
         _;
     }
 
-    function addManager(address manager) external onlyRole(DEFAULT_ADMIN_ROLE){
-        _setupRole(MANAGER_ROLE, manager);
+    function addManager(address _manager) external onlyRole(DEFAULT_ADMIN_ROLE){
+        _setupRole(MANAGER_ROLE, _manager);
     }
 
-    function removeManager(address manager) external onlyRole(DEFAULT_ADMIN_ROLE){
-        _revokeRole(MANAGER_ROLE,manager);
+    function removeManager(address _manager) external onlyRole(DEFAULT_ADMIN_ROLE){
+        _revokeRole(MANAGER_ROLE, _manager);
     }
 
     function getVaultTokenAmount(uint256 _amount) public view returns (uint){

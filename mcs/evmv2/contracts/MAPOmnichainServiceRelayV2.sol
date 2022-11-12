@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -53,7 +53,6 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         NEAR
     }
     mapping(uint256 => chainType) public chainTypes;
-
 
     event mapDepositIn(address indexed token, bytes from, address indexed to,
         bytes32 orderId, uint256 amount, uint256 fromChain);
@@ -236,8 +235,8 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     }
 
 
-    function depositIn(uint256 _fromChain, bytes memory receiptProof) external payable nonReentrant whenNotPaused {
-        (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_fromChain, receiptProof);
+    function depositIn(uint256 _fromChain, bytes memory _receiptProof) external payable nonReentrant whenNotPaused {
+        (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_fromChain, _receiptProof);
         require(success, message);
 
         uint256 fromChain = _fromChain;
@@ -264,25 +263,25 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         }
     }
 
-    function depositToken(address token, address to, uint amount) external override {
-        require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
+    function depositToken(address _token, address _to, uint _amount) external override {
+        require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
 
-        TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
+        TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
 
-        _deposit(token, Utils.toBytes(msg.sender), payable(to), amount, bytes32(""), selfChainId);
+        _deposit(_token, Utils.toBytes(msg.sender), payable(_to), _amount, bytes32(""), selfChainId);
     }
 
-    function depositNative(address to) external override payable whenNotPaused {
+    function depositNative(address _to) external override payable whenNotPaused {
         uint256 amount = msg.value;
         require(amount > 0, "value too low");
 
         IWToken(wToken).deposit{value : amount}();
 
-        _deposit(wToken, Utils.toBytes(msg.sender), payable(to), amount, bytes32(""), selfChainId);
+        _deposit(wToken, Utils.toBytes(msg.sender), payable(_to), amount, bytes32(""), selfChainId);
     }
 
-    function _depositIn(bytes memory _fromToken, bytes memory _from, address payable _to, uint256 _amount, bytes32 orderId, uint256 _fromChain)
-    internal checkOrder(orderId) {
+    function _depositIn(bytes memory _fromToken, bytes memory _from, address payable _to, uint256 _amount, bytes32 _orderId, uint256 _fromChain)
+    internal checkOrder(_orderId) {
         address token = tokenRegister.getRelayChainToken(_fromChain, _fromToken);
         require(token != address(0), "map token not registered");
 
@@ -292,7 +291,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             IMAPToken(token).mint(address(this), mapAmount);
         }
 
-        _deposit(token, _from, _to, mapAmount, orderId, _fromChain);
+        _deposit(token, _from, _to, mapAmount, _orderId, _fromChain);
     }
 
     function _deposit(address _token, bytes memory _from, address payable _to, uint256 _amount, bytes32 _orderId, uint256 _fromChain)
@@ -319,11 +318,11 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     }
 
 
-    function emergencyWithdraw(address _token, address payable _receiver, uint256 _amount) public onlyOwner {
+    function emergencyWithdraw(address _token, address payable _receiver, uint256 _amount) external onlyOwner {
         _withdraw(_token, _receiver, _amount);
     }
 
-    function _withdraw(address _token, address payable _receiver, uint256 _amount) public onlyOwner {
+    function _withdraw(address _token, address payable _receiver, uint256 _amount) internal {
         if (_token == wToken) {
             TransferHelper.safeWithdraw(wToken, _amount);
             TransferHelper.safeTransferETH(_receiver, _amount);
