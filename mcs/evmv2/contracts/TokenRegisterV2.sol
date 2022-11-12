@@ -10,7 +10,7 @@ import "./utils/Utils.sol";
 contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
     using SafeMath for uint;
 
-    bytes32 constant MAX_RATE_UNI = 1000000;
+    uint256 constant MAX_RATE_UNI = 1000000;
 
     struct FeeRate {
         uint256     lowest;

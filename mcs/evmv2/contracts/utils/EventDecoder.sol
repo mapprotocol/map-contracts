@@ -41,7 +41,7 @@ library EventDecoder {
         bytes data;
     }
 
-    function decodeTxLog(bytes memory logsHash)
+    function decodeTxLogs(bytes memory logsHash)
     internal
     pure
     returns (txLog[] memory _txLogs){
@@ -142,5 +142,4 @@ library EventDecoder {
         });
 
     }
-
 }

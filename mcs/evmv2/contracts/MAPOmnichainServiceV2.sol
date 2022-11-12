@@ -109,7 +109,7 @@ contract MapOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         tokenMappingList[_toChain][_token] = _enable;
     }
 
-    function transferIn(uint _chainId, bytes memory _receiptProof) external override nonReentrant whenNotPaused {
+    function transferIn(uint _chainId, bytes memory _receiptProof) external nonReentrant whenNotPaused {
         require(_chainId == relayChainId, "invalid chain id");
         (bool sucess, string memory message, bytes memory logArray) = lightNode.verifyProofData(_receiptProof);
         require(sucess, message);
@@ -129,10 +129,6 @@ contract MapOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         }
     }
 
-
-    function transferOut(address toContract, uint toChain, bytes memory data) external override whenNotPaused {
-
-    }
 
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain)
     external override

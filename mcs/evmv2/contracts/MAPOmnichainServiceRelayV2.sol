@@ -151,7 +151,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         return (mapOutAmount, outAmount);
     }
 
-    function transferIn(uint256 _chainId, bytes memory _receiptProof) external override {
+    function transferIn(uint256 _chainId, bytes memory _receiptProof) external {
         (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_chainId, _receiptProof);
         require(success, message);
         if (chainTypes[_chainId] == chainType.NEAR) {
@@ -176,9 +176,6 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         }
     }
 
-    function transferOut(address _toContract, uint256 _toChain, bytes memory _data) external override {
-
-    }
 
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused {
         require(_toChain != selfChainId, "only other chain");
