@@ -553,8 +553,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         order_id : logList[2].toBytes(),
         from_chain : logList[3].toUint(),
         to_chain : logList[4].toUint(),
-        to : logList[3].toBytes(),
-        amount : logList[3].toUint()
+        to : logList[5].toBytes(),
+        amount : logList[6].toUint()
         });
 
     }
