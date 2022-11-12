@@ -47,4 +47,13 @@ library EventDecoder {
         = abi.decode(log.data, (bytes, bytes, bytes32, uint256, uint256, bytes, uint256, bytes));
     }
 
+    function decodeDepositOutLog(IEvent.txLog memory log)
+    internal
+    pure
+    returns (bytes memory executorId, IEvent.depositOutEvent memory depositEvent){
+        executorId = Utils.toBytes(log.addr);
+        (depositEvent.token, depositEvent.from, depositEvent.orderId, depositEvent.fromChain,
+        depositEvent.toChain, depositEvent.to, depositEvent.amount)
+        = abi.decode(log.data, (bytes, bytes, bytes32, uint256, uint256, bytes, uint256));
+    }
 }

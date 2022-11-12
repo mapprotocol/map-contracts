@@ -80,8 +80,11 @@ library NearDecoder {
         token : logList[0].toBytes(),
         from : logList[1].toBytes(),
         orderId : bytes32(logList[2].toBytes()),
-        to : logList[3].toBytes(),
-        amount : logList[4].toUint()
+
+        fromChain : logList[3].toUint(),
+        toChain : logList[4].toUint(),
+        to : logList[5].toBytes(),
+        amount : logList[6].toUint()
         });
 
     }

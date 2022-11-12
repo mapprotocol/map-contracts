@@ -239,27 +239,23 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     }
 
 
-    function depositIn(uint256 _fromChain, bytes memory _receiptProof) external payable nonReentrant whenNotPaused {
-        (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_fromChain, _receiptProof);
+    function depositIn(uint256 _chainId, bytes memory _receiptProof) external payable nonReentrant whenNotPaused {
+        (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_chainId, _receiptProof);
         require(success, message);
 
-        uint256 fromChain = _fromChain;
-        if (chainTypes[fromChain] == chainType.NEAR) {
-            (bytes memory mcsContract, IEvent.depositOutEvent memory outEvent) = NearDecoder.decodeNearDepositLog(logArray);
-            require(Utils.checkBytes(mcsContract, mosContracts[fromChain]), "invalid mos contract");
+        if (chainTypes[_chainId] == chainType.NEAR) {
+            (bytes memory mosContract, IEvent.depositOutEvent memory depositEvent) = NearDecoder.decodeNearDepositLog(logArray);
+            require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
 
-            address payable toAddress = payable(Utils.fromBytes(outEvent.to));
-            _depositIn(outEvent.token, outEvent.from, toAddress, outEvent.amount, bytes32(outEvent.orderId), fromChain);
-        } else if (chainTypes[fromChain] == chainType.EVM) {
+            _depositIn(_chainId, depositEvent);
+        } else if (chainTypes[_chainId] == chainType.EVM) {
             IEvent.txLog[] memory logs = EventDecoder.decodeTxLogs(logArray);
             for (uint256 i = 0; i < logs.length; i++) {
                 if (abi.decode(logs[i].topics[0], (bytes32)) == EventDecoder.MAP_DEPOSITOUT_TOPIC) {
-                    require(logs[i].addr == Utils.fromBytes(mosContracts[fromChain]), "invalid mos contract");
-                    (address fromToken, bytes memory from, bytes32 orderId, address to, uint256 amount)
-                    = abi.decode(logs[i].data, (address, bytes, bytes32, address, uint256));
+                    (bytes memory mosContract, IEvent.depositOutEvent memory depositEvent) = EventDecoder.decodeDepositOutLog(logs[i]);
+                    require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
 
-                    bytes memory fromTokenBytes = Utils.toBytes(fromToken);
-                    _depositIn(fromTokenBytes, from, payable(to), amount, orderId, fromChain);
+                    _depositIn(_chainId, depositEvent);
                 }
             }
         } else {
@@ -270,7 +266,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     function depositToken(address _token, address _to, uint _amount) external override {
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
 
-        _deposit(_token, Utils.toBytes(msg.sender), payable(_to), _amount, bytes32(""), selfChainId);
+        _deposit(_token, Utils.toBytes(msg.sender), _to, _amount, bytes32(""), selfChainId);
     }
 
     function depositNative(address _to) external override payable whenNotPaused {
@@ -279,25 +275,25 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
 
         IWToken(wToken).deposit{value : amount}();
 
-        _deposit(wToken, Utils.toBytes(msg.sender), payable(_to), amount, bytes32(""), selfChainId);
+        _deposit(wToken, Utils.toBytes(msg.sender), _to, amount, bytes32(""), selfChainId);
     }
 
-    function _depositIn(bytes memory _fromToken, bytes memory _from, address payable _to, uint256 _amount, bytes32 _orderId, uint256 _fromChain)
-    internal checkOrder(_orderId) {
-
-        address token = tokenRegister.getRelayChainToken(_fromChain, _fromToken);
+    function _depositIn(uint256 _chainId, IEvent.depositOutEvent memory _depositEvent)
+    internal checkOrder(_depositEvent.orderId) {
+        require(_chainId == _depositEvent.fromChain, "invalid chain id");
+        address token = tokenRegister.getRelayChainToken(_depositEvent.fromChain, _depositEvent.token);
         require(token != address(0), "map token not registered");
 
-        uint256 mapAmount = tokenRegister.getRelayChainAmount(token, _fromChain, _amount);
+        uint256 mapAmount = tokenRegister.getRelayChainAmount(token, _depositEvent.fromChain, _depositEvent.amount);
 
         if (tokenRegister.checkMintable(token)) {
             IMAPToken(token).mint(address(this), mapAmount);
         }
 
-        _deposit(token, _from, _to, mapAmount, _orderId, _fromChain);
+        _deposit(token, _depositEvent.from, Utils.fromBytes(_depositEvent.to), mapAmount, _depositEvent.orderId, _depositEvent.fromChain);
     }
 
-    function _deposit(address _token, bytes memory _from, address payable _to, uint256 _amount, bytes32 _orderId, uint256 _fromChain)
+    function _deposit(address _token, bytes memory _from, address _to, uint256 _amount, bytes32 _orderId, uint256 _fromChain)
     internal  {
         address vaultToken = tokenRegister.getVaultToken(_token);
         require(vaultToken != address(0), "vault token not registered");
