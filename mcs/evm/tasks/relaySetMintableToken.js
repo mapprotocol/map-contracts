@@ -5,11 +5,11 @@ module.exports = async (taskArgs,hre) => {
 
     console.log("deployer address:",deployer.address);
 
-    let proxy = await hre.deployments.get("MapCrossChainServiceRelayProxy");
+    let proxy = await hre.deployments.get("MAPCrossChainServiceRelayProxy");
 
     console.log("mos relay address:", proxy.address);
 
-    let mosProxy = await ethers.getContractAt('MapCrossChainServiceRelay',proxy.address);
+    let mosProxy = await ethers.getContractAt('MAPCrossChainServiceRelay',proxy.address);
 
     let tokens = taskArgs.token.split(",");
     if (taskArgs.mintable) {

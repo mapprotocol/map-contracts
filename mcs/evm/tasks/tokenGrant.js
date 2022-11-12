@@ -12,7 +12,7 @@ module.exports = async (taskArgs,hre) => {
 
     let minter;
     if (taskArgs.minter === "relay") {
-        let mcs = await ethers.getContract('MapCrossChainServiceRelayProxy');
+        let mcs = await ethers.getContract('MAPCrossChainServiceRelayProxy');
         minter = mcs.address;
     } else if (taskArgs.minter === "mos") {
         let mcs = await ethers.getContract('MapCrossChainServiceProxy');
