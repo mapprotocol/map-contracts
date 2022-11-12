@@ -98,7 +98,7 @@ contract VaultTokenV2 is IVaultTokenV2, AccessControlEnumerable,ERC20Burnable {
         vaultBalance[_toChain] -= int256(_outAmount);
 
         uint256 fee = _amount - _outAmount - _fee;
-        vaultBalance[_relayChain] += fee;
+        vaultBalance[_relayChain] += int256(fee);
         totalVault += fee;
     }
 }
