@@ -18,7 +18,7 @@ import "./interface/IMOSV2.sol";
 import "./interface/ILightNode.sol";
 import "./utils/RLPReader.sol";
 import "./utils/Utils.sol";
-import "./utils/EventDecoder.sol";
+import "./utils/EvmDecoder.sol";
 
 
 contract MapOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOSV2, UUPSUpgradeable {
@@ -113,10 +113,10 @@ contract MapOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         require(_chainId == relayChainId, "invalid chain id");
         (bool sucess, string memory message, bytes memory logArray) = lightNode.verifyProofData(_receiptProof);
         require(sucess, message);
-        EventDecoder.txLog[] memory logs = EventDecoder.decodeTxLogs(logArray);
+        IEvent.txLog[] memory logs = EventDecoder.decodeTxLogs(logArray);
 
         for (uint i = 0; i < logs.length; i++) {
-            EventDecoder.txLog memory log = logs[i];
+            IEvent.txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
             if (topic == EventDecoder.MAP_TRANSFEROUT_TOPIC) {
                 require(relayContract == log.addr, "invalid mos contract");

@@ -27,5 +27,33 @@ The repository has the following packages (sub projects):
 3. Light Clients on MAP
 
 4. MOS Relay contracts
+  fee, register, relay, proxy
+  set fee
 
 5. MOS contracts on other chains
+  mcs, proxy
+  relay register (chain type, address)
+  setrelay
+
+
+6. token register (map <-> chain)
+  relay:
+  a. create map token if needed
+  b. set auth token(if needed)
+  c. create map vault
+  d. bind vault and token
+  e. set fee
+  f. relay token register (decimal, chain token)
+  
+  mos:
+  a. mos set auth token
+  b. mos register token
+
+7. token update
+  a. relay set fee
+  b. relay token register (decimal, chain token)
+  c. mos set auth token if neened
+  d. mos register token
+
+7. token deploy
+   a. 
