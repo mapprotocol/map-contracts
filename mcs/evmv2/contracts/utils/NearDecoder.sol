@@ -17,7 +17,7 @@ library NearDecoder {
 
     function decodeNearLog(bytes memory _logs)
     internal
-    view
+    pure
     returns (bytes memory executorId, IEvent.transferOutEvent memory outEvent){
         RLPReader.RLPItem[] memory ls = _logs.toRlpItem().toList();
 
@@ -54,7 +54,7 @@ library NearDecoder {
 
     function decodeNearDepositLog(bytes memory _logs)
     public
-    view
+    pure
     returns (bytes memory executorId, IEvent.depositOutEvent memory outEvent){
         RLPReader.RLPItem[] memory ls = _logs.toRlpItem().toList();
 
