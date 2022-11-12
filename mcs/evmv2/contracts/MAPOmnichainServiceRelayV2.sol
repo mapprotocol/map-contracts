@@ -27,43 +27,39 @@ import "./utils/Utils.sol";
 contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable, IMOSV2, UUPSUpgradeable {
     using SafeMath for uint256;
 
-    uint256 public nonce;
-
-    ITokenRegisterV2 public tokenRegister;
-    ILightClientManager public lightClientManager;
-
-    address public wToken;        // native wrapped token
-
-    uint256 public immutable selfChainId = block.chainid;
-
-    mapping(bytes32 => bool) public orderList;
-
-    mapping(uint256 => bytes) mosContracts;
-
     struct Rate{
         address receiver;
         uint rate;
     }
-    //id : 0 VToken  1:relayer
-    mapping(uint => Rate) distributeRate;
-
     enum chainType{
         NULL,
         EVM,
         NEAR
     }
+
+    uint256 public immutable selfChainId = block.chainid;
+    uint256 public nonce;
+    address public wToken;        // native wrapped token
+    //id : 0 VToken  1:relayer
+    ITokenRegisterV2 public tokenRegister;
+    ILightClientManager public lightClientManager;
+
+    mapping(uint => Rate) distributeRate;
+    mapping(bytes32 => bool) public orderList;
+    mapping(uint256 => bytes) mosContracts;
     mapping(uint256 => chainType) public chainTypes;
 
     event mapDepositIn(address indexed token, bytes from, address indexed to,
         bytes32 orderId, uint256 amount, uint256 fromChain);
 
+
     function initialize(address _wToken, address _managerAddress) public initializer
     checkAddress(_wToken) checkAddress(_managerAddress) {
         wToken = _wToken;
         lightClientManager = ILightClientManager(_managerAddress);
-
         _changeAdmin(msg.sender);
     }
+
 
     receive() external payable {
         require(msg.sender == wToken, "only wToken");
@@ -86,6 +82,15 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         _;
     }
 
+
+    function setPause() external onlyOwner {
+        _pause();
+    }
+
+    function setUnpause() external onlyOwner {
+        _unpause();
+    }
+
     function setTokenManager(address _register) external onlyOwner checkAddress(_register) {
         tokenRegister = ITokenRegisterV2(_register);
     }
@@ -99,16 +104,21 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         chainTypes[_chainId] = _type;
     }
 
-    function setPause() external onlyOwner {
-        _pause();
+    // withdraw deposit token using vault token.
+    function withdraw(address _vaultToken, uint256 _vaultAmount) external {
+        require(_vaultToken != address(0), "vault token not registered");
+        address token = IVaultTokenV2(_vaultToken).getTokenAddress();
+        address vaultToken = tokenRegister.getVaultToken(token);
+        require(_vaultToken == vaultToken, "Invalid vault token");
+
+        uint256 amount = IVaultTokenV2(vaultToken).getTokenAmount(_vaultAmount);
+        IVaultTokenV2(vaultToken).withdraw(selfChainId, _vaultAmount, msg.sender);
+
+        _withdraw(token, payable(msg.sender), amount);
     }
 
-    function setUnpause() external onlyOwner {
-        _unpause();
-    }
-
-    function _getOrderId(address _token, address _from, bytes memory _to, uint256 _amount, uint256 _toChain) internal returns (bytes32){
-        return keccak256(abi.encodePacked(nonce++, _from, _to, _token, _amount, selfChainId, _toChain));
+    function emergencyWithdraw(address _token, address payable _receiver, uint256 _amount) external onlyOwner {
+        _withdraw(_token, _receiver, _amount);
     }
 
     function setDistributeRate(uint _id, address _to, uint _rate) external onlyOwner checkAddress(_to) {
@@ -119,39 +129,33 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         require((distributeRate[0].rate).add(distributeRate[1].rate) <= 1000000, 'invalid rate value');
     }
 
-    function getFee(uint256 _id, uint256 _amount) view public returns (uint256, address){
-        Rate memory rate = distributeRate[_id];
-        return (_amount.mul(rate.rate).div(1000000), rate.receiver);
+    function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused {
+        require(_toChain != selfChainId, "only other chain");
+        require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
+
+        TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
+        _transferOut(_token, msg.sender, _to, _amount, _toChain);
     }
 
-    function _collectFee(address _token, uint256 _mapAmount, uint256 _fromChain, uint256 _toChain) internal returns (uint256, uint256) {
-        address token = _token;
-        address vaultToken = tokenRegister.getVaultToken(token);
-        require(vaultToken != address(0), "vault token not registered");
+    function transferOutNative(bytes memory _to, uint256 _toChain) external override payable whenNotPaused {
+        require(_toChain != selfChainId, "only other chain");
+        uint256 amount = msg.value;
+        require(amount > 0, "value too low");
+        IWToken(wToken).deposit{value : amount}();
+        _transferOut(wToken, msg.sender, _to, amount, _toChain);
+    }
 
-        uint256 fee = tokenRegister.getTokenFee(token, _mapAmount, _toChain);
+    function depositToken(address _token, address _to, uint _amount) external override {
+        require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
 
-        uint256 mapOutAmount = 0;
-        uint256 outAmount = 0;
-        if (_mapAmount > fee) {
-            uint256 mapOutAmount = _mapAmount - fee;
-            uint256 outAmount = tokenRegister.getToChainAmount(token, mapOutAmount, _toChain);
-        } else {
-            fee = _mapAmount;
-        }
+        _deposit(_token, Utils.toBytes(msg.sender), _to, _amount, bytes32(""), selfChainId);
+    }
 
-        uint256 otherFee = 0;
-        if (fee > 0) {
-            (uint256 vaultFee,) = getFee(0, fee);
-            otherFee = fee - vaultFee;
-
-            (uint256 out, address receiver) = getFee(1, fee);
-            _withdraw(token, payable(receiver), out);
-        }
-
-        IVaultTokenV2(vaultToken).transferToken(_fromChain, _mapAmount, _toChain, mapOutAmount, selfChainId, otherFee);
-
-        return (mapOutAmount, outAmount);
+    function depositNative(address _to) external override payable whenNotPaused {
+        uint256 amount = msg.value;
+        require(amount > 0, "value too low");
+        IWToken(wToken).deposit{value : amount}();
+        _deposit(wToken, Utils.toBytes(msg.sender), _to, amount, bytes32(""), selfChainId);
     }
 
     function transferIn(uint256 _chainId, bytes memory _receiptProof) external {
@@ -179,21 +183,69 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         }
     }
 
+    function depositIn(uint256 _chainId, bytes memory _receiptProof) external payable nonReentrant whenNotPaused {
+        (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_chainId, _receiptProof);
+        require(success, message);
 
-    function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused {
-        require(_toChain != selfChainId, "only other chain");
-        require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
+        if (chainTypes[_chainId] == chainType.NEAR) {
+            (bytes memory mosContract, IEvent.depositOutEvent memory depositEvent) = NearDecoder.decodeNearDepositLog(logArray);
+            require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
 
-        TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
-        _transferOut(_token, msg.sender, _to, _amount, _toChain);
+            _depositIn(_chainId, depositEvent);
+        } else if (chainTypes[_chainId] == chainType.EVM) {
+            IEvent.txLog[] memory logs = EvmDecoder.decodeTxLogs(logArray);
+            for (uint256 i = 0; i < logs.length; i++) {
+                if (abi.decode(logs[i].topics[0], (bytes32)) == EvmDecoder.MAP_DEPOSITOUT_TOPIC) {
+                    (bytes memory mosContract, IEvent.depositOutEvent memory depositEvent) = EvmDecoder.decodeDepositOutLog(logs[i]);
+                    require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
+
+                    _depositIn(_chainId, depositEvent);
+                }
+            }
+        } else {
+            require(true, "chain type error");
+        }
     }
 
-    function transferOutNative(bytes memory _to, uint256 _toChain) external override payable whenNotPaused {
-        require(_toChain != selfChainId, "only other chain");
-        uint256 amount = msg.value;
-        require(amount > 0, "value too low");
-        IWToken(wToken).deposit{value : amount}();
-        _transferOut(wToken, msg.sender, _to, amount, _toChain);
+
+    function getFee(uint256 _id, uint256 _amount) view public returns (uint256, address){
+        Rate memory rate = distributeRate[_id];
+        return (_amount.mul(rate.rate).div(1000000), rate.receiver);
+    }
+
+
+    function _getOrderId(address _token, address _from, bytes memory _to, uint256 _amount, uint256 _toChain) internal returns (bytes32){
+        return keccak256(abi.encodePacked(nonce++, _from, _to, _token, _amount, selfChainId, _toChain));
+    }
+
+    function _collectFee(address _token, uint256 _mapAmount, uint256 _fromChain, uint256 _toChain) internal returns (uint256, uint256) {
+        address token = _token;
+        address vaultToken = tokenRegister.getVaultToken(token);
+        require(vaultToken != address(0), "vault token not registered");
+
+        uint256 fee = tokenRegister.getTokenFee(token, _mapAmount, _toChain);
+
+        uint256 mapOutAmount = 0;
+        uint256 outAmount = 0;
+        if (_mapAmount > fee) {
+            mapOutAmount = _mapAmount - fee;
+            outAmount = tokenRegister.getToChainAmount(token, mapOutAmount, _toChain);
+        } else {
+            fee = _mapAmount;
+        }
+
+        uint256 otherFee = 0;
+        if (fee > 0) {
+            (uint256 vaultFee,) = getFee(0, fee);
+            otherFee = fee - vaultFee;
+
+            (uint256 out, address receiver) = getFee(1, fee);
+            _withdraw(token, payable(receiver), out);
+        }
+
+        IVaultTokenV2(vaultToken).transferToken(_fromChain, _mapAmount, _toChain, mapOutAmount, selfChainId, otherFee);
+
+        return (mapOutAmount, outAmount);
     }
 
     function _transferOut(address _token, address _from, bytes memory _to, uint256 _amount, uint256 _toChain) internal {
@@ -245,46 +297,6 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             _outEvent.to, outAmount, toChainToken);
     }
 
-
-    function depositIn(uint256 _chainId, bytes memory _receiptProof) external payable nonReentrant whenNotPaused {
-        (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_chainId, _receiptProof);
-        require(success, message);
-
-        if (chainTypes[_chainId] == chainType.NEAR) {
-            (bytes memory mosContract, IEvent.depositOutEvent memory depositEvent) = NearDecoder.decodeNearDepositLog(logArray);
-            require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
-
-            _depositIn(_chainId, depositEvent);
-        } else if (chainTypes[_chainId] == chainType.EVM) {
-            IEvent.txLog[] memory logs = EvmDecoder.decodeTxLogs(logArray);
-            for (uint256 i = 0; i < logs.length; i++) {
-                if (abi.decode(logs[i].topics[0], (bytes32)) == EvmDecoder.MAP_DEPOSITOUT_TOPIC) {
-                    (bytes memory mosContract, IEvent.depositOutEvent memory depositEvent) = EvmDecoder.decodeDepositOutLog(logs[i]);
-                    require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
-
-                    _depositIn(_chainId, depositEvent);
-                }
-            }
-        } else {
-            require(true, "chain type error");
-        }
-    }
-
-    function depositToken(address _token, address _to, uint _amount) external override {
-        require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
-
-        _deposit(_token, Utils.toBytes(msg.sender), _to, _amount, bytes32(""), selfChainId);
-    }
-
-    function depositNative(address _to) external override payable whenNotPaused {
-        uint256 amount = msg.value;
-        require(amount > 0, "value too low");
-
-        IWToken(wToken).deposit{value : amount}();
-
-        _deposit(wToken, Utils.toBytes(msg.sender), _to, amount, bytes32(""), selfChainId);
-    }
-
     function _depositIn(uint256 _chainId, IEvent.depositOutEvent memory _depositEvent)
     internal checkOrder(_depositEvent.orderId) {
         require(_chainId == _depositEvent.fromChain, "invalid chain id");
@@ -309,25 +321,6 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         emit mapDepositIn(_token, _from, _to, _orderId, _amount, _fromChain);
     }
 
-
-    // withdraw deposit token using vault token.
-    function withdraw(address _vaultToken, uint256 _vaultAmount) external {
-        require(_vaultToken != address(0), "vault token not registered");
-        address token = IVaultTokenV2(_vaultToken).getTokenAddress();
-        address vaultToken = tokenRegister.getVaultToken(token);
-        require(_vaultToken == vaultToken, "Invalid vault token");
-
-        uint256 amount = IVaultTokenV2(vaultToken).getTokenAmount(_vaultAmount);
-        IVaultTokenV2(vaultToken).withdraw(selfChainId, _vaultAmount, msg.sender);
-
-        _withdraw(token, payable(msg.sender), amount);
-    }
-
-
-    function emergencyWithdraw(address _token, address payable _receiver, uint256 _amount) external onlyOwner {
-        _withdraw(_token, _receiver, _amount);
-    }
-
     function _withdraw(address _token, address payable _receiver, uint256 _amount) internal {
         if (_token == wToken) {
             TransferHelper.safeWithdraw(wToken, _amount);
@@ -338,19 +331,12 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     }
 
 
-
-
     /** UUPS *********************************************************/
-    function _authorizeUpgrade(address)
-    internal
-    view
-    override {
+    function _authorizeUpgrade(address) internal view override {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 
-    function changeAdmin(address _admin)
-    public onlyOwner
-    checkAddress(_admin) {
+    function changeAdmin(address _admin) external onlyOwner checkAddress(_admin) {
         _changeAdmin(_admin);
     }
 
