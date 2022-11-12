@@ -169,7 +169,12 @@ contract MapOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         address from = msg.sender;
         //require(IERC20(token).balanceOf(_from) >= _amount, "balance too low");
 
-        TransferHelper.safeTransferFrom(_token, from, address(this), _amount);
+        if (checkMintable(_token)) {
+            IMAPToken(_token).burnFrom(from, _amount);
+        } else {
+            TransferHelper.safeTransferFrom(_token, from, address(this), _amount);
+        }
+
         bytes32 orderId = getOrderID(_token, from, Utils.toBytes(_to), _amount, relayChainId);
         emit mapDepositOut(_token, Utils.toBytes(from), orderId, selfChainId, relayChainId, _to, _amount);
     }
@@ -188,6 +193,7 @@ contract MapOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
 
     function _transferIn(address _token, bytes memory _from, address payable _to, uint _amount, bytes32 _orderId, uint _fromChain, uint _toChain)
     internal checkOrder(_orderId) {
+        require(_toChain == selfChainId, "invalid chain id");
         if (_token == wToken) {
             TransferHelper.safeWithdraw(wToken, _amount);
             TransferHelper.safeTransferETH(_to, _amount);
