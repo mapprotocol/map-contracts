@@ -36,7 +36,7 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
     // [chain_id => [source_token => map_token]]
     mapping(uint256 => mapping(bytes => address)) public tokenMappingList;
 
-    mapping(address => Token) tokenList;
+    mapping(address => Token) public tokenList;
 
 
     function registerToken(address _token, address _vaultToken, uint8 _decimals, bool _mintable)

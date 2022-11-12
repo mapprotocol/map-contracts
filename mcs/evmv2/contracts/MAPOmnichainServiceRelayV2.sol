@@ -111,8 +111,9 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
 
-    function setDistributeRate(uint id, address to, uint rate) external onlyOwner {
+    function setDistributeRate(uint id, address to, uint rate) external onlyOwner checkAddress(to) {
         require(id < 2, "Invalid rate id");
+
         distributeRate[id] = Rate(to, rate);
 
         require((distributeRate[0].rate).add(distributeRate[1].rate) <= 1000000, 'invalid rate value');
@@ -130,10 +131,16 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
 
         uint256 fee = tokenRegister.getTokenFee(token, _mapAmount, _toChain);
 
-        uint256 mapOutAmount = _mapAmount - fee;
-        uint256 outAmount = tokenRegister.getToChainAmount(token, mapOutAmount, _toChain);
+        uint256 mapOutAmount = 0;
+        uint256 outAmount = 0;
+        if (_mapAmount > fee) {
+            uint256 mapOutAmount = _mapAmount - fee;
+            uint256 outAmount = tokenRegister.getToChainAmount(token, mapOutAmount, _toChain);
+        } else {
+            fee = _mapAmount;
+        }
 
-        uint256 otherFee;
+        uint256 otherFee = 0;
         if (fee > 0) {
             (uint256 vaultFee,) = getFee(0, fee);
             otherFee = fee - vaultFee;
