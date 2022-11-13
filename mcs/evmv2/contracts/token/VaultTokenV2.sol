@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "../interface/IVaultTokenV2.sol";
 import "../utils/TransferHelper.sol";
 
@@ -17,12 +16,12 @@ contract VaultTokenV2 is IVaultTokenV2, AccessControlEnumerable,ERC20Burnable {
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
+    address public underlying;
     // chain_id => vault_value
     mapping(uint256 => int256) public vaultBalance;
-
-    address public underlying;
     uint256 public totalVault;
-    uint8 _decimals;
+
+    uint8 private _decimals;
 
     event DepositVault(address indexed token, address indexed to, uint256 vaultValue, uint256 value);
     event WithdrawVault(address indexed token, address indexed to, uint256 vaultValue, uint256 value);
@@ -35,6 +34,7 @@ contract VaultTokenV2 is IVaultTokenV2, AccessControlEnumerable,ERC20Burnable {
      * See {ERC20-constructor}.
      */
     constructor(address _underlying, string memory _name, string memory _symbol) ERC20(_name, _symbol) {
+        require(_underlying != address(0), "underlying address is zero");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
 
         _setupRole(MANAGER_ROLE, _msgSender());
