@@ -6,6 +6,7 @@ require('hardhat-abi-exporter')
 require('@nomiclabs/hardhat-ethers')
 require('dotenv/config')
 require('@nomiclabs/hardhat-etherscan')
+require('@nomiclabs/hardhat-waffle')
 require('solidity-coverage')
 require('./tasks')
 
@@ -30,7 +31,7 @@ module.exports = {
         //url: `https://bsc-dataseed.eme-node.com`,
         //url: `https://bsc-dataseed2.defibit.io/`,
       },
-      allowUnlimitedContractSize: true,
+      netallowUnlimitedContractSize: true,
       live: true,
       saveDeployments: false,
       tags: ['local'],

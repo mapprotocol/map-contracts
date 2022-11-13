@@ -113,7 +113,6 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
 
         uint256 amount = IVaultTokenV2(vaultToken).getTokenAmount(_vaultAmount);
         IVaultTokenV2(vaultToken).withdraw(selfChainId, _vaultAmount, msg.sender);
-
         _withdraw(token, payable(msg.sender), amount);
     }
 
@@ -148,6 +147,8 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     function depositToken(address _token, address _to, uint _amount) external override {
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
 
+        TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
+
         _deposit(_token, Utils.toBytes(msg.sender), _to, _amount, bytes32(""), selfChainId);
     }
 
@@ -164,7 +165,6 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         if (chainTypes[_chainId] == chainType.NEAR) {
             (bytes memory mosContract, IEvent.transferOutEvent memory outEvent) = NearDecoder.decodeNearLog(logArray);
             require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
-
             _transferIn(_chainId, outEvent);
         } else if (chainTypes[_chainId] == chainType.EVM) {
             IEvent.txLog[] memory logs = EvmDecoder.decodeTxLogs(logArray);
@@ -267,10 +267,8 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         require(_chainId == _outEvent.fromChain, "invalid chain id");
         address token = tokenRegister.getRelayChainToken(_outEvent.fromChain, _outEvent.token);
         require(token != address(0), "map token not registered");
-
         bytes memory toChainToken = tokenRegister.getToChainToken(token, _outEvent.toChain);
         require(!Utils.checkBytes(toChainToken, bytes("")), "out token not registered");
-
         uint256 mapAmount = tokenRegister.getRelayChainAmount(token, _outEvent.fromChain, _outEvent.amount);
         if (tokenRegister.checkMintable(token)) {
             IMAPToken(token).mint(address(this), mapAmount);
