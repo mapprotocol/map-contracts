@@ -38,10 +38,14 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
 
     mapping(address => Token) public tokenList;
 
+    modifier checkAddress(address _address){
+        require(_address != address(0), "address is zero");
+        _;
+    }
 
     function registerToken(address _token, address _vaultToken, uint8 _decimals, bool _mintable)
     external
-    onlyOwner {
+    onlyOwner checkAddress(_token) checkAddress(_vaultToken) {
         Token storage token = tokenList[_token];
         token.vaultToken = _vaultToken;
         token.decimals = _decimals;
@@ -51,10 +55,12 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
     function mapToken(address _token, uint256 _fromChain, bytes memory _fromToken, uint8 _decimals)
     external
     onlyOwner {
+        require(!Utils.checkBytes(_fromToken, bytes("")), "invalid from token");
         Token storage token = tokenList[_token];
-        require(token.vaultToken != address(0), "Invalid map token");
+        require(token.vaultToken != address(0), "invalid map token");
         token.tokenDecimals[_fromChain] = _decimals;
         token.mappingTokens[_fromChain] = _fromToken;
+        tokenMappingList[_fromChain][_fromToken] = _token;
     }
 
     function setTokenFee( address _token, uint256 _toChain, uint _lowest, uint _highest,uint _rate) external onlyOwner {
