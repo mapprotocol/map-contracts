@@ -85,14 +85,14 @@ describe("MAPOmnichainServiceV2 start test", function () {
         await mcss.setRelayContract(34434,mcsData.mcsRelay);
         await mcss.setRelayContract(212,mcsData.mcsRelay);
 
-        await mcss.setBridgeToken(standardToken.address,34434,"true");
-        await mcss.setBridgeToken(wrapped.address,34434,"true");
+        await mcss.registerToken(standardToken.address,34434,"true");
+        await mcss.registerToken(wrapped.address,34434,"true");
 
-        await mcss.setBridgeToken(standardToken.address,212,"true");
-        await mcss.setBridgeToken(wrapped.address,212,"true");
+        await mcss.registerToken(standardToken.address,212,"true");
+        await mcss.registerToken(wrapped.address,212,"true");
 
-        await mcss.setBridgeToken(standardToken.address,1313161555,"true");
-        await mcss.setBridgeToken(wrapped.address,1313161555,"true");
+        await mcss.registerToken(standardToken.address,1313161555,"true");
+        await mcss.registerToken(wrapped.address,1313161555,"true");
 
         let mintRole = await standardToken.MINTER_ROLE();
 
@@ -198,7 +198,7 @@ describe("MAPOmnichainServiceV2 start test", function () {
 
 
     it('transferOutNative', async function () {
-        await mcss.setBridgeToken(wrapped.address,1313161555,"true");
+        await mcss.registerToken(wrapped.address,1313161555,"true");
 
         await mcss.connect(owner).transferOutNative(address2Bytes,1313161555,{value:"100000000000000000"});
 

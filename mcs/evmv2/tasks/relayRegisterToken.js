@@ -1,0 +1,19 @@
+
+module.exports = async (taskArgs,hre) => {
+    const accounts = await ethers.getSigners()
+    const deployer = accounts[0];
+
+    console.log("deployer address:",deployer.address);
+
+    let manager = await hre.deployments.get("TokenRegisterV2");
+
+    console.log("Token manager address:", manager.address);
+
+    await (await manager.connect(deployer).registerToken(
+        taskArgs.token,
+        taskArgs.vault,
+        taskArgs.mintable
+    )).wait()
+
+    console.log(`register token ${taskArgs.token} success`)
+}

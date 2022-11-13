@@ -19,27 +19,17 @@ PRIVATE_KEY User-deployed private key
 INFURA_KEY User-deployed infura key
 
 ## Instruction
-FeeCenter contract is a contract used to manage cross-chain charges
+MAPOmnichainServiceV2 contract is suitable for evm-compatible chains and implements cross-chain logic
 
-MapCrossChainService contract is suitable for evm-compatible chains and implements cross-chain logic
+MAPOmnichainServiceRelayV2 contract implements cross-chain logic and basic cross-chain control based on MAP Relay Chain
 
-MAPCrossChainServiceRelay contract implements cross-chain logic and basic cross-chain control based on MapChain
-
-TokenRegister contract is used to control the mapping of cross-chain tokens
-
-The MAPVaultToken contract is a treasury and fee growth for users to provide cross-chain pledges
-
-StandardToken contract is a token contract that has roles to control minting and destruction
-
-MapCrossChainServiceProxy is the contract for MapCrossChainService upgrade
-
-MAPCrossChainServiceRelayProxy is the contract for MAPCrossChainServiceRelay upgrade
+TokenRegisterV2 contract is used to control the mapping of cross-chain tokens
 
 ## Build
 
 ```shell
 git clone https://github.com/mapprotocol/map-contracts.git
-cd map-contracts/mcs/evm/
+cd map-contracts/mcs/evmv2/
 npm install
 ```
 
@@ -49,6 +39,8 @@ npm install
 npx hardhat test
 ```
 
+
+
 ## Deploy
 
 ### MOS Relay
@@ -56,7 +48,6 @@ The following steps help to deploy MOS relay contracts on Map mainnet or Makalu 
 
 1. Deploy Fee Center and Token Register
 ```
-npx hardhat deploy --tags FeeCenter --network <network>
 npx hardhat deploy --tags TokenRegister --network <network>
 ````
 2. Deploy MOS Relay
@@ -70,13 +61,13 @@ npx hardhat relayDeploy --wrapped <wrapped token> --lightnode <lightNodeManager 
 
 3. Init MOS Relay
 ```
-npx hardhat relayInit --feeCenter <feeCenter address> --tokenRegister <token register address> --network <network>
+npx hardhat relayInit  --tokenmanager <token register address> --network <network>
 ````
 
 
 4. FeeCenter sets fee distribution
 ````
-npx hardhat feeCenterSetDistributeRate --token <vault address> --rate <rate 0-1000000> --network <network>
+npx hardhat managerSetDistributeRate --type <0 to the token vault, 1 to specified receiver> --address <fee receiver address> --rate <rate 0-1000000, uni 0.000001> --network <network>
 ````
 
 ### MOS on EVM Chains
@@ -87,7 +78,7 @@ npx hardhat mosDeploy --wrapped <native wrapped address> --lightnode <lightnode 
 ```
 
 2. Set MOS Relay Address
-The following command on the EVM compatible chain
+   The following command on the EVM compatible chain
 ```
 npx hardhat mosSetRelay --relay <Relay address> --chain <map chainId> --network <network>
 ```
@@ -95,136 +86,120 @@ npx hardhat mosSetRelay --relay <Relay address> --chain <map chainId> --network 
 3. Register
    The following command applies to the cross-chain contract configuration of Map mainnet and Makalu testnet
 ```
-npx hardhat registerMCS --address <mapCrossChainService address> --chain <mapCrossChainService chainId> --network <network>
+npx hardhat relayRegisterChain --address <MAPOmnichainService address> --chain <chain id> --network <network>
 ```
 
 ### MOS on other chain
 
-
 The following four commands are generally applicable to Map mainnet and Makalu testnet
 ```
-npx hardhat mcsSetChain --name <chain name> --chain <chain id> --network <network>
+npx hardhat relayRegisterChain --address <MAPOmnichainService address> --chain <near chain id> --type 2 --network <network>
 ```
-
+**NOTE**: Near Protocol testnet chain id 5566818579631833089, mainnet chain id 5566818579631833088
 
 ## Configure
 
 ### Deploy Token
 
 1. Deploy a mintable Token
+   If want to transfer token through MOS, the token must exist on target chain. Please depoly the mapped mintable token on target chain if it does NOT exist.
 ````
-npx hardhat deployToken --name <token name > --symbol <token symbol> --balance <init balance> --network <network>
+npx hardhat tokenDeploy --name <token name > --symbol <token symbol> --network <network>
 ````
 
 2. Grant Mint Role to relay or mos contract
 ````
-npx hardhat grantToken --token <token address > --minter <adress/mos/relay> --network <network>
+npx hardhat tokenGrant --token <token address > --minter <adress/mos> --network <network>
 ````
 
 ### Register Token
 
-1. Relay Chain Create VaultToken
+
+1. Relay Chain deploy vault token
+Every token has a vault token. The vault token will distribute to the users that provide cross-chain liquidity.
+The mos relay contract is manager of all vault tokens.
 
 ````
-npx hardhat vaultInitToken --token <relaychain token address> --name <vault token name> --symbol <vault token symbol> --network <network>
-````
-2. Relay Chain FeeCenter sets up the treasury and token binding
-````
-npx hardhat feeSetTokenVault --vault <vault token address> --token <relaychain mapping token address> --network <network>
+npx hardhat vaultDeploy --token <relaychain token address> --name <vault token name> --symbol <vault token symbol> --network <network>
+
+npx hardhat vaultAddManager --vault <vault token address> --manager <manager address> --network <network>
 ````
 
-3. Relay Chain sets the token decimal
-   Note the mcsids and tokendecimals parameters can be filled with one or more words separated by ',' (eg 1,2,96 18,18,24)
+2. Register token
 ````
-npx hardhat tokenRegisterSetTokenDecimals --token <token address> --chains <Multiple chainIds (1,2,96)> --decimals <token decimals (18,18,24)> --network <network>
+npx hardhat relayRegisterToken --token <relaychain mapping token address> --vault <vault token address> --mintable <true/false> --network <network>
 ````
 
-4. Relay chain sets the token mintable
-
+3. Set fee ratio to relay chain
+```
+npx hardhat relaySetTokenFee --token <token address> --chain <relay chain id>  --min <minimum fee value> --max <maximum fee value> --rate <fee rate 0-1000000> --network <network>
+```
 
 ### Add Cross-chain Token
 
-1. Relay Chain FeeCenter sets the token cross-chain fee ratio
+1. Relay Chain Bind the token mapping relationship between the two chains that requires cross-chain
 ````
-npx hardhat feeSetTokenGasFee --token <token address> --chain <target chain id>  --min <minimum fee value (WEI)> --max <maximum fee value (WEI)> --rate <fee rate 0-1000000> --network <network>
-````
-
-2. Relay Chain Bind the token mapping relationship between the two chains that requires cross-chain
-````
-npx hardhat tokenRegister --mapToken <token address> --chain <cross-chain id> --token <cross-chain token>  --network <network>
+npx hardhat relayMapToken --token <relay chain token address> --chain <cross-chain id> --chaintoken <cross-chain token> --decimals <cross-chain token decimals> --network <network>
 ````
 
-3. Relay Chain sets the decimal for cross-chain tokens
-   Note the mcsids and tokendecimals parameters can be filled with one or more words separated by ',' (eg 1,2,96 18,18,24)
+2. Relay Chain sets the token cross-chain fee ratio
 ````
-npx hardhat relaySetTokenDecimals --token <token address> --chains <Multiple chainIds (1,2,96)> --decimals <token decimals (18,18,24)> --network <network>
-````
-
-4. Altchain sets bridge token
-````
-npx hardhat relaySetTokenDecimals --token <token address> --chains <Multiple chainIds (1,2,96)> --decimals <token decimals (18,18,24)> --network <network>
+npx hardhat relaySetTokenFee --token <token address> --chain <chain id>  --min <minimum fee value> --max <maximum fee value> --rate <fee rate 0-1000000> --network <network>
 ````
 
-5. Altchain sets token mintable
+3. Altchain sets token mintable
+   
+````
+npx hardhat mosSetMintableToken --token <token address> --mintable <true/false> --network <network>
+````
+
+**NOTE:** If set the token mintable, the token must grant the minter role to mos contract.
+
+5. Altchain sets bridge token
+
+````
+npx hardhat mosRegisterToken --token <token address> --chains < chain ids,separated by ',' > --network <network>
+````
+
+
 
 ## Upgrade
 
-When have a better cross-chain idea, we can upgrade the cross-chain contract through the following commands.
+When upgrade the mos contract through the following commands.
 
 Please execute the following command on the EVM compatible chain
 
 ```
-npx hardhat deploy --tags MapCrossChainServiceProxyUp --network <network>
+npx hardhat deploy --tags MAPOmnichainServiceV2Up --network <network>
 ```
 
-Please execute the following command on Map mainnet or Makalu testnet
+Please execute the following command on relay chain mainnet or Makalu testnet
 ```
-npx hardhat deploy --tags MAPCrossChainServiceRelayProxyUp --network <network>
-```
-
-
-## MOS parameter setting
-
-- Setting a Token can be cross-chain or canceled
-
-```solidity
-function setCanBridgeToken(address token, uint chainId, bool canBridge) public 	onlyManager {
-        canBridgeToken[token][chainId] = canBridge;
-    }
+npx hardhat deploy --tags MAPOmnichainServiceRelayV2Up --network <network>
 ```
 
+## Token cross-chain transfer deposit
 
+1. token transfer
+```
+npx hardhat transferOutToken --mos <mos or relay address> --token <token address> --address <receiver address> --value <transfer value> --chain <chain id> --network <network>
+```
 
-MAP Cross Chain Service Relay parameter setting
+2. token depsit
+```
+npx hardhat depositOutToken --mos <mos address> --token <token address> --address <receiver address> --value <transfer value> --network <network>
+```
 
-- Set cross-chain fees for FeeCenter contracts
+Note that the --token parameter is optional, if not set, it means to transfer out Native Token.
+Similarly --address is also an optional parameter. If it is not filled in, it will be the default caller's address.
 
-  ```solidity
-  function setChainTokenGasFee(uint to, address token, uint lowest, uint highest,uint proportion) external onlyManager {
-      chainTokenGasFee[to][token] = gasFee(lowest,highest,proportion);
-  }
-  ```
+transfer native token to other chain:
+```
+npx hardhat depositOutToken --mos <mos or relay address>  --address <receiver address> --value <transfer value> --network <network>
+```
 
-- Set the decimals of the cross-chain token
+transfer native token to sender's address:
+```
+npx hardhat transferOutToken --mos <mos or relay address> --value <transfer value> --chain <chain id> --network <network>
+```
 
-  ```solidity
-  function setTokenOtherChainDecimals(bytes memory selfToken, uint256 chainId, uint256 decimals) external onlyManager {
-      tokenOtherChainDecimals[selfToken][chainId] = decimals;
-  }
-  ```
-
-- Set the number of cross-chain vault tokens (if needed)
-
-  ```solidity
-  function setVaultBalance(uint256 tochain, address token, uint256 amount) external onlyManager {
-      vaultBalance[tochain][token] = amount;
-  }
-  ```
-
-- Set other chain msc contract address for verification
-
-  ```solidity
-  function setBridgeAddress(uint256 _chainId, bytes memory _addr) external onlyManager {
-      bridgeAddress[_addr] = _chainId;
-  }
-  ```

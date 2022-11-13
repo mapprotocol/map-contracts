@@ -98,7 +98,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         relayChainId = _chainId;
     }
 
-    function setBridgeToken(address _token, uint _toChain, bool _enable) external onlyOwner {
+    function registerToken(address _token, uint _toChain, bool _enable) external onlyOwner {
         tokenMappingList[_toChain][_token] = _enable;
     }
 

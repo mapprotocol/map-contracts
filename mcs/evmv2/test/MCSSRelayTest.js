@@ -104,7 +104,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         mapVaultU = await MapVaultU.deploy(usdt.address,"MapVaultTokenUsdt","UVT");
 
         MapVaultW = await ethers.getContractFactory("VaultTokenV2");
-        mapVaultW = await MapVaultU.deploy(usdt.address,"MapVaultTokenWrapped","WVT");
+        mapVaultW = await MapVaultU.deploy(wrapped.address,"MapVaultTokenWrapped","WVT");
 
         //await mapVaultU.initialize(usdt.address,"MapVaultTokenUsdt","UVT","18");
 
@@ -142,9 +142,9 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
     });
 
     it('TokenRegister set', async function () {
-        await tokenRegister.registerToken(usdt.address,mapVaultU.address,18,false);
-        await tokenRegister.registerToken(standardToken.address,mapVault.address,18,true);
-        await tokenRegister.registerToken(wrapped.address,mapVaultW.address,18,false);
+        await tokenRegister.registerToken(usdt.address,mapVaultU.address,false);
+        await tokenRegister.registerToken(standardToken.address,mapVault.address,true);
+        await tokenRegister.registerToken(wrapped.address,mapVaultW.address,false);
 
         await tokenRegister.mapToken(usdt.address,34434,mcsRelayData.ethUsdtToken,18);
         await tokenRegister.mapToken(standardToken.address,34434,mcsRelayData.ethStanardToken,18);
@@ -182,7 +182,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
         await standardToken.mint(owner.address,"1000000000000000000");
 
-        await tokenRegister.registerToken(standardToken.address,mapVault.address,18,false);
+        await tokenRegister.registerToken(standardToken.address,mapVault.address, false);
 
         await mcssR.connect(owner).transferOutToken(standardToken.address,address2Bytes,"1000000000000000000",1313161555)
 
@@ -200,7 +200,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
 
     it('transferIn test ', async function () {
-        await tokenRegister.registerToken(standardToken.address,mapVault.address,18,true);
+        await tokenRegister.registerToken(standardToken.address,mapVault.address,true);
         //await mcssR.addAuthToken([standardToken.address]);
         //console.log(await tokenRegister.getTargetToken(1313161555,212))
 

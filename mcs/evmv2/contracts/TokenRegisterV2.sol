@@ -4,7 +4,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./interface/ITokenRegisterV2.sol";
+import "./interface/IVaultTokenV2.sol";
 import "./utils/Utils.sol";
 
 contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
@@ -43,12 +45,15 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
         _;
     }
 
-    function registerToken(address _token, address _vaultToken, uint8 _decimals, bool _mintable)
+    function registerToken(address _token, address _vaultToken, bool _mintable)
     external
     onlyOwner checkAddress(_token) checkAddress(_vaultToken) {
         Token storage token = tokenList[_token];
+        address tokenAddress = IVaultTokenV2(_vaultToken).getTokenAddress();
+        require(_token == tokenAddress, "invalid vault token");
+
         token.vaultToken = _vaultToken;
-        token.decimals = _decimals;
+        token.decimals = IERC20Metadata(_token).decimals();
         token.mintable = _mintable;
     }
 
@@ -65,9 +70,9 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
 
     function setTokenFee( address _token, uint256 _toChain, uint _lowest, uint _highest,uint _rate) external onlyOwner {
         Token storage token = tokenList[_token];
-        require(token.vaultToken != address(0), "Invalid map token");
-        require(_highest >= _lowest, 'Invalid highest and lowest');
-        require(_rate <= MAX_RATE_UNI, 'Invalid proportion value');
+        require(token.vaultToken != address(0), "invalid map token");
+        require(_highest >= _lowest, 'invalid highest and lowest');
+        require(_rate <= MAX_RATE_UNI, 'invalid proportion value');
 
         token.fees[_toChain] = FeeRate(_lowest, _highest, _rate);
     }

@@ -7,7 +7,7 @@ module.exports = async (taskArgs, hre) => {
 
     await deploy('VaultTokenV2', {
         from: deployer.address,
-        args: [taskArgs.underlying,taskArgs.name,taskArgs.symbol],
+        args: [taskArgs.token, taskArgs.name, taskArgs.symbol],
         log: true,
         contract: 'VaultTokenV2',
     })

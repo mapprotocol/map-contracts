@@ -8,11 +8,11 @@ module.exports = async (taskArgs,hre) => {
     //let proxy = await hre.deployments.get("MAPVaultToken");
     let manager = taskArgs.manager;
     if (taskArgs.manager === "relay") {
-        let mcs = await ethers.getContract('MAPOmnichainServiceProxy');
-        manager = mcs.address;
+        let proxy = await ethers.getContract('MAPOmnichainServiceProxy');
+        manager = proxy.address;
     }
 
-    let vaultToken = await ethers.getContractAt('MAPVaultToken', taskArgs.vault);
+    let vaultToken = await ethers.getContractAt('VaultTokenV2', taskArgs.vault);
 
     await (await vaultToken.connect(deployer).addManager(manager)).wait();
     console.log(`MAPVaultToken ${taskArgs.vault} add manager ${manager} success`)
