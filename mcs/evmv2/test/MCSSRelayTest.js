@@ -70,14 +70,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         nearDecoder = await NearDecoder.deploy();
         console.log("NearDecoder address:",nearDecoder.address);
 
-        MCSSRelay = await ethers.getContractFactory("MAPOmnichainServiceRelayV2",{
-            libraries:{
-                EvmDecoder:evmDecoder.address
-            },
-            libraries:{
-                NearDecoder:nearDecoder.address
-            }
-        });
+        MCSSRelay = await ethers.getContractFactory("MAPOmnichainServiceRelayV2");
         // mcss = await ethers.getContractAt("MapCrossChainService",mcsData.mcs);
         mcssR = await MCSSRelay.deploy();
         console.log("mcssR address:",mcssR.address);
@@ -325,14 +318,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
     });
 
     it('Upgrade', async function () {
-        let MCSSRelayUpGrade = await ethers.getContractFactory("MAPOmnichainServiceRelayV2",{
-            libraries:{
-                EvmDecoder:evmDecoder.address
-            },
-            libraries:{
-                NearDecoder:nearDecoder.address
-            }
-        });
+        let MCSSRelayUpGrade = await ethers.getContractFactory("MAPOmnichainServiceRelayV2");
         // mcss = await ethers.getContractAt("MapCrossChainService",mcsData.mcs);
         let mcssRUpGrade = await MCSSRelayUpGrade.deploy();
         await mcssRUpGrade.deployed();

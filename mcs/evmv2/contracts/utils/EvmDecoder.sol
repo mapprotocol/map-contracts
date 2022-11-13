@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-
 pragma solidity 0.8.7;
 
 import "../interface/IEvent.sol";
@@ -43,7 +42,7 @@ library EvmDecoder {
     returns (bytes memory executorId, IEvent.transferOutEvent memory outEvent){
         executorId = Utils.toBytes(log.addr);
         (outEvent.token, outEvent.from, outEvent.orderId, outEvent.fromChain,
-        outEvent.toChain, outEvent.to, outEvent.amount,)
+        outEvent.toChain, outEvent.to, outEvent.amount,outEvent.toChainToken)
         = abi.decode(log.data, (bytes, bytes, bytes32, uint256, uint256, bytes, uint256, bytes));
     }
 
