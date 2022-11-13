@@ -17,7 +17,6 @@ import "./interface/IVaultTokenV2.sol";
 import "./interface/ITokenRegisterV2.sol";
 import "./interface/ILightClientManager.sol";
 import "./interface/IMOSV2.sol";
-import "./interface/IEvent.sol";
 import "./utils/TransferHelper.sol";
 import "./utils/EvmDecoder.sol";
 import "./utils/NearDecoder.sol";
@@ -345,6 +344,4 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     function getImplementation() external view returns (address) {
         return _getImplementation();
     }
-
-
 }

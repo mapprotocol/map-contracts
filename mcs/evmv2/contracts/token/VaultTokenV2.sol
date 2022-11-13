@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "../interface/IVaultTokenV2.sol";
 import "../utils/TransferHelper.sol";
 
@@ -21,6 +22,7 @@ contract VaultTokenV2 is IVaultTokenV2, AccessControlEnumerable,ERC20Burnable {
 
     address public underlying;
     uint256 public totalVault;
+    uint8 _decimals;
 
     event DepositVault(address indexed token, address indexed to, uint256 vaultValue, uint256 value);
     event WithdrawVault(address indexed token, address indexed to, uint256 vaultValue, uint256 value);
@@ -38,6 +40,8 @@ contract VaultTokenV2 is IVaultTokenV2, AccessControlEnumerable,ERC20Burnable {
         _setupRole(MANAGER_ROLE, _msgSender());
 
         underlying = _underlying;
+
+        _decimals = IERC20Metadata(underlying).decimals();
     }
 
     modifier onlyManager(){
@@ -51,6 +55,10 @@ contract VaultTokenV2 is IVaultTokenV2, AccessControlEnumerable,ERC20Burnable {
 
     function removeManager(address _manager) external onlyRole(DEFAULT_ADMIN_ROLE){
         _revokeRole(MANAGER_ROLE, _manager);
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return _decimals;
     }
 
     function getVaultTokenAmount(uint256 _amount) public view returns (uint256){

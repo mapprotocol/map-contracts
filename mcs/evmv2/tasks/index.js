@@ -1,3 +1,29 @@
+task("mosDeploy",
+    "Deploy the upgradeable MapCrossChainService contract and initialize it",
+    require("./mosDeploy")
+)
+    .addParam("wrapped", "native wrapped token address")
+    .addParam("lightnode", "lightNode contract address")
+
+task("relayDeploy",
+    "Deploy the upgradeable MapCrossChainServiceRelay contract and initialize it",
+    require("./relayDeploy")
+)
+    .addParam("wrapped", "native wrapped token address")
+    .addParam("lightnode", "lightNodeManager contract address")
+
+
+task("vaultToken",
+    "Deploy the upgradeable MapCrossChainServiceRelay contract and initialize it",
+    require("./vaultToken")
+)
+    .addParam("underlying", "underlying address")
+    .addParam("name", "token name")
+    .addParam("symbol", "token symbol")
+
+
+
+//Organized
 
 task("tokenDeploy",
     "Deploy a token with role control",
@@ -13,20 +39,6 @@ task("tokenGrant",
 )
     .addParam("token", "token address")
     .addParam("minter", "address/relay/mos, grant address can be an address or relay/mos")
-
-task("mosDeploy",
-    "Deploy the upgradeable MapCrossChainService contract and initialize it",
-    require("./mosDeploy")
-)
-    .addParam("wrapped", "native wrapped token address")
-    .addParam("lightnode", "lightNode contract address")
-
-task("relayDeploy",
-    "Deploy the upgradeable MapCrossChainServiceRelay contract and initialize it",
-    require("./relayDeploy")
-)
-    .addParam("wrapped", "native wrapped token address")
-    .addParam("lightnode", "lightNodeManager contract address")
 
 task("mosSetRelay",
     "Initialize MapCrossChainServiceRelay address for MapCrossChainService",
