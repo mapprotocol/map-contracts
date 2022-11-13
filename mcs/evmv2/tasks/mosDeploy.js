@@ -1,38 +1,32 @@
-
-module.exports = async (taskArgs,hre) => {
+module.exports = async (taskArgs, hre) => {
     const {deploy} = hre.deployments
     const accounts = await ethers.getSigners()
     const deployer = accounts[0];
 
-    console.log("deployer address:",deployer.address);
+    console.log("deployer address:", deployer.address);
 
-    await deploy('MapCrossChainService', {
+    await deploy('MAPOmnichainServiceV2', {
         from: deployer.address,
         args: [],
         log: true,
-        contract: 'MapCrossChainService',
+        contract: 'MAPOmnichainServiceV2',
     })
 
-    let mcss = await ethers.getContract('MapCrossChainService');
+    let mos = await ethers.getContract('MAPOmnichainServiceV2');
 
-    console.log("MapCrossChainService address:",mcss.address);
+    console.log("MAPOmnichainServiceV2 address:", mos.address);
 
 
-    let data;
-    await ( data = await mcss.initialize(taskArgs.wrapped, taskArgs.lightnode)).wait();
+    let data = mos.interface.encodeFunctionData("initialize", [taskArgs.wrapped, taskArgs.lightnode]);
 
-    console.log("MapCrossChainService initialize success");
-
-    await deploy('MapCrossChainServiceProxy', {
+    await deploy('MAPOmnichainServiceProxyV2', {
         from: deployer.address,
-        args: [mcss.address,data.data],
+        args: [mos.address, data],
         log: true,
-        contract: 'MapCrossChainServiceProxy',
+        contract: 'MAPOmnichainServiceProxyV2',
     })
 
-    let mcssP = await ethers.getContract('MapCrossChainServiceProxy');
+    let mosProxy = await ethers.getContract('MAPOmnichainServiceProxyV2');
 
-    console.log("MapCrossChainServiceProxy address:",mcssP.address)
-
-
+    console.log("MapCrossChainServiceProxy address:", mosProxy.address)
 }

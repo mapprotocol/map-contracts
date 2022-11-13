@@ -7,20 +7,15 @@ module.exports = async function ({ethers, deployments}) {
 
     console.log("deployer address:",deployer.address);
 
-
-    await deploy('TokenRegister', {
+    await deploy('TokenRegisterV2', {
         from: deployer.address,
         args: [],
         log: true,
-        contract: 'TokenRegister',
+        contract: 'TokenRegisterV2',
     })
 
-
-    let tokenRegister = await ethers.getContract('TokenRegister');
-
-    console.log("tokenRegister address:",tokenRegister.address);
-
-
+    let tokenRegister = await ethers.getContract('TokenRegisterV2');
+    console.log("TokenRegisterV2 address:",tokenRegister.address);
 }
 
-module.exports.tags = ['TokenRegister']
+module.exports.tags = ['TokenRegisterV2']

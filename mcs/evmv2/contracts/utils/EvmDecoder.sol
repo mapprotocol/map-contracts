@@ -13,7 +13,7 @@ library EvmDecoder {
     using RLPReader for RLPReader.RLPItem;
 
     bytes32 constant MAP_TRANSFEROUT_TOPIC = keccak256(bytes('mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)'));
-    bytes32 constant MAP_DEPOSITOUT_TOPIC = keccak256(bytes('mapDepositOut(address,bytes,bytes32,address,uint256)'));
+    bytes32 constant MAP_DEPOSITOUT_TOPIC = keccak256(bytes('mapDepositOut(address,bytes,bytes32,uint256,uint256,address,uint256)'));
 
 
     function decodeTxLogs(bytes memory logsHash)
