@@ -37,6 +37,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     mapping(address => bool) public mintableTokens;
     mapping(uint256 => mapping(address => bool)) tokenMappingList;
 
+    event mapTransferExecute(address indexed from, uint256 indexed fromChain, uint256 indexed toChain);
 
     function initialize(address _wToken, address _lightNode)
     public initializer checkAddress(_wToken) checkAddress(_lightNode) {
@@ -71,7 +72,6 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         require(msg.sender == _getAdmin(), "mos :: only admin");
         _;
     }
-
 
     function setPause() external onlyOwner {
         _pause();
@@ -111,7 +111,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         }
     }
 
-    function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused
+    function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override nonReentrant whenNotPaused
     checkBridgeable(_token, _toChain) {
         require(_toChain != selfChainId, "only other chain");
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
@@ -125,7 +125,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         emit mapTransferOut(Utils.toBytes(_token), Utils.toBytes(msg.sender), orderId, selfChainId, _toChain, _to, _amount, Utils.toBytes(address(0)));
     }
 
-    function transferOutNative(bytes memory _to, uint _toChain) external override payable whenNotPaused
+    function transferOutNative(bytes memory _to, uint _toChain) external override payable nonReentrant whenNotPaused
     checkBridgeable(wToken, _toChain) {
         require(_toChain != selfChainId, "only other chain");
         uint amount = msg.value;
@@ -135,7 +135,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         emit mapTransferOut(Utils.toBytes(wToken), Utils.toBytes(msg.sender), orderId, selfChainId, _toChain, _to, amount, Utils.toBytes(address(0)));
     }
 
-    function depositToken(address _token, address _to, uint _amount) external override whenNotPaused
+    function depositToken(address _token, address _to, uint _amount) external override nonReentrant whenNotPaused
     checkBridgeable(_token, relayChainId){
         address from = msg.sender;
         //require(IERC20(token).balanceOf(_from) >= _amount, "balance too low");
@@ -150,7 +150,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         emit mapDepositOut(_token, Utils.toBytes(from), orderId, selfChainId, relayChainId, _to, _amount);
     }
 
-    function depositNative(address _to) external override payable whenNotPaused
+    function depositNative(address _to) external override payable nonReentrant whenNotPaused
     checkBridgeable(wToken, relayChainId) {
         address from = msg.sender;
         uint amount = msg.value;
@@ -160,7 +160,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         emit mapDepositOut(wToken, Utils.toBytes(from), orderId, selfChainId, relayChainId, _to, amount);
     }
 
-    function transferIn(uint _chainId, bytes memory _receiptProof) external nonReentrant whenNotPaused {
+    function transferIn(uint256 _chainId, bytes memory _receiptProof) external nonReentrant whenNotPaused {
         require(_chainId == relayChainId, "invalid chain id");
         (bool sucess, string memory message, bytes memory logArray) = lightNode.verifyProofData(_receiptProof);
         require(sucess, message);
@@ -169,15 +169,15 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         for (uint i = 0; i < logs.length; i++) {
             IEvent.txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
-            if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC) {
-                require(relayContract == log.addr, "invalid mos contract");
-                (,bytes memory from,bytes32 orderId,uint fromChain, uint toChain, bytes memory to, uint amount, bytes memory toChainToken)
-                = abi.decode(log.data, (bytes, bytes, bytes32, uint, uint, bytes, uint, bytes));
-                address token = Utils.fromBytes(toChainToken);
-                address payable toAddress = payable(Utils.fromBytes(to));
-                _transferIn(token, from, toAddress, amount, orderId, fromChain, toChain);
+
+            // there might be more than on events to multi-chains
+            if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC && relayContract == log.addr) {
+                (, IEvent.transferOutEvent memory outEvent) = EvmDecoder.decodeTransferOutLog(log);
+
+                _transferIn(selfChainId, outEvent);
             }
         }
+        emit mapTransferExecute(msg.sender, _chainId, selfChainId);
     }
 
 
@@ -190,18 +190,22 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         return keccak256(abi.encodePacked(nonce++, _from, _to, _token, _amount, selfChainId, _toChain));
     }
 
-    function _transferIn(address _token, bytes memory _from, address payable _to, uint _amount, bytes32 _orderId, uint _fromChain, uint _toChain)
-    internal checkOrder(_orderId) {
-        require(_toChain == selfChainId, "invalid chain id");
-        if (_token == wToken) {
-            TransferHelper.safeWithdraw(wToken, _amount);
-            TransferHelper.safeTransferETH(_to, _amount);
-        } else if (checkMintable(_token)) {
-            IMAPToken(_token).mint(_to, _amount);
+    function _transferIn(uint256 _chainId, IEvent.transferOutEvent memory _outEvent)
+    internal checkOrder(_outEvent.orderId) {
+        require(_chainId == _outEvent.toChain, "invalid chain id");
+        address token = Utils.fromBytes(_outEvent.toChainToken);
+        address payable toAddress = payable(Utils.fromBytes(_outEvent.to));
+        uint256 amount = _outEvent.amount;
+        if (token == wToken) {
+            TransferHelper.safeWithdraw(wToken, amount);
+            TransferHelper.safeTransferETH(toAddress, amount);
+        } else if (checkMintable(token)) {
+            IMAPToken(token).mint(toAddress, amount);
         } else {
-            TransferHelper.safeTransfer(_token, _to, _amount);
+            TransferHelper.safeTransfer(token, toAddress, amount);
         }
-        emit mapTransferIn(_token, _from, _orderId, _fromChain, _toChain, _to, _amount);
+
+        emit mapTransferIn(token, _outEvent.from, _outEvent.orderId, _outEvent.fromChain, _outEvent.toChain, toAddress, amount);
     }
 
 
