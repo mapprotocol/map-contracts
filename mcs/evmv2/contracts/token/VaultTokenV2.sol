@@ -54,7 +54,7 @@ contract VaultTokenV2 is IVaultTokenV2, AccessControlEnumerable,ERC20Burnable {
     }
 
     function getVaultTokenAmount(uint256 _amount) public view returns (uint256){
-        if (totalVault == 0) {
+        if (totalSupply() == 0) {
             return _amount;
         }
         uint allVToken = totalSupply();
