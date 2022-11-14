@@ -5,9 +5,11 @@ module.exports = async (taskArgs,hre) => {
 
     console.log("deployer address:",deployer.address);
 
-    let manager = await hre.deployments.get("TokenRegisterV2");
+    let tokenmanager = await hre.deployments.get("TokenRegisterV2");
 
-    console.log("Token manager address:", manager.address);
+    console.log("Token manager address:", tokenmanager.address);
+
+    let manager = await ethers.getContractAt('TokenRegisterV2', tokenmanager.address);
 
     await (await manager.connect(deployer).setTokenFee(
             taskArgs.token,

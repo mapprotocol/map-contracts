@@ -13,13 +13,13 @@ module.exports = async (taskArgs,hre) => {
 
     let tokens = taskArgs.token.split(",");
     if (taskArgs.mintable) {
-        await (await mos.connect(deployer).addAuthToken(
+        await (await mos.connect(deployer).addMintableToken(
             tokens
         )).wait();
 
         console.log(`mos set token ${taskArgs.token} mintable ${taskArgs.mintable} success`);
     } else {
-        await (await mos.connect(deployer).removeAuthToken(
+        await (await mos.connect(deployer).removeMintableToken(
             tokens
         )).wait();
 

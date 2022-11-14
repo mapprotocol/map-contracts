@@ -68,10 +68,10 @@ task("mosSetMintableToken",
     .addParam("mintable", "true or false")
 
 task("relayInit",
-    "Initialize MapCrossChainServiceRelay contract",
+    "Initialize mos contract",
     require("./relayInit")
 )
-    .addParam("tokenMananger","tokenRegister contract")
+    .addParam("tokenmananger","tokenRegister contract")
 
 
 task("relayRegisterChain",

@@ -8,7 +8,7 @@ module.exports = async (taskArgs,hre) => {
     //let proxy = await hre.deployments.get("MAPVaultToken");
     let manager = taskArgs.manager;
     if (taskArgs.manager === "relay") {
-        let proxy = await ethers.getContract('MAPOmnichainServiceProxy');
+        let proxy = await ethers.getContract('MAPOmnichainServiceProxyV2');
         manager = proxy.address;
     }
 

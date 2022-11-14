@@ -14,5 +14,5 @@ module.exports = async (taskArgs, hre) => {
 
     let vault = await ethers.getContract('VaultTokenV2');
 
-    console.log("VaultTokenV2 address:", vault.address);
+    console.log(`VaultTokenV2 ${taskArgs.symbol} address: ${vault.address}`);
 }

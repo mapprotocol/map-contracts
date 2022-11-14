@@ -11,7 +11,7 @@ module.exports = async (taskArgs,hre) => {
 
     let mos = await ethers.getContractAt('MAPOmnichainServiceRelayV2', proxy.address);
 
-    await (await mos.connect(deployer).setTokenRegister(taskArgs.tokenregister)).wait();
+    await (await mos.connect(deployer).setTokenManager(taskArgs.tokenmananger)).wait();
 
-    console.log("set token register:", taskArgs.tokenregister);
+    console.log("set token register:", taskArgs.tokenmananger);
 }

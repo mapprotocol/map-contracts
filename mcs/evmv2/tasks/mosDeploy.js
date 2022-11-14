@@ -28,5 +28,5 @@ module.exports = async (taskArgs, hre) => {
 
     let mosProxy = await ethers.getContract('MAPOmnichainServiceProxyV2');
 
-    console.log("MapCrossChainServiceProxy address:", mosProxy.address)
+    console.log("MAPOmnichainServiceProxyV2 address:", mosProxy.address)
 }

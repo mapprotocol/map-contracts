@@ -5,7 +5,7 @@ module.exports = async (taskArgs,hre) => {
 
     console.log("deployer address:",deployer.address);
 
-    let proxy = await hre.deployments.get("MAPOmnichainServiceProxy")
+    let proxy = await hre.deployments.get("MAPOmnichainServiceProxyV2")
 
     console.log("mos address:", proxy.address);
 

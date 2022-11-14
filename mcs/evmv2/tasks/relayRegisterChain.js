@@ -16,7 +16,7 @@ module.exports = async (taskArgs,hre) => {
 
     console.log("mos address:", proxy.address);
 
-    let mos = await ethers.getContractAt('MAPOmnichainServiceRelay',proxy.address);
+    let mos = await ethers.getContractAt('MAPOmnichainServiceRelayV2',proxy.address);
 
     let address = taskArgs.address;
     if (taskArgs.address.substr(0,2) != "0x") {

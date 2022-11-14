@@ -155,7 +155,7 @@ npx hardhat mosSetMintableToken --token <token address> --mintable <true/false> 
 
 **NOTE:** If set the token mintable, the token must grant the minter role to mos contract.
 
-5. Altchain sets bridge token
+4. Altchain sets bridge token
 
 ````
 npx hardhat mosRegisterToken --token <token address> --chains < chain ids,separated by ',' > --network <network>
