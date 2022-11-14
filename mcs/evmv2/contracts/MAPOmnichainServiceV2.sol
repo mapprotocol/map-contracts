@@ -170,11 +170,14 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
             IEvent.txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
 
-            // there might be more than on events to multi-chains
+
             if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC && relayContract == log.addr) {
                 (, IEvent.transferOutEvent memory outEvent) = EvmDecoder.decodeTransferOutLog(log);
-
-                _transferIn(selfChainId, outEvent);
+                // there might be more than on events to multi-chains
+                // only process the event for this chain
+                if (selfChainId == outEvent.toChain) {
+                    _transferIn(outEvent);
+                }
             }
         }
         emit mapTransferExecute(msg.sender, _chainId, selfChainId);
@@ -190,9 +193,9 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         return keccak256(abi.encodePacked(nonce++, _from, _to, _token, _amount, selfChainId, _toChain));
     }
 
-    function _transferIn(uint256 _chainId, IEvent.transferOutEvent memory _outEvent)
+    function _transferIn(IEvent.transferOutEvent memory _outEvent)
     internal checkOrder(_outEvent.orderId) {
-        require(_chainId == _outEvent.toChain, "invalid chain id");
+        //require(_chainId == _outEvent.toChain, "invalid chain id");
         address token = Utils.fromBytes(_outEvent.toChainToken);
         address payable toAddress = payable(Utils.fromBytes(_outEvent.to));
         uint256 amount = _outEvent.amount;
