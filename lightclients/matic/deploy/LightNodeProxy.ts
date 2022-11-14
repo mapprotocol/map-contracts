@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { BigNumber } from 'ethers';
 import {
   BlockHeader, getBlock
 } from "../utils/Util"
@@ -7,7 +8,8 @@ import {
 
 let uri = process.env.MATICURI;
 let minEpochBlockExtraDataLen = 161
-let mpt = process.env.MPT_VERIFY;
+let mpt = process.env.MPT_VERIFY || 0;
+let start = process.env.START_SYNCY_BLOCK
 let epochNum = 64;
 
 const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -31,7 +33,11 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const provider = new ethers.providers.JsonRpcProvider(uri);
 
-  let currentBlock = await provider.getBlockNumber()
+  let currentBlock: number = BigNumber.from(start).toNumber();
+
+  if (currentBlock == undefined || currentBlock == 0) {
+    currentBlock = await provider.getBlockNumber()
+  }
 
   let lastEpoch = currentBlock - currentBlock % epochNum - 1 - epochNum;;
 

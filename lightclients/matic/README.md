@@ -25,6 +25,8 @@ create an .env file and fill following in the contents
 PRIVATE_KEY = 
 # matic rpc url
 MATICURI = 
+// 0 - for latest  block number start to syncing
+START_SYNCY_BLOCK = 0
 //MPTVerify address  if you not want to repeat the deployment of MPTVerify put deployed address it Otherwise empty
 MPT_VERIFY = 
 ```
