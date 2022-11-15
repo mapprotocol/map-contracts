@@ -51,8 +51,14 @@ library EvmDecoder {
     pure
     returns (bytes memory executorId, IEvent.depositOutEvent memory depositEvent){
         executorId = Utils.toBytes(log.addr);
-        (depositEvent.token, depositEvent.from, depositEvent.orderId, depositEvent.fromChain,
-        depositEvent.toChain, depositEvent.to, depositEvent.amount)
-        = abi.decode(log.data, (bytes, bytes, bytes32, uint256, uint256, bytes, uint256));
+        address tokenAddress =  abi.decode(log.topics[1],(address));
+        depositEvent.token = Utils.toBytes(tokenAddress);
+        address toAddress;
+        ( depositEvent.from, depositEvent.orderId, depositEvent.fromChain,
+        depositEvent.toChain,toAddress, depositEvent.amount)
+        = abi.decode(log.data, (bytes, bytes32, uint256, uint256, address, uint256));
+
+        depositEvent.to = Utils.toBytes(toAddress);
+
     }
 }
