@@ -220,7 +220,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         return keccak256(abi.encodePacked(nonce++, _from, _to, _token, _amount, selfChainId, _toChain));
     }
 
-    function _collectFee(address _token, uint256 _mapAmount, uint256 _fromChain, uint256 _toChain) public returns (uint256, uint256) {
+    function _collectFee(address _token, uint256 _mapAmount, uint256 _fromChain, uint256 _toChain) internal returns (uint256, uint256) {
         address token = _token;
         address vaultToken = tokenRegister.getVaultToken(token);
         require(vaultToken != address(0), "vault token not registered");
