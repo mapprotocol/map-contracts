@@ -14,12 +14,10 @@ use near_sdk::env::panic_str;
 use near_sdk::serde_json::json;
 use map_light_client::proof::ReceiptProof;
 use crate::ChainType::{EvmChain, Unknown};
-use crate::migrate::OldMapCrossChainService;
 
 mod event;
 pub mod prover;
 mod bytes;
-mod migrate;
 
 const MCS_TOKEN_BINARY: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/mcs_token.wasm");
 
@@ -243,8 +241,8 @@ impl MapCrossChainService {
     #[private]
     #[init(ignore_state)]
     pub fn migrate() -> Self {
-        let old_mcs: OldMapCrossChainService = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
-        old_mcs.migrate()
+        let mcs: MapCrossChainService = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
+        mcs
     }
 
     pub fn version() -> &'static str {
