@@ -1,20 +1,22 @@
-import {HardhatRuntimeEnvironment} from 'hardhat/types';
-import {DeployFunction} from 'hardhat-deploy/types';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { DeployFunction } from 'hardhat-deploy/types';
 import {
   BlockHeader, getBlock
 } from "../utils/Util"
+import { BigNumber } from 'ethers';
 
 
 let uri = process.env.BSCURI;
 let minEpochBlockExtraDataLen = process.env.MinEpochBlockExtraDataLen
 let chainId = process.env.CHAINID;
+let start = process.env.START_SYNCY_BLOCK || 0
 let epochNum = 200;
 
 const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const {deployments, getNamedAccounts,ethers} = hre;
-  const {deploy} = deployments;
+  const { deployments, getNamedAccounts, ethers } = hre;
+  const { deploy } = deployments;
 
-  const {deployer} = await getNamedAccounts();
+  const { deployer } = await getNamedAccounts();
 
   let mPTVerify = await deployments.get('MPTVerify');
 
@@ -22,8 +24,11 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const provider = new ethers.providers.JsonRpcProvider(uri);
 
-  let currentBlock = await provider.getBlockNumber()
+  let currentBlock: number = BigNumber.from(start).toNumber();
 
+  if (currentBlock == undefined || currentBlock == 0) {
+    currentBlock = await provider.getBlockNumber()
+  }
   let lastEpoch = currentBlock - currentBlock % epochNum - epochNum;
 
   let lastHeader = await getBlock(lastEpoch, provider);
@@ -45,9 +50,9 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await deploy('LightNodeProxy', {
     from: deployer,
-    args: [lightNode.address,initData],
+    args: [lightNode.address, initData],
     log: true,
-    contract:'LightNodeProxy',
+    contract: 'LightNodeProxy',
     gasLimit: 20000000
   });
 

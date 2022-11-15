@@ -1,6 +1,8 @@
 PRIVATE_KEY = 
 # matic rpc url
 MATICURI = 
+// 0 - for latest
+START_SYNCY_BLOCK = 0
 //MPTVerify address
 MPT_VERIFY = 
 

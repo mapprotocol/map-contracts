@@ -27,6 +27,8 @@ PRIVATE_KEY =
 BSCURI = 
 # mainnet 56 testnet 97
 CHAINID = 
+// 0 - for latest  block number start to syncing
+START_SYNCY_BLOCK = 0
 # bsc mainnet 317 testnet 197
 MinEpochBlockExtraDataLen = 317
 ```
