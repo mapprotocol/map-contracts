@@ -43,9 +43,9 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     ITokenRegisterV2 public tokenRegister;
     ILightClientManager public lightClientManager;
 
-    mapping(uint => Rate) distributeRate;
+    mapping(uint => Rate) public distributeRate;
     mapping(bytes32 => bool) public orderList;
-    mapping(uint256 => bytes) mosContracts;
+    mapping(uint256 => bytes) public mosContracts;
     mapping(uint256 => chainType) public chainTypes;
 
     event mapDepositIn(address indexed token, bytes from, address indexed to,

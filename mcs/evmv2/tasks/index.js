@@ -141,4 +141,16 @@ task("depositOutToken",
     .addParam("value", "deposit value, unit WEI")
 
 
+task("relayList",
+    "List mos relay infos",
+    require("./relayList")
+)
+    .addOptionalParam("relay", "The mos address, default mos", "relay", types.string)
+    .addOptionalParam("token", "The token address, default wtoken", "wtoken", types.string)
 
+task("mosList",
+    "List mos relay infos",
+    require("./mosList")
+)
+    .addOptionalParam("mos", "The mos address, default mos", "mos", types.string)
+    .addOptionalParam("token", "The token address, default wtoken", "wtoken", types.string)

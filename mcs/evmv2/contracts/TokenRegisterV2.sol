@@ -125,7 +125,7 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
     }
 
     function getTokenFee(address _token, uint256 _amount, uint256 _toChain)
-    external view override returns (uint256){
+    external view override returns (uint256) {
         FeeRate memory feeRate = tokenList[_token].fees[_toChain];
 
         uint256 fee = _amount.mul(feeRate.rate).div(MAX_RATE_UNI);
@@ -137,7 +137,19 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
         return fee;
     }
 
+    function getToChainTokenInfo(address _token, uint256 _toChain)
+    external
+    view
+    returns (bytes memory toChainToken, uint8 decimals, FeeRate memory feeRate){
+        if (_toChain == selfChainId) {
+            toChainToken = Utils.toBytes(_token);
+            decimals = tokenList[_token].decimals;
+        } else {
+            toChainToken = tokenList[_token].mappingTokens[_toChain];
+            decimals = tokenList[_token].tokenDecimals[_toChain];
+        }
 
-
+        feeRate = tokenList[_token].fees[_toChain];
+    }
 
 }

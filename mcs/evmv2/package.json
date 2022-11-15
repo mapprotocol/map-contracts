@@ -1,5 +1,5 @@
 {
-  "name": "mapCrossChainServiceRelay",
+  "name": "MAPOmnichainService",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -14,7 +14,7 @@
     "type": "git",
     "url": "https://github.com/mapprotocol/map-contracts.git"
   },
-  "author": "",
+  "author": "MAP Protocol",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/mapprotocol/map-contracts/issues"

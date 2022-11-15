@@ -35,7 +35,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
 
     mapping(bytes32 => bool) public orderList;
     mapping(address => bool) public mintableTokens;
-    mapping(uint256 => mapping(address => bool)) tokenMappingList;
+    mapping(uint256 => mapping(address => bool)) public tokenMappingList;
 
     event mapTransferExecute(address indexed from, uint256 indexed fromChain, uint256 indexed toChain);
 
@@ -116,7 +116,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         require(_toChain != selfChainId, "only other chain");
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
 
-        if (checkMintable(_token)) {
+        if (isMintable(_token)) {
             IMAPToken(_token).burnFrom(msg.sender, _amount);
         } else {
             TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
@@ -140,7 +140,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         address from = msg.sender;
         //require(IERC20(token).balanceOf(_from) >= _amount, "balance too low");
 
-        if (checkMintable(_token)) {
+        if (isMintable(_token)) {
             IMAPToken(_token).burnFrom(from, _amount);
         } else {
             TransferHelper.safeTransferFrom(_token, from, address(this), _amount);
@@ -184,8 +184,12 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     }
 
 
-    function checkMintable(address _token) public view returns (bool) {
+    function isMintable(address _token) public view returns (bool) {
         return mintableTokens[_token];
+    }
+
+    function isBridgeable(address _token, uint256 _toChain) public view returns (bool) {
+        return tokenMappingList[_toChain][_token];
     }
 
 
@@ -202,7 +206,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         if (token == wToken) {
             TransferHelper.safeWithdraw(wToken, amount);
             TransferHelper.safeTransferETH(toAddress, amount);
-        } else if (checkMintable(token)) {
+        } else if (isMintable(token)) {
             IMAPToken(token).mint(toAddress, amount);
         } else {
             TransferHelper.safeTransfer(token, toAddress, amount);
