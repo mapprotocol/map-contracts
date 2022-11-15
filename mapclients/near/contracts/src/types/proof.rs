@@ -40,7 +40,7 @@ impl<'de> Deserialize<'de> for ProofEntry {
         let data = Vec::from_hex(&s[2..]).map_err(|err| {
             Error::custom(err.to_string())
         })?;
-        Ok(ProofEntry{0: data})
+        Ok(ProofEntry(data))
     }
 }
 

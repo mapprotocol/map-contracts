@@ -12,6 +12,8 @@ rm -rf $RES_DIR
 
 cd $SCRIPT_DIR/..
 echo "start to build map light client"
+
+export RUSTFLAGS='-C link-arg=-s'
 cargo build --workspace --target wasm32-unknown-unknown --release
 
 mkdir $RES_DIR
