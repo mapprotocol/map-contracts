@@ -116,7 +116,12 @@ impl MapLightClient {
 
         // check ecdsa and bls signature
         let epoch = get_epoch_number(header.number.to_u64().unwrap(), self.epoch_size as u64);
-        let epoch_record = &self.epoch_records.get(&epoch).unwrap();
+        let epoch_record = &self.epoch_records.get(&epoch)
+            .unwrap_or_else(|| {
+                let range = self.get_verifiable_header_range();
+                panic!("cannot get epoch record for block {}, expected range[{}, {}]",
+                       header.number.to_string(), range.0, range.1)
+            });
         self.verify_signatures(header, receipt_proof.agg_pk, &extra, epoch_record);
 
         // Verify receipt included into header
@@ -126,6 +131,11 @@ impl MapLightClient {
         let receipt_data = receipt_proof.receipt.encode_index();
 
         assert_eq!(hex::encode(receipt_data), hex::encode(data), "receipt data is not equal to the value in trie");
+    }
+
+    pub fn get_verifiable_header_range(&self) -> (u64, u64) {
+        let count = self.epoch_records.len() * self.epoch_size;
+        (self.header_height + self.epoch_size + 1 - count, self.header_height + self.epoch_size)
     }
 
     pub fn get_header_height(&self) -> u64 {

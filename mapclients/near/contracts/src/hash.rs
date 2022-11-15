@@ -8,8 +8,8 @@ use crate::G1;
 use crate::crypto::sum_points;
 
 pub(crate) fn hash_to_g1(message: &Vec<u8>) -> G1 {
-    let t0 = hash_to_base(&message, 0x00, 0x01);
-    let t1 = hash_to_base(&message, 0x02, 0x03);
+    let t0 = hash_to_base(message, 0x00, 0x01);
+    let t1 = hash_to_base(message, 0x02, 0x03);
 
     let h0 = base_to_g1(&t0);
     let h1 = base_to_g1(&t1);
@@ -87,7 +87,7 @@ fn base_to_g1(t: &BigInt) -> G1 {
     let y = y.add(&curve_b).mod_floor(&prime);
     let y = sqrt(&y);
 
-    let y_sign = sign0(&t);
+    let y_sign = sign0(t);
     let y = y.mul(&y_sign).mod_floor(&prime);
 
     let point = G1::from(&x, &y);

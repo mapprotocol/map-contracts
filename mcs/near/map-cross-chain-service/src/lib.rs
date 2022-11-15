@@ -14,12 +14,10 @@ use near_sdk::env::panic_str;
 use near_sdk::serde_json::json;
 use map_light_client::proof::ReceiptProof;
 use crate::ChainType::{EvmChain, Unknown};
-use crate::migrate::OldMapCrossChainService;
 
 mod event;
 pub mod prover;
 mod bytes;
-mod migrate;
 
 const MCS_TOKEN_BINARY: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/mcs_token.wasm");
 
@@ -243,8 +241,8 @@ impl MapCrossChainService {
     #[private]
     #[init(ignore_state)]
     pub fn migrate() -> Self {
-        let old_mcs: OldMapCrossChainService = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
-        old_mcs.migrate()
+        let mcs: MapCrossChainService = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
+        mcs
     }
 
     pub fn version() -> &'static str {
@@ -268,7 +266,7 @@ impl MapCrossChainService {
         assert_eq!(self.near_chain_id, event.to_chain, "unexpected to chain: {}", event.to_chain);
         assert!(self.mcs_tokens.get(&to_chain_token).is_some()
                     || self.fungible_tokens.get(&to_chain_token).is_some() || self.is_native_token(event.to_chain_token.clone()),
-                "to_chain_token {} is not mcs token or fungible token or empty", to_chain_token);
+                "to_chain_token {} is not mcs token or fungible token or native token", to_chain_token);
         assert_eq!(false, self.is_used_event(&event.order_id), "the event with order id {} is used", hex::encode(event.order_id));
 
         ext_map_light_client::ext(self.map_client_account.clone())
@@ -852,13 +850,11 @@ impl MapCrossChainService {
     }
 
     fn is_native_token(&self, token: Vec<u8>) -> bool {
-        let addr = self.native_token_address().0;
-        token.eq(&addr)
+        token.eq(self.wrapped_token.as_bytes())
     }
 
     fn native_token_address(&self) -> (Vec<u8>, String) {
-        let addr: Vec<u8> = vec![0; 20];
-        (addr.clone(), String::from_utf8(addr).unwrap())
+        (Vec::from(self.wrapped_token.clone()), self.wrapped_token.clone())
     }
 
     fn check_to_account(&mut self, to: Vec<u8>, chain_id: u128) {

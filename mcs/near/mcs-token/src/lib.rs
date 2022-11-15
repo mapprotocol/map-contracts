@@ -4,7 +4,7 @@ use near_contract_standards::fungible_token::metadata::{
 use near_contract_standards::fungible_token::FungibleToken;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{Base64VecU8, U128};
-use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, PromiseOrValue, StorageUsage, log, Gas};
+use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, PromiseOrValue, StorageUsage, Gas};
 
 const GAS_FOR_UPGRADE_SELF_DEPLOY: Gas = Gas(15_000_000_000_000);
 

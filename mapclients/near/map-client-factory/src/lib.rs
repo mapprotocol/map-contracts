@@ -1,6 +1,6 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde_json::json;
-use near_sdk::{env, near_bindgen, AccountId, Promise, Gas};
+use near_sdk::{env, near_bindgen, Promise, Gas};
 use map_light_client::Validator;
 
 const MAP_CLIENT_BINARY: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/map_light_client.wasm");

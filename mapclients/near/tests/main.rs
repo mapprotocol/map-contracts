@@ -676,6 +676,59 @@ async fn test_get_header_height() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn test_get_verifiable_header_range() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+
+    let file = fs::File::open("./tests/data/init_value.json").unwrap();
+    let init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "init contract failed!");
+
+    let range: (u64, u64) = contract
+        .call(&worker, "get_verifiable_header_range")
+        .view()
+        .await?
+        .json()?;
+    assert_eq!(2001, range.0, "wrong min verifiable header");
+    assert_eq!(3000, range.1, "wrong mac verifiable header");
+
+    let file = fs::File::open("./tests/data/header.json").unwrap();
+    let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    let mut block = 3000;
+    while block <= 23000 {
+        let value = headers[block.to_string()].clone();
+        let res = contract
+            .call(&worker, "update_block_header")
+            .args_json(json!(value))?
+            .gas(300_000_000_000_000)
+            .transact()
+            .await?;
+
+        println!("logs {:?}", res.logs());
+        assert!(res.is_success(), "update_block_header {} failed", block);
+
+        block += 1000;
+    }
+
+    let range: (u64, u64) = contract
+        .call(&worker, "get_verifiable_header_range")
+        .view()
+        .await?
+        .json()?;
+    assert_eq!(4001, range.0, "wrong min verifiable header");
+    assert_eq!(24000, range.1, "wrong mac verifiable header");
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_get_epoch_size() -> anyhow::Result<()> {
     let (worker, contract) = deploy_contract().await?;
 
@@ -836,6 +889,9 @@ async fn test_verify_proof() -> anyhow::Result<()> {
         .await;
 
     assert!(res.is_err(), "verify_proof_data for block 187133 should fail");
+    println!("error: {}", res.as_ref().err().unwrap());
+    assert!(res.err().unwrap().to_string().contains("cannot get epoch record for block"),
+            "should be epoch record not found error");
 
     let file = fs::File::open("./tests/data/header.json").unwrap();
     let headers: serde_json::Value = serde_json::from_reader(file).unwrap();

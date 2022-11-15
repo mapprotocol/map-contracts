@@ -617,7 +617,7 @@ async fn test_transfer_in_mcs_token_no_token() -> anyhow::Result<()> {
         .await;
     assert!(res.is_err(), "transfer_in should fail");
     println!("error: {:?}", res.as_ref().err());
-    assert!(res.err().unwrap().to_string().contains("is not mcs token or fungible token or empty"), "token is invalid");
+    assert!(res.err().unwrap().to_string().contains("is not mcs token or fungible token or native token"), "token is invalid");
     let dev_balance_1 = dev_account.view_account(&worker).await?.balance;
     println!("after transfer in: account {} balance: {}", dev_account.id(), dev_balance_1);
     assert!(dev_balance_0 - dev_balance_1 < parse_near!("1 N"));
@@ -4568,8 +4568,11 @@ fn new_account(account_id: &AccountId, sk: &SecretKey) -> Account {
     Account::from_file(path)
 }
 
-async fn deploy_and_init_wnear(worker: &Worker<Sandbox>) -> anyhow::Result<Contract> {
-    let contract = worker.dev_deploy(&std::fs::read(WNEAR_WASM_FILEPATH)?).await?;
+async fn deploy_and_init_wnear(worker: &Worker<Sandbox>) -> anyhow::Result<Contract> { let token_account: AccountId = "mcs.test.near".parse().unwrap();
+    let account_id: AccountId = "wrap.test.near".to_string().parse().unwrap();
+    let sk = SecretKey::from_seed(KeyType::ED25519, DEV_ACCOUNT_SEED);
+    let account = worker.create_tla(account_id.clone(), sk).await?.unwrap();
+    let contract = account.deploy(&worker, &std::fs::read(WNEAR_WASM_FILEPATH)?).await?.unwrap();
     println!("deploy wnear contract id: {:?}", contract.id());
 
     let res = contract
