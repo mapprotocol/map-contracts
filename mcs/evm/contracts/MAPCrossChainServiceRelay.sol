@@ -395,8 +395,9 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
             for (uint256 i = 0; i < logs.length; i++) {
                 if (abi.decode(logs[i].topics[0], (bytes32)) == mapDepositOutTopic) {
                     require(_checkBytes(_addressToBytes(logs[i].addr), bridgeAddress[_fromChain]), "Illegal across the chain");
-                    (address fromToken, bytes memory from,bytes32 orderId, uint256 fromChain, uint256 toChain,address to,uint256 amount)
-                    = abi.decode(logs[i].data, (address, bytes, bytes32, uint256, uint256, address, uint256));
+                    address fromToken = abi.decode(logs[i].topics[1],(address));
+                    ( bytes memory from,bytes32 orderId, uint256 fromChain, uint256 toChain,address to,uint256 amount)
+                    = abi.decode(logs[i].data, ( bytes, bytes32, uint256, uint256, address, uint256));
                     require(selfChainId == toChain, "Illegal to chainID");
                     require(_fromChain == fromChain, "Illegal from chainID");
                     bytes memory _fromBytes = _addressToBytes(fromToken);

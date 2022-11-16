@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-
-
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -44,4 +42,12 @@ contract LightClientManager is ILightClientManager, Ownable {
         }
 
     }
+
+    function verifiableHeaderRange(uint256 _chainId) external view override returns (uint256, uint256){
+        require(lightClientContract[_chainId] != address(0), "not register");
+        ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
+        (uint256 min,uint256 max) = lightNode.verifiableHeaderRange();
+        return(min,max);
+    }
+
 }

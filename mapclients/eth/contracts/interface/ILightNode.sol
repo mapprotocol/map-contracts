@@ -32,4 +32,6 @@ interface ILightNode is ILightNodePoint{
         uint epochSize,
         address verifyTool)
     external;
+
+    function verifiableHeaderRange() external view returns (uint256, uint256);
 }

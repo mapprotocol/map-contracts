@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 interface ILightNode {
     function verifyProofData(bytes memory _receiptProof) external view returns (bool success, string memory message, bytes memory logs);
@@ -10,4 +10,6 @@ interface ILightNode {
     function headerHeight() external view returns (uint256 height);
 
     function currentNumberAndHash(uint256 number) external view returns(uint256 ,bytes memory);
+
+    function verifiableHeaderRange() external view returns (uint256, uint256);
 }

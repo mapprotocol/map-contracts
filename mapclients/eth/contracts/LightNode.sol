@@ -144,6 +144,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         emit MapUpdateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 
+    function verifiableHeaderRange() external view override returns (uint256, uint256){
+
+        return (headerHeight - (maxValidators * epochSize) , headerHeight);
+    }
+
     function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk)
     internal
     view
