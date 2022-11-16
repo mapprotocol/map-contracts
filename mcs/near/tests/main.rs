@@ -43,7 +43,7 @@ pub struct FungibleTokenMsg {
     pub msg_type: u8,
     // 0: Transfer or 1: Deposit
     pub to: Vec<u8>,
-    pub to_chain: u128, // if msg_type is 1, it is omitted
+    pub to_chain: U128, // if msg_type is 1, it is omitted
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -141,7 +141,7 @@ async fn test_deploy_mcs_token() -> anyhow::Result<()> {
         .call(&worker, "get_mcs_tokens")
         .view()
         .await?
-        .json::<Vec<(String, HashSet<u128>)>>()?;
+        .json::<Vec<(String, Vec<U128>)>>()?;
 
     println!("tokens:{:?}", tokens);
 
@@ -184,7 +184,7 @@ async fn test_owner() -> anyhow::Result<()> {
     assert!(res.is_success(), "init MCS contract failed!");
     println!("init mcs logs: {:?}", res.logs());
 
-    let chain_id = 100;
+    let chain_id: U128 = U128(100);
     let token_name = "mcs_token";
     let token_account = format!("{}.{}", token_name, mcs.id().to_string());
 
@@ -246,7 +246,7 @@ async fn test_manage_to_chain_type() -> anyhow::Result<()> {
                                   MAP_BRIDGE_ADDRESS.to_string(),
                                   wnear.id().to_string()).await?;
 
-    let chain_id = 100;
+    let chain_id: U128 = U128(100);
     let chain_type = ChainType::EvmChain;
 
     let ret = gen_call_transaction(&worker, &mcs, "get_chain_type", json!({"chain_id": chain_id}), false)
@@ -277,16 +277,16 @@ async fn test_manage_near_chain_id() -> anyhow::Result<()> {
                                   MAP_BRIDGE_ADDRESS.to_string(),
                                   wnear.id().to_string()).await?;
 
-    let near_chain_id = "5566818579631833088";
+    let near_chain_id: U128 = U128(5566818579631833088);
     let paused_mask = 1 << 2 | 1 << 3 | 1 << 4 | 1 << 5;
 
     let ret = gen_call_transaction(&worker, &mcs, "get_near_chain_id", json!({}), false)
         .view()
         .await?
-        .json::<u128>()?;
+        .json::<U128>()?;
 
-    println!("get_near_chain_id {}", ret);
-    assert_eq!(1313161555, ret, "get default near chain id");
+    println!("get_near_chain_id {}", ret.0);
+    assert_eq!(1313161555, ret.0, "get default near chain id");
 
     let res = gen_call_transaction(&worker, &mcs, "set_near_chain_id", json!({"near_chain_id": near_chain_id}), false)
         .transact()
@@ -306,12 +306,9 @@ async fn test_manage_near_chain_id() -> anyhow::Result<()> {
     let ret = gen_call_transaction(&worker, &mcs, "get_near_chain_id", json!({}), false)
         .view()
         .await?
-        .json::<u128>()?;
-    println!("get near chain id {}", ret);
-    let s = format!("{}", ret);
-    assert_eq!(near_chain_id, s, "near chain id should be set");
-
-    println!("max u128 {}", u128::MAX);
+        .json::<U128>()?;
+    println!("get near chain id {}", ret.0);
+    assert_eq!(near_chain_id, ret, "near chain id should be set");
 
     Ok(())
 }
@@ -374,7 +371,8 @@ async fn test_manage_mcs_token_to_chain() -> anyhow::Result<()> {
         let token_name = format!("eth_token{}", i);
         let token_account = format!("{}.{}", token_name, mcs.id().to_string());
 
-        let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account, "to_chain": i}), false)
+        let to_chain: U128 = U128(i);
+        let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account, "to_chain": to_chain}), false)
             .transact()
             .await;
         assert!(res.is_err(), "add_mcs_token_to_chain should fail since it is not deployed");
@@ -384,29 +382,30 @@ async fn test_manage_mcs_token_to_chain() -> anyhow::Result<()> {
             .await?;
         assert!(res.is_success(), "deploy_mcs_token {} failed", token_name);
 
-        let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account, "to_chain": i}), false)
+        let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account, "to_chain": to_chain}), false)
             .transact()
             .await?;
         assert!(res.is_success(), "add_mcs_token_to_chain should succeed since it has been deployed");
 
-        let is_valid = gen_call_transaction(&worker, &mcs, "valid_mcs_token_out", json!({"token": token_account, "to_chain": i}), false)
+        let is_valid = gen_call_transaction(&worker, &mcs, "valid_mcs_token_out", json!({"token": token_account, "to_chain": to_chain}), false)
             .view()
             .await?
             .json::<bool>()?;
         assert!(is_valid, "mcs token {} to chain {} should be valid", token_account, i);
 
-        let is_valid = gen_call_transaction(&worker, &mcs, "valid_mcs_token_out", json!({"token": token_account, "to_chain": i+1}), false)
+        let to_chain_2: U128 = U128(i + 1);
+        let is_valid = gen_call_transaction(&worker, &mcs, "valid_mcs_token_out", json!({"token": token_account, "to_chain": to_chain_2}), false)
             .view()
             .await?
             .json::<bool>()?;
         assert!(!is_valid, "mcs token {} to chain {} should be invalid", token_account, i + 1);
 
-        let res = gen_call_transaction(&worker, &mcs, "remove_mcs_token_to_chain", json!({"token": token_account, "to_chain": i}), false)
+        let res = gen_call_transaction(&worker, &mcs, "remove_mcs_token_to_chain", json!({"token": token_account, "to_chain": to_chain}), false)
             .transact()
             .await?;
         assert!(res.is_success(), "remove_mcs_token_to_chain should succeed");
 
-        let is_valid = gen_call_transaction(&worker, &mcs, "valid_mcs_token_out", json!({"token": token_account, "to_chain": i}), false)
+        let is_valid = gen_call_transaction(&worker, &mcs, "valid_mcs_token_out", json!({"token": token_account, "to_chain": to_chain}), false)
             .view()
             .await?
             .json::<bool>()?;
@@ -425,12 +424,12 @@ async fn test_manage_fungible_token_to_chain() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
 
     let mut token_name0 = "eth_token".to_string();
-    let to_chain = 1;
+    let to_chain: U128 = U128(1);
     let is_valid = gen_call_transaction(&worker, &mcs, "valid_fungible_token_out", json!({"token": token_name0, "to_chain": to_chain}), false)
         .view()
         .await?
         .json::<bool>()?;
-    assert!(!is_valid, "fungible token {} to chain {} should be invalid", token_name0, to_chain);
+    assert!(!is_valid, "fungible token {} to chain {} should be invalid", token_name0, to_chain.0);
 
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": token_name0, "to_chain": to_chain}), false)
         .transact()
@@ -448,24 +447,25 @@ async fn test_manage_fungible_token_to_chain() -> anyhow::Result<()> {
         .view()
         .await?
         .json::<bool>()?;
-    assert!(is_valid, "fungible token {} to chain {} should be valid", token_name0, to_chain);
+    assert!(is_valid, "fungible token {} to chain {} should be valid", token_name0, to_chain.0);
 
-    let is_valid = gen_call_transaction(&worker, &mcs, "valid_fungible_token_out", json!({"token": token_name0, "to_chain": to_chain+1}), false)
+    let to_chain_2: U128 = U128(to_chain.0 + 1);
+    let is_valid = gen_call_transaction(&worker, &mcs, "valid_fungible_token_out", json!({"token": token_name0, "to_chain": to_chain_2}), false)
         .view()
         .await?
         .json::<bool>()?;
-    assert!(!is_valid, "fungible token {} to chain {} should be invalid", token_name0, to_chain + 1);
+    assert!(!is_valid, "fungible token {} to chain {} should be invalid", token_name0, to_chain_2.0);
 
-    let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": token_name0, "to_chain": to_chain + 1}), false)
+    let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": token_name0, "to_chain": to_chain_2}), false)
         .transact()
         .await?;
     assert!(res.is_success(), "add_fungible_token_to_chain should succeed");
 
-    let is_valid = gen_call_transaction(&worker, &mcs, "valid_fungible_token_out", json!({"token": token_name0, "to_chain": to_chain+1}), false)
+    let is_valid = gen_call_transaction(&worker, &mcs, "valid_fungible_token_out", json!({"token": token_name0, "to_chain": to_chain_2}), false)
         .view()
         .await?
         .json::<bool>()?;
-    assert!(is_valid, "fungible token {} to chain {} should be valid", token_name0, to_chain + 1);
+    assert!(is_valid, "fungible token {} to chain {} should be valid", token_name0, to_chain_2.0);
 
     let ft = deploy_and_init_ft(&worker).await?;
     let token_name1 = ft.id().to_string();
@@ -478,13 +478,13 @@ async fn test_manage_fungible_token_to_chain() -> anyhow::Result<()> {
         .view()
         .await?
         .json::<bool>()?;
-    assert!(is_valid, "fungible token {} to chain {} should be valid", token_name1, to_chain);
+    assert!(is_valid, "fungible token {} to chain {} should be valid", token_name1, to_chain.0);
 
     let tokens = mcs
         .call(&worker, "get_fungible_tokens")
         .view()
         .await?
-        .json::<Vec<(String, HashSet<u128>)>>()?;
+        .json::<Vec<(String, Vec<U128>)>>()?;
     assert_eq!(2, tokens.len(), "wrong fungible tokens size");
     assert_eq!(token_name0, tokens.get(0).unwrap().0, "{} is not contained", token_name0);
     assert_eq!(token_name1, tokens.get(1).unwrap().0, "{} is not contained", token_name1);
@@ -498,13 +498,13 @@ async fn test_manage_fungible_token_to_chain() -> anyhow::Result<()> {
         .view()
         .await?
         .json::<bool>()?;
-    assert!(!is_valid, "fungible token {} to chain {} should be invalid", token_name1, to_chain);
+    assert!(!is_valid, "fungible token {} to chain {} should be invalid", token_name1, to_chain.0);
 
     let tokens = mcs
         .call(&worker, "get_fungible_tokens")
         .view()
         .await?
-        .json::<Vec<(String, HashSet<u128>)>>()?;
+        .json::<Vec<(String, Vec<U128>)>>()?;
     assert_eq!(1, tokens.len(), "wrong fungible tokens size");
     assert_eq!(token_name0, tokens.get(0).unwrap().0, "{} is not contained", token_name0);
 
@@ -817,7 +817,7 @@ async fn test_transfer_in_ft_token() -> anyhow::Result<()> {
     let sk = SecretKey::from_seed(KeyType::ED25519, DEV_ACCOUNT_SEED);
     let account = worker.create_tla(token_account.clone(), sk).await?.unwrap();
     let ft = deploy_and_init_ft_with_account(&worker, &account).await?;
-    let to_chain = 1;
+    let to_chain = U128(1);
 
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": token_account, "to_chain": to_chain}), false)
         .transact()
@@ -928,7 +928,7 @@ async fn test_transfer_in_ft_token_no_token() -> anyhow::Result<()> {
         .json::<U128>()?;
     assert_eq!(total, balance, "balance of mcs is incorrect");
 
-    let to_chain = 1;
+    let to_chain = U128(1);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": token_account, "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -978,7 +978,7 @@ async fn test_transfer_in_ft_token_not_enough_deposit() -> anyhow::Result<()> {
     let sk = SecretKey::from_seed(KeyType::ED25519, DEV_ACCOUNT_SEED);
     let account = worker.create_tla(token_account.clone(), sk).await?.unwrap();
     let ft = deploy_and_init_ft_with_account(&worker, &account).await?;
-    let to_chain = 1;
+    let to_chain = U128(1);
 
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": token_account, "to_chain": to_chain}), false)
         .transact()
@@ -1084,7 +1084,7 @@ async fn test_transfer_in_ft_token_not_enough_token() -> anyhow::Result<()> {
     let sk = SecretKey::from_seed(KeyType::ED25519, DEV_ACCOUNT_SEED);
     let account = worker.create_tla(token_account.clone(), sk).await?.unwrap();
     let ft = deploy_and_init_ft_with_account(&worker, &account).await?;
-    let to_chain = 1;
+    let to_chain: U128 = U128(1);
 
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": token_account, "to_chain": to_chain}), false)
         .transact()
@@ -1735,7 +1735,7 @@ async fn test_transfer_out_mcs_token() -> anyhow::Result<()> {
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account.to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -1828,7 +1828,7 @@ async fn test_transfer_out_mcs_token_invalid_to_account() -> anyhow::Result<()> 
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account.to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -1911,7 +1911,7 @@ async fn test_transfer_out_mcs_token_amount_too_small() -> anyhow::Result<()> {
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account.to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -2004,7 +2004,7 @@ async fn test_transfer_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 18).await?;
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account.to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -2097,7 +2097,7 @@ async fn test_transfer_out_mcs_token_with_deposit() -> anyhow::Result<()> {
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account.to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -2181,7 +2181,7 @@ async fn test_transfer_out_mcs_token_no_to_chain() -> anyhow::Result<()> {
     let token_name = "mcs_token_0";
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let account_id: AccountId = "pandarr.test.near".to_string().parse().unwrap();
     let sk = SecretKey::from_seed(KeyType::ED25519, DEV_ACCOUNT_SEED);
     let dev_account = worker.create_tla(account_id.clone(), sk).await?.unwrap();
@@ -2274,7 +2274,7 @@ async fn test_transfer_out_mcs_token_burn_failed() -> anyhow::Result<()> {
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account.to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -2315,7 +2315,7 @@ async fn test_transfer_out_mcs_token_burn_failed() -> anyhow::Result<()> {
         .await;
     assert!(res.is_err(), "transfer_out_token should fail");
     println!("error: {}", res.as_ref().err().unwrap().to_string());
-    assert!(res.err().unwrap().to_string().contains("get failed result from cross contract"), "should be cross contract call error");
+    assert!(res.err().unwrap().to_string().contains("burn mcs token or call near_deposit()"), "should be burn mcs token or call near_deposit() error");
 
     let balance = dev_account
         .call(&worker, &token_account, "ft_balance_of")
@@ -2357,7 +2357,7 @@ async fn test_transfer_out_fungible_token() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -2400,7 +2400,7 @@ async fn test_transfer_out_fungible_token() -> anyhow::Result<()> {
     let msg = FungibleTokenMsg {
         msg_type: 0,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(100000000000000000000000000);
     let res = from
@@ -2446,7 +2446,7 @@ async fn test_transfer_out_fungible_invalid_to_account() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -2489,7 +2489,7 @@ async fn test_transfer_out_fungible_invalid_to_account() -> anyhow::Result<()> {
     let msg = FungibleTokenMsg {
         msg_type: 0,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(100000000000000000000000000);
     let res = from
@@ -2534,7 +2534,7 @@ async fn test_transfer_out_fungible_token_amount_too_small() -> anyhow::Result<(
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -2577,7 +2577,7 @@ async fn test_transfer_out_fungible_token_amount_too_small() -> anyhow::Result<(
     let msg = FungibleTokenMsg {
         msg_type: 0,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(1000000000000000000000 - 1);
     let res = from
@@ -2650,7 +2650,7 @@ async fn test_transfer_out_fungible_token_diff_decimal() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft_with_decimal(&worker, 18).await?;
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -2693,7 +2693,7 @@ async fn test_transfer_out_fungible_token_diff_decimal() -> anyhow::Result<()> {
     let msg = FungibleTokenMsg {
         msg_type: 0,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(1000000000000000 - 1);
     let res = from
@@ -2766,7 +2766,7 @@ async fn test_transfer_out_fungible_token_wrong_type() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -2809,7 +2809,7 @@ async fn test_transfer_out_fungible_token_wrong_type() -> anyhow::Result<()> {
     let msg = FungibleTokenMsg {
         msg_type: 2,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(100000000000000000000000000);
     let res = from
@@ -2854,7 +2854,7 @@ async fn test_transfer_out_fungible_token_no_to_chain() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = 100;
+    let to_chain: U128 = U128(100);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -2865,7 +2865,7 @@ async fn test_transfer_out_fungible_token_no_to_chain() -> anyhow::Result<()> {
         .await?;
     assert!(res.is_success(), "set_chain_type should succeed");
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let from = worker.dev_create_account().await?;
     let total: U128 = U128::from(1000000000000000000000000000);
     let res = gen_call_transaction(&worker, &ft, "mint", json!({"account_id": from.id(), "amount": total}), true)
@@ -2898,7 +2898,7 @@ async fn test_transfer_out_fungible_token_no_to_chain() -> anyhow::Result<()> {
     let msg = FungibleTokenMsg {
         msg_type: 0,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(100000000000000000000000000);
     let res = from
@@ -2943,7 +2943,7 @@ async fn test_transfer_out_fungible_token_not_registered() -> anyhow::Result<()>
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let from = worker.dev_create_account().await?;
     let total: U128 = U128::from(1000000000000000000000000000);
     let res = gen_call_transaction(&worker, &ft, "mint", json!({"account_id": from.id(), "amount": total}), true)
@@ -2976,7 +2976,7 @@ async fn test_transfer_out_fungible_token_not_registered() -> anyhow::Result<()>
     let msg = FungibleTokenMsg {
         msg_type: 0,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(100000000000000000000000000);
     let res = from
@@ -3021,7 +3021,7 @@ async fn test_transfer_out_native() -> anyhow::Result<()> {
 
     let from = worker.dev_create_account().await?;
     let amount: u128 = parse_near!("10 N");
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
 
     let res = gen_call_transaction(&worker, &mcs, "add_native_to_chain", json!({"to_chain": to_chain}), false)
@@ -3072,7 +3072,7 @@ async fn test_transfer_out_native_invalid_account() -> anyhow::Result<()> {
 
     let from = worker.dev_create_account().await?;
     let amount: u128 = parse_near!("0.001 N");
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31").unwrap();
 
     let res = gen_call_transaction(&worker, &mcs, "add_native_to_chain", json!({"to_chain": to_chain}), false)
@@ -3123,7 +3123,7 @@ async fn test_transfer_out_native_too_small() -> anyhow::Result<()> {
 
     let from = worker.dev_create_account().await?;
     let amount: u128 = parse_near!("0.0009 N");
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
 
     let res = gen_call_transaction(&worker, &mcs, "add_native_to_chain", json!({"to_chain": to_chain}), false)
@@ -3195,7 +3195,7 @@ async fn test_transfer_out_native_no_deposit() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
 
     let from = worker.dev_create_account().await?;
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
 
     let res = gen_call_transaction(&worker, &mcs, "add_native_to_chain", json!({"to_chain": to_chain}), false)
@@ -3269,7 +3269,7 @@ async fn test_transfer_out_native_no_to_chain() -> anyhow::Result<()> {
 
     let from = worker.dev_create_account().await?;
     let amount: u128 = parse_near!("10 N");
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
 
     let balance_from_0 = from.view_account(&worker).await?.balance;
@@ -3310,7 +3310,7 @@ async fn test_transfer_out_native_not_enough_gas() -> anyhow::Result<()> {
 
     let from = worker.dev_create_account().await?;
     let amount: u128 = parse_near!("10 N");
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
 
     let res = gen_call_transaction(&worker, &mcs, "add_native_to_chain", json!({"to_chain": to_chain}), false)
@@ -3565,7 +3565,7 @@ async fn test_deposit_out_fungible_token() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = MAP_CHAIN_ID as _;
+    let to_chain: U128 = U128(MAP_CHAIN_ID);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -3603,7 +3603,7 @@ async fn test_deposit_out_fungible_token() -> anyhow::Result<()> {
     let msg = FungibleTokenMsg {
         msg_type: 1,
         to,
-        to_chain: 0 as _,
+        to_chain: U128(0),
     };
     let amount: U128 = U128(100000000000000000000000000);
     let res = from
@@ -3650,7 +3650,7 @@ async fn test_deposit_out_fungible_token_invalid_account() -> anyhow::Result<()>
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = MAP_CHAIN_ID as u64;
+    let to_chain: U128 = U128(MAP_CHAIN_ID);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -3688,7 +3688,7 @@ async fn test_deposit_out_fungible_token_invalid_account() -> anyhow::Result<()>
     let msg = FungibleTokenMsg {
         msg_type: 1,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(1000000000000000000000);
     let res = from
@@ -3732,7 +3732,7 @@ async fn test_deposit_out_fungible_token_amount_too_small() -> anyhow::Result<()
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = MAP_CHAIN_ID as u64;
+    let to_chain: U128 = U128(MAP_CHAIN_ID);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -3770,7 +3770,7 @@ async fn test_deposit_out_fungible_token_amount_too_small() -> anyhow::Result<()
     let msg = FungibleTokenMsg {
         msg_type: 1,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(1000000000000000000000 - 1);
     let res = from
@@ -3843,7 +3843,7 @@ async fn test_deposit_out_fungible_token_diff_decimal() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft_with_decimal(&worker, 18).await?;
 
-    let to_chain: u64 = MAP_CHAIN_ID as u64;
+    let to_chain: U128 = U128(MAP_CHAIN_ID);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -3881,7 +3881,7 @@ async fn test_deposit_out_fungible_token_diff_decimal() -> anyhow::Result<()> {
     let msg = FungibleTokenMsg {
         msg_type: 1,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(1000000000000000 - 1);
     let res = from
@@ -3954,13 +3954,13 @@ async fn test_deposit_out_fungible_token_no_to_chain() -> anyhow::Result<()> {
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = 100;
+    let to_chain: U128 = U128(100);
     let res = gen_call_transaction(&worker, &mcs, "add_fungible_token_to_chain", json!({"token": ft.id().to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
     assert!(res.is_success(), "add_fungible_token_to_chain should succeed");
 
-    let to_chain: u64 = 1000;
+    let to_chain: U128 = U128(1000);
     let from = worker.dev_create_account().await?;
     let total: U128 = U128::from(1000000000000000000000000000);
     let res = gen_call_transaction(&worker, &ft, "mint", json!({"account_id": from.id(), "amount":total}), true)
@@ -3993,7 +3993,7 @@ async fn test_deposit_out_fungible_token_no_to_chain() -> anyhow::Result<()> {
     let msg = FungibleTokenMsg {
         msg_type: 1,
         to,
-        to_chain: 0,
+        to_chain: U128(0),
     };
     let amount: U128 = U128(100000000000000000000000000);
     let res = from
@@ -4038,7 +4038,7 @@ async fn test_deposit_out_fungible_token_not_registered() -> anyhow::Result<()> 
                                   wnear.id().to_string()).await?;
     let ft = deploy_and_init_ft(&worker).await?;
 
-    let to_chain: u64 = 1;
+    let to_chain: U128 = U128(1);
     let from = worker.dev_create_account().await?;
     let total: U128 = U128::from(1000000000000000000000000000);
     let res = gen_call_transaction(&worker, &ft, "mint", json!({"account_id": from.id(), "amount": total}), true)
@@ -4071,7 +4071,7 @@ async fn test_deposit_out_fungible_token_not_registered() -> anyhow::Result<()> 
     let msg = FungibleTokenMsg {
         msg_type: 0,
         to,
-        to_chain: to_chain as _,
+        to_chain,
     };
     let amount: U128 = U128(100000000000000000000000000);
     let res = from
@@ -4115,7 +4115,7 @@ async fn test_deposit_out_mcs_token() -> anyhow::Result<()> {
                                   MAP_BRIDGE_ADDRESS.to_string(),
                                   wnear.id().to_string()).await?;
 
-    let to_chain: u64 = MAP_CHAIN_ID as _;
+    let to_chain: U128 = U128(MAP_CHAIN_ID);
     let token_name = "mcs_token_0";
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
@@ -4156,24 +4156,17 @@ async fn test_deposit_out_mcs_token() -> anyhow::Result<()> {
 
     let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
     let balance_from_0 = from.view_account(&worker).await?.balance;
-
-    let msg = FungibleTokenMsg {
-        msg_type: 1,
-        to,
-        to_chain: 0 as _,
-    };
     let amount: U128 = U128(100000000000000000000000000);
     let res = from
-        .call(&worker, &token_account, "ft_transfer_call")
-        .args_json((mcs.id().to_string(), amount, Option::<String>::None, serde_json::to_string(&msg).unwrap()))?
+        .call(&worker, &mcs.id(), "deposit_out_token")
+        .args_json((token_account.to_string(), to, amount))?
         .gas(300_000_000_000_000)
-        .deposit(1)
         .transact()
         .await?;
     assert!(res.is_success(), "ft_transfer_call failed");
     println!("ft_transfer_call logs: {:?}", res.logs());
-    assert_eq!(3, res.logs().len(), "should have 3 logs");
-    assert!(res.logs().get(2).unwrap().contains(DEPOSIT_OUT_TYPE), "should be deposit out log");
+    assert_eq!(2, res.logs().len(), "should have 3 logs");
+    assert!(res.logs().get(1).unwrap().contains(DEPOSIT_OUT_TYPE), "should be deposit out log");
 
     let balance = from
         .call(&worker, &token_account, "ft_balance_of")
@@ -4191,7 +4184,7 @@ async fn test_deposit_out_mcs_token() -> anyhow::Result<()> {
         .await?
         .json::<U128>()?;
     println!("after deposit out ft balance of mcs is {:?}", balance);
-    assert_eq!(amount.0, balance.0, "after deposit out ft balance of mcs");
+    assert_eq!(0, balance.0, "after deposit out ft balance of mcs");
 
     Ok(())
 }
@@ -4206,7 +4199,7 @@ async fn test_deposit_out_mcs_token_amount_too_small() -> anyhow::Result<()> {
                                   MAP_BRIDGE_ADDRESS.to_string(),
                                   wnear.id().to_string()).await?;
 
-    let to_chain: u64 = MAP_CHAIN_ID as _;
+    let to_chain: U128 = U128(MAP_CHAIN_ID);
     let token_name = "mcs_token_0";
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
@@ -4248,21 +4241,15 @@ async fn test_deposit_out_mcs_token_amount_too_small() -> anyhow::Result<()> {
     let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
-    let msg = FungibleTokenMsg {
-        msg_type: 1,
-        to,
-        to_chain: 0,
-    };
     let amount: U128 = U128(1000000000000000000000 - 1);
     let res = from
-        .call(&worker, &token_account, "ft_transfer_call")
-        .args_json((mcs.id().to_string(), amount, Option::<String>::None, serde_json::to_string(&msg).unwrap()))?
+        .call(&worker, &mcs.id(), "deposit_out_token")
+        .args_json((token_account.to_string(), to.clone(), amount))?
         .gas(300_000_000_000_000)
-        .deposit(1)
         .transact()
-        .await?;
-    assert!(res.is_success(), "ft_transfer_call should succeed");
-    println!("ft_transfer_call logs: {:?}", res.logs());
+        .await;
+    assert!(res.is_err(), "deposit_out_token should failed");
+    assert!(res.as_ref().err().unwrap().to_string().contains("amount too small"), "should be amount too small error");
 
     let balance = from
         .call(&worker, &token_account, "ft_balance_of")
@@ -4284,14 +4271,15 @@ async fn test_deposit_out_mcs_token_amount_too_small() -> anyhow::Result<()> {
 
     let amount: U128 = U128(1000000000000000000000);
     let res = from
-        .call(&worker, &token_account, "ft_transfer_call")
-        .args_json((mcs.id().to_string(), amount, Option::<String>::None, serde_json::to_string(&msg).unwrap()))?
+        .call(&worker, &mcs.id(), "deposit_out_token")
+        .args_json((token_account.to_string(), to, amount))?
         .gas(300_000_000_000_000)
-        .deposit(1)
         .transact()
         .await?;
-    assert!(res.is_success(), "ft_transfer_call should succeed");
+    assert!(res.is_success(), "ft_transfer_call failed");
     println!("ft_transfer_call logs: {:?}", res.logs());
+    assert_eq!(2, res.logs().len(), "should have 3 logs");
+    assert!(res.logs().get(1).unwrap().contains(DEPOSIT_OUT_TYPE), "should be deposit out log");
 
     let balance = from
         .call(&worker, &token_account, "ft_balance_of")
@@ -4309,7 +4297,90 @@ async fn test_deposit_out_mcs_token_amount_too_small() -> anyhow::Result<()> {
         .await?
         .json::<U128>()?;
     println!("after transfer out ft balance of mcs is {:?}", balance);
-    assert_eq!(amount.0, balance.0, "after transfer out ft balance of mcs");
+    assert_eq!(0, balance.0, "after transfer out ft balance of mcs");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_deposit_out_mcs_token_amount_too_large() -> anyhow::Result<()> {
+    let worker = init_worker().await?;
+    let map_client = deploy_and_init_light_client(&worker).await?;
+    let wnear = deploy_and_init_wnear(&worker).await?;
+    let mcs = deploy_and_init_mcs(&worker,
+                                  map_client.id().to_string(),
+                                  MAP_BRIDGE_ADDRESS.to_string(),
+                                  wnear.id().to_string()).await?;
+
+    let to_chain: U128 = U128(MAP_CHAIN_ID);
+    let token_name = "mcs_token_0";
+    let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
+    deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
+
+    let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account.to_string(), "to_chain": to_chain}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "add_mcs_token_to_chain should succeed");
+
+    let from = worker.dev_create_account().await?;
+    let total: U128 = U128::from(1000000000000000000000000000);
+    let res = mcs.as_account().call(&worker, &token_account, "mint")
+        .args_json(json!({"account_id": from.id(), "amount": total}))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "mint should succeed");
+    println!("log: {:?}", res.logs());
+
+    let balance = from
+        .call(&worker, &token_account, "ft_balance_of")
+        .args_json((from.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    println!("before transfer out ft balance of {} is {:?}", from.id(), balance);
+    assert_eq!(total, balance, "before transfer out ft balance of root account");
+
+    let balance = from
+        .call(&worker, &token_account, "ft_balance_of")
+        .args_json((mcs.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    println!("before transfer out ft balance of mcs is {:?}", balance);
+    assert_eq!(0, balance.0, "before transfer out ft balance of mcs");
+
+    let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
+    let balance_from_0 = from.view_account(&worker).await?.balance;
+
+    let amount: U128 = U128(total.0 + 1);
+    let res = from
+        .call(&worker, &mcs.id(), "deposit_out_token")
+        .args_json((token_account.to_string(), to.clone(), amount))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+    assert!(res.is_err(), "deposit_out_token should failed");
+    assert!(res.as_ref().err().unwrap().to_string().contains("burn mcs token failed"), "should be burn mcs token failed error");
+
+    let balance = from
+        .call(&worker, &token_account, "ft_balance_of")
+        .args_json((from.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    println!("after transfer out ft balance of from account is {:?}", balance);
+    assert_eq!(total, balance, "after transfer out ft balance of from account");
+
+    let balance = from
+        .call(&worker, &token_account, "ft_balance_of")
+        .args_json((mcs.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    println!("after transfer out ft balance of mcs is {:?}", balance);
+    assert_eq!(0, balance.0, "after transfer out ft balance of mcs");
 
     Ok(())
 }
@@ -4324,7 +4395,7 @@ async fn test_deposit_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
                                   MAP_BRIDGE_ADDRESS.to_string(),
                                   wnear.id().to_string()).await?;
 
-    let to_chain: u64 = MAP_CHAIN_ID as _;
+    let to_chain: U128 = U128(MAP_CHAIN_ID);
     let token_name = "mcs_token_0";
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 18).await?;
@@ -4366,21 +4437,15 @@ async fn test_deposit_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
     let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
-    let msg = FungibleTokenMsg {
-        msg_type: 1,
-        to,
-        to_chain: 0,
-    };
     let amount: U128 = U128(1000000000000000 - 1);
     let res = from
-        .call(&worker, &token_account, "ft_transfer_call")
-        .args_json((mcs.id().to_string(), amount, Option::<String>::None, serde_json::to_string(&msg).unwrap()))?
+        .call(&worker, &mcs.id(), "deposit_out_token")
+        .args_json((token_account.to_string(), to.clone(), amount))?
         .gas(300_000_000_000_000)
-        .deposit(1)
         .transact()
-        .await?;
-    assert!(res.is_success(), "ft_transfer_call should succeed");
-    println!("ft_transfer_call logs: {:?}", res.logs());
+        .await;
+    assert!(res.is_err(), "deposit_out_token should failed");
+    assert!(res.as_ref().err().unwrap().to_string().contains("amount too small"), "should be amount too small error");
 
     let balance = from
         .call(&worker, &token_account, "ft_balance_of")
@@ -4402,14 +4467,15 @@ async fn test_deposit_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
 
     let amount: U128 = U128(1000000000000000);
     let res = from
-        .call(&worker, &token_account, "ft_transfer_call")
-        .args_json((mcs.id().to_string(), amount, Option::<String>::None, serde_json::to_string(&msg).unwrap()))?
+        .call(&worker, &mcs.id(), "deposit_out_token")
+        .args_json((token_account.to_string(), to, amount))?
         .gas(300_000_000_000_000)
-        .deposit(1)
         .transact()
         .await?;
-    assert!(res.is_success(), "ft_transfer_call should succeed");
+    assert!(res.is_success(), "ft_transfer_call failed");
     println!("ft_transfer_call logs: {:?}", res.logs());
+    assert_eq!(2, res.logs().len(), "should have 3 logs");
+    assert!(res.logs().get(1).unwrap().contains(DEPOSIT_OUT_TYPE), "should be deposit out log");
 
     let balance = from
         .call(&worker, &token_account, "ft_balance_of")
@@ -4427,7 +4493,7 @@ async fn test_deposit_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
         .await?
         .json::<U128>()?;
     println!("after transfer out ft balance of mcs is {:?}", balance);
-    assert_eq!(amount.0, balance.0, "after transfer out ft balance of mcs");
+    assert_eq!(0, balance.0, "after transfer out ft balance of mcs");
 
     Ok(())
 }
@@ -4442,7 +4508,7 @@ async fn test_deposit_out_mcs_token_no_to_chain() -> anyhow::Result<()> {
                                   MAP_BRIDGE_ADDRESS.to_string(),
                                   wnear.id().to_string()).await?;
 
-    let to_chain: u64 = 100;
+    let to_chain: U128 = U128(100);
     let token_name = "mcs_token_0";
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
@@ -4484,21 +4550,15 @@ async fn test_deposit_out_mcs_token_no_to_chain() -> anyhow::Result<()> {
     let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
     let balance_from_0 = from.view_account(&worker).await?.balance;
 
-    let msg = FungibleTokenMsg {
-        msg_type: 1,
-        to,
-        to_chain: 0,
-    };
     let amount: U128 = U128(100000000000000000000000000);
     let res = from
-        .call(&worker, &token_account, "ft_transfer_call")
-        .args_json((mcs.id().to_string(), amount, Option::<String>::None, serde_json::to_string(&msg).unwrap()))?
+        .call(&worker, &mcs.id(), "deposit_out_token")
+        .args_json((token_account.to_string(), to.clone(), amount))?
         .gas(300_000_000_000_000)
-        .deposit(1)
         .transact()
-        .await?;
-    assert!(res.is_success(), "ft_transfer_call should succeed");
-    println!("ft_transfer_call logs: {:?}", res.logs());
+        .await;
+    assert!(res.is_err(), "deposit_out_token should failed");
+    assert!(res.as_ref().err().unwrap().to_string().contains("not supported"), "should be not supported error");
 
     let balance = from
         .call(&worker, &token_account, "ft_balance_of")
@@ -4568,7 +4628,8 @@ fn new_account(account_id: &AccountId, sk: &SecretKey) -> Account {
     Account::from_file(path)
 }
 
-async fn deploy_and_init_wnear(worker: &Worker<Sandbox>) -> anyhow::Result<Contract> { let token_account: AccountId = "mcs.test.near".parse().unwrap();
+async fn deploy_and_init_wnear(worker: &Worker<Sandbox>) -> anyhow::Result<Contract> {
+    let token_account: AccountId = "mcs.test.near".parse().unwrap();
     let account_id: AccountId = "wrap.test.near".to_string().parse().unwrap();
     let sk = SecretKey::from_seed(KeyType::ED25519, DEV_ACCOUNT_SEED);
     let account = worker.create_tla(account_id.clone(), sk).await?.unwrap();

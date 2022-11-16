@@ -29,13 +29,13 @@ function list_tokens() {
 
 function transfer_out() {
   echo "transfer out $5 $1 token from $3 to $4 on chain $2"
-  near call $MCS_ACCOUNT transfer_out_token '{"token":"'$1'", "to":'$4', "amount":"'$5'", "to_chain":'$2'}' --accountId $3 --gas 60000000000000
+  near call $MCS_ACCOUNT transfer_out_token '{"token":"'$1'", "to":'$4', "amount":"'$5'", "to_chain":"'$2'"}' --accountId $3 --gas 60000000000000
 
 }
 
 function deposit_out() {
   echo "deposit out $4 $1 token from $2 to $3 on MAP chain"
-  near call $1 ft_transfer_call '{"receiver_id":"'$MCS_ACCOUNT'", "amount":"'$4'", "memo": "", "msg": "{\"msg_type\": 1, \"to\": '$3', \"to_chain\": 1}"}' --accountId $2 --depositYocto 1 --gas 60000000000000
+  near call $MCS_ACCOUNT deposit_out_token '{"token":"'$1'", "to":'$3', "amount":"'$4'"}' --accountId $2 --gas 60000000000000
 }
 
 function balance() {

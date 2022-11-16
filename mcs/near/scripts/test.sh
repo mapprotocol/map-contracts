@@ -13,7 +13,8 @@ AMOUNT=100000000000000000000000
 FROM="pandarr.testnet"
 TO="[46,120,72,116,221,179,44,215,151,93,104,86,91,80,148,18,165,181,25,244]"
 #TO_CHAIN=34434
-TO_CHAIN=22776 # map
+#TO_CHAIN=22776 # map mainnet
+TO_CHAIN=212 # map testnet
 CHAIN_TYPE="EvmChain"
 
 function printHelp() {
@@ -87,25 +88,25 @@ function deinit() {
 
 function add_chain() {
   echo "setting chain type"
-  $SCRIPT_DIR/manage_multisig.sh request_and_confirm chain_type $TO_CHAIN $CHAIN_TYPE
+  $SCRIPT_DIR/manage_multisig.sh request_and_confirm chain_type $TO_CHAIN $CHAIN_TYPE ${MEMBERS[1]}
 
   echo "adding mcs token to_chain"
-  $SCRIPT_DIR/manage_multisig.sh request_and_confirm add_mcs $MCS_TOKEN $TO_CHAIN
+  $SCRIPT_DIR/manage_multisig.sh request_and_confirm add_mcs $MCS_TOKEN $TO_CHAIN ${MEMBERS[1]}
   $SCRIPT_DIR/manage_mcs_token.sh list
 
   echo "adding ft token to_chain"
-  $SCRIPT_DIR/manage_multisig.sh request_and_confirm add_ft $FT_TOKEN $TO_CHAIN
+  $SCRIPT_DIR/manage_multisig.sh request_and_confirm add_ft $FT_TOKEN $TO_CHAIN ${MEMBERS[1]}
   $SCRIPT_DIR/manage_ft_token.sh list
 
   echo "adding native token to_chain"
-  $SCRIPT_DIR/manage_multisig.sh request_and_confirm add_native $TO_CHAIN
+  $SCRIPT_DIR/manage_multisig.sh request_and_confirm add_native $TO_CHAIN ${MEMBERS[1]}
   $SCRIPT_DIR/manage_native_token.sh list
 }
 
 function prepare() {
   echo "preparing mcs token"
-  $SCRIPT_DIR/manage_mcs_token.sh deploy $MCS_TOKEN_NAME
-  $SCRIPT_DIR/manage_multisig.sh request_and_confirm metadata $MCS_TOKEN $DECIMALS
+  $SCRIPT_DIR/manage_mcs_token.sh deploy $MCS_TOKEN_NAME $FROM
+  $SCRIPT_DIR/manage_multisig.sh request_and_confirm metadata $MCS_TOKEN $DECIMALS ${MEMBERS[1]}
   $SCRIPT_DIR/manage_mcs_token.sh list
 
   echo "minting 100000000000000000000000 $MCS_TOKEN for account $FROM"
