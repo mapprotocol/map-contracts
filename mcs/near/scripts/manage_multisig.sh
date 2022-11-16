@@ -45,7 +45,7 @@ function prepare_request() {
         echo "adding native token to_chain $2 to mcs contract"
         RECEIVER=$MCS_ACCOUNT
         METHOD="add_native_to_chain"
-        ARGS=`echo '{"to_chain": '$2'}'| base64`
+        ARGS=`echo '{"to_chain": "'$2'"}'| base64`
         MEMBER=$3
       else
         printHelp
@@ -57,7 +57,7 @@ function prepare_request() {
         echo "add mcs token $2 to_chain $3 to mcs contract"
         RECEIVER=$MCS_ACCOUNT
         METHOD="add_mcs_token_to_chain"
-        ARGS=`echo '{"token": "'$2'", "to_chain": '$3'}'| base64`
+        ARGS=`echo '{"token": "'$2'", "to_chain": "'$3'"}'| base64`
         MEMBER=$4
       else
         printHelp
@@ -69,7 +69,7 @@ function prepare_request() {
         echo "add ft token $2 to_chain $3 to mcs contract"
         RECEIVER=$MCS_ACCOUNT
         METHOD="add_fungible_token_to_chain"
-        ARGS=`echo '{"token": "'$2'", "to_chain": '$3'}'| base64`
+        ARGS=`echo '{"token": "'$2'", "to_chain": "'$3'"}'| base64`
         MEMBER=$4
       else
         printHelp
@@ -81,7 +81,7 @@ function prepare_request() {
         echo "remove native token to_chain $2 from mcs contract"
         RECEIVER=$MCS_ACCOUNT
         METHOD="remove_native_to_chain"
-        ARGS=`echo '{"to_chain": '$2'}'| base64`
+        ARGS=`echo '{"to_chain": "'$2'"}'| base64`
         MEMBER=$3
       else
         printHelp
@@ -93,7 +93,7 @@ function prepare_request() {
         echo "remove mcs token $2 to_chain $3 from mcs contract"
         RECEIVER=$MCS_ACCOUNT
         METHOD="remove_mcs_token_to_chain"
-        ARGS=`echo '{"token": "'$2'", "to_chain": '$3'}'| base64`
+        ARGS=`echo '{"token": "'$2'", "to_chain": "'$3'"}'| base64`
         MEMBER=$3
       else
         printHelp
@@ -105,7 +105,7 @@ function prepare_request() {
         echo "remove ft token $2 to_chain $3 from mcs contract"
         RECEIVER=$MCS_ACCOUNT
         METHOD="remove_fungible_token_to_chain"
-        ARGS=`echo '{"token": "'$2'", "to_chain": '$3'}'| base64`
+        ARGS=`echo '{"token": "'$2'", "to_chain": "'$3'"}'| base64`
         MEMBER=$4
       else
         printHelp
@@ -129,7 +129,7 @@ function prepare_request() {
         echo "set chain type of chain $2 to $3"
         RECEIVER=$MCS_ACCOUNT
         METHOD="set_chain_type"
-        ARGS=`echo '{"chain_id": '$2', "chain_type": "'$3'"}'| base64`
+        ARGS=`echo '{"chain_id": "'$2'", "chain_type": "'$3'"}'| base64`
         MEMBER=$4
       else
         printHelp

@@ -22,12 +22,12 @@ function list_tokens() {
 
 function transfer_out() {
   echo "transfer out $5 $1 token from $3 to $4 on chain $2"
-  near call $1 ft_transfer_call '{"receiver_id":"'$MCS_ACCOUNT'", "amount":"'$5'", "memo": "", "msg": "{\"msg_type\": 0, \"to\": '$4', \"to_chain\": '$2'}"}' --accountId $3 --depositYocto 1 --gas 60000000000000
+  near call $1 ft_transfer_call '{"receiver_id":"'$MCS_ACCOUNT'", "amount":"'$5'", "memo": "", "msg": "{\"msg_type\": 0, \"to\": '$4', \"to_chain\": \"'$2'\"}"}' --accountId $3 --depositYocto 1 --gas 60000000000000
 }
 
 function deposit_out() {
   echo "deposit out $4 $1 token from $2 to $3 on MAP chain"
-  near call $1 ft_transfer_call '{"receiver_id":"'$MCS_ACCOUNT'", "amount":"'$4'", "memo": "", "msg": "{\"msg_type\": 1, \"to\": '$3', \"to_chain\": 2}"}' --accountId $2 --depositYocto 1 --gas 60000000000000
+  near call $1 ft_transfer_call '{"receiver_id":"'$MCS_ACCOUNT'", "amount":"'$4'", "memo": "", "msg": "{\"msg_type\": 1, \"to\": '$3', \"to_chain\": \"0\"}"}' --accountId $2 --depositYocto 1 --gas 60000000000000
 }
 
 function balance() {
