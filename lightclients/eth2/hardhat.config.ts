@@ -28,10 +28,15 @@ const config: HardhatUserConfig = {
             gas: 20000000,
             chainId: 43112,
         },
+        dev: {
+            chainId: 212,
+            url: "http://3.0.19.66:7445",
+            accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+        },
         makalu: {
             chainId: 212,
             url: "https://testnet-rpc.maplabs.io",
-            accounts: process.env.MAKALU_PRIVATE_KEY !== undefined ? [process.env.MAKALU_PRIVATE_KEY] : [],
+            accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
         },
         map: {
             chainId: 22776,

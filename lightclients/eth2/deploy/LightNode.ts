@@ -12,9 +12,6 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const {deploy} = deployments;
   const {deployer} = await getNamedAccounts();
 
-  
-  let MPTVerify = await deployments.get('MPTVerify');
-
   await deploy('LightNode', {
     from: deployer,
     args: [],

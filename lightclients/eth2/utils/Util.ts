@@ -222,3 +222,7 @@ export function index2key(index: number, proofLength: number) {
 function buffer2hex(buffer: Buffer) {
     return '0x' + buffer.toString('hex');
 }
+
+export async function delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
