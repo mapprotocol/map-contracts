@@ -3,8 +3,10 @@
 pragma solidity 0.8.7;
 
 interface ILightNode {
-
-    event UpdateBlockHeader(address indexed account, uint256 indexed blockHeight);
+    event UpdateBlockHeader(
+        address indexed account,
+        uint256 indexed blockHeight
+    );
 
     //Verify the validity of the transaction according to the header, receipt
     //The interface will be updated later to return logs
@@ -22,4 +24,6 @@ interface ILightNode {
     function updateBlockHeader(bytes memory _blockHeaders) external;
 
     function headerHeight() external view returns (uint256);
+
+    function verifiableHeaderRange() external view returns (uint256, uint256);
 }

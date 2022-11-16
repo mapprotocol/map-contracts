@@ -22,6 +22,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     bool public setFirstBlock;
     uint256 constant MAX_BLOCK_PRODUCERS = 100;
+    uint256 constant EPOCH_NUM = 43200; 
 
     struct Epoch {
         // bytes32 epochId;
@@ -36,6 +37,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     bytes32 public nextEpochId;
     uint256 public curHeight;
+    uint256 public minValidBlocknum;
 
     modifier onlyOwner() {
         require(msg.sender == _getAdmin(), "lightnode :: only admin");
@@ -104,6 +106,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         );
 
         curHeight = nearBlock.inner_lite.height;
+
+        minValidBlocknum = curHeight;
 
         Epoch storage epoch = epochs[nearBlock.inner_lite.epoch_id];
 
@@ -426,6 +430,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         bytes32[MAX_BLOCK_PRODUCERS] memory keys = epochs[id].keys;
 
         return keys;
+    }
+
+    function verifiableHeaderRange() external view override returns (uint256, uint256){
+          return (minValidBlocknum,curHeight + EPOCH_NUM);// max verifiable is inaccuracy 
     }
 
     /** UUPS *********************************************************/

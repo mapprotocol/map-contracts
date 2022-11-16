@@ -194,6 +194,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return _lastSyncedBlock + EPOCH_NUM;
     }
 
+     function verifiableHeaderRange() external view override returns (uint256, uint256){
+        return (minValidBlocknum,maxCanVerifyNum());
+     }
+
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
