@@ -1,3 +1,4 @@
+
 task("mosDeploy",
     "Deploy the upgradeable MapCrossChainService contract and initialize it",
     require("./mosDeploy")
@@ -65,7 +66,7 @@ task("mosSetMintableToken",
     require("./mosSetMintableToken")
 )
     .addParam("token", "token address")
-    .addParam("mintable", "true or false")
+    .addParam("mintable", "true or false",false,types.boolean)
 
 task("relayInit",
     "Initialize mos contract",
@@ -89,7 +90,9 @@ task("relayRegisterToken",
 )
     .addParam("token", "Token address")
     .addParam("vault", "vault token address")
-    .addParam("mintable", "token mintable")
+    .addParam("mintable", "token mintable",false,types.boolean)
+
+
 
 
 task("relayMapToken",
