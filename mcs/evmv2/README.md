@@ -203,3 +203,15 @@ transfer native token to sender's address:
 npx hardhat transferOutToken --mos <mos or relay address> --value <transfer value> --chain <chain id> --network <network>
 ```
 
+
+## List token mapped chain
+
+1. relay chain
+```
+npx hardhat relayList --relay <relay address> --token <token address> --network <network>
+```
+
+2. altchains
+```
+npx hardhat mosList --mos <relay address> --token <token address> --network <network>
+```

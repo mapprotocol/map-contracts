@@ -300,6 +300,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     function _depositIn(uint256 _chainId, IEvent.depositOutEvent memory _depositEvent)
     internal checkOrder(_depositEvent.orderId) {
         require(_chainId == _depositEvent.fromChain, "invalid chain id");
+        require(selfChainId == _depositEvent.toChain, "invalid chain id");
         address token = tokenRegister.getRelayChainToken(_depositEvent.fromChain, _depositEvent.token);
         require(token != address(0), "map token not registered");
 
