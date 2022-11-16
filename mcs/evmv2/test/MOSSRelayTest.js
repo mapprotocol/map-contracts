@@ -423,27 +423,28 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         expect(await mapVaultW.totalSupply()).to.equal("2000000000000000000");
         //0x6d63735f746f6b656e5f302e6d63732e6d61703030312e746573746e6574
         //100000000000000000
-        await mossR.depositIn("5566818579631833089",mosRelayData.near2mapDepositeW);
+        await expect(mossR.depositIn("5566818579631833089",mosRelayData.near2mapDepositeM01E)).to.be.revertedWith("invalid chain id");
+
+
+        await mossR.depositIn("1313161555",mosRelayData.near2mapDepositeM01);
 
         expect(await usdt.balanceOf(mossR.address)).to.equal("900000000000000000")
         expect(await standardToken.balanceOf(mossR.address)).to.equal("1000000000000000000")
         expect(await wrapped.balanceOf(mossR.address)).to.equal("2000000000000000000")
         expect(await usdt.totalSupply()).to.equal("101165000000000000000")
         expect(await standardToken.totalSupply()).to.equal("10301650000000000000000")
+
         expect(await mapVault.totalSupply()).to.equal("0");
         expect(await mapVaultU.totalSupply()).to.equal("100000000000000000");
         expect(await mapVaultW.totalSupply()).to.equal("2000000000000000000");
-        // expect(await usdt.balanceOf(mossR.address)).to.equal("0")
-        // expect(await mapVaultU.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4")).to.equal("150000000000000000")
-        // expect(await mapVaultU.totalSupply()).to.equal("150000000000000000");
         //
         // await mossR.setmosContract(34434,"0xAC25DeA31A410900238c8669eD9973f328919160",1);
         //0x777261702e746573746e6574
         //100000000000000000
-        await mossR.depositIn("5566818579631833089",mosRelayData.near2mapDepositeM01);
-        expect(await mapVault.totalSupply()).to.equal("100000000000000000");
-
-        expect(await standardToken.totalSupply()).to.equal("10301750000000000000000")
+        // await mossR.depositIn("5566818579631833089",mosRelayData.near2mapDepositeM01);
+        // expect(await mapVault.totalSupply()).to.equal("100000000000000000");
+        //
+        // expect(await standardToken.totalSupply()).to.equal("10301750000000000000000")
 
         //0xd293ffec6c0ed1abda02a72ac0199858cd5cc4a9
         await mossR.connect(addr5).registerChain(97,"0xd293ffec6c0ed1abda02a72ac0199858cd5cc4a9",1);
@@ -455,21 +456,10 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         // expect(await mapVault.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4")).to.equal("10000000000000000000000")
         // expect(await mapVault.totalSupply()).to.equal("10000000000000000000000");
         expect(await usdt.balanceOf(mossR.address)).to.equal("900000000000000000")
-        expect(await standardToken.balanceOf(mossR.address)).to.equal("1100000000000000000")
+        expect(await standardToken.balanceOf(mossR.address)).to.equal("1000000000000000000")
         expect(await usdt.totalSupply()).to.equal("101165000000000000000")
         expect(await mapVaultU.totalSupply()).to.equal("30403030303030303030");
 
-
-        //200000000000000000000
-        await mossR.depositIn(97,mosRelayData.eth2mapDepositeS);
-        expect(await standardToken.balanceOf(mossR.address)).to.equal("201100000000000000000")
-        expect(await standardToken.totalSupply()).to.equal("10501750000000000000000")
-        expect(await mapVault.totalSupply()).to.equal("200100000000000000000");
-
-        //1000000000000000
-        await mossR.depositIn(97,mosRelayData.eth2mapDepositeW);
-        expect(await wrapped.balanceOf(mossR.address)).to.equal("2000000000000000000")
-        expect(await mapVaultW.totalSupply()).to.equal("2001000000000000000");
     });
 
 
@@ -485,10 +475,57 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
         await expect(mossR.transferIn(1313161555,mosRelayData.near2mapW)).to.be.revertedWith("order exist");
 
-        await mossR.connect(addr5).setLightClientManager(addr4.address);
-        expect(await mossR.lightClientManager()).to.be.equal(addr4.address);
+        // await mossR.connect(addr5).setLightClientManager(addr4.address);
+        // expect(await mossR.lightClientManager()).to.be.equal(addr4.address);
     });
 
+
+    it('deposit and withdraw ', async function () {
+
+        //200000000000000000000
+        await mossR.depositIn(97,mosRelayData.eth2mapDepositeS);
+        expect(await standardToken.balanceOf(mossR.address)).to.equal("201000000000000000000")
+        expect(await mapVault.balanceOf(addr8.address)).to.equal("200000000000000000000")
+        expect(await standardToken.totalSupply()).to.equal("10501650000000000000000")
+        expect(await mapVault.totalSupply()).to.equal("200000000000000000000");
+
+
+        //1000000000000000
+        await mossR.depositIn(97,mosRelayData.eth2mapDepositeW);
+        expect(await wrapped.balanceOf(mossR.address)).to.equal("2000000000000000000")
+        expect(await mapVaultW.totalSupply()).to.equal("2001000000000000000");
+
+        await standardToken.mint(addr2.address,"20000000000000000000");
+        await standardToken.connect(addr2).approve(mossR.address,"2000000000000000000000");
+        await mossR.connect(addr2).transferOutToken(standardToken.address,address2Bytes,"20000000000000000000",34434)
+        //2008
+        expect(await mapVault.totalVault()).to.equal("200800000000000000000");
+        expect(await mapVault.totalSupply()).to.equal("200000000000000000000");
+        await standardToken.mint(addr1.address,"1000000000000000000");
+        await standardToken.connect(addr1).approve(mossR.address,"100000000000000000000");
+        await mossR.connect(addr1).transferOutToken(standardToken.address,address2Bytes,"1000000000000000000",34434)
+        //2010
+        expect(await mapVault.totalVault()).to.equal("201000000000000000000");
+        expect(await mapVault.totalSupply()).to.equal("200000000000000000000");
+        console.log(await standardToken.balanceOf(addr7.address));
+        await standardToken.connect(addr7).approve(mossR.address,"10000000000000000000000");
+        await mossR.connect(addr7).depositToken(standardToken.address,addr7.address,"10000000000000000000000")
+        expect(await mapVault.totalVault()).to.equal("10201000000000000000000");
+
+        //100000 * 2000 / 2010 = 99502 + 2000 = 101502
+        expect(await mapVault.totalSupply()).to.equal("10150248756218905472636");
+
+        expect(await standardToken.balanceOf(addr8.address)).to.equal("0");
+
+        await mapVault.connect(addr8).approve(mossR.address,"200000000000000000000")
+        await mossR.connect(addr8).withdraw(mapVault.address,"200000000000000000000")
+
+        expect(await mapVault.balanceOf(addr8.address)).to.equal("0");
+        //200000000000000000000 + 1000000000000000000(fee)
+        expect(await standardToken.balanceOf(addr8.address)).to.equal("201000000000000000000");
+
+
+    });
 
 
 })

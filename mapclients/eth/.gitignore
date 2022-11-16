@@ -1,7 +1,8 @@
 node_modules
-../../mcs/evmv2/.env
+
 
 #Hardhat files
+abi
 cache
 artifacts
 
@@ -9,5 +10,4 @@ artifacts
 .idea
 
 #hardhat plugin
-abi
 deployments

@@ -112,6 +112,8 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
         await mcssR.setBridgeAddress(34434,mcsRelayData.mcsETH);
 
+        await mcssR.setBridgeAddress(97,"0xd293ffec6c0ed1abda02a72ac0199858cd5cc4a9");
+
         await mcssR.setBridgeAddress(1313161555,mcsRelayData.mcsNear);
 
         await mcssR.setIdTable(1313161555, 1);
@@ -136,7 +138,9 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
     it('TokenRegister set', async function () {
         await tokenRegister.registerToken(34434,mcsRelayData.ethUsdtToken,usdt.address);
+        await tokenRegister.registerToken(97,mcsRelayData.ethUsdtToken,usdt.address);
         await tokenRegister.registerToken(34434,mcsRelayData.ethStanardToken,standardToken.address);
+        await tokenRegister.registerToken(97,mcsRelayData.ethStanardToken,standardToken.address);
         await tokenRegister.registerToken(212,usdt.address,mcsRelayData.ethUsdtToken);
         await tokenRegister.registerToken(212,standardToken.address,mcsRelayData.ethStanardToken);
         await tokenRegister.registerToken(1313161555,mcsRelayData.nearUsdtToken,usdt.address);
@@ -144,6 +148,7 @@ describe("MAPCrossChainServiceRelay start test", function () {
         await tokenRegister.registerToken(1313161555,"0x0000000000000000000000000000000000000000",wrapped.address);
         await tokenRegister.registerToken(212,wrapped.address,"0x0000000000000000000000000000000000000000");
         await tokenRegister.registerToken(34434,"0x0000000000000000000000000000000000000000",wrapped.address);
+        await tokenRegister.registerToken(97,"0x0000000000000000000000000000000000000000",wrapped.address);
     });
 
     it('mcsRelay setVaultBalance', async function () {
@@ -169,18 +174,22 @@ describe("MAPCrossChainServiceRelay start test", function () {
     it('mcsRelay set token decimals', async function () {
         await mcssR.setTokenOtherChainDecimals(standardToken.address,212,18);
         await mcssR.setTokenOtherChainDecimals(standardToken.address,34434,18);
+        await mcssR.setTokenOtherChainDecimals(standardToken.address,97,18);
         await mcssR.setTokenOtherChainDecimals(standardToken.address,1313161555,24);
 
         await mcssR.setTokenOtherChainDecimals(wrapped.address,212,18);
         await mcssR.setTokenOtherChainDecimals(wrapped.address,34434,18);
+        await mcssR.setTokenOtherChainDecimals(wrapped.address,97,18);
         await mcssR.setTokenOtherChainDecimals(wrapped.address,1313161555,24);
 
         await mcssR.setTokenOtherChainDecimals(usdt.address,212,18);
         await mcssR.setTokenOtherChainDecimals(usdt.address,34434,18);
+        await mcssR.setTokenOtherChainDecimals(usdt.address,97,18);
         await mcssR.setTokenOtherChainDecimals(usdt.address,1313161555,24);
 
         await mcssR.setTokenOtherChainDecimals("0x0000000000000000000000000000000000000000",212,18);
         await mcssR.setTokenOtherChainDecimals("0x0000000000000000000000000000000000000000",34434,18);
+        await mcssR.setTokenOtherChainDecimals("0x0000000000000000000000000000000000000000",97,18);
         await mcssR.setTokenOtherChainDecimals("0x0000000000000000000000000000000000000000",1313161555,24);
 
     });
@@ -298,28 +307,26 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
 
     it('depositIn test ', async function () {
-        // expect(await usdt.balanceOf(mcssR.address)).to.equal("0")
         await feeCenter.setTokenVault(usdt.address,mapVaultU.address)
         expect(await mapVaultU.totalSupply()).to.equal("0");
 
-        // await usdt.mint(mcssR.address,"150000000000000000");
-
         console.log(await usdt.balanceOf(mcssR.address));
-        await mcssR.depositIn(1313161555,mcsRelayData.near2mapDeposite);
-        expect(await usdt.balanceOf(mcssR.address)).to.equal("0")
-        expect(await mapVaultU.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4")).to.equal("150000000000000000")
-        expect(await mapVaultU.totalSupply()).to.equal("150000000000000000");
+        await mcssR.depositIn("1313161555",mcsRelayData.near2mapDeposite);
+
+        expect(await mapVaultU.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4")).to.equal("100000000000000000")
+        expect(await mapVaultU.totalSupply()).to.equal("100000000000000000");
 
         //await mcssR.setMcsContract(34434,"0xAC25DeA31A410900238c8669eD9973f328919160",1);
         await mcssR.setBridgeAddress(34434,"0xAC25DeA31A410900238c8669eD9973f328919160");
 
         await feeCenter.setTokenVault(standardToken.address,mapVault.address)
 
-        await mcssR.depositIn(34434,mcsRelayData.eth2mapDeposite);
-
-        expect(await standardToken.totalSupply()).to.equal("10301150000000000000000");
-        expect(await mapVault.balanceOf(addr7.address)).to.equal("10000000000000000000000")
-        expect(await mapVault.totalSupply()).to.equal("10000000000000000000000");
+        await mcssR.depositIn(97,mcsRelayData.eth2mapDeposite);
+        //200000000000000000
+        console.log(await mapVault.getVTokenQuantity("100000000000000000000"));
+        expect(await standardToken.totalSupply()).to.equal("501150000000000000000");
+        expect(await mapVault.balanceOf(addr7.address)).to.equal("200000000000000000000")
+        expect(await mapVault.totalSupply()).to.equal("200000000000000000000");
     });
 
 
@@ -371,7 +378,7 @@ describe("MAPCrossChainServiceRelay start test", function () {
         await mcssR.connect(owner).transferOutToken(usdt.address,address2Bytes,"1000000000000000000",34434);
 
         expect(await usdt.balanceOf(mcssR.address)).to.be.equal("900000000000000000");
-        expect(await mapVaultU.correspondBalance()).to.be.equal("350000000000000000");
+        expect(await mapVaultU.correspondBalance()).to.be.equal("300000000000000000");
         expect(await usdt.balanceOf(addr3.address)).to.be.equal("115000000000000000");
 
         // set standToken to 34434 fee rate 50%
@@ -387,13 +394,13 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
 
         // to vault 200000000000000000
-        expect(await mapVault.correspondBalance()).to.be.equal("10000200000000000000000");
+        expect(await mapVault.correspondBalance()).to.be.equal("200200000000000000000");
         // to addr3 100000000000000000
         expect(await standardToken.balanceOf(addr3.address)).to.be.equal("100000000000000000");
         //fee 500000000000000000
         // no processing 200000000000000000 + to vault 200000000000000000
         //400000000000000000
-        expect(await standardToken.balanceOf(mcssR.address)).to.be.equal("10001400000000000000000");
+        expect(await standardToken.balanceOf(mcssR.address)).to.be.equal("201400000000000000000");
 
 
         await mcssR.connect(addr5).setLightClientManager(addr4.address);
@@ -420,13 +427,14 @@ describe("MAPCrossChainServiceRelay start test", function () {
         console.log(await mapVault.correspondBalance());
         console.log(await mapVault.getCorrespondQuantity("10000000000000000000000"))
 
-        await mapVault.connect(addr7).approve(mcssR.address,"10000000000000000000000")
+        //200000000000000000000
+        await mapVault.connect(addr7).approve(mcssR.address,"200000000000000000000")
         await mcssR.connect(addr7).withdraw(
             standardToken.address,
-            "10000000000000000000000"
+            "200000000000000000000"
         )
         expect(await mapVault.balanceOf(addr7.address)).to.equal("0")
-        expect(await standardToken.balanceOf(addr7.address)).to.equal("10000200000000000000000")
+        expect(await standardToken.balanceOf(addr7.address)).to.equal("200200000000000000000")
         expect(await mapVault.totalSupply()).to.equal("0");
         expect(await standardToken.balanceOf(mcssR.address)).to.equal("1200000000000000000");
 
