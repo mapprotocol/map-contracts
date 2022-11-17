@@ -11,7 +11,6 @@ let exedata = require("../data/mainnet/exe_header_period619.js");
 
 let chainId = 1; //test data from eth mainnet
 
-let minEpochBlockExtraDataLen = process.env.MinEpochBlockExtraDataLen
 describe("LightNode", function () {
     // We define a fixture to reuse the same setup in every test.
     // We use loadFixture to run this setup once, snapshot that state,
@@ -314,6 +313,28 @@ describe("LightNode", function () {
             expect(result.success).to.true;
         });
 
+
+        describe("Verifiable header range", function () {
+
+            it("verifiableHeaderRange ... ok ", async function () {
+                let lightNode = await loadFixture(deployFixture)
+
+                let begin = await lightNode.verifiableHeaderRange()
+                expect(begin[0]).to.eq(15905996)
+                expect(begin[1]).to.eq(15905996)
+
+                await lightNode.updateLightClient(period620.update);
+                begin = await lightNode.verifiableHeaderRange()
+                expect(begin[0]).to.eq(15905996)
+                expect(begin[1]).to.eq(15905996)
+
+                await lightNode.updateExeBlockHeaders(exedata.headers);
+                begin = await lightNode.verifiableHeaderRange()
+                expect(begin[0]).to.eq(15905996)
+                expect(begin[1]).to.eq(15905996)
+            });
+
+        });
     });
 });
 
