@@ -48,8 +48,9 @@ contract LightClientManager is ILightClientManager,Ownable {
         }else{
             return lightNode.headerHeight();
         }
+    }
 
-
-
+    function verifiableHeaderRange(uint256 _chainId) external view override returns (uint256, uint256) {
+        return (0, 0);
     }
 }

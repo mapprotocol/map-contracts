@@ -23,5 +23,5 @@ interface ILightNode {
 
     function headerHeight() external view returns (uint256);
 
-    function verifiableHeaderRange( external view returns (uint256, uint256);
+    function verifiableHeaderRange() external view returns (uint256, uint256);
 }

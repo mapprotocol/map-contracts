@@ -72,8 +72,13 @@ task("relayInit",
     "Initialize mos contract",
     require("./relayInit")
 )
-    .addParam("tokenmananger","tokenRegister contract")
+    .addParam("tokenmanager","tokenRegister contract")
 
+task("relaySetClientManager",
+    "Update client manager",
+    require("./relaySetClientManager")
+)
+    .addParam("manager","client manager contract")
 
 task("relayRegisterChain",
     "Register altchain mos to relay chain",
