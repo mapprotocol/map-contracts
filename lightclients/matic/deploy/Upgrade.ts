@@ -3,8 +3,8 @@ import { DeployFunction } from 'hardhat-deploy/types';
 
 
 
-let minEpochBlockExtraDataLen = process.env.MinEpochBlockExtraDataLen
-let chainId = process.env.CHAINID;
+let minEpochBlockExtraDataLen = 161
+
 
 const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts, ethers } = hre;
@@ -12,20 +12,12 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  let mPTVerifyDeploy = await deploy('MPTVerify', {
-    from: deployer,
-    args: [],
-    log: true,
-    contract: 'MPTVerify'
-  });
-
   let LightNodeDeploy = await deploy('LightNode', {
     from: deployer,
-    args: [chainId, minEpochBlockExtraDataLen, deployer, mPTVerifyDeploy.address],
+    args: [minEpochBlockExtraDataLen, deployer, deployer],
     log: true,
     contract: 'LightNode'
   });
-
   let LightNodeProxy = await deployments.get('LightNodeProxy');
 
   const LightNode = await ethers.getContractFactory("LightNode");
