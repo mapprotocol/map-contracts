@@ -33,6 +33,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     uint256 public finalizedExeHeaderNumber;
     ExeHeaderUpdateInfo public exeHeaderUpdateInfo;
     BeaconBlockHeader public finalizedBeaconHeader;
+    uint256 private _startExeHeaderNumber;
 
     SyncCommittee[2] public syncCommittees;
     uint64 private _curSyncCommitteeIndex;
@@ -75,6 +76,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         finalizedBeaconHeader = _finalizedBeaconHeader;
         finalizedExeHeaderNumber = _finalizedExeHeaderNumber;
         finalizedExeHeaders[_finalizedExeHeaderNumber] = _finalizedExeHeaderHash;
+        _startExeHeaderNumber = _finalizedExeHeaderNumber;
 
         syncCommittees[0].aggregatePubkey = curSyncCommitteeAggPubKey;
         syncCommittees[1].aggregatePubkey = nextSyncCommitteeAggPubKey;
@@ -228,6 +230,13 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
+    function verifiableHeaderRange() external view returns (uint256, uint256) {
+        if (exeHeaderUpdateInfo.startNumber == 0) {
+            return (_startExeHeaderNumber, finalizedExeHeaderNumber);
+        }
+
+        return (_startExeHeaderNumber, exeHeaderUpdateInfo.startNumber - 1);
+    }
 
     function togglePause(bool flag) external onlyOwner returns (bool) {
         if (flag) {
@@ -367,7 +376,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
 
-/** UUPS *********************************************************/
+    /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
