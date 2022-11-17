@@ -269,8 +269,14 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         require(_chainId == _outEvent.fromChain, "invalid chain id");
         address token = tokenRegister.getRelayChainToken(_outEvent.fromChain, _outEvent.token);
         require(token != address(0), "map token not registered");
-        bytes memory toChainToken = tokenRegister.getToChainToken(token, _outEvent.toChain);
-        require(!Utils.checkBytes(toChainToken, bytes("")), "out token not registered");
+        bytes memory toChainToken;
+        if (_outEvent.toChain == selfChainId) {
+            toChainToken = Utils.toBytes(token);
+        } else {
+            toChainToken = tokenRegister.getToChainToken(token, _outEvent.toChain);
+            require(!Utils.checkBytes(toChainToken, bytes("")), "out token not registered");
+        }
+
         uint256 mapAmount = tokenRegister.getRelayChainAmount(token, _outEvent.fromChain, _outEvent.amount);
         if (tokenRegister.checkMintable(token)) {
             IMAPToken(token).mint(address(this), mapAmount);

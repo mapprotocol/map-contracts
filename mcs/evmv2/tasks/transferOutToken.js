@@ -1,4 +1,10 @@
 
+function stringToHex(str) {
+    return str.split("").map(function(c) {
+        return ("0" + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join("");
+}
+
 module.exports = async (taskArgs) => {
     const accounts = await ethers.getSigners()
     const deployer = accounts[0];

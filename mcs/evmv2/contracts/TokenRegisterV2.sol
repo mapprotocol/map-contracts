@@ -111,6 +111,7 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
         if (decimalsFrom == decimalsTo) {
             return _amount;
         }
+        // TODO: check decimalsFrom = 0
         return _amount.mul(10 ** decimalsTo).div(10 ** decimalsFrom);
     }
 

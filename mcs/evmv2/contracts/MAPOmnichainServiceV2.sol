@@ -170,7 +170,6 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
             IEvent.txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
 
-
             if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC && relayContract == log.addr) {
                 (, IEvent.transferOutEvent memory outEvent) = EvmDecoder.decodeTransferOutLog(log);
                 // there might be more than on events to multi-chains
