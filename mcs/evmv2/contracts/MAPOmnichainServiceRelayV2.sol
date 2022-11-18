@@ -293,14 +293,16 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
                 require(IERC20(token).balanceOf(address(this)) >= mapOutAmount, "balance too low");
                 TransferHelper.safeTransfer(token, toAddress, mapOutAmount);
             }
+            emit mapTransferIn(token, _outEvent.from, _outEvent.orderId, _outEvent.fromChain, _outEvent.toChain,
+                toAddress, outAmount);
         }else {
             if (tokenRegister.checkMintable(token)) {
                 IMAPToken(token).burn(mapOutAmount);
             }
-        }
 
-        emit mapTransferOut(_outEvent.token, _outEvent.from, _outEvent.orderId, _outEvent.fromChain, _outEvent.toChain,
-            _outEvent.to, outAmount, toChainToken);
+            emit mapTransferOut(_outEvent.token, _outEvent.from, _outEvent.orderId, _outEvent.fromChain, _outEvent.toChain,
+                _outEvent.to, outAmount, toChainToken);
+        }
     }
 
     function _depositIn(uint256 _chainId, IEvent.depositOutEvent memory _depositEvent)
