@@ -804,6 +804,49 @@ async fn test_transfer_in_mcs_token_replay() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
+async fn test_transfer_in_mcs_token_invalid_address() -> anyhow::Result<()> {
+    let worker = init_worker().await?;
+    let map_client = deploy_and_init_light_client(&worker).await?;
+    let wnear = deploy_and_init_wnear(&worker).await?;
+    let mcs = deploy_and_init_mcs(&worker,
+                                  map_client.id().to_string(),
+                                  MAP_BRIDGE_ADDRESS.to_string(),
+                                  wnear.id().to_string()).await?;
+
+    let token_name = "mcs_token_0";
+    deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
+    let dev_account = worker.dev_create_account().await?;
+
+    let file = fs::File::open("./tests/data/transfer_in_token.json").unwrap();
+    let mut proof: serde_json::Value = serde_json::from_reader(file).unwrap();
+
+    proof["receipt"]["logs"][0]["data"] = json!("0x00000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140d1edb03b4a0fe5d7b378a7beddd84a81ff8d6f2cf15607be44ba3518b541818f00000000000000000000000000000000000000000000000000000000000000d4000000000000000000000000000000000000000000000000000000004e4541530000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000014ec3e016916ba9f10762e33e03e8556409d096fb40000000000000000000000000000000000000000000000000000000000000000000000000000000000000014ec3e016916ba9f10762e33e03e8556409d096fb40000000000000000000000000000000000000000000000000000000000000000000000000000000000000014ec3e016916ba9f10762e33e03e8556409d096fb400000000000000000000000000000000000000000000000000000000000000000000000000000000000000196d63735f746f6b656e5f302e6d63732e746573742e6e65617200000000000000");
+    let res = dev_account
+        .call(&worker, mcs.id(), "transfer_in")
+        .args_json(json!({"receipt_proof": proof, "index": 0}))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await;
+    assert!(res.is_err(), "transfer_in should fail");
+    println!("error {:?}", res.as_ref().err().unwrap());
+    assert!(res.err().unwrap().to_string().contains("invalid to address"));
+
+    proof["receipt"]["logs"][0]["data"] = json!("0x00000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140d1edb03b4a0fe5d7b378a7beddd84a81ff8d6f2cf15607be44ba3518b541818f00000000000000000000000000000000000000000000000000000000000000d4000000000000000000000000000000000000000000000000000000004e4541530000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000014ec3e016916ba9f10762e33e03e8556409d096fb40000000000000000000000000000000000000000000000000000000000000000000000000000000000000014ec3e016916ba9f10762e33e03e8556409d096fb4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f70616e646172722e746573746e657400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000014ec3e016916ba9f10762e33e03e8556409d096fb4000000000000000000000000");
+    let res = dev_account
+        .call(&worker, mcs.id(), "transfer_in")
+        .args_json(json!({"receipt_proof": proof, "index": 0}))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await;
+    assert!(res.is_err(), "transfer_in should fail");
+    println!("error {:?}", res.as_ref().err().unwrap());
+    assert!(res.err().unwrap().to_string().contains("invalid to chain token address"));
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_transfer_in_ft_token() -> anyhow::Result<()> {
     let worker = init_worker().await?;
     let map_client = deploy_and_init_light_client(&worker).await?;
@@ -1490,7 +1533,8 @@ async fn test_transfer_in_native_token_no_to_account() -> anyhow::Result<()> {
         .transact()
         .await;
     assert!(res.is_err(), "transfer_in should fail");
-    println!("error {:?}", res.err());
+    println!("error {:?}", res.as_ref().err());
+    assert!(res.err().unwrap().to_string().contains("transfer in token failed, maybe TO account does not exist"));
     let dev_balance_1 = worker.view_account(&dev_account.id()).await?.balance;
     println!("after transfer in: account {} balance: {}", dev_account.id(), dev_balance_1);
     println!("dev account balance decrease: {}", dev_balance_0 - dev_balance_1);
@@ -1504,7 +1548,7 @@ async fn test_transfer_in_native_token_no_to_account() -> anyhow::Result<()> {
     println!("after transfer in: account {} wnear balance: {}", mcs.id(), mcs_wnear_1.0);
     assert_eq!(mcs_wnear_0.0, mcs_wnear_1.0, "wnear of mcs should not change");
 
-    // create account and transfer in again should succeed
+    // create account and transfer in again should still failed
     let account_id: AccountId = "pandarr.test.near".to_string().parse().unwrap();
     let sk = SecretKey::from_seed(KeyType::ED25519, DEV_ACCOUNT_SEED);
     let account = worker.create_tla(account_id.clone(), sk).await?.unwrap();
@@ -1517,12 +1561,13 @@ async fn test_transfer_in_native_token_no_to_account() -> anyhow::Result<()> {
         .gas(300_000_000_000_000)
         .deposit(parse_near!("4 N"))
         .transact()
-        .await?;
-    assert!(res.is_success(), "transfer_in should success");
-    println!("logs {:?}", res.logs());
+        .await;
+    assert!(res.is_err(), "transfer_in should fail");
+    println!("error {:?}", res.as_ref().err().unwrap());
+    assert!(res.err().unwrap().to_string().contains("the event with order id"));
     let balance_1 = worker.view_account(&account_id).await?.balance;
     println!("after transfer in 2: account {} balance: {}", account_id, balance_1);
-    assert_eq!(amount, balance_1 - balance_0, "should transfer in 100 yocto near");
+    assert_eq!(0, balance_1 - balance_0, "should transfer in 0 yocto near");
     let dev_balance_2 = worker.view_account(&dev_account.id()).await?.balance;
     println!("after transfer in 2: account {} balance: {}", dev_account.id(), dev_balance_2);
     println!("dev account balance decrease: {}", dev_balance_1 - dev_balance_2);
@@ -1534,7 +1579,7 @@ async fn test_transfer_in_native_token_no_to_account() -> anyhow::Result<()> {
         .await?
         .json::<U128>()?;
     println!("after transfer in 2: account {} wnear balance: {}", mcs.id(), mcs_wnear_2.0);
-    assert_eq!(mcs_wnear_1.0 - amount, mcs_wnear_2.0, "wnear of mcs should decrease {} yocto near", amount);
+    assert_eq!(mcs_wnear_1.0, mcs_wnear_2.0, "wnear of mcs should decrease 0 yocto near");
 
     Ok(())
 }

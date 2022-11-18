@@ -261,8 +261,8 @@ impl MapCrossChainService {
         let event = event_opt.unwrap();
         assert_eq!(self.map_bridge_address, event.map_bridge_address, "unexpected map mcs address: {}", hex::encode(event.map_bridge_address));
 
-        let to_chain_token = String::from_utf8(event.to_chain_token.clone()).unwrap();
         log!("get transfer in event: {}", event);
+        let to_chain_token = String::from_utf8(event.to_chain_token.clone()).unwrap();
         assert_eq!(self.near_chain_id, event.to_chain, "unexpected to chain: {}", event.to_chain);
         assert!(self.mcs_tokens.get(&to_chain_token).is_some()
                     || self.fungible_tokens.get(&to_chain_token).is_some() || self.is_native_token(event.to_chain_token.clone()),
@@ -497,16 +497,21 @@ impl MapCrossChainService {
             PromiseResult::NotReady => env::abort(),
             PromiseResult::Successful(_) => { Promise::new(env::signer_account_id()).transfer(env::attached_deposit()) }
             _ => {
-                let mut promise = Promise::new(env::signer_account_id()).transfer(env::attached_deposit() + self.remove_order_id(&event.order_id));
+                let mut err_msg = "transfer in token failed".to_string();
+                let mut promise = Promise::new(env::signer_account_id());
                 if self.is_native_token(event.to_chain_token.clone()) {
-                    promise = promise.then(ext_wnear_token::ext(self.wrapped_token.parse().unwrap())
+                    promise = promise.transfer(env::attached_deposit())
+                        .then(ext_wnear_token::ext(self.wrapped_token.parse().unwrap())
                         .with_static_gas(NEAR_DEPOSIT_GAS)
                         .with_attached_deposit(event.amount)
-                        .near_deposit())
+                        .near_deposit());
+                    err_msg = format!("transfer in token failed, maybe TO account does not exist")
+                } else {
+                    promise = promise.transfer(env::attached_deposit()+ self.remove_order_id(&event.order_id))
                 }
                 promise.then(Self::ext(env::current_account_id())
                     .with_static_gas(REPORT_FAIL_GAS)
-                    .report_transfer_in_fail("transfer in token failed".to_string()))
+                    .report_transfer_in_fail(err_msg))
             }
         }
     }
