@@ -13,7 +13,7 @@ interface IMOSV2 {
         uint256 fromChain, uint256 toChain, bytes to, uint256 amount, bytes toChainToken);
 
     event mapTransferIn(address indexed token, bytes from, bytes32 indexed orderId,
-        uint256 fromChain, uint256 toChain, address indexed to, uint256 amount);
+        uint256 fromChain, uint256 toChain, address to, uint256 amount);
 
     event mapDepositOut(address indexed token, bytes from, bytes32 orderId,
         uint256 fromChain, uint256 toChain, address to, uint256 amount);

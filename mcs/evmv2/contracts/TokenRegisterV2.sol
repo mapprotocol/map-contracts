@@ -90,6 +90,7 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
     view
     returns (uint256){
         uint256 decimalsFrom = tokenList[_token].decimals;
+        // TODO: check _toChain is relay chain
         uint256 decimalsTo = tokenList[_token].tokenDecimals[_toChain];
         if (decimalsFrom == decimalsTo) {
             return _amount;

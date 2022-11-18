@@ -294,7 +294,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
                 TransferHelper.safeTransfer(token, toAddress, mapOutAmount);
             }
             emit mapTransferIn(token, _outEvent.from, _outEvent.orderId, _outEvent.fromChain, _outEvent.toChain,
-                toAddress, outAmount);
+                toAddress, mapOutAmount);
         }else {
             if (tokenRegister.checkMintable(token)) {
                 IMAPToken(token).burn(mapOutAmount);
