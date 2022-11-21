@@ -3,6 +3,7 @@ import {expect} from "chai";
 import {Contract} from "ethers";
 import {ethers} from "hardhat";
 import config from "../hardhat.config";
+import {delay} from "../utils/Util";
 
 let period619 = require("../data/mainnet/init_arg_period619.js");
 let period620 = require("../data/mainnet/period620.js");
@@ -15,6 +16,11 @@ describe("LightNode", function () {
     // We define a fixture to reuse the same setup in every test.
     // We use loadFixture to run this setup once, snapshot that state,
     // and reset Hardhat Network to that snapshopt in every test.
+
+    if (config.defaultNetwork == "makalu" || config.defaultNetwork == "dev") {
+        return
+    }
+
     async function deployFixture() {
         let [wallet] = await ethers.getSigners();
 
@@ -341,20 +347,11 @@ describe("LightNode", function () {
 describe("LightNode Test on MAP", function () {
     let proxy: Contract;
 
-    async function delay(ms: number) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    console.log("config.defaultNetwork", config.defaultNetwork)
-    if (config.defaultNetwork != "local" && config.defaultNetwork != "makalu") {
+    if (config.defaultNetwork != "local" && config.defaultNetwork != "makalu" && config.defaultNetwork != "dev") {
         return
     }
 
-    let verifyUpdate = false;
-    if (config.defaultNetwork == "local") {
-        verifyUpdate = true;
-    }
-
+    let verifyUpdate = true;
     console.log("verifyUpdate", verifyUpdate)
 
     describe("initialize and update", function () {

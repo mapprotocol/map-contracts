@@ -10,7 +10,7 @@ import "./interface/IMPTVerify.sol";
 import "./lib/RLPReader.sol";
 import "./lib/RLPEncode.sol";
 
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     using RLPReader for bytes;

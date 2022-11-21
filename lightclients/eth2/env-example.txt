@@ -1,7 +1,12 @@
-PRIVATE_KEY = 
-# bsc rpc url
-BSCURI = 
-# mainnet 56 testnet 97
-CHAINID = 
-# bsc mainnet 317 testnet 197
-MinEpochBlockExtraDataLen = 317
+# your private key on the blockchain the contracts will be deployed to
+PRIVATE_KEY=
+# beacon chain rpc url
+URL=
+# eth mainnet 1 Goerli 5
+CHAIN_ID =
+# initialize the light client with the information of the period
+PERIOD=
+# report gas or not
+REPORT_GAS=
+# default network to test or deploy, one of "hardhat", "local", "makalu", "dev" and "map"
+DEFAULT_NETWORK=
