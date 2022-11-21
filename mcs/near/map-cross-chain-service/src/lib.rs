@@ -262,7 +262,11 @@ impl MapCrossChainService {
         assert_eq!(self.map_bridge_address, event.map_bridge_address, "unexpected map mcs address: {}", hex::encode(event.map_bridge_address));
 
         log!("get transfer in event: {}", event);
-        let to_chain_token = String::from_utf8(event.to_chain_token.clone()).unwrap();
+
+        String::from_utf8(event.to.clone())
+            .unwrap_or_else(|_| env::panic_str(&*format!("invalid to address: {:?}", event.to)));
+        let to_chain_token = String::from_utf8(event.to_chain_token.clone())
+            .unwrap_or_else(|_| env::panic_str(&*format!("invalid to chain token address: {:?}", event.to_chain_token)));
         assert_eq!(self.near_chain_id, event.to_chain, "unexpected to chain: {}", event.to_chain);
         assert!(self.mcs_tokens.get(&to_chain_token).is_some()
                     || self.fungible_tokens.get(&to_chain_token).is_some() || self.is_native_token(event.to_chain_token.clone()),

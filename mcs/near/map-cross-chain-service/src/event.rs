@@ -67,16 +67,7 @@ impl MapTransferOutEvent {
 
 impl std::fmt::Display for MapTransferOutEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let to = String::from_utf8(self.to.clone())
-            .unwrap_or_else(|_| env::panic_str(&*format!("invalid to address: {:?}", self.to)));
-        let to_chain_token = String::from_utf8(self.to_chain_token.clone())
-            .unwrap_or_else(|_| env::panic_str(&*format!("invalid to chain token address: {:?}", self.to_chain_token)));
-        write!(
-            f,
-            "token: {:?}; from: {:?};  orderId: {}; fromChain: {}; toChain: {}; to: {}; amount: {}; toChainToken: {}",
-            self.token, self.from, hex::encode(self.order_id), self.from_chain, self.to_chain,
-            to, self.amount, to_chain_token
-        )
+        write!(f, "{}", serde_json::to_string(self).unwrap())
     }
 }
 
