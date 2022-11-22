@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./utils/TransferHelper.sol";
@@ -217,7 +216,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
-        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
+        require(msg.sender == _getAdmin(), "MAPOmnichainService: only Admin can upgrade");
     }
 
     function changeAdmin(address _admin) external onlyOwner checkAddress(_admin){

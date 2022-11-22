@@ -118,6 +118,14 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         let mossRP = await MAPCrossChainServiceRelayProxy.deploy(mossR.address,initData);
         await mossRP.deployed()
 
+        let initTokenRegisterData = await tokenRegister.initialize();
+
+        const TokenResgisterProxy = await ethers.getContractFactory("MAPOmnichainServiceProxyV2");
+        let tokenRegisterP = await TokenResgisterProxy.deploy(tokenRegister.address,initTokenRegisterData.data);
+        await tokenRegisterP.deployed()
+
+        tokenRegister = TokenRegister.attach(tokenRegister.address);
+
         mossR = MOSSRelay.attach(mossRP.address);
 
     });
