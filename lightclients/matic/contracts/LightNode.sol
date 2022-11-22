@@ -13,6 +13,8 @@ import "./lib/Verify.sol";
 contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     uint256 public constant EPOCH_NUM = 64;
 
+    uint256 internal constant MAX_SAVED_EPOCH_NUM = 121500;
+
     address public mptVerify;
 
     uint256 public minValidBlocknum;
@@ -170,6 +172,18 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return true;
     }
 
+    function _removeExcessEpochValidators() internal {
+        uint256 remove = _lastSyncedBlock - EPOCH_NUM * MAX_SAVED_EPOCH_NUM;
+
+        if (
+            remove + EPOCH_NUM > minValidBlocknum &&
+            validators[(remove + 1) / EPOCH_NUM].length > 0
+        ) {
+            minValidBlocknum = remove + EPOCH_NUM + 1;
+            delete validators[(remove + 1) / EPOCH_NUM];
+        }
+    }
+
     function getBytes(ProofData memory _proof)
         public
         pure
@@ -194,9 +208,14 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return _lastSyncedBlock + EPOCH_NUM;
     }
 
-     function verifiableHeaderRange() external view override returns (uint256, uint256){
-        return (minValidBlocknum,maxCanVerifyNum());
-     }
+    function verifiableHeaderRange()
+        external
+        view
+        override
+        returns (uint256, uint256)
+    {
+        return (minValidBlocknum, maxCanVerifyNum());
+    }
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
