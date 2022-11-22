@@ -5,19 +5,22 @@ import {ethers} from "hardhat";
 import config from "../hardhat.config";
 import {delay} from "../utils/Util";
 
-let period619 = require("../data/mainnet/init_arg_period619.js");
-let period620 = require("../data/mainnet/period620.js");
-let exedata = require("../data/mainnet/exe_header_period619.js");
+let bootstrap = require("../data/goerli/bootstrap.js");
+let periodUpdate = require("../data/goerli/period_update.js");
+let exedata = require("../data/goerli/exe_headers.js");
+let chainId = 5; //test data from eth testnet
 
-
-let chainId = 1; //test data from eth mainnet
+// let bootstrap = require("../data/mainnet/bootstrap.js");
+// let periodUpdate = require("../data/mainnet/period_update.js");
+// let exedata = require("../data/mainnet/exe_headers.js");
+// let chainId = 1; //test data from eth mainnet
 
 describe("LightNode", function () {
     // We define a fixture to reuse the same setup in every test.
     // We use loadFixture to run this setup once, snapshot that state,
     // and reset Hardhat Network to that snapshopt in every test.
 
-    if (config.defaultNetwork == "makalu" || config.defaultNetwork == "dev") {
+    if (config.defaultNetwork != "hardhat") {
         return
     }
 
@@ -43,12 +46,12 @@ describe("LightNode", function () {
             [chainId,
                 wallet.address,
                 mPTVerify.address,
-                period619.finalizedBeaconHeader,
-                period619.finalizedExeHeaderNumber,
-                period619.finalizedExeHeaderHash,
-                period619.curSyncCommitteAggPubkey,
-                period619.nextSyncCommitteAggPubkey,
-                period619.syncCommitteePubkeyHashes,
+                bootstrap.finalizedBeaconHeader,
+                bootstrap.finalizedExeHeaderNumber,
+                bootstrap.finalizedExeHeaderHash,
+                bootstrap.curSyncCommitteAggPubkey,
+                bootstrap.nextSyncCommitteAggPubkey,
+                bootstrap.syncCommitteePubkeyHashes,
                 false
             ]
         );
@@ -57,19 +60,19 @@ describe("LightNode", function () {
         await lightNodeProxy.connect(wallet).deployed();
         let proxy = LightNode.attach(lightNodeProxy.address);
 
-        for (let i = 0; i < period619.curSyncCommitteePubkeys.length; i++) {
-            await proxy.initSyncCommitteePubkey(period619.curSyncCommitteePubkeys[i]);
+        for (let i = 0; i < bootstrap.curSyncCommitteePubkeys.length; i++) {
+            await proxy.initSyncCommitteePubkey(bootstrap.curSyncCommitteePubkeys[i]);
             let initStage = await proxy.initStage();
             expect(initStage).to.eq(2 + i);
             let initialized = await proxy.initialized();
             expect(initialized).false;
         }
 
-        for (let i = 0; i < period619.nextSyncCommitteePubkeys.length; i++) {
-            await proxy.initSyncCommitteePubkey(period619.nextSyncCommitteePubkeys[i]);
+        for (let i = 0; i < bootstrap.nextSyncCommitteePubkeys.length; i++) {
+            await proxy.initSyncCommitteePubkey(bootstrap.nextSyncCommitteePubkeys[i]);
             let initStage = await proxy.initStage();
             let initialized = await proxy.initialized();
-            if (i != period619.nextSyncCommitteePubkeys.length - 1) {
+            if (i != bootstrap.nextSyncCommitteePubkeys.length - 1) {
                 expect(initStage).to.eq(5 + i);
                 expect(initialized).false;
             }
@@ -84,7 +87,7 @@ describe("LightNode", function () {
             let lightNode = await loadFixture(deployFixture);
 
             let slot = await lightNode.finalizedSlot();
-            expect(slot).to.eq(period619.finalizedBeaconHeader.slot)
+            expect(slot).to.eq(bootstrap.finalizedBeaconHeader.slot)
 
             let initStage = await lightNode.initStage();
             expect(initStage).to.eq(6);
@@ -102,7 +105,7 @@ describe("LightNode", function () {
             let initialized = await lightNode.initialized();
             expect(initialized).true;
 
-            await expect(lightNode.initSyncCommitteePubkey(period619.curSyncCommitteePubkeys[0]))
+            await expect(lightNode.initSyncCommitteePubkey(bootstrap.curSyncCommitteePubkeys[0]))
                 .to.be.revertedWith('contract is initialized!');
         });
 
@@ -120,12 +123,12 @@ describe("LightNode", function () {
                 chainId,
                 wallet.address,
                 wallet.address,
-                period619.finalizedBeaconHeader,
-                period619.finalizedExeHeaderNumber,
-                period619.finalizedExeHeaderHash,
-                period619.curSyncCommitteAggPubkey,
-                period619.nextSyncCommitteAggPubkey,
-                period619.syncCommitteePubkeyHashes,
+                bootstrap.finalizedBeaconHeader,
+                bootstrap.finalizedExeHeaderNumber,
+                bootstrap.finalizedExeHeaderHash,
+                bootstrap.curSyncCommitteAggPubkey,
+                bootstrap.nextSyncCommitteAggPubkey,
+                bootstrap.syncCommitteePubkeyHashes,
                 false
             )).to.be.revertedWith('Initializable: contract is already initialized');
         });
@@ -146,12 +149,12 @@ describe("LightNode", function () {
                 [chainId,
                     wallet.address,
                     mPTVerify.address,
-                    period619.finalizedBeaconHeader,
-                    period619.finalizedExeHeaderNumber,
-                    period619.finalizedExeHeaderHash,
-                    period619.curSyncCommitteAggPubkey,
-                    period619.nextSyncCommitteAggPubkey,
-                    period619.syncCommitteePubkeyHashes,
+                    bootstrap.finalizedBeaconHeader,
+                    bootstrap.finalizedExeHeaderNumber,
+                    bootstrap.finalizedExeHeaderHash,
+                    bootstrap.curSyncCommitteAggPubkey,
+                    bootstrap.nextSyncCommitteAggPubkey,
+                    bootstrap.syncCommitteePubkeyHashes,
                     false
                 ]
             );
@@ -159,7 +162,7 @@ describe("LightNode", function () {
             await lightNodeProxy.connect(wallet).deployed();
             let proxy = LightNode.attach(lightNodeProxy.address);
 
-            await expect(proxy.initSyncCommitteePubkey(period619.curSyncCommitteePubkeys[1]))
+            await expect(proxy.initSyncCommitteePubkey(bootstrap.curSyncCommitteePubkeys[1]))
                 .to.be.revertedWith('wrong syncCommitteePubkeyPart hash');
 
             let initialized = await lightNode.initialized();
@@ -204,7 +207,7 @@ describe("LightNode", function () {
             expect(await lightNode.getImplementation()).to.eq(newImplement.address);
 
             let slot = await lightNode.finalizedSlot();
-            expect(slot).to.eq(period619.finalizedBeaconHeader.slot)
+            expect(slot).to.eq(bootstrap.finalizedBeaconHeader.slot)
         });
 
     });
@@ -253,7 +256,7 @@ describe("LightNode", function () {
             let lightNode = await deployFixture();
 
             await lightNode.connect(wallet).togglePause(true);
-            await expect(lightNode.updateLightClient(period620.update)).to.be.revertedWith('Pausable: paused');
+            await expect(lightNode.updateLightClient(periodUpdate.update)).to.be.revertedWith('Pausable: paused');
         });
 
         it("updateLightClient ... OK ", async function () {
@@ -261,16 +264,16 @@ describe("LightNode", function () {
             let initialized = await lightNode.initialized();
             expect(initialized).true;
 
-            await lightNode.updateLightClient(period620.update);
+            await lightNode.updateLightClient(periodUpdate.update);
 
             let finalizedSlot = await lightNode.finalizedSlot();
-            expect(finalizedSlot).to.eq(5079072)
+            expect(finalizedSlot).to.eq(periodUpdate.update.finalizedHeader.slot)
 
             let exeHeaderUpdateInfo = await lightNode.exeHeaderUpdateInfo();
-            expect(exeHeaderUpdateInfo.startNumber).to.eq(15905997)
-            expect(exeHeaderUpdateInfo.endNumber).to.eq(15913896)
+            expect(exeHeaderUpdateInfo.startNumber).to.eq(bootstrap.finalizedExeHeaderNumber.toNumber() + 1)
+            expect(exeHeaderUpdateInfo.endNumber).to.eq(periodUpdate.update.finalizedExeHeader.number - 1)
             expect(exeHeaderUpdateInfo.endHash)
-                .to.eq("0xc3a1df4db9777e14f5bf8f7d8e58e3443c0e9a7b9883f463ad956e25617dce27")
+                .to.eq(periodUpdate.update.finalizedExeHeader.parentHash)
         });
 
 
@@ -279,9 +282,9 @@ describe("LightNode", function () {
             let initialized = await lightNode.initialized();
             expect(initialized).true;
 
-            await lightNode.updateLightClient(period620.update);
+            await lightNode.updateLightClient(periodUpdate.update);
             await lightNode.updateExeBlockHeaders(exedata.headers);
-            await expect(lightNode.updateLightClient(period620.update)).to.be.revertedWith('previous exe block headers should be updated before update light client')
+            await expect(lightNode.updateLightClient(periodUpdate.update)).to.be.revertedWith('previous exe block headers should be updated before update light client')
         });
     });
 
@@ -290,14 +293,14 @@ describe("LightNode", function () {
         it("updateExeBlockHeaders ... ok ", async function () {
             let lightNode = await loadFixture(deployFixture);
 
-            await lightNode.updateLightClient(period620.update);
+            await lightNode.updateLightClient(periodUpdate.update);
             await lightNode.updateExeBlockHeaders(exedata.headers);
 
             let exeHeaderUpdateInfo = await lightNode.exeHeaderUpdateInfo();
-            expect(exeHeaderUpdateInfo.startNumber).to.eq(15905997)
-            expect(exeHeaderUpdateInfo.endNumber).to.eq(15913886)
+            expect(exeHeaderUpdateInfo.startNumber).to.eq(bootstrap.finalizedExeHeaderNumber.toNumber() + 1)
+            expect(exeHeaderUpdateInfo.endNumber).to.eq(exedata.headers[0].number - 1)
             expect(exeHeaderUpdateInfo.endHash)
-                .to.eq("0x6daf8504d13564cc28bd8764226b7c8ed2ef4be236f495247c2b590fbbe72cfc")
+                .to.eq(exedata.headers[0].parentHash)
         });
 
     });
@@ -307,14 +310,14 @@ describe("LightNode", function () {
         it("verifyProofData ... ok ", async function () {
             let lightNode = await loadFixture(deployFixture);
 
-            await lightNode.updateLightClient(period620.update);
+            await lightNode.updateLightClient(periodUpdate.update);
             await lightNode.updateExeBlockHeaders(exedata.headers);
 
             let exeHeaderUpdateInfo = await lightNode.exeHeaderUpdateInfo();
-            expect(exeHeaderUpdateInfo.startNumber).to.eq(15905997)
-            expect(exeHeaderUpdateInfo.endNumber).to.eq(15913886)
+            expect(exeHeaderUpdateInfo.startNumber).to.eq(bootstrap.finalizedExeHeaderNumber.toNumber() + 1)
+            expect(exeHeaderUpdateInfo.endNumber).to.eq(exedata.headers[0].number - 1)
 
-            let proofData = await lightNode.getBytes(exedata.receiptProof_15913887);
+            let proofData = await lightNode.getBytes(exedata.receiptProof);
             let result = await lightNode.verifyProofData(proofData, {gasLimit: 20000000});
             expect(result.success).to.true;
         });
@@ -326,18 +329,18 @@ describe("LightNode", function () {
                 let lightNode = await loadFixture(deployFixture)
 
                 let begin = await lightNode.verifiableHeaderRange()
-                expect(begin[0]).to.eq(15905996)
-                expect(begin[1]).to.eq(15905996)
+                expect(begin[0]).to.eq(bootstrap.finalizedExeHeaderNumber)
+                expect(begin[1]).to.eq(bootstrap.finalizedExeHeaderNumber)
 
-                await lightNode.updateLightClient(period620.update);
+                await lightNode.updateLightClient(periodUpdate.update);
                 begin = await lightNode.verifiableHeaderRange()
-                expect(begin[0]).to.eq(15905996)
-                expect(begin[1]).to.eq(15905996)
+                expect(begin[0]).to.eq(bootstrap.finalizedExeHeaderNumber)
+                expect(begin[1]).to.eq(bootstrap.finalizedExeHeaderNumber)
 
                 await lightNode.updateExeBlockHeaders(exedata.headers);
                 begin = await lightNode.verifiableHeaderRange()
-                expect(begin[0]).to.eq(15905996)
-                expect(begin[1]).to.eq(15905996)
+                expect(begin[0]).to.eq(bootstrap.finalizedExeHeaderNumber)
+                expect(begin[1]).to.eq(bootstrap.finalizedExeHeaderNumber)
             });
 
         });
@@ -370,12 +373,12 @@ describe("LightNode Test on MAP", function () {
                 [chainId,
                     wallet.address,
                     mPTVerify.address,
-                    period619.finalizedBeaconHeader,
-                    period619.finalizedExeHeaderNumber,
-                    period619.finalizedExeHeaderHash,
-                    period619.curSyncCommitteAggPubkey,
-                    period619.nextSyncCommitteAggPubkey,
-                    period619.syncCommitteePubkeyHashes,
+                    bootstrap.finalizedBeaconHeader,
+                    bootstrap.finalizedExeHeaderNumber,
+                    bootstrap.finalizedExeHeaderHash,
+                    bootstrap.curSyncCommitteAggPubkey,
+                    bootstrap.nextSyncCommitteAggPubkey,
+                    bootstrap.syncCommitteePubkeyHashes,
                     verifyUpdate
                 ]
             );
@@ -390,8 +393,8 @@ describe("LightNode Test on MAP", function () {
         });
 
         it("init cur sync committee pub keys should be OK", async function () {
-            for (let i = 0; i < period619.curSyncCommitteePubkeys.length; i++) {
-                await proxy.initSyncCommitteePubkey(period619.curSyncCommitteePubkeys[i]);
+            for (let i = 0; i < bootstrap.curSyncCommitteePubkeys.length; i++) {
+                await proxy.initSyncCommitteePubkey(bootstrap.curSyncCommitteePubkeys[i]);
                 await delay(10000)
                 let initStage = await proxy.initStage();
                 expect(initStage).to.eq(2 + i);
@@ -401,12 +404,12 @@ describe("LightNode Test on MAP", function () {
         });
 
         it("init next sync committee pub keys should be OK", async function () {
-            for (let i = 0; i < period619.nextSyncCommitteePubkeys.length; i++) {
-                await proxy.initSyncCommitteePubkey(period619.nextSyncCommitteePubkeys[i]);
+            for (let i = 0; i < bootstrap.nextSyncCommitteePubkeys.length; i++) {
+                await proxy.initSyncCommitteePubkey(bootstrap.nextSyncCommitteePubkeys[i]);
                 await delay(10000)
                 let initStage = await proxy.initStage();
                 let initialized = await proxy.initialized();
-                if (i != period619.nextSyncCommitteePubkeys.length - 1) {
+                if (i != bootstrap.nextSyncCommitteePubkeys.length - 1) {
                     expect(initStage).to.eq(5 + i);
                     expect(initialized).false;
                 } else {
@@ -417,16 +420,17 @@ describe("LightNode Test on MAP", function () {
         });
 
         it("updateLightClient should be OK ", async function () {
-            await proxy.updateLightClient(period620.update);
+            await proxy.updateLightClient(periodUpdate.update);
             await delay(10000)
 
             let finalizedSlot = await proxy.finalizedSlot();
-            expect(finalizedSlot).to.eq(5079072)
+            expect(finalizedSlot).to.eq(periodUpdate.update.finalizedHeader.slot)
 
             let exeHeaderUpdateInfo = await proxy.exeHeaderUpdateInfo();
-            expect(exeHeaderUpdateInfo.startNumber).to.eq(15905997)
-            expect(exeHeaderUpdateInfo.endNumber).to.eq(15913896)
-            expect(exeHeaderUpdateInfo.endHash).to.eq("0xc3a1df4db9777e14f5bf8f7d8e58e3443c0e9a7b9883f463ad956e25617dce27")
+            expect(exeHeaderUpdateInfo.startNumber).to.eq(bootstrap.finalizedExeHeaderNumber.toNumber() + 1)
+            expect(exeHeaderUpdateInfo.endNumber).to.eq(periodUpdate.update.finalizedExeHeader.number - 1)
+            expect(exeHeaderUpdateInfo.endHash)
+                .to.eq(periodUpdate.update.finalizedExeHeader.parentHash)
         });
     });
 

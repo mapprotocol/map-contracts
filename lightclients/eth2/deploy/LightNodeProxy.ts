@@ -3,13 +3,13 @@ import {DeployFunction} from 'hardhat-deploy/types';
 import {dynamicImport} from 'tsimportlib';
 import {LightClientUpdate} from "@lodestar/types/lib/altair/types";
 import {bellatrix} from "@lodestar/types";
-import {keccak256} from "ethers/lib/utils";
+import {hexlify} from "ethers/lib/utils";
 import {expect} from "chai";
-import {delay} from "../utils/Util";
+import {computePubkeyHash, delay, getPubkeySlice} from "../utils/Util";
 
 const url = process.env.URL!;
 let chainId = process.env.CHAIN_ID;
-let period = parseInt(process.env.PERIOD!);
+let blockRoot = process.env.TRUSTED_BLOCK_ROOT!;
 
 const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const {deployments, getNamedAccounts, ethers} = hre;
@@ -26,30 +26,34 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     let LightNode = await ethers.getContractFactory("LightNode")
 
     const api = getClient({baseUrl: url}, {config});
-    let periodUpdate = await api.lightclient.getUpdates(period! - 1, 2)
-    let prePeriod: LightClientUpdate = periodUpdate.data[0];
-    let initPeriod: LightClientUpdate = periodUpdate.data[1];
 
-    console.log("initPeriod.finalizedHeader.slot", initPeriod.finalizedHeader.slot)
-
-    let finalizedBlock = await api.beacon.getBlockV2(initPeriod.finalizedHeader.slot);
+    let boorStrapResp = await api.lightclient.getBootstrap(blockRoot)
+    let bootStrap = boorStrapResp.data
+    let period = getPeriodBySlot(bootStrap.header.slot)
+    console.log("period", period)
+    let periodUpdateResp = await api.lightclient.getUpdates(period, 1)
+    let periodUpdate: LightClientUpdate = periodUpdateResp.data[0];
+    let finalizedBlock = await api.beacon.getBlockV2(bootStrap.header.slot);
     let block: bellatrix.SignedBeaconBlock = finalizedBlock.data;
     let finalizedExeHeaderNumber = block.message.body.executionPayload.blockNumber;
     let finalizedExeHeaderHash = block.message.body.executionPayload.blockHash;
 
-    console.log("initPeriod.finalizedHeader", initPeriod.finalizedHeader)
-    console.log("finalizedExeHeaderNumber", finalizedExeHeaderNumber)
-    console.log("finalizedExeHeaderHash", finalizedExeHeaderHash)
-    console.log("prePeriod.nextSyncCommittee.aggregatePubkey", prePeriod.nextSyncCommittee.aggregatePubkey)
-    console.log("initPeriod.nextSyncCommittee.aggregatePubkey", initPeriod.nextSyncCommittee.aggregatePubkey)
+    console.log("finalizedHeader", bootStrap.header)
+    console.log("finalizedExeHeaderNumber", hexlify(finalizedExeHeaderNumber))
+    console.log("finalizedExeHeaderHash", hexlify(finalizedExeHeaderHash))
+    console.log("curSyncCommittee.aggregatePubkey", hexlify(bootStrap.currentSyncCommittee.aggregatePubkey))
+    console.log("nextSyncCommittee.aggregatePubkey", hexlify(periodUpdate.nextSyncCommittee.aggregatePubkey))
+
+
+    console.log("period finalizedHeader slot", periodUpdate.finalizedHeader.slot)
 
     let hashes: string[] = [];
-    hashes.push(computePubkeyHash(prePeriod.nextSyncCommittee.pubkeys, 0, 171))
-    hashes.push(computePubkeyHash(prePeriod.nextSyncCommittee.pubkeys, 171, 342))
-    hashes.push(computePubkeyHash(prePeriod.nextSyncCommittee.pubkeys, 342, 512))
-    hashes.push(computePubkeyHash(initPeriod.nextSyncCommittee.pubkeys, 0, 171))
-    hashes.push(computePubkeyHash(initPeriod.nextSyncCommittee.pubkeys, 171, 342))
-    hashes.push(computePubkeyHash(initPeriod.nextSyncCommittee.pubkeys, 342, 512))
+    hashes.push(computePubkeyHash(bootStrap.currentSyncCommittee.pubkeys, 0, 171))
+    hashes.push(computePubkeyHash(bootStrap.currentSyncCommittee.pubkeys, 171, 342))
+    hashes.push(computePubkeyHash(bootStrap.currentSyncCommittee.pubkeys, 342, 512))
+    hashes.push(computePubkeyHash(periodUpdate.nextSyncCommittee.pubkeys, 0, 171))
+    hashes.push(computePubkeyHash(periodUpdate.nextSyncCommittee.pubkeys, 171, 342))
+    hashes.push(computePubkeyHash(periodUpdate.nextSyncCommittee.pubkeys, 342, 512))
     console.log("hashes", hashes)
 
     let initData = LightNode.interface.encodeFunctionData(
@@ -57,11 +61,11 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         [chainId,
             wallet.address,
             mPTVerify.address,
-            initPeriod.finalizedHeader,
+            bootStrap.header,
             finalizedExeHeaderNumber,
             finalizedExeHeaderHash,
-            prePeriod.nextSyncCommittee.aggregatePubkey,
-            initPeriod.nextSyncCommittee.aggregatePubkey,
+            bootStrap.currentSyncCommittee.aggregatePubkey,
+            periodUpdate.nextSyncCommittee.aggregatePubkey,
             hashes,
             false
         ]
@@ -83,61 +87,51 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     expect(initStage).to.eq(1);
 
     console.log("init cur sync committee pubkeys part 1...")
-    await proxy.initSyncCommitteePubkey(getPubkeySlice(prePeriod.nextSyncCommittee.pubkeys, 0, 171));
+    console.log(hexlify(getPubkeySlice(bootStrap.currentSyncCommittee.pubkeys, 0, 171)))
+    await proxy.initSyncCommitteePubkey(getPubkeySlice(bootStrap.currentSyncCommittee.pubkeys, 0, 171));
     await delay(10000)
     initStage = await proxy.initStage();
     expect(initStage).to.eq(2);
 
     console.log("init cur sync committee pubkeys part 2...")
-    await proxy.initSyncCommitteePubkey(getPubkeySlice(prePeriod.nextSyncCommittee.pubkeys, 171, 342));
+    console.log(hexlify(getPubkeySlice(bootStrap.currentSyncCommittee.pubkeys, 171, 342)))
+    await proxy.initSyncCommitteePubkey(getPubkeySlice(bootStrap.currentSyncCommittee.pubkeys, 171, 342));
     await delay(10000)
     initStage = await proxy.initStage();
     expect(initStage).to.eq(3);
 
     console.log("init cur sync committee pubkeys part 3...")
-    await proxy.initSyncCommitteePubkey(getPubkeySlice(prePeriod.nextSyncCommittee.pubkeys, 342, 512));
+    console.log(hexlify(getPubkeySlice(bootStrap.currentSyncCommittee.pubkeys, 342, 512)))
+    await proxy.initSyncCommitteePubkey(getPubkeySlice(bootStrap.currentSyncCommittee.pubkeys, 342, 512));
     await delay(10000)
     initStage = await proxy.initStage();
     expect(initStage).to.eq(4);
 
     console.log("init next sync committee pubkeys part 1...")
-    await proxy.initSyncCommitteePubkey(getPubkeySlice(initPeriod.nextSyncCommittee.pubkeys, 0, 171));
+    console.log(hexlify(getPubkeySlice(periodUpdate.nextSyncCommittee.pubkeys, 0, 171)))
+    await proxy.initSyncCommitteePubkey(getPubkeySlice(periodUpdate.nextSyncCommittee.pubkeys, 0, 171));
     await delay(10000)
     initStage = await proxy.initStage();
     expect(initStage).to.eq(5);
 
     console.log("init next sync committee pubkeys part 2...")
-    await proxy.initSyncCommitteePubkey(getPubkeySlice(initPeriod.nextSyncCommittee.pubkeys, 171, 342));
+    console.log(hexlify(getPubkeySlice(periodUpdate.nextSyncCommittee.pubkeys, 171, 342)))
+    await proxy.initSyncCommitteePubkey(getPubkeySlice(periodUpdate.nextSyncCommittee.pubkeys, 171, 342));
     await delay(10000)
     initStage = await proxy.initStage();
     expect(initStage).to.eq(6);
 
     console.log("init next sync committee pubkeys part 3...")
-    await proxy.initSyncCommitteePubkey(getPubkeySlice(initPeriod.nextSyncCommittee.pubkeys, 342, 512));
+    console.log(hexlify(getPubkeySlice(periodUpdate.nextSyncCommittee.pubkeys, 342, 512)))
+    await proxy.initSyncCommitteePubkey(getPubkeySlice(periodUpdate.nextSyncCommittee.pubkeys, 342, 512));
     await delay(10000)
 
     initialized = await proxy.initialized();
     expect(initialized).true;
 };
 
-function computePubkeyHash(pubkeys: Uint8Array[], start: number, end: number): string {
-    let pubkeysSlice: Uint8Array = new Uint8Array(48 * (end - start));
-
-    for (let i = start, j = 0; i < end; i++, j++) {
-        pubkeysSlice.set(pubkeys[i], 48 * j)
-    }
-
-    return keccak256(pubkeysSlice)
-}
-
-function getPubkeySlice(pubkeys: Uint8Array[], start: number, end: number): Uint8Array {
-    let pubkeysSlice: Uint8Array = new Uint8Array(48 * (end - start));
-
-    for (let i = start, j = 0; i < end; i++, j++) {
-        pubkeysSlice.set(pubkeys[i], 48 * j)
-    }
-
-    return pubkeysSlice
+function getPeriodBySlot(slot : number) : number {
+    return ~~(slot / 32 / 256)
 }
 
 export default deploy;

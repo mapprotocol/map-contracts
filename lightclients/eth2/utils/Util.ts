@@ -1,8 +1,10 @@
-import { BigNumber } from "ethers";
-import { JsonRpcProvider } from "@ethersproject/providers";
+import {BigNumber} from "ethers";
+import {JsonRpcProvider} from "@ethersproject/providers";
+import {keccak256} from "ethers/lib/utils";
+
 const Rpc = require('isomorphic-rpc')
-const { GetProof } = require('eth-proof')
-const { encode } = require('eth-util-lite')
+const {GetProof} = require('eth-proof')
+const {encode} = require('eth-util-lite')
 
 
 export class BeaconBlockHeader {
@@ -96,6 +98,7 @@ export class BlockHeader {
     }
 
 }
+
 // struct TxLog {
 //     address addr;
 //     bytes[] topics;
@@ -225,4 +228,46 @@ function buffer2hex(buffer: Buffer) {
 
 export async function delay(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export function getPubkeySlice(pubkeys: Uint8Array[], start: number, end: number): Uint8Array {
+    let pubkeysSlice: Uint8Array = new Uint8Array(48 * (end - start));
+
+    for (let i = start, j = 0; i < end; i++, j++) {
+        pubkeysSlice.set(pubkeys[i], 48 * j)
+    }
+
+    return pubkeysSlice
+}
+
+export function getPubkeyStringSlice(pubkeys: string[], start: number, end: number): Uint8Array {
+    let pubkeysSlice: Uint8Array = new Uint8Array(48 * (end - start));
+
+    for (let i = start, j = 0; i < end; i++, j++) {
+        pubkeysSlice.set(hexToBytes(pubkeys[i]), 48 * j)
+    }
+
+    return pubkeysSlice
+}
+
+function hexToBytes(hex: string) : number[]{
+    let start = 0
+    if (hex.startsWith("0x")) {
+        start = 2
+    }
+    let bytes = [];
+    for (let c = start; c < hex.length; c += 2) {
+        bytes.push(parseInt(hex.substring(c, c + 2), 16));
+    }
+    return bytes;
+}
+
+export function computePubkeyHash(pubkeys: Uint8Array[], start: number, end: number): string {
+    let pubkeysSlice: Uint8Array = new Uint8Array(48 * (end - start));
+
+    for (let i = start, j = 0; i < end; i++, j++) {
+        pubkeysSlice.set(pubkeys[i], 48 * j)
+    }
+
+    return keccak256(pubkeysSlice)
 }
