@@ -2,11 +2,7 @@
 PRIVATE_KEY=
 # beacon chain rpc url
 URL=
-# eth mainnet 1 Goerli 5
+# 1 for eth mainnet, 5 for Goerli testnet
 CHAIN_ID =
-# initialize the light client with the information of the period
-PERIOD=
-# report gas or not
-REPORT_GAS=
-# default network to test or deploy, one of "hardhat", "local", "makalu", "dev" and "map"
-DEFAULT_NETWORK=
+# initialize the light client base on the trusted root
+TRUSTED_BLOCK_ROOT=
