@@ -2,14 +2,15 @@
 
 pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./interface/ITokenRegisterV2.sol";
 import "./interface/IVaultTokenV2.sol";
 import "./utils/Utils.sol";
 
-contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
+contract TokenRegisterV2 is ITokenRegisterV2,Initializable,UUPSUpgradeable {
     using SafeMath for uint;
 
     uint256 constant MAX_RATE_UNI = 1000000;
@@ -45,6 +46,17 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
         _;
     }
 
+    modifier onlyOwner() {
+        require(msg.sender == _getAdmin(), "register only owner");
+        _;
+    }
+
+    function initialize() public initializer
+    {
+        _changeAdmin(msg.sender);
+    }
+
+
     function registerToken(address _token, address _vaultToken, bool _mintable)
     external
     onlyOwner checkAddress(_token) checkAddress(_vaultToken) {
@@ -68,7 +80,9 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
         tokenMappingList[_fromChain][_fromToken] = _token;
     }
 
-    function setTokenFee( address _token, uint256 _toChain, uint _lowest, uint _highest,uint _rate) external onlyOwner {
+    function setTokenFee( address _token, uint256 _toChain, uint _lowest, uint _highest,uint _rate) 
+    external 
+    onlyOwner {
         Token storage token = tokenList[_token];
         require(token.vaultToken != address(0), "invalid map token");
         require(_highest >= _lowest, 'invalid highest and lowest');
@@ -79,14 +93,16 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
 
 
     function getToChainToken(address _token, uint256 _toChain)
-    external override
+    external 
+    override
     view
     returns (bytes memory _toChainToken){
         _toChainToken = tokenList[_token].mappingTokens[_toChain];
     }
 
     function getToChainAmount(address _token, uint256 _amount, uint256 _toChain)
-    external override
+    external 
+    override
     view
     returns (uint256){
         uint256 decimalsFrom = tokenList[_token].decimals;
@@ -99,14 +115,18 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
     }
 
     function getRelayChainToken(uint256 _fromChain, bytes memory _fromToken)
-    external override
+    external 
+    override
     view
     returns (address token){
         token = tokenMappingList[_fromChain][_fromToken];
     }
 
     function getRelayChainAmount(address _token, uint256 _fromChain, uint256 _amount)
-    external override view returns (uint256){
+    external 
+    override 
+    view 
+    returns (uint256){
         uint256 decimalsFrom = tokenList[_token].tokenDecimals[_fromChain];
         uint256 decimalsTo = tokenList[_token].decimals;
         if (decimalsFrom == decimalsTo) {
@@ -117,17 +137,26 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
     }
 
     function checkMintable(address _token)
-    external override view returns (bool) {
+    external 
+    override 
+    view 
+    returns (bool) {
         return tokenList[_token].mintable;
     }
 
     function getVaultToken(address _token)
-    external override view returns (address) {
+    external 
+    override 
+    view 
+    returns (address) {
         return tokenList[_token].vaultToken;
     }
 
     function getTokenFee(address _token, uint256 _amount, uint256 _toChain)
-    external view override returns (uint256) {
+    external 
+    view 
+    override 
+    returns (uint256) {
         FeeRate memory feeRate = tokenList[_token].fees[_toChain];
 
         uint256 fee = _amount.mul(feeRate.rate).div(MAX_RATE_UNI);
@@ -152,6 +181,23 @@ contract TokenRegisterV2 is Ownable, ITokenRegisterV2 {
         }
 
         feeRate = tokenList[_token].fees[_toChain];
+    }
+
+    /** UUPS *********************************************************/
+    function _authorizeUpgrade(address) internal view override {
+        require(msg.sender == _getAdmin(), "TokenRegister: only Admin can upgrade");
+    }
+
+    function changeAdmin(address _admin) external onlyOwner checkAddress(_admin) {
+        _changeAdmin(_admin);
+    }
+
+    function getAdmin() external view returns (address) {
+        return _getAdmin();
+    }
+
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
     }
 
 }

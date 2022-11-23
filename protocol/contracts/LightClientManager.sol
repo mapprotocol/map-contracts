@@ -2,17 +2,32 @@
 
 pragma solidity 0.8.7;
 
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./utils/Role.sol";
 import "./interface/ILightClientManager.sol";
 import "./interface/ILightNode.sol";
 
 
-contract LightClientManager is ILightClientManager, Ownable {
-    mapping(uint256 => address) lightClientContract;
+contract LightClientManager is ILightClientManager, Initializable,UUPSUpgradeable {
+    mapping(uint256 => address) public lightClientContract;
+
+    modifier checkAddress(address _address){
+        require(_address != address(0), "address is zero");
+        _;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == _getAdmin(), " only owner");
+        _;
+    }
+
+    function initialize() public initializer
+    {
+        _changeAdmin(msg.sender);
+    }
 
     function register(uint256 _chainId, address _contract) external override onlyOwner {
         lightClientContract[_chainId] = _contract;
@@ -48,6 +63,23 @@ contract LightClientManager is ILightClientManager, Ownable {
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         (uint256 min,uint256 max) = lightNode.verifiableHeaderRange();
         return(min,max);
+    }
+
+    /** UUPS *********************************************************/
+    function _authorizeUpgrade(address) internal view override {
+        require(msg.sender == _getAdmin(), "LightClientManager: only Admin can upgrade");
+    }
+
+    function changeAdmin(address _admin) external onlyOwner checkAddress(_admin) {
+        _changeAdmin(_admin);
+    }
+
+    function getAdmin() external view returns (address) {
+        return _getAdmin();
+    }
+
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
     }
 
 }

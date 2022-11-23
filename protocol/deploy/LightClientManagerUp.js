@@ -23,19 +23,16 @@ module.exports = async function ({ethers, deployments}) {
 
     console.log("LightClientManager",LightClientManager.address);
 
-    let data = LightClientManager.interface.encodeFunctionData("initialize", []);
-
-    await deploy('LightClientManagerProxy', {
-        from: deployer.address,
-        args: [LightClientManager.address,data],
-        log: true,
-        contract: 'LightClientManagerProxy',
-    })
-
     let LightClientManagerProxy = await ethers.getContract('LightClientManagerProxy');
 
-    console.log("LightClientManagerProxy",LightClientManagerProxy.address)
+    console.log("LightClientManagerProxy",LightClientManagerProxy.address);
 
+    let lightClientManager = await ethers.getContractAt("LightClientManager",LightClientManagerProxy.address);
+
+    await  lightClientManager.upgradeTo(LightClientManager.address);
+
+    console.log("LightNodeUp ok")
+    
 }
 
-module.exports.tags = ['LightClientManager']
+module.exports.tags = ['LightClientManagerUp']
