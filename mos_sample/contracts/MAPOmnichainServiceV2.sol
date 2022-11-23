@@ -32,24 +32,10 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, IMOSV2 {
 
     event mapTransferExecute(address indexed from, uint256 indexed fromChain, uint256 indexed toChain);
 
-    function initialize(address _wToken, address _lightNode)
-    public initializer {
+    constructor(address _wToken, address _lightNode)
+    {
         wToken = _wToken;
         lightNode = ILightNode(_lightNode);
-    }
-
-
-    receive() external payable {
-        require(msg.sender == wToken, "only wToken");
-    }
-
-    function emergencyWithdraw(address _token, address payable _receiver, uint256 _amount) external {
-        if (_token == wToken) {
-            TransferHelper.safeWithdraw(wToken, _amount);
-            TransferHelper.safeTransferETH(_receiver, _amount);
-        } else {
-            IERC20(_token).transfer(_receiver, _amount);
-        }
     }
 
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override nonReentrant
@@ -62,17 +48,6 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, IMOSV2 {
         bytes32 orderId = _getOrderID(_token, msg.sender, _to, _amount, _toChain);
         emit mapTransferOut(Utils.toBytes(_token), Utils.toBytes(msg.sender), orderId, selfChainId, _toChain, _to, _amount, Utils.toBytes(address(0)));
     }
-
-    function transferOutNative(bytes memory _to, uint _toChain) external override payable nonReentrant
-    {
-        require(_toChain != selfChainId, "only other chain");
-        uint amount = msg.value;
-        require(amount > 0, "balance is zero");
-        IWToken(wToken).deposit{value : amount}();
-        bytes32 orderId = _getOrderID(wToken, msg.sender, _to, amount, _toChain);
-        emit mapTransferOut(Utils.toBytes(wToken), Utils.toBytes(msg.sender), orderId, selfChainId, _toChain, _to, amount, Utils.toBytes(address(0)));
-    }
-
 
     function transferIn(uint256 _chainId, bytes memory _receiptProof) external nonReentrant {
         (bool sucess, string memory message, bytes memory logArray) = lightNode.verifyProofData(_receiptProof);

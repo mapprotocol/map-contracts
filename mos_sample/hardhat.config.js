@@ -8,7 +8,7 @@ require('dotenv/config')
 require('@nomiclabs/hardhat-etherscan')
 require('@nomiclabs/hardhat-waffle')
 require('solidity-coverage')
-require('./tasks')
+//require('./tasks')
 
 const { PRIVATE_KEY, INFURA_KEY} = process.env;
 let accounts = [];
