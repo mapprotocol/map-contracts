@@ -56,21 +56,21 @@ pub enum ChainType {
 #[tokio::test]
 async fn test_multisig_access_key_methods() -> anyhow::Result<()> {
     let worker = init_worker().await?;
+    let m0 = worker.dev_create_account().await?;
+    let m1 = worker.dev_create_account().await?;
+    let alice = worker.dev_create_account().await?;
     let receiver = worker.dev_create_account().await?;
-    let sk0 = SecretKey::from_seed(KeyType::ED25519, "sk0");
-    let sk1 = SecretKey::from_seed(KeyType::ED25519, "sk1");
 
     let init_value = r#"{
-        "members": [{ "public_key": ""}],
+        "members": [{ "account_id": ""}, { "account_id": ""}],
         "num_confirmations": 1,
         "request_lock": 5000000000
     }"#;
     let mut init_args: serde_json::Value = serde_json::from_str(init_value).unwrap();
-    init_args["members"][0]["public_key"] = json!(sk0.public_key());
+    init_args["members"][0]["account_id"] = json!(m0.id().to_string());
+    init_args["members"][1]["account_id"] = json!(m1.id().to_string());
 
     let multisig = deploy_and_init_multisig(&worker, init_args).await?;
-    let member = new_account(multisig.id(), &sk0);
-    println!("account: {:?}", member.id());
 
     let request_value = r#"{
         "receiver_id": "",
@@ -78,37 +78,75 @@ async fn test_multisig_access_key_methods() -> anyhow::Result<()> {
     }"#;
     let mut request: serde_json::Value = serde_json::from_str(request_value).unwrap();
     request["receiver_id"] = json!(receiver.id());
-    let request_id = gen_call_transaction_by_account(&worker, &member, &multisig, "add_request", json!({"request": request}), false)
+
+    let ret = gen_call_transaction_by_account(&worker, &m0, &multisig, "add_request", json!({"request": request}), false)
+        .transact()
+        .await;
+    assert!(ret.is_err(), "add_request without 1 yocto NEAR should fail");
+    println!("error: {}", ret.as_ref().err().unwrap());
+    assert!(ret.err().unwrap().to_string().contains("1 yoctoNEAR"), "should be 1 yocto NEAR error");
+
+    let request_id = gen_call_transaction_by_account(&worker, &m0, &multisig, "add_request", json!({"request": request}), false)
+        .deposit(1)
         .transact()
         .await?
         .json::<u32>()?;
 
-    let res = gen_call_transaction_by_account(&worker, &member, &multisig, "confirm", json!({"request_id": request_id}), false)
+    let ret = gen_call_transaction_by_account(&worker, &m1, &multisig, "confirm", json!({"request_id": request_id}), false)
+        .transact()
+        .await;
+    assert!(ret.is_err(), "confirm without 1 yocto NEAR should fail");
+    println!("error: {}", ret.as_ref().err().unwrap());
+    assert!(ret.err().unwrap().to_string().contains("1 yoctoNEAR"), "should be 1 yocto NEAR error");
+
+    let res = gen_call_transaction_by_account(&worker, &m1, &multisig, "confirm", json!({"request_id": request_id}), false)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res.is_success(), "confirm should succeed");
 
     worker.fast_forward(1000).await?;
 
-    let res = gen_call_transaction_by_account(&worker, &member, &multisig, "delete_request", json!({"request_id": request_id}), false)
+    let res = gen_call_transaction_by_account(&worker, &m1, &multisig, "delete_request", json!({"request_id": request_id}), false)
+        .transact()
+        .await;
+    assert!(res.is_err(), "confirm without 1 yocto NEAR should fail");
+    println!("error: {}", res.as_ref().err().unwrap());
+    assert!(res.err().unwrap().to_string().contains("1 yoctoNEAR"), "should be 1 yocto NEAR error");
+
+    let res = gen_call_transaction_by_account(&worker, &m1, &multisig, "delete_request", json!({"request_id": request_id}), false)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res.is_success(), "delete_request should succeed");
 
-    let request_id = gen_call_transaction_by_account(&worker, &member, &multisig, "add_request_and_confirm", json!({"request": request}), false)
+    let ret = gen_call_transaction_by_account(&worker, &m1, &multisig, "add_request_and_confirm", json!({"request": request}), false)
+        .transact()
+        .await;
+    assert!(ret.is_err(), "add_request_and_confirm without 1 yocto NEAR should fail");
+    println!("error: {}", ret.as_ref().err().unwrap());
+    assert!(ret.err().unwrap().to_string().contains("1 yoctoNEAR"), "should be 1 yocto NEAR error");
+
+    let request_id = gen_call_transaction_by_account(&worker, &m1, &multisig, "add_request_and_confirm", json!({"request": request}), false)
+        .deposit(1)
         .transact()
         .await?
         .json::<u32>()?;
-    assert!(res.is_success(), "add_request_and_confirm should succeed");
 
-    worker.fast_forward(1000).await?;
-
-    let res = gen_call_transaction_by_account(&worker, &member, &multisig, "execute", json!({"request_id": request_id}), false)
+    let ret = gen_call_transaction_by_account(&worker, &alice, &multisig, "add_request_and_confirm", json!({"request": request}), false)
+        .deposit(1)
         .transact()
         .await;
-    assert!(res.is_err(), "call execute should fail");
-    println!("err: {}", res.as_ref().err().unwrap());
-    assert!(res.err().unwrap().to_string().contains("InvalidAccessKeyError"));
+    assert!(ret.is_err(), "add_request_and_confirm should fail");
+    println!("error: {}", ret.as_ref().err().unwrap());
+    assert!(ret.err().unwrap().to_string().contains("Predecessor must be a member"), "should be key error");
+
+    worker.fast_forward(1000).await?;
+    let res = gen_call_transaction_by_account(&worker, &m0, &multisig, "confirm", json!({"request_id": request_id}), false)
+        .deposit(1)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "call confirm should success");
 
     Ok(())
 }
@@ -1824,6 +1862,7 @@ async fn test_transfer_out_mcs_token() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json((token_account.to_string(), to.clone(), amount, to_chain))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res.is_success(), "transfer_out_token should succeed");
@@ -1850,11 +1889,85 @@ async fn test_transfer_out_mcs_token() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json((token_account.to_string(), to, amount, to_chain))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res1.is_success(), "transfer_out_token should succeed");
     println!("logs {:?}", res1.logs());
     assert_ne!(res.logs().get(1).unwrap(), res1.logs().get(1).unwrap(), "log should be different");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_transfer_out_mcs_token_no_deposit() -> anyhow::Result<()> {
+    let worker = init_worker().await?;
+    let map_client = deploy_and_init_light_client(&worker).await?;
+    let wnear = deploy_and_init_wnear(&worker).await?;
+    let mcs = deploy_and_init_mcs(&worker,
+                                  map_client.id().to_string(),
+                                  MAP_BRIDGE_ADDRESS.to_string(),
+                                  wnear.id().to_string()).await?;
+
+    let token_name = "mcs_token_0";
+    deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
+    let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
+
+    let to_chain: U128 = U128(1000);
+    let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account.to_string(), "to_chain": to_chain}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "add_mcs_token_to_chain should succeed");
+
+    let res = gen_call_transaction(&worker, &mcs, "set_chain_type", json!({"chain_id": to_chain, "chain_type": "EvmChain"}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "set_chain_type should succeed");
+
+    let account_id: AccountId = "pandarr.test.near".to_string().parse().unwrap();
+    let sk = SecretKey::from_seed(KeyType::ED25519, DEV_ACCOUNT_SEED);
+    let dev_account = worker.create_tla(account_id.clone(), sk).await?.unwrap();
+    let total: U128 = U128::from(1000000000000000000000000000);
+    let mcs_balance_0 = mcs.view_account(&worker).await?.balance;
+    println!("before mint: account {} balance: {}", mcs.id(), mcs_balance_0);
+    let res = mcs.as_account().call(&worker, &token_account, "mint")
+        .args_json(json!({"account_id": dev_account.id(), "amount": total}))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "mint should succeed");
+    let mcs_balance_1 = mcs.view_account(&worker).await?.balance;
+    println!("after mint: account {} balance: {}", mcs.id(), mcs_balance_1);
+    assert!(mcs_balance_0 - mcs_balance_1 < parse_near!("1 N"));
+
+    let balance = dev_account
+        .call(&worker, &token_account, "ft_balance_of")
+        .args_json((dev_account.id(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    assert_eq!(total, balance, "balance of {} is incorrect", dev_account.id());
+
+    let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
+    let amount: U128 = U128(100000000000000000000000000);
+    let res = dev_account
+        .call(&worker, mcs.id(), "transfer_out_token")
+        .args_json((token_account.to_string(), to.clone(), amount, to_chain))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+    assert!(res.is_err(), "transfer_out_token should fail");
+    println!("error {:?}", res.as_ref().err().unwrap());
+    assert!(res.err().unwrap().to_string().contains("Requires attached deposit of exactly 1 yoctoNEAR"), "should be 1 yoctoNEAR error");
+
+    let balance = dev_account
+        .call(&worker, &token_account, "ft_balance_of")
+        .args_json((dev_account.id(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    assert_eq!(total.0, balance.0, "balance of {} is incorrect", dev_account.id());
 
     Ok(())
 }
@@ -1917,6 +2030,7 @@ async fn test_transfer_out_mcs_token_invalid_to_account() -> anyhow::Result<()> 
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json((token_account.to_string(), to.clone(), amount, to_chain))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await;
     assert!(res.is_err(), "transfer_out_token should fail");
@@ -2000,6 +2114,7 @@ async fn test_transfer_out_mcs_token_amount_too_small() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json((token_account.to_string(), to.clone(), amount, to_chain))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await;
     assert!(res.is_err(), "transfer_out_token should fail");
@@ -2027,6 +2142,7 @@ async fn test_transfer_out_mcs_token_amount_too_small() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json((token_account.to_string(), to, amount, to_chain))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res1.is_success(), "transfer_out_token should succeed");
@@ -2093,6 +2209,7 @@ async fn test_transfer_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json((token_account.to_string(), to.clone(), amount, to_chain))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await;
     assert!(res.is_err(), "transfer_out_token should fail");
@@ -2120,6 +2237,7 @@ async fn test_transfer_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json((token_account.to_string(), to, amount, to_chain))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res1.is_success(), "transfer_out_token should succeed");
@@ -2129,7 +2247,7 @@ async fn test_transfer_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn test_transfer_out_mcs_token_with_deposit() -> anyhow::Result<()> {
+async fn test_transfer_out_mcs_token_too_much_deposit() -> anyhow::Result<()> {
     let worker = init_worker().await?;
     let map_client = deploy_and_init_light_client(&worker).await?;
     let wnear = deploy_and_init_wnear(&worker).await?;
@@ -2261,6 +2379,7 @@ async fn test_transfer_out_mcs_token_no_to_chain() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json(json!({"token": token_account.to_string(), "to": to, "amount": amount, "to_chain": to_chain}))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await;
     assert!(res.is_err(), "transfer_out_token should fail");
@@ -2297,6 +2416,7 @@ async fn test_transfer_out_mcs_token_no_to_chain() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json(json!({"token": token_account.to_string(), "to": to, "amount": amount, "to_chain": to_chain}))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res1.is_success(), "transfer_out_token should succeed");
@@ -2339,8 +2459,8 @@ async fn test_transfer_out_mcs_token_burn_failed() -> anyhow::Result<()> {
         .deposit(30000000000000000000000)
         .transact()
         .await?;
-    println!("after mint: account {} balance: {}", mcs.id(), mcs.view_account(&worker).await?.balance);
     assert!(res.is_success(), "mint should succeed");
+    println!("after mint: account {} balance: {}", mcs.id(), mcs.view_account(&worker).await?.balance);
 
     let balance = dev_account
         .call(&worker, &token_account, "ft_balance_of")
@@ -2356,6 +2476,7 @@ async fn test_transfer_out_mcs_token_burn_failed() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json(json!({"token": token_account.to_string(), "to": to, "amount": amount, "to_chain": to_chain}))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await;
     assert!(res.is_err(), "transfer_out_token should fail");
@@ -2375,6 +2496,7 @@ async fn test_transfer_out_mcs_token_burn_failed() -> anyhow::Result<()> {
         .call(&worker, mcs.id(), "transfer_out_token")
         .args_json(json!({"token": token_account.to_string(), "to": to, "amount": amount, "to_chain": to_chain}))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res.is_success(), "transfer_out_token should succeed");
@@ -4206,6 +4328,7 @@ async fn test_deposit_out_mcs_token() -> anyhow::Result<()> {
         .call(&worker, &mcs.id(), "deposit_out_token")
         .args_json((token_account.to_string(), to, amount))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res.is_success(), "ft_transfer_call failed");
@@ -4221,6 +4344,89 @@ async fn test_deposit_out_mcs_token() -> anyhow::Result<()> {
         .json::<U128>()?;
     println!("after deposit out ft balance of root account is {:?}", balance);
     assert_eq!(total.0 - amount.0, balance.0, "after deposit out ft balance of from account");
+
+    let balance = from
+        .call(&worker, &token_account, "ft_balance_of")
+        .args_json((mcs.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    println!("after deposit out ft balance of mcs is {:?}", balance);
+    assert_eq!(0, balance.0, "after deposit out ft balance of mcs");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_deposit_out_mcs_token_no_1_yocto() -> anyhow::Result<()> {
+    let worker = init_worker().await?;
+    let map_client = deploy_and_init_light_client(&worker).await?;
+    let wnear = deploy_and_init_wnear(&worker).await?;
+    let mcs = deploy_and_init_mcs(&worker,
+                                  map_client.id().to_string(),
+                                  MAP_BRIDGE_ADDRESS.to_string(),
+                                  wnear.id().to_string()).await?;
+
+    let to_chain: U128 = U128(MAP_CHAIN_ID);
+    let token_name = "mcs_token_0";
+    let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
+    deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
+
+    let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account.to_string(), "to_chain": to_chain}), false)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "add_mcs_token_to_chain should succeed");
+
+    let from = worker.dev_create_account().await?;
+    let total: U128 = U128::from(1000000000000000000000000000);
+    let res = mcs.as_account().call(&worker, &token_account, "mint")
+        .args_json(json!({"account_id": from.id(), "amount": total}))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "mint should succeed");
+    println!("log: {:?}", res.logs());
+
+    let balance = from
+        .call(&worker, &token_account, "ft_balance_of")
+        .args_json((from.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    println!("before deposit out mcs token balance of {} is {:?}", from.id(), balance);
+    assert_eq!(total, balance, "before transfer out ft balance of root account");
+
+    let balance = from
+        .call(&worker, &token_account, "ft_balance_of")
+        .args_json((mcs.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    println!("before deposit out ft balance of mcs is {:?}", balance);
+    assert_eq!(0, balance.0, "before transfer out ft balance of mcs");
+
+    let to = hex::decode("0f5Ea0A652E851678Ebf77B69484bFcD31F9459B").unwrap();
+    let balance_from_0 = from.view_account(&worker).await?.balance;
+    let amount: U128 = U128(100000000000000000000000000);
+    let res = from
+        .call(&worker, &mcs.id(), "deposit_out_token")
+        .args_json((token_account.to_string(), to, amount))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+    assert!(res.is_err(), "ft_transfer_call should fail");
+    println!("ft_transfer_call error: {:?}", res.as_ref().err().unwrap());
+    assert!(res.err().unwrap().to_string().contains("Requires attached deposit of exactly 1 yoctoNEAR"), "should be 1 yoctoNEAR error");
+
+    let balance = from
+        .call(&worker, &token_account, "ft_balance_of")
+        .args_json((from.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    println!("after deposit out ft balance of root account is {:?}", balance);
+    assert_eq!(total.0, balance.0, "after deposit out ft balance of from account");
 
     let balance = from
         .call(&worker, &token_account, "ft_balance_of")
@@ -4291,6 +4497,7 @@ async fn test_deposit_out_mcs_token_amount_too_small() -> anyhow::Result<()> {
         .call(&worker, &mcs.id(), "deposit_out_token")
         .args_json((token_account.to_string(), to.clone(), amount))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await;
     assert!(res.is_err(), "deposit_out_token should failed");
@@ -4319,6 +4526,7 @@ async fn test_deposit_out_mcs_token_amount_too_small() -> anyhow::Result<()> {
         .call(&worker, &mcs.id(), "deposit_out_token")
         .args_json((token_account.to_string(), to, amount))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res.is_success(), "ft_transfer_call failed");
@@ -4404,6 +4612,7 @@ async fn test_deposit_out_mcs_token_amount_too_large() -> anyhow::Result<()> {
         .call(&worker, &mcs.id(), "deposit_out_token")
         .args_json((token_account.to_string(), to.clone(), amount))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await;
     assert!(res.is_err(), "deposit_out_token should failed");
@@ -4487,6 +4696,7 @@ async fn test_deposit_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
         .call(&worker, &mcs.id(), "deposit_out_token")
         .args_json((token_account.to_string(), to.clone(), amount))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await;
     assert!(res.is_err(), "deposit_out_token should failed");
@@ -4515,6 +4725,7 @@ async fn test_deposit_out_mcs_token_diff_decimal() -> anyhow::Result<()> {
         .call(&worker, &mcs.id(), "deposit_out_token")
         .args_json((token_account.to_string(), to, amount))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await?;
     assert!(res.is_success(), "ft_transfer_call failed");
@@ -4600,6 +4811,7 @@ async fn test_deposit_out_mcs_token_no_to_chain() -> anyhow::Result<()> {
         .call(&worker, &mcs.id(), "deposit_out_token")
         .args_json((token_account.to_string(), to.clone(), amount))?
         .gas(300_000_000_000_000)
+        .deposit(1)
         .transact()
         .await;
     assert!(res.is_err(), "deposit_out_token should failed");

@@ -431,15 +431,14 @@ REQUEST_ID=
 # ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
 ```
 
-### 4. Set new multisig contract account
+### 4. Upgrade multisig contract
 
-The MCS contract supports updating the multisig contract account to a new one if the old one is deprecated.
-
+**NOTE**: currently the script works on MacOS only.
 ```shell
-NEW_MULTISIG_ACCOUNT="new_multisig.testnet"  # new multisig contract account ID
+MULTISIG_WASM_FILE=/path/to/multisig/contract  # new multisig contract wasm file
 
-# request to set new multisig contract account by multisig member
-./scripts/manage_multisig.sh request_and_confirm set_owner $NEW_MULTISIG_ACCOUNT ${MEMBERS[1]}
+# request to upgrade multisig contract by multisig member
+./scripts/manage_multisig.sh request_and_confirm upgrade_multisig $MULTISIG_WASM_FILE ${MEMBERS[1]}
     
 # the request ID can be obtained from the last line of last command's output
 REQUEST_ID=

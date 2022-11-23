@@ -4,7 +4,7 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::collections::{UnorderedMap, UnorderedSet};
 use near_sdk::json_types::{Base64VecU8, U128};
-use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Gas, PanicOnDefault, Promise, PromiseOrValue, PromiseResult, CryptoHash, log};
+use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance, Gas, PanicOnDefault, Promise, PromiseOrValue, PromiseResult, CryptoHash, log, assert_one_yocto};
 use event::*;
 use prover::*;
 use near_contract_standards::fungible_token::metadata::FungibleTokenMetadata;
@@ -284,7 +284,9 @@ impl MapCrossChainService {
             )
     }
 
+    #[payable]
     pub fn transfer_out_token(&mut self, token: String, to: Vec<u8>, amount: U128, to_chain: U128) -> Promise {
+        assert_one_yocto();
         self.check_not_paused(PAUSE_TRANSFER_OUT_TOKEN);
 
         if self.valid_mcs_token_out(&token, to_chain) {
@@ -547,7 +549,9 @@ impl MapCrossChainService {
         log!("{}{}", DEPOSIT_OUT_TYPE, event);
     }
 
+    #[payable]
     pub fn deposit_out_token(&mut self, token: String, to: Vec<u8>, amount: U128) -> Promise {
+        assert_one_yocto();
         self.check_not_paused(PAUSE_DEPOSIT_OUT_TOKEN);
 
         if self.valid_mcs_token_out(&token, self.map_chain_id.into()) {
