@@ -143,7 +143,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             bytes memory result = new bytes(0);
             bool success = false;
             assembly {
-                success := staticcall(gas(), 31, encode, inputLength, result, 0)
+                success := staticcall(gas(), 0xe0, add(encode, 32), inputLength, result, 0)
             }
             require(success, "verify light client update failed");
         }

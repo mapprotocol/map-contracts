@@ -20,9 +20,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     bytes32 private constant zero_byte32 =
         0x0000000000000000000000000000000000000000000000000000000000000000;
 
+    uint256 internal constant MAX_SAVED_EPOCH_NUM = 180;
     bool public setFirstBlock;
     uint256 constant MAX_BLOCK_PRODUCERS = 100;
-    uint256 constant EPOCH_NUM = 43200; 
+    uint256 constant EPOCH_NUM = 43200;
 
     struct Epoch {
         // bytes32 epochId;
@@ -38,6 +39,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     bytes32 public nextEpochId;
     uint256 public curHeight;
     uint256 public minValidBlocknum;
+
+    uint256 public counts;
+
+    mapping(uint256 => bytes32) epochIds;
 
     modifier onlyOwner() {
         require(msg.sender == _getAdmin(), "lightnode :: only admin");
@@ -121,11 +126,19 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         epoch.init = true;
 
+        counts ++;
+
+        epochIds[counts] = nearBlock.inner_lite.epoch_id;
+
         Epoch storage next = epochs[nearBlock.inner_lite.next_epoch_id];
 
         nextEpochId = nearBlock.inner_lite.next_epoch_id;
 
         next.init = true;
+
+        counts ++;
+
+        epochIds[counts] = nearBlock.inner_lite.next_epoch_id;
 
         setBlockProducers(nearBlock.next_bps.blockProducers, next);
     }
@@ -211,7 +224,13 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
             setBlockProducers(nearBlock.next_bps.blockProducers, nextEpoch);
 
-            emit UpdateBlockHeader(tx.origin, curHeight); 
+            counts++;
+
+            epochIds[counts] = nearBlock.inner_lite.next_epoch_id;
+
+            _removeExcessEpochValidators();
+
+            emit UpdateBlockHeader(tx.origin, curHeight);
         }
     }
 
@@ -418,6 +437,20 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 hash = sha256(abi.encodePacked(item.hash, hash));
             } else {
                 hash = sha256(abi.encodePacked(hash, item.hash));
+            }
+        }
+    }
+
+    function _removeExcessEpochValidators() internal {
+        uint256 remove = curHeight - MAX_SAVED_EPOCH_NUM * EPOCH_NUM;
+        if(minValidBlocknum < remove) {
+            minValidBlocknum = remove;
+        }
+        if (counts > MAX_SAVED_EPOCH_NUM) {
+            if (remove + EPOCH_NUM > minValidBlocknum) {
+                minValidBlocknum = remove + EPOCH_NUM;
+                delete epochs[epochIds[counts - MAX_SAVED_EPOCH_NUM]];
+                delete epochIds[counts - MAX_SAVED_EPOCH_NUM];
             }
         }
     }
