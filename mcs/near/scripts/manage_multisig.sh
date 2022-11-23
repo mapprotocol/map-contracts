@@ -22,6 +22,7 @@ function printHelp() {
   echo "    remove_native <chain id>                 remove native token to_chain"
   echo "    remove_mcs    <token> <chain id>         remove mcs token to_chain"
   echo "    remove_ft    <token> <chain id>          remove fungible token to_chain"
+  echo "    upgrade_multisig  <wasm file>            upgrade multisig contract"
   echo "    upgrade_mcs  <wasm file>                 upgrade mcs contract"
   echo "    upgrade_mcs_token <token>  <wasm file>   upgrade mcs token contract"
   echo "    set_client  <map client account>         set new map light client account to mcs contract"
@@ -33,9 +34,9 @@ function printHelp() {
 }
 
 function prepare() {
-  near create-account $MEMBER0 --masterAccount $MASTER_ACCOUNT --initialBalance 1
-  near create-account $MEMBER1 --masterAccount $MASTER_ACCOUNT --initialBalance 1
-  near create-account $MEMBER2 --masterAccount $MASTER_ACCOUNT --initialBalance 1
+  near create-account ${MEMBERS[0]} --masterAccount $MASTER_ACCOUNT --initialBalance 1
+  near create-account ${MEMBERS[1]} --masterAccount $MASTER_ACCOUNT --initialBalance 1
+  near create-account ${MEMBERS[2]} --masterAccount $MASTER_ACCOUNT --initialBalance 1
 }
 
 function prepare_request() {
@@ -172,6 +173,19 @@ function prepare_request() {
         exit 1
       fi
       ;;
+    upgrade_multisig)
+      if [[ $# == 3 ]]; then
+        echo "upgrade multisig contract to $2"
+        RECEIVER=$MULTISIG_ACCOUNT
+        METHOD="upgrade_self"
+        CODE=`base64 -i $2`
+        ARGS=`echo '{"code": "'$CODE'"}'| base64`
+        MEMBER=$3
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
     upgrade_mcs)
       if [[ $# == 3 ]]; then
         echo "upgrade mcs contract to $2"
@@ -250,7 +264,7 @@ function confirm() {
   echo "confirming request id '$1' by member '$2'"
   near view $MULTISIG_ACCOUNT get_request '{"request_id": '$1'}'
   near view $MULTISIG_ACCOUNT get_confirmations '{"request_id": '$1'}'
-  near call $MULTISIG_ACCOUNT confirm '{"request_id": '$1'}' --accountId $2 --gas 300000000000000
+  near call $MULTISIG_ACCOUNT confirm '{"request_id": '$1'}' --accountId $2 --gas 300000000000000  --depositYocto 1
 }
 
 function execute() {
@@ -276,7 +290,7 @@ function request_and_confirm() {
         }
       ]
     }
-  }' --accountId $MEMBER --gas 300000000000000
+  }' --accountId $MEMBER --gas 300000000000000  --depositYocto 1
 }
 
 function clean() {
