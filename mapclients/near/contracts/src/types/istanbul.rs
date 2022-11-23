@@ -38,7 +38,7 @@ pub enum IstanbulMsg {
 }
 
 /// IstanbulAggregatedSeal contains the aggregated BLS signature created via IBFT consensus
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase",crate = "near_sdk::serde")]
 pub struct IstanbulAggregatedSeal {
     /// Bitmap is a bitmap having an active bit for each validator that signed this block

@@ -3,6 +3,7 @@ use near_sdk::PublicKey;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::json;
 use near_sdk::{env, near_bindgen, AccountId, Promise, Gas};
+use near_sdk::json_types::{U128, U64};
 
 const MULTISIG_BINARY: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/multisig.wasm");
 const MCS_BINARY: &'static [u8] = include_bytes!("../../target/wasm32-unknown-unknown/release/mcs.wasm");
@@ -28,8 +29,8 @@ impl Factory {
         &mut self,
         name: String,
         members: Vec<MultisigMember>,
-        num_confirmations: u64,
-        request_lock: u64,
+        num_confirmations: u32,
+        request_lock: U64,
     ) -> Promise {
         let account_id = format!("{}.{}", name, env::current_account_id());
         Promise::new(account_id.parse().unwrap())
@@ -57,8 +58,8 @@ impl Factory {
         map_light_client: String,
         map_bridge_address: String,
         wrapped_token: String,
-        near_chain_id: String,
-        map_chain_id: String,
+        near_chain_id: U128,
+        map_chain_id: U128,
     ) -> Promise {
         let account_id = format!("{}.{}", name, env::current_account_id());
         Promise::new(account_id.parse().unwrap())

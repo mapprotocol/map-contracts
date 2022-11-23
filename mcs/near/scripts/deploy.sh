@@ -11,7 +11,7 @@ INIT_ARGS_MULTISIG='{
               "members": [
               ],
               "num_confirmations": '$CONFIRMS',
-              "request_lock": '$REQUEST_LOCK_IN_NS'
+              "request_lock": "'$REQUEST_LOCK_IN_NS'"
             }'
 for MEMBER in "${MEMBERS[@]}"
 do

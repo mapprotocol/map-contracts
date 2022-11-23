@@ -14,6 +14,7 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::{env, log, near_bindgen, PanicOnDefault, serde_json};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::env::keccak256;
+use near_sdk::json_types::U64;
 use near_sdk::serde::{Serialize, Deserialize};
 pub use crypto::{G1, G2, REGISTER_EXPECTED_ERR};
 use crate::types::{istanbul::IstanbulExtra, istanbul::get_epoch_number, header::Header};
@@ -38,8 +39,8 @@ pub struct MapLightClient {
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct EpochRecord {
-    pub threshold: u64,
-    pub epoch: u64,
+    pub threshold: U64,
+    pub epoch: U64,
     pub validators: Vec<Validator>,
 }
 
@@ -47,7 +48,7 @@ pub struct EpochRecord {
 #[serde(crate = "near_sdk::serde")]
 pub struct Validator {
     g1_pub_key: G1,
-    weight: u64,
+    weight: U64,
     #[serde(with = "crate::serialization::bytes::hexstring")]
     address: Address,
 }
@@ -55,26 +56,26 @@ pub struct Validator {
 #[near_bindgen]
 impl MapLightClient {
     #[init]
-    pub fn new(threshold: u64,
+    pub fn new(threshold: U64,
                validators: Vec<Validator>,
-               epoch: u64,
-               epoch_size: u64) -> Self {
+               epoch: U64,
+               epoch_size: U64) -> Self {
         assert!(!Self::initialized(), "already initialized");
         assert_ne!(0, validators.len(), "empty validators!");
-        assert_ne!(0, threshold, "threashold should not be 0");
+        assert_ne!(0, threshold.0, "threashold should not be 0");
 
         let mut addresses: HashSet<Address> = HashSet::default();
         let mut total_weight = 0;
         for validator in validators.iter() {
-            assert_ne!(0, validator.weight, "the weight of validator {} is 0", serde_json::to_string(&validator.address).unwrap());
+            assert_ne!(0, validator.weight.0, "the weight of validator {} is 0", serde_json::to_string(&validator.address).unwrap());
             addresses.insert(validator.address);
-            total_weight += validator.weight;
+            total_weight += validator.weight.0;
         }
         assert_eq!(validators.len(), addresses.len(), "duplicated address in validators");
-        assert!(threshold <= total_weight, "threashold should not greater than validators' total weight");
+        assert!(threshold.0 <= total_weight, "threashold should not greater than validators' total weight");
 
         let mut val_records = UnorderedMap::new(b"v".to_vec());
-        val_records.insert(&epoch, &EpochRecord {
+        val_records.insert(&epoch.0, &EpochRecord {
             threshold,
             epoch,
             validators,
@@ -82,8 +83,8 @@ impl MapLightClient {
 
         Self {
             epoch_records: val_records,
-            epoch_size,
-            header_height: (epoch - 1) * epoch_size,
+            epoch_size: epoch_size.into(),
+            header_height: (epoch.0 - 1) * epoch_size.0,
         }
     }
 
@@ -120,7 +121,7 @@ impl MapLightClient {
             .unwrap_or_else(|| {
                 let range = self.get_verifiable_header_range();
                 panic!("cannot get epoch record for block {}, expected range[{}, {}]",
-                       header.number.to_string(), range.0, range.1)
+                       header.number.to_string(), range.0.0, range.1.0)
             });
         self.verify_signatures(header, receipt_proof.agg_pk, &extra, epoch_record);
 
@@ -133,21 +134,23 @@ impl MapLightClient {
         assert_eq!(hex::encode(receipt_data), hex::encode(data), "receipt data is not equal to the value in trie");
     }
 
-    pub fn get_verifiable_header_range(&self) -> (u64, u64) {
+    pub fn get_verifiable_header_range(&self) -> (U64, U64) {
         let count = self.epoch_records.len() * self.epoch_size;
-        (self.header_height + self.epoch_size + 1 - count, self.header_height + self.epoch_size)
+        let begin = self.header_height + self.epoch_size + 1 - count;
+        let end = self.header_height + self.epoch_size;
+        (begin.into(), end.into())
     }
 
-    pub fn get_header_height(&self) -> u64 {
-        self.header_height
+    pub fn get_header_height(&self) -> U64 {
+        self.header_height.into()
     }
 
-    pub fn get_epoch_size(&self) -> u64 {
-        self.epoch_size
+    pub fn get_epoch_size(&self) -> U64 {
+        self.epoch_size.into()
     }
 
-    pub fn get_record_for_epoch(&self, epoch: u64) -> Option<EpochRecord> {
-        self.epoch_records.get(&epoch)
+    pub fn get_record_for_epoch(&self, epoch: U64) -> Option<EpochRecord> {
+        self.epoch_records.get(&epoch.0)
     }
 
     fn verify_signatures(&self, header: &Header, agg_pk: G2, extra: &IstanbulExtra, epoch_record: &EpochRecord) {
@@ -167,7 +170,7 @@ impl MapLightClient {
             .iter()
             .enumerate()
             .filter(|(i, _)| bitmap.bit(*i as u64))
-            .map(|(_, v)| v.weight)
+            .map(|(_, v)| v.weight.0)
             .sum();
 
         weight >= threshold
@@ -208,7 +211,7 @@ impl MapLightClient {
             .iter()
             .map(|x| x.g1_pub_key)
             .collect();
-        assert!(self.is_quorum(&extra.aggregated_seal.bitmap, &epoch_record.validators, epoch_record.threshold), "threshold is not satisfied");
+        assert!(self.is_quorum(&extra.aggregated_seal.bitmap, &epoch_record.validators, epoch_record.threshold.into()), "threshold is not satisfied");
 
         assert!(check_aggregated_g2_pub_key(&pair_keys, &extra.aggregated_seal.bitmap, agg_g2_pk), "check g2 pub key failed");
 
@@ -229,7 +232,7 @@ impl MapLightClient {
             .zip(extra.added_validators.iter())
             .map(|(g1_key, address)| Validator {
                 g1_pub_key: G1::from_slice(g1_key).unwrap(),
-                weight: 1,
+                weight: U64(1),
                 address: *address,
             })
             .collect();
@@ -238,15 +241,15 @@ impl MapLightClient {
 
         let total_weight: u64 = validator_list
             .iter()
-            .map(|x| x.weight)
+            .map(|x| x.weight.0)
             .sum();
 
-        let next_epoch = cur_epoch_record.epoch + 1;
+        let next_epoch = cur_epoch_record.epoch.0 + 1;
 
         let next_epoch_record = EpochRecord {
-            epoch: next_epoch,
+            epoch: U64(next_epoch),
             validators: validator_list,
-            threshold: total_weight - total_weight / 3,
+            threshold: U64(total_weight - total_weight / 3),
         };
 
         log!("epoch {} validators: remove: {}, add: {:?}, total: {:?}",

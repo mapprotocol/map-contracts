@@ -90,12 +90,12 @@ function prepare_request() {
       fi
       ;;
     remove_mcs)
-      if [[ $# == 3 ]]; then
+      if [[ $# == 4 ]]; then
         echo "remove mcs token $2 to_chain $3 from mcs contract"
         RECEIVER=$MCS_ACCOUNT
         METHOD="remove_mcs_token_to_chain"
         ARGS=`echo '{"token": "'$2'", "to_chain": "'$3'"}'| base64`
-        MEMBER=$3
+        MEMBER=$4
       else
         printHelp
         exit 1
