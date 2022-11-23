@@ -79,8 +79,7 @@ module.exports = {
       accounts: accounts
     },
     BscTest: {
-      //url: `https://data-seed-prebsc-2-s1.binance.org:8545/`,
-      url:"https://nd-013-308-555.p2pify.com/2e66f28b510dfa758c7dc43bb464dbde",
+      url: `https://data-seed-prebsc-2-s1.binance.org:8545/`,
       chainId : 97,
       accounts: accounts,
       gasPrice: 11 * 1000000000
