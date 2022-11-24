@@ -148,6 +148,14 @@ task("depositOutToken",
     .addOptionalParam("address", "The receiver address","",types.string)
     .addParam("value", "deposit value, unit WEI")
 
+task("withdraw",
+    "withdraw token",
+    require("./withdraw")
+)
+    .addParam("mos", "The mos address")
+    .addOptionalParam("token", "The token address","0x0000000000000000000000000000000000000000",types.string)
+    .addOptionalParam("address", "The receiver address","",types.string)
+    .addParam("value", "withdraw value, unit WEI")
 
 task("relayList",
     "List mos relay infos",

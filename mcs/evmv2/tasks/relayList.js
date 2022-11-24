@@ -65,6 +65,8 @@ module.exports = async (taskArgs,hre) => {
     let vault = await ethers.getContractAt('VaultTokenV2', token.vaultToken);
     let totalVault = await vault.totalVault();
     console.log(`total vault:\t ${totalVault}`);
+    let totalSupply = await vault.totalSupply();
+    console.log(`total vault token: ${totalSupply}`);
 
     console.log(`chains:`);
     for (let i = 0; i < chains.length; i++) {
