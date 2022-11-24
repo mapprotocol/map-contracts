@@ -263,10 +263,10 @@ impl MapCrossChainService {
 
         log!("get transfer in event: {}", event);
 
-        String::from_utf8(event.to.clone())
-            .unwrap_or_else(|_| env::panic_str(&*format!("invalid to address: {:?}", event.to)));
-        let to_chain_token = String::from_utf8(event.to_chain_token.clone())
-            .unwrap_or_else(|_| env::panic_str(&*format!("invalid to chain token address: {:?}", event.to_chain_token)));
+        assert!(env::is_valid_account_id(event.to.as_slice()), "invalid to address: {:?}", event.to);
+        assert!(env::is_valid_account_id(event.to_chain_token.as_slice()),
+                "invalid to chain token address: {:?}", event.to_chain_token);
+        let to_chain_token = String::from_utf8(event.to_chain_token.clone()).unwrap();
         assert_eq!(self.near_chain_id, event.to_chain.0, "unexpected to chain: {}", event.to_chain.0);
         assert!(self.mcs_tokens.get(&to_chain_token).is_some()
                     || self.fungible_tokens.get(&to_chain_token).is_some() || self.is_native_token(event.to_chain_token.clone()),
@@ -293,7 +293,7 @@ impl MapCrossChainService {
             self.check_to_account(to.clone(), to_chain.into());
             self.check_amount(token.clone(), amount.0, false);
             let from = env::signer_account_id().to_string();
-            let order_id = self.get_order_id(&token, &from, &to, amount.0, to_chain.into());
+            let order_id = self.get_order_id(&from, &to, to_chain.into());
 
             let event = TransferOutEvent {
                 from_chain: self.near_chain_id.into(),
@@ -332,7 +332,7 @@ impl MapCrossChainService {
         self.check_amount("".to_string(), amount, true);
 
         let from = env::signer_account_id().to_string();
-        let order_id = self.get_order_id(&self.native_token_address().1, &from, &to, amount, to_chain.into());
+        let order_id = self.get_order_id(&from, &to, to_chain.into());
 
         let event = TransferOutEvent {
             from_chain: self.near_chain_id.into(),
@@ -380,10 +380,10 @@ impl MapCrossChainService {
     fn process_transfer_in(&mut self, event: &MapTransferOutEvent) -> Promise {
         let cur_deposit = env::attached_deposit();
         if self.is_used_event(&event.order_id) {
-           return Promise::new(env::signer_account_id()).transfer(cur_deposit)
+            return Promise::new(env::signer_account_id()).transfer(cur_deposit)
                 .then(Self::ext(env::current_account_id())
                     .with_static_gas(REPORT_FAIL_GAS)
-                    .report_transfer_in_fail("the transfer in event is already processed".to_string()))
+                    .report_transfer_in_fail("the transfer in event is already processed".to_string()));
         }
 
         let required_deposit = self.record_order_id(&event.order_id);
@@ -508,12 +508,12 @@ impl MapCrossChainService {
                 if self.is_native_token(event.to_chain_token.clone()) {
                     promise = promise.transfer(env::attached_deposit())
                         .then(ext_wnear_token::ext(self.wrapped_token.parse().unwrap())
-                        .with_static_gas(NEAR_DEPOSIT_GAS)
-                        .with_attached_deposit(event.amount.into())
-                        .near_deposit());
+                            .with_static_gas(NEAR_DEPOSIT_GAS)
+                            .with_attached_deposit(event.amount.into())
+                            .near_deposit());
                     err_msg = format!("transfer in token failed, maybe TO account does not exist")
                 } else {
-                    promise = promise.transfer(env::attached_deposit()+ self.remove_order_id(&event.order_id))
+                    promise = promise.transfer(env::attached_deposit() + self.remove_order_id(&event.order_id))
                 }
                 promise.then(Self::ext(env::current_account_id())
                     .with_static_gas(REPORT_FAIL_GAS)
@@ -558,7 +558,7 @@ impl MapCrossChainService {
             self.check_to_account(to.clone(), self.map_chain_id);
             self.check_amount(token.clone(), amount.0, false);
             let from = env::signer_account_id().to_string();
-            let order_id = self.get_order_id(&token, &from, &to, amount.0, self.map_chain_id);
+            let order_id = self.get_order_id(&from, &to, self.map_chain_id);
 
             let event = DepositOutEvent {
                 token,
@@ -595,7 +595,7 @@ impl MapCrossChainService {
 
         let from = env::signer_account_id().to_string();
 
-        let order_id = self.get_order_id(&self.native_token_address().1, &from, &to, amount, self.map_chain_id);
+        let order_id = self.get_order_id(&from, &to, self.map_chain_id);
 
         let event = DepositOutEvent {
             token: self.native_token_address().1,
@@ -912,14 +912,19 @@ impl MapCrossChainService {
         }
     }
 
-    fn get_order_id(&mut self, token: &String, from: &String, to: &Vec<u8>, amount: u128, to_chain_id: u128) -> CryptoHash {
-        let mut data = self.nonce.try_to_vec().unwrap();
-        data.extend(from.as_bytes());
-        data.extend(to);
-        data.extend(token.as_bytes());
-        data.extend(amount.try_to_vec().unwrap());
+    /*
+    function _getOrderId(address _from, bytes memory _to, uint256 _toChain) internal returns (bytes32){
+        return keccak256(abi.encodePacked(address(this), nonce++, selfChainId, _toChain, _from, _to));
+    }
+     */
+    fn get_order_id(&mut self, from: &String, to: &Vec<u8>, to_chain_id: u128) -> CryptoHash {
+        let mut data: Vec<u8> = Vec::new();
+        data.extend(env::current_account_id().as_bytes());
+        data.extend(self.nonce.try_to_vec().unwrap());
         data.extend(self.near_chain_id.try_to_vec().unwrap());
         data.extend(to_chain_id.try_to_vec().unwrap());
+        data.extend(from.as_bytes());
+        data.extend(to);
         self.nonce = self.nonce + 1;
         CryptoHash::try_from(env::sha256(&data[..])).unwrap()
     }
@@ -1041,11 +1046,7 @@ impl FungibleTokenReceiver for MapCrossChainService {
             self.check_to_account(transfer_msg.to.clone(), transfer_msg.to_chain.into());
             self.check_amount(token.clone(), amount.0, false);
 
-            let order_id = self.get_order_id(&token,
-                                             &from,
-                                             &transfer_msg.to,
-                                             amount.0,
-                                             transfer_msg.to_chain.into());
+            let order_id = self.get_order_id(&from, &transfer_msg.to, transfer_msg.to_chain.into());
             let event = TransferOutEvent {
                 from_chain: self.near_chain_id.into(),
                 to_chain: transfer_msg.to_chain,
@@ -1065,11 +1066,7 @@ impl FungibleTokenReceiver for MapCrossChainService {
             self.check_to_account(transfer_msg.to.clone(), self.map_chain_id);
             self.check_amount(token.clone(), amount.0, false);
 
-            let order_id = self.get_order_id(&token,
-                                             &from,
-                                             &transfer_msg.to,
-                                             amount.0,
-                                             self.map_chain_id);
+            let order_id = self.get_order_id(&from, &transfer_msg.to, self.map_chain_id);
             let event = DepositOutEvent {
                 from,
                 to: transfer_msg.to,
