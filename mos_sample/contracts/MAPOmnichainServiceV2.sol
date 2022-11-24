@@ -16,7 +16,7 @@ import "./interface/ILightNode.sol";
 import "./utils/RLPReader.sol";
 import "./utils/Utils.sol";
 import "./utils/EvmDecoder.sol";
-
+import "hardhat/console.sol";
 
 contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, IMOSV2 {
     using SafeMath for uint;
@@ -25,16 +25,12 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, IMOSV2 {
 
     uint public immutable selfChainId = block.chainid;
     uint public nonce;
-    address public wToken;          // native wrapped token
-    address public relayContract;
-    uint256 public relayChainId;
     ILightNode public lightNode;
 
     event mapTransferExecute(address indexed from, uint256 indexed fromChain, uint256 indexed toChain);
 
-    constructor(address _wToken, address _lightNode)
+    constructor( address _lightNode)
     {
-        wToken = _wToken;
         lightNode = ILightNode(_lightNode);
     }
 
@@ -58,13 +54,14 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, IMOSV2 {
             IEvent.txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
 
-            if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC && relayContract == log.addr) {
+            if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC) {
                 (, IEvent.transferOutEvent memory outEvent) = EvmDecoder.decodeTransferOutLog(log);
                 // there might be more than on events to multi-chains
                 // only process the event for this chain
-                if (selfChainId == outEvent.toChain) {
-                    _transferIn(outEvent);
-                }
+                    console.logBytes(outEvent.to);
+
+                   _transferIn(outEvent);
+                
             }
         }
         emit mapTransferExecute(msg.sender, _chainId, selfChainId);
@@ -79,12 +76,10 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, IMOSV2 {
         address token = Utils.fromBytes(_outEvent.toChainToken);
         address payable toAddress = payable(Utils.fromBytes(_outEvent.to));
         uint256 amount = _outEvent.amount;
-        if (token == wToken) {
-            TransferHelper.safeWithdraw(wToken, amount);
-            TransferHelper.safeTransferETH(toAddress, amount);
-        } else {
-            TransferHelper.safeTransfer(token, toAddress, amount);
-        }
+        console.logUint(amount);
+
+        TransferHelper.safeTransfer(token, toAddress, amount);
+        
 
         emit mapTransferIn(token, _outEvent.from, _outEvent.orderId, _outEvent.fromChain, _outEvent.toChain, toAddress, amount);
     }

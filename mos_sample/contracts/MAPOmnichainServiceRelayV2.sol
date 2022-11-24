@@ -22,7 +22,6 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, IMOSV2 {
 
     uint256 public immutable selfChainId = block.chainid;
     uint256 public nonce;
-    address public wToken;        // native wrapped token
 
     ILightClientManager public lightClientManager;
 
@@ -30,9 +29,8 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, IMOSV2 {
 
     event mapTransferExecute(address indexed from, uint256 indexed fromChain, uint256 indexed toChain);
 
-    constructor(address _wToken, address _managerAddress)
+    constructor(address _managerAddress)
     {
-        wToken = _wToken;
         lightClientManager = ILightClientManager(_managerAddress);
     }
 
@@ -88,13 +86,10 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, IMOSV2 {
         uint256 mapOutAmount = _outEvent.amount;
 
         address payable toAddress = payable(Utils.fromBytes(_outEvent.to));
-        if (token == wToken) {
-            TransferHelper.safeWithdraw(wToken, mapOutAmount);
-            TransferHelper.safeTransferETH(toAddress, mapOutAmount);
-        } else {
-            require(IERC20(token).balanceOf(address(this)) >= mapOutAmount, "balance too low");
-            TransferHelper.safeTransfer(token, toAddress, mapOutAmount);
-        }
+
+        require(IERC20(token).balanceOf(address(this)) >= mapOutAmount, "balance too low");
+        TransferHelper.safeTransfer(token, toAddress, mapOutAmount);
+        
         emit mapTransferIn(token, _outEvent.from, _outEvent.orderId, _outEvent.fromChain, _outEvent.toChain,
             toAddress, mapOutAmount);
     }
