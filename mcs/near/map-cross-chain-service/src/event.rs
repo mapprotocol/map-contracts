@@ -14,26 +14,25 @@ pub struct MapTransferOutEvent {
     pub map_bridge_address: Address,
     pub from_chain: U128,
     pub to_chain: U128,
-    pub from: Vec<u8>,
-    pub to: Vec<u8>,
     #[serde(with = "crate::bytes::hexstring")]
     pub order_id: CryptoHash,
     pub token: Vec<u8>,
-    pub to_chain_token: Vec<u8>,
+    pub from: Vec<u8>,
+    pub to: Vec<u8>,
     pub amount: U128,
+    pub to_chain_token: Vec<u8>,
 }
 /*
-event mapTransferOut(address indexed token, address indexed from, bytes32 indexed orderId,
-uint fromChain, uint toChain, bytes to, uint amount, bytes toChainToken);
+event mapTransferOut(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId, bytes token, bytes from, bytes to, uint256 amount, bytes toChainToken);
  */
 impl MapTransferOutEvent {
     fn event_params() -> EthEventParams {
         vec![
+            ("fromChain".to_string(), ParamType::Uint(256), true),
+            ("toChain".to_string(), ParamType::Uint(256), true),
+            ("orderId".to_string(), ParamType::FixedBytes(32), false),
             ("token".to_string(), ParamType::Bytes, false),
             ("from".to_string(), ParamType::Bytes, false),
-            ("orderId".to_string(), ParamType::FixedBytes(32), false),
-            ("fromChain".to_string(), ParamType::Uint(256), false),
-            ("toChain".to_string(), ParamType::Uint(256), false),
             ("to".to_string(), ParamType::Bytes, false),
             ("amount".to_string(), ParamType::Uint(256), false),
             ("toChainToken".to_string(), ParamType::Bytes, false),
@@ -43,24 +42,23 @@ impl MapTransferOutEvent {
     /// Parse raw log entry data.
     pub fn from_log_entry_data(data: &LogEntry) -> Option<Self> {
         let event = MapEvent::from_log_entry_data("mapTransferOut", MapTransferOutEvent::event_params(), data)?;
-        let token = event.log.params[0].value.clone().to_bytes().unwrap();
-        let from = event.log.params[1].value.clone().to_bytes().unwrap();
-        let order_id: CryptoHash = event.log.params[2].value.clone().to_fixed_bytes().unwrap().try_into()
-            .unwrap_or_else(|v: Vec<u8>| panic!("Expected a Vec of length 32 but it was {}", v.len()));
-        let from_chain = event.log.params[3].value.clone().to_uint().unwrap().as_u128().into();
-        let to_chain = event.log.params[4].value.clone().to_uint().unwrap().as_u128().into();
-        let to = event.log.params[5].value.clone().to_bytes().unwrap();
-        let amount = event.log.params[6].value.clone().to_uint().unwrap().as_u128().into();
-        let to_chain_token = event.log.params[7].value.clone().to_bytes().unwrap();
+        let from_chain = event.log.params[0].value.clone().to_uint()?.as_u128().into();
+        let to_chain = event.log.params[1].value.clone().to_uint()?.as_u128().into();
+        let order_id: CryptoHash = event.log.params[2].value.clone().to_fixed_bytes()?.try_into().ok()?;
+        let token = event.log.params[3].value.clone().to_bytes()?;
+        let from = event.log.params[4].value.clone().to_bytes()?;
+        let to = event.log.params[5].value.clone().to_bytes()?;
+        let amount = event.log.params[6].value.clone().to_uint()?.as_u128().into();
+        let to_chain_token = event.log.params[7].value.clone().to_bytes()?;
         Some(Self {
             map_bridge_address: event.mcs_address,
+            from_chain,
+            to_chain,
+            order_id,
             token,
             from,
             to,
-            order_id,
             amount,
-            from_chain,
-            to_chain,
             to_chain_token,
         })
     }
@@ -75,12 +73,12 @@ impl std::fmt::Display for MapTransferOutEvent {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TransferOutEvent {
-    pub token: String,
-    pub from: String,
-    #[serde(with = "crate::bytes::hexstring")]
-    pub order_id: CryptoHash,
     pub from_chain: U128,
     pub to_chain: U128,
+    #[serde(with = "crate::bytes::hexstring")]
+    pub order_id: CryptoHash,
+    pub token: String,
+    pub from: String,
     pub to: Vec<u8>,
     pub amount: U128,
     pub to_chain_token: String,
@@ -90,11 +88,11 @@ impl Encodable for TransferOutEvent {
     fn rlp_append(&self, s: &mut RlpStream) {
         s.begin_list(8);
 
-        s.append(&self.token);
-        s.append(&self.from);
-        s.append(&self.order_id.as_ref());
         s.append(&self.from_chain.0);
         s.append(&self.to_chain.0);
+        s.append(&self.order_id.as_ref());
+        s.append(&self.token);
+        s.append(&self.from);
         s.append(&self.to);
         s.append(&self.amount.0);
         s.append(&self.to_chain_token);
@@ -110,12 +108,12 @@ impl std::fmt::Display for TransferOutEvent {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct DepositOutEvent {
-    pub token: String,
-    pub from: String,
-    #[serde(with = "crate::bytes::hexstring")]
-    pub order_id: CryptoHash,
     pub from_chain: U128,
     pub to_chain: U128,
+    #[serde(with = "crate::bytes::hexstring")]
+    pub order_id: CryptoHash,
+    pub token: String,
+    pub from: String,
     pub to: Vec<u8>,
     pub amount: U128,
 }
@@ -124,11 +122,11 @@ impl Encodable for DepositOutEvent {
     fn rlp_append(&self, s: &mut RlpStream) {
         s.begin_list(7);
 
-        s.append(&self.token);
-        s.append(&self.from);
-        s.append(&self.order_id.as_ref());
         s.append(&self.from_chain.0);
         s.append(&self.to_chain.0);
+        s.append(&self.order_id.as_ref());
+        s.append(&self.token);
+        s.append(&self.from);
         s.append(&self.to);
         s.append(&self.amount.0);
     }
@@ -143,9 +141,13 @@ impl std::fmt::Display for DepositOutEvent {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
     use super::*;
     use hex;
     use ethabi::Token;
+    use tiny_keccak::keccak256;
+    use std::string::String;
+    use near_sdk::AccountId;
 
     impl MapTransferOutEvent {
         pub fn to_log_entry_data(&self) -> LogEntry {
@@ -153,13 +155,14 @@ mod tests {
                 "mapTransferOut",
                 MapTransferOutEvent::event_params(),
                 self.map_bridge_address,
-                vec![],
                 vec![
+                    self.from_chain.0.clone().to_be_bytes().to_vec(),
+                    self.to_chain.0.clone().to_be_bytes().to_vec(),
+                ],
+                vec![
+                    Token::FixedBytes(self.order_id.clone().to_vec()),
                     Token::Bytes(self.token.clone()),
                     Token::Bytes(self.from.clone()),
-                    Token::FixedBytes(self.order_id.clone().to_vec()),
-                    Token::Uint(self.from_chain.0.into()),
-                    Token::Uint(self.to_chain.0.into()),
                     Token::Bytes(self.to.clone()),
                     Token::Uint(self.amount.0.into()),
                     Token::Bytes(self.to_chain_token.clone()),
@@ -196,5 +199,42 @@ mod tests {
         let data = event.to_log_entry_data();
         let result = MapTransferOutEvent::from_log_entry_data(&data).unwrap();
         assert_eq!(result, event);
+    }
+
+    #[test]
+    fn test_event_json() {
+        let event = TransferOutEvent{
+            from_chain: U128(1000),
+            to_chain: U128(2000),
+            order_id: [1, 2, 3, 4, 5,1, 2, 3, 4, 5,1, 2, 3, 4, 5,1, 2, 3, 4, 5,1, 2, 3, 4, 5,1, 2, 3, 4, 5,1, 2],
+            token: "from.token.near".to_string(),
+            from: "alice.near".to_string(),
+            to: vec![1, 2, 3, 4, 5,1, 2, 3, 4, 5],
+            amount: U128(100),
+            to_chain_token: "".to_string()
+        };
+
+        println!("{}", serde_json::to_string(&event).unwrap())
+    }
+
+    #[test]
+    fn test_gen_event() {
+        let event = MapTransferOutEvent{
+            map_bridge_address: Address::try_from(hex::decode("765a5a86411ab8627516cbb77d5db00b74fe610d").unwrap()).unwrap(),
+            from_chain: U128(212),
+            to_chain: U128(1313161555),
+            order_id: keccak256("123".as_bytes()),
+            token: hex::decode("ec3e016916ba9f10762e33e03e8556409d096fb4").unwrap(),
+            from: hex::decode("223e016916ba9f10762e33e03e8556409d096f22").unwrap(),
+            to: "pandarr.test.near".as_bytes().to_vec(),
+            amount: U128(100),
+            to_chain_token: "wrap.test.near".as_bytes().to_vec()
+        };
+
+        let data = event.to_log_entry_data();
+        let result = MapTransferOutEvent::from_log_entry_data(&data).unwrap();
+        assert_eq!(result, event);
+
+        println!("{:?}", serde_json::to_string(&data).unwrap());
     }
 }
