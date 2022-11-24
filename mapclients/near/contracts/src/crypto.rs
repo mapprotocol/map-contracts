@@ -15,7 +15,7 @@ const ALT_BN128_REGISTER: u64 = 1;
 pub const REGISTER_EXPECTED_ERR: &str =
     "Register was expected to have data because we just wrote it into it.";
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct G1 {
     #[serde(with = "crate::serialization::bytes::hexstring")]

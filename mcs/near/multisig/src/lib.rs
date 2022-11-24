@@ -149,7 +149,7 @@ impl MultiSigContract {
     /// @params members: list of {"account_id": "name"} or {"public_key": "key"} members.
     /// @params num_confirmations: k of n signatures required to perform operations.
     #[init]
-    pub fn new(members: Vec<MultisigMember>, num_confirmations: u32, request_lock: u64) -> Self {
+    pub fn new(members: Vec<MultisigMember>, num_confirmations: u32, request_lock: U64) -> Self {
         assert(
             members.len() >= num_confirmations as usize,
             "Members list must be equal or larger than number of confirmations",
@@ -163,7 +163,7 @@ impl MultiSigContract {
             num_requests_pk: LookupMap::new(StorageKeys::NumRequestsPk),
             active_requests_limit: ACTIVE_REQUESTS_LIMIT,
             schedule: UnorderedMap::new(StorageKeys::Schedule),
-            request_lock,
+            request_lock: request_lock.into(),
         };
         let mut promise = Promise::new(env::current_account_id());
         for member in members {
@@ -685,7 +685,7 @@ mod tests {
             ),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request = MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -722,7 +722,7 @@ mod tests {
     fn test_full_access_check_001() {
         let amount = 1_000;
         testing_env!(context_with_account(alice(), amount, 1));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request = MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -750,7 +750,7 @@ mod tests {
     fn test_full_access_check_002() {
         let amount = 1_000;
         testing_env!(context_with_account(bob(), amount, 1));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request = MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -767,7 +767,7 @@ mod tests {
     fn test_full_access_check_003() {
         let amount = 1_000;
         testing_env!(context_with_account(bob(), amount, 0));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request = MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -782,7 +782,7 @@ mod tests {
     fn test_full_access_check_004() {
         let amount = 1_000;
         testing_env!(context_with_account(bob(), amount, 1));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request = MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -799,7 +799,7 @@ mod tests {
     fn test_full_access_check_005() {
         let amount = 1_000;
         testing_env!(context_with_account(bob(), amount, 1));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request = MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -827,7 +827,7 @@ mod tests {
             ),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request = MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -882,7 +882,7 @@ mod tests {
             ),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request = MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -923,7 +923,7 @@ mod tests {
             ),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request = MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -975,7 +975,7 @@ mod tests {
             ),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 1, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 1, REQUEST_LOCK.into());
         let new_key: PublicKey = PublicKey::from(
             "HghiythFFPjVXwc9BLNi8uqFmfQc1DWFrJQ4nE6ANo7R"
                 .parse()
@@ -1081,7 +1081,7 @@ mod tests {
             ),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 1, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 1, REQUEST_LOCK.into());
         let new_key: PublicKey = PublicKey::from(
             "ed25519:HghiythFFPjVXwc9BLNi8uqFmfQc1DWFrJQ4nE6ANo7R"
                 .parse()
@@ -1117,7 +1117,7 @@ mod tests {
             PublicKey::try_from(TEST_KEY.to_vec()).unwrap(),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 1, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 1, REQUEST_LOCK.into());
         let request_id = c.add_request(MultiSigRequest {
             receiver_id: contract(),
             actions: vec![MultiSigRequestAction::SetNumConfirmations {
@@ -1143,7 +1143,7 @@ mod tests {
             PublicKey::try_from(TEST_KEY.to_vec()).unwrap(),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request_id = c.add_request(MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -1165,7 +1165,7 @@ mod tests {
             PublicKey::try_from(TEST_KEY.to_vec()).unwrap(),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request_id = c.add_request(MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -1182,7 +1182,7 @@ mod tests {
             PublicKey::try_from(TEST_KEY.to_vec()).unwrap(),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request_id = c.add_request(MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -1207,7 +1207,7 @@ mod tests {
             PublicKey::try_from(TEST_KEY.to_vec()).unwrap(),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         let request_id = c.add_request(MultiSigRequest {
             receiver_id: bob(),
             actions: vec![MultiSigRequestAction::Transfer {
@@ -1233,7 +1233,7 @@ mod tests {
             PublicKey::try_from(TEST_KEY.to_vec()).unwrap(),
             amount
         ));
-        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK);
+        let mut c = MultiSigContract::new(members(), 3, REQUEST_LOCK.into());
         for _i in 0..16 {
             c.add_request(MultiSigRequest {
                 receiver_id: bob(),
@@ -1251,6 +1251,6 @@ mod tests {
             PublicKey::try_from(TEST_KEY.to_vec()).unwrap(),
             1_000
         ));
-        let _ = MultiSigContract::new(members(), 5, REQUEST_LOCK);
+        let _ = MultiSigContract::new(members(), 5, REQUEST_LOCK.into());
     }
 }

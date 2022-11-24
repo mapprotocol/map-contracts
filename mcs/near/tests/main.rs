@@ -311,9 +311,22 @@ async fn test_manage_to_chain_type() -> anyhow::Result<()> {
 async fn test_manage_near_chain_id() -> anyhow::Result<()> {
     let worker = init_worker().await?;
     let wnear = deploy_and_init_wnear(&worker).await?;
-    let mcs = deploy_and_init_mcs(&worker, "map_light_client.near".to_string(),
-                                  MAP_BRIDGE_ADDRESS.to_string(),
-                                  wnear.id().to_string()).await?;
+    let mcs = worker.dev_deploy(&std::fs::read(MCS_WASM_FILEPATH)?).await?;
+    println!("deploy mcs contract id: {:?}", mcs.id());
+
+    let res = mcs
+        .call(&worker, "init")
+        .args_json(json!({"owner": mcs.id(),
+            "map_light_client": "map_light_client.near".to_string(),
+            "map_bridge_address":MAP_BRIDGE_ADDRESS.to_string(),
+            "wrapped_token": wnear.id().to_string(),
+            "near_chain_id": "5566818579631833089",
+        "map_chain_id": "22776"}))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "init MCS contract failed!");
+    println!("init mcs logs: {:?}", res.logs());
 
     let near_chain_id: U128 = U128(5566818579631833088);
     let paused_mask = 1 << 2 | 1 << 3 | 1 << 4 | 1 << 5;
@@ -324,7 +337,7 @@ async fn test_manage_near_chain_id() -> anyhow::Result<()> {
         .json::<U128>()?;
 
     println!("get_near_chain_id {}", ret.0);
-    assert_eq!(1313161555, ret.0, "get default near chain id");
+    assert_eq!(5566818579631833089, ret.0, "get default near chain id");
 
     let res = gen_call_transaction(&worker, &mcs, "set_near_chain_id", json!({"near_chain_id": near_chain_id}), false)
         .transact()
@@ -1818,7 +1831,7 @@ async fn test_transfer_out_mcs_token() -> anyhow::Result<()> {
     deploy_mcs_token_and_set_decimals(&worker, &mcs, token_name.to_string(), 24).await?;
     let token_account = AccountId::from_str(format!("{}.{}", token_name, mcs.id().to_string()).as_str()).unwrap();
 
-    let to_chain: U128 = U128(1000);
+    let to_chain: U128 = U128(5566818579631833089);
     let res = gen_call_transaction(&worker, &mcs, "add_mcs_token_to_chain", json!({"token": token_account.to_string(), "to_chain": to_chain}), false)
         .transact()
         .await?;
@@ -1868,6 +1881,7 @@ async fn test_transfer_out_mcs_token() -> anyhow::Result<()> {
     assert!(res.is_success(), "transfer_out_token should succeed");
     println!("logs {:?}", res.logs());
     assert!(res.logs().get(1).unwrap().contains(TRANSFER_OUT_TYPE), "can not get transfer out log");
+    assert!(res.logs().get(0).unwrap().contains("5566818579631833089"), "can not correct to chain id");
     let mcs_balance_2 = mcs.view_account(&worker).await?.balance;
     println!("after transfer out: account {} balance: {}", mcs.id(), mcs_balance_2);
     let dev_balance_2 = dev_account.view_account(&worker).await?.balance;

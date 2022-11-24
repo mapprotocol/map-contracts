@@ -41,7 +41,7 @@ pub type Bloom = [u8; BLOOM_BYTE_LENGTH];
 pub type Nonce = [u8; NONCE_LENGTH];
 
 /// Header contains block metadata in Celo Blockchain
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 #[serde(crate = "near_sdk::serde", rename_all = "camelCase")]
 pub struct Header {
     #[serde(with = "crate::serialization::bytes::hexstring")]
