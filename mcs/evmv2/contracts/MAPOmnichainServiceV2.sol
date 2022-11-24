@@ -36,7 +36,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     mapping(address => bool) public mintableTokens;
     mapping(uint256 => mapping(address => bool)) public tokenMappingList;
 
-    event mapTransferExecute(address indexed from, uint256 indexed fromChain, uint256 indexed toChain);
+    event mapTransferExecute(uint256 indexed fromChain, uint256 indexed toChain, address indexed from);
 
     function initialize(address _wToken, address _lightNode)
     public initializer checkAddress(_wToken) checkAddress(_lightNode) {
@@ -121,7 +121,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
             TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
         }
         bytes32 orderId = _getOrderID(msg.sender, _to, _toChain);
-        emit mapTransferOut(Utils.toBytes(_token), Utils.toBytes(msg.sender), orderId, selfChainId, _toChain, _to, _amount, Utils.toBytes(address(0)));
+        emit mapTransferOut(selfChainId, _toChain, orderId, Utils.toBytes(_token), Utils.toBytes(msg.sender),  _to, _amount, Utils.toBytes(address(0)));
     }
 
     function transferOutNative(bytes memory _to, uint _toChain) external override payable nonReentrant whenNotPaused
@@ -131,7 +131,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         require(amount > 0, "balance is zero");
         IWToken(wToken).deposit{value : amount}();
         bytes32 orderId = _getOrderID(msg.sender, _to, _toChain);
-        emit mapTransferOut(Utils.toBytes(wToken), Utils.toBytes(msg.sender), orderId, selfChainId, _toChain, _to, amount, Utils.toBytes(address(0)));
+        emit mapTransferOut(selfChainId, _toChain, orderId, Utils.toBytes(wToken), Utils.toBytes(msg.sender),  _to, amount, Utils.toBytes(address(0)));
     }
 
     function depositToken(address _token, address _to, uint _amount) external override nonReentrant whenNotPaused
@@ -146,7 +146,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         }
 
         bytes32 orderId = _getOrderID(from, Utils.toBytes(_to), relayChainId);
-        emit mapDepositOut(_token, Utils.toBytes(from), orderId, selfChainId, relayChainId, _to, _amount);
+        emit mapDepositOut(selfChainId, relayChainId, orderId, _token, Utils.toBytes(from),  _to, _amount);
     }
 
     function depositNative(address _to) external override payable nonReentrant whenNotPaused
@@ -156,7 +156,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         bytes32 orderId = _getOrderID(from, Utils.toBytes(_to), relayChainId);
 
         IWToken(wToken).deposit{value : amount}();
-        emit mapDepositOut(wToken, Utils.toBytes(from), orderId, selfChainId, relayChainId, _to, amount);
+        emit mapDepositOut(selfChainId, relayChainId, orderId, wToken, Utils.toBytes(from), _to, amount);
     }
 
     function transferIn(uint256 _chainId, bytes memory _receiptProof) external nonReentrant whenNotPaused {
@@ -178,7 +178,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
                 }
             }
         }
-        emit mapTransferExecute(msg.sender, _chainId, selfChainId);
+        emit mapTransferExecute(_chainId, selfChainId, msg.sender);
     }
 
 
@@ -210,7 +210,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
             TransferHelper.safeTransfer(token, toAddress, amount);
         }
 
-        emit mapTransferIn(token, _outEvent.from, _outEvent.orderId, _outEvent.fromChain, _outEvent.toChain, toAddress, amount);
+        emit mapTransferIn( _outEvent.fromChain, _outEvent.toChain, _outEvent.orderId, token, _outEvent.from, toAddress, amount);
     }
 
 

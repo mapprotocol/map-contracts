@@ -40,11 +40,11 @@ library NearDecoder {
         RLPReader.RLPItem[] memory logList = log.toRlpItem().toList();
 
         outEvent = IEvent.transferOutEvent({
-        token : logList[0].toBytes(),
-        from : logList[1].toBytes(),
+        fromChain : logList[0].toUint(),
+        toChain : logList[1].toUint(),
         orderId : bytes32(logList[2].toBytes()),
-        fromChain : logList[3].toUint(),
-        toChain : logList[4].toUint(),
+        token : logList[3].toBytes(),
+        from : logList[4].toBytes(),
         to : logList[5].toBytes(),
         amount : logList[6].toUint(),
         toChainToken : logList[7].toBytes()
@@ -77,12 +77,13 @@ library NearDecoder {
         RLPReader.RLPItem[] memory logList = log.toRlpItem().toList();
 
         outEvent = IEvent.depositOutEvent({
-        token : logList[0].toBytes(),
-        from : logList[1].toBytes(),
+        fromChain : logList[0].toUint(),
+        toChain : logList[1].toUint(),
         orderId : bytes32(logList[2].toBytes()),
 
-        fromChain : logList[3].toUint(),
-        toChain : logList[4].toUint(),
+        token : logList[3].toBytes(),
+        from : logList[4].toBytes(),
+
         to : logList[5].toBytes(),
         amount : logList[6].toUint()
         });

@@ -9,14 +9,13 @@ interface IMOSV2 {
     function depositNative(address _to) external payable ;
 
 
-    event mapTransferOut(bytes token, bytes from, bytes32 orderId,
-        uint256 fromChain, uint256 toChain, bytes to, uint256 amount, bytes toChainToken);
+    event mapTransferOut(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId,
+        bytes token, bytes from, bytes to, uint256 amount, bytes toChainToken);
 
-    event mapTransferIn(address indexed token, bytes from, bytes32 indexed orderId,
-        uint256 fromChain, uint256 toChain, address to, uint256 amount);
+    event mapTransferIn(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId,
+        address token, bytes from,  address to, uint256 amount);
 
-    event mapDepositOut(address indexed token, bytes from, bytes32 orderId,
-        uint256 fromChain, uint256 toChain, address to, uint256 amount);
-
+    event mapDepositOut(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId,
+        address token, bytes from, address to, uint256 amount);
 
 }
