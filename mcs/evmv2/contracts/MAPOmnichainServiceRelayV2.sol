@@ -215,8 +215,8 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     }
 
 
-    function _getOrderId(address _token, address _from, bytes memory _to, uint256 _amount, uint256 _toChain) internal returns (bytes32){
-        return keccak256(abi.encodePacked(nonce++, _from, _to, _token, _amount, selfChainId, _toChain));
+    function _getOrderId(address _from, bytes memory _to, uint256 _toChain) internal returns (bytes32){
+        return keccak256(abi.encodePacked(address(this), nonce++, selfChainId, _toChain, _from, _to));
     }
 
     function _collectFee(address _token, uint256 _mapAmount, uint256 _fromChain, uint256 _toChain) internal returns (uint256, uint256) {
@@ -259,7 +259,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             IMAPToken(_token).burn(mapOutAmount);
         }
 
-        bytes32 orderId = _getOrderId(_token, _from, _to, mapOutAmount, _toChain);
+        bytes32 orderId = _getOrderId(_from, _to, _toChain);
         emit mapTransferOut(Utils.toBytes(_token), Utils.toBytes(_from), orderId, selfChainId, _toChain, _to, outAmount, toToken);
     }
 

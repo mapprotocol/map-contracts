@@ -120,7 +120,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         } else {
             TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
         }
-        bytes32 orderId = _getOrderID(_token, msg.sender, _to, _amount, _toChain);
+        bytes32 orderId = _getOrderID(msg.sender, _to, _toChain);
         emit mapTransferOut(Utils.toBytes(_token), Utils.toBytes(msg.sender), orderId, selfChainId, _toChain, _to, _amount, Utils.toBytes(address(0)));
     }
 
@@ -130,7 +130,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         uint amount = msg.value;
         require(amount > 0, "balance is zero");
         IWToken(wToken).deposit{value : amount}();
-        bytes32 orderId = _getOrderID(wToken, msg.sender, _to, amount, _toChain);
+        bytes32 orderId = _getOrderID(msg.sender, _to, _toChain);
         emit mapTransferOut(Utils.toBytes(wToken), Utils.toBytes(msg.sender), orderId, selfChainId, _toChain, _to, amount, Utils.toBytes(address(0)));
     }
 
@@ -145,7 +145,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
             TransferHelper.safeTransferFrom(_token, from, address(this), _amount);
         }
 
-        bytes32 orderId = _getOrderID(_token, from, Utils.toBytes(_to), _amount, relayChainId);
+        bytes32 orderId = _getOrderID(from, Utils.toBytes(_to), relayChainId);
         emit mapDepositOut(_token, Utils.toBytes(from), orderId, selfChainId, relayChainId, _to, _amount);
     }
 
@@ -153,7 +153,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     checkBridgeable(wToken, relayChainId) {
         address from = msg.sender;
         uint amount = msg.value;
-        bytes32 orderId = _getOrderID(wToken, from, Utils.toBytes(_to), amount, relayChainId);
+        bytes32 orderId = _getOrderID(from, Utils.toBytes(_to), relayChainId);
 
         IWToken(wToken).deposit{value : amount}();
         emit mapDepositOut(wToken, Utils.toBytes(from), orderId, selfChainId, relayChainId, _to, amount);
@@ -191,8 +191,8 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     }
 
 
-    function _getOrderID(address _token, address _from, bytes memory _to, uint _amount, uint _toChain) internal returns (bytes32){
-        return keccak256(abi.encodePacked(nonce++, _from, _to, _token, _amount, selfChainId, _toChain));
+    function _getOrderID(address _from, bytes memory _to, uint _toChain) internal returns (bytes32){
+        return keccak256(abi.encodePacked(address(this), nonce++, selfChainId, _toChain, _from, _to));
     }
 
     function _transferIn(IEvent.transferOutEvent memory _outEvent)
