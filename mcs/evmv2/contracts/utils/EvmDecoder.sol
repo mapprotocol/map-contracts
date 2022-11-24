@@ -60,7 +60,7 @@ library EvmDecoder {
         address token;
         address toAddress;
         (depositEvent.orderId, token, depositEvent.from, toAddress, depositEvent.amount)
-        = abi.decode(log.data, (bytes32, bytes, address, uint256));
+        = abi.decode(log.data, (bytes32, address, bytes, address, uint256));
 
         depositEvent.token = Utils.toBytes(token);
         depositEvent.to = Utils.toBytes(toAddress);

@@ -7,9 +7,11 @@ interface ILightNode {
 
     function updateBlockHeader(bytes memory _blockHeader) external;
 
+    function updateLightClient(bytes memory _data) external;
+
     function headerHeight() external view returns (uint256 height);
 
-    function currentNumberAndHash(uint256 number) external view returns(uint256 ,bytes memory);
+    //function currentNumberAndHash(uint256 number) external view returns(uint256 ,bytes memory);
 
     function verifiableHeaderRange() external view returns (uint256, uint256);
 }
