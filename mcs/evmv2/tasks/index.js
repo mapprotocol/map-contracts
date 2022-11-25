@@ -155,7 +155,7 @@ task("withdraw",
     .addParam("mos", "The mos address")
     .addOptionalParam("token", "The token address","0x0000000000000000000000000000000000000000",types.string)
     .addOptionalParam("address", "The receiver address","",types.string)
-    .addParam("value", "withdraw value, unit WEI")
+    .addParam("value", "withdraw value")
 
 task("relayList",
     "List mos relay infos",

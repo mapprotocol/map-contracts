@@ -97,7 +97,11 @@ contract TokenRegisterV2 is ITokenRegisterV2,Initializable,UUPSUpgradeable {
     override
     view
     returns (bytes memory _toChainToken){
-        _toChainToken = tokenList[_token].mappingTokens[_toChain];
+        if (_toChain == selfChainId) {
+            _toChainToken = Utils.toBytes(_token);
+        } else {
+            _toChainToken = tokenList[_token].mappingTokens[_toChain];
+        }
     }
 
     function getToChainAmount(address _token, uint256 _amount, uint256 _toChain)
@@ -105,8 +109,11 @@ contract TokenRegisterV2 is ITokenRegisterV2,Initializable,UUPSUpgradeable {
     override
     view
     returns (uint256){
+        if (_toChain == selfChainId) {
+            return _amount;
+        }
         uint256 decimalsFrom = tokenList[_token].decimals;
-        // TODO: check _toChain is relay chain
+
         uint256 decimalsTo = tokenList[_token].tokenDecimals[_toChain];
         if (decimalsFrom == decimalsTo) {
             return _amount;
@@ -119,7 +126,11 @@ contract TokenRegisterV2 is ITokenRegisterV2,Initializable,UUPSUpgradeable {
     override
     view
     returns (address token){
-        token = tokenMappingList[_fromChain][_fromToken];
+        if (_fromChain == selfChainId) {
+            token = Utils.fromBytes(_fromToken);
+        } else {
+            token = tokenMappingList[_fromChain][_fromToken];
+        }
     }
 
     function getRelayChainAmount(address _token, uint256 _fromChain, uint256 _amount)
@@ -127,12 +138,14 @@ contract TokenRegisterV2 is ITokenRegisterV2,Initializable,UUPSUpgradeable {
     override 
     view 
     returns (uint256){
+        if (_fromChain == selfChainId) {
+            return _amount;
+        }
         uint256 decimalsFrom = tokenList[_token].tokenDecimals[_fromChain];
         uint256 decimalsTo = tokenList[_token].decimals;
         if (decimalsFrom == decimalsTo) {
             return _amount;
         }
-        // TODO: check decimalsFrom = 0
         return _amount.mul(10 ** decimalsTo).div(10 ** decimalsFrom);
     }
 

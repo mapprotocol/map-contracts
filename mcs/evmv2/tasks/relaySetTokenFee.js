@@ -5,7 +5,7 @@ module.exports = async (taskArgs,hre) => {
 
     console.log("deployer address:",deployer.address);
 
-    let tokenmanager = await hre.deployments.get("TokenRegisterV2");
+    let tokenmanager = await hre.deployments.get("TokenRegisterProxy");
 
     console.log("Token manager address:", tokenmanager.address);
 
