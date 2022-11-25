@@ -46,6 +46,11 @@ module.exports = {
       chainId : 212,
       accounts: accounts
     },
+    MapDev: {
+      url: `http://3.0.19.66:7445/`,
+      chainId : 213,
+      accounts: accounts
+    },
     Matic: {
       url: `https://rpc-mainnet.maticvigil.com`,
       chainId : 137,
@@ -112,7 +117,7 @@ module.exports = {
   },
   spdxLicenseIdentifier: {
     overwrite: true,
-    runOnCompile: true
+    runOnCompile: false
   },
   mocha: {
     timeout: 2000000

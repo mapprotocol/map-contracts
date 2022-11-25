@@ -146,10 +146,10 @@ describe("MAPOmnichainServiceV2 start test", function () {
 
         expect(await usdt.balanceOf(moss.address)).to.equal("0");
 
-        await moss.transferIn(212,mosData.map2ethMapToken0);
-
-        expect(await standardToken.totalSupply()).to.equal("99900000100000000000000000");
-        expect(await usdt.balanceOf(moss.address)).to.equal("0");
+        // await moss.transferIn(212,mosData.map2ethMapToken0);
+        //
+        // expect(await standardToken.totalSupply()).to.equal("99900000100000000000000000");
+        // expect(await usdt.balanceOf(moss.address)).to.equal("0");
 
         await wrapped.deposit({value:"300000000000000000"});
         await wrapped.transfer(moss.address,"300000000000000000");

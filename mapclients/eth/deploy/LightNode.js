@@ -52,13 +52,14 @@ module.exports = async function ({ethers, deployments}) {
 
     let epochSize = initializeData.epoch_size;
 
-    let initD = await lightNode.initialize(threshold, addresss, g1List, weights, epoch, epochSize,verifyTool.address);
+
+    let data = lightNode.interface.encodeFunctionData("initialize", [threshold, addresss, g1List, weights, epoch, epochSize,verifyTool.address]);
     console.log("initialize success")
 
 
     await deploy('LightNodeProxy', {
         from: deployer.address,
-        args: [lightNode.address,initD.data],
+        args: [lightNode.address,data],
         log: true,
         contract: 'LightNodeProxy',
     })
