@@ -61,7 +61,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
     it("MAPOmnichainServiceRelayV2 contract deploy init", async function () {
         console.log("deployer address:",deployer.address)
-
+        console.log(addr8.address)
 
         EvmDecoder = await ethers.getContractFactory("EvmDecoder");
         evmDecoder = await EvmDecoder.deploy();
@@ -96,10 +96,9 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         console.log("LightClientManager   address:",lightClientManager.address);
 
         MapVault = await ethers.getContractFactory("VaultTokenV2");
-        // moss = await ethers.getContractAt("MapCrossChainService",mosData.mos);
         mapVault = await MapVault.deploy(standardToken.address,"MapVaultToken","MVT");
         console.log("MapVault  address:",mapVault.address);
-        //await mapVault.initialize(standardToken.address,"MapVaultToken","MVT","18");
+
 
         MapVaultU = await ethers.getContractFactory("VaultTokenV2");
         mapVaultU = await MapVaultU.deploy(usdt.address,"MapVaultTokenUsdt","UVT");
@@ -107,7 +106,6 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         MapVaultW = await ethers.getContractFactory("VaultTokenV2");
         mapVaultW = await MapVaultU.deploy(wrapped.address,"MapVaultTokenWrapped","WVT");
 
-        //await mapVaultU.initialize(usdt.address,"MapVaultTokenUsdt","UVT","18");
 
         let data = await mossR.initialize(wrapped.address,lightClientManager.address);
         initData = data.data;
@@ -135,12 +133,12 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
         expect(await mossR.tokenRegister()).to.equal(tokenRegister.address);
 
-        await mossR.registerChain(34434,mosRelayData.mosETH,1);
+
+        await mossR.registerChain(97,mosRelayData.mosETH,1);
 
         await mossR.registerChain(1313161555,mosRelayData.mosNear,2);
-        await mossR.registerChain("5566818579631833089",mosRelayData.mosNear,2);
 
-        expect(await mossR.chainTypes(34434)).to.equal(1)
+        expect(await mossR.chainTypes(97)).to.equal(1)
 
         await mapVault.addManager(mossR.address);
         await mapVaultU.addManager(mossR.address);
@@ -156,23 +154,16 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         await tokenRegister.registerToken(standardToken.address,mapVault.address,true);
         await tokenRegister.registerToken(wrapped.address,mapVaultW.address,false);
 
-        await tokenRegister.mapToken(usdt.address,34434,mosRelayData.ethUsdtToken,18);
         await tokenRegister.mapToken(usdt.address,97,mosRelayData.ethUsdtToken,18);
-        await tokenRegister.mapToken(standardToken.address,34434,mosRelayData.ethStanardToken,18);
         await tokenRegister.mapToken(standardToken.address,97,mosRelayData.ethStanardToken,18);
         await tokenRegister.mapToken(usdt.address,212,usdt.address,18);
         await tokenRegister.mapToken(standardToken.address,212,standardToken.address,18);
         await tokenRegister.mapToken(usdt.address,1313161555,mosRelayData.nearUsdtToken,24);
-        await tokenRegister.mapToken(usdt.address,"5566818579631833089",mosRelayData.nearUsdtToken,24);
-        await tokenRegister.mapToken(standardToken.address,1313161555,mosRelayData.nearWethToken,24);
-        await tokenRegister.mapToken(standardToken.address,"5566818579631833089",mosRelayData.nearWethToken,24);
-        await tokenRegister.mapToken(wrapped.address,1313161555,"0x0000000000000000000000000000000000000000",24);
-        await tokenRegister.mapToken(wrapped.address,"5566818579631833089","0x0000000000000000000000000000000000000000",24);
+        await tokenRegister.mapToken(standardToken.address,1313161555,mosRelayData.nearStandToken,24);
+        await tokenRegister.mapToken(wrapped.address,1313161555,mosRelayData.nearWethToken,24);
         await tokenRegister.mapToken(wrapped.address,212,wrapped.address,18);
-        await tokenRegister.mapToken(wrapped.address,34434,"0x0000000000000000000000000000000000000000",18);
         await tokenRegister.mapToken(wrapped.address,97,"0xae13d989dac2f0debff460ac112a837c89baa7cd",18);
-
-        await tokenRegister.setTokenFee(usdt.address,34434,"1000000000000000","2000000000000000000","500000")
+        await tokenRegister.setTokenFee(usdt.address,97,"1000000000000000","2000000000000000000","500000")
 
     });
 
@@ -190,9 +181,9 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
         await standardToken.connect(owner).approve(mossR.address,"100000000000000000000");
 
-        await mossR.connect(owner).transferOutToken(standardToken.address,address2Bytes,"1000000000000000000",34434)
+        await mossR.connect(owner).transferOutToken(standardToken.address,address2Bytes,"1000000000000000000",97)
 
-        expect(await mapVault.vaultBalance(34434)).to.equal("-1000000000000000000")
+        expect(await mapVault.vaultBalance(97)).to.equal("-1000000000000000000")
         expect(await standardToken.totalSupply()).to.equal("0");
         console.log(await standardToken.totalSupply());
 
@@ -218,8 +209,6 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
     it('transferIn test ', async function () {
         await tokenRegister.registerToken(standardToken.address,mapVault.address,true);
-        //await mossR.addAuthToken([standardToken.address]);
-        //console.log(await tokenRegister.getTargetToken(1313161555,212))
 
         console.log(await usdt.balanceOf(mossR.address));
         console.log(await wrapped.balanceOf(mossR.address));
@@ -228,32 +217,32 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         await usdt.mint(mossR.address,"15000000000000000");
         let near2eth001Data = await mossR.transferIn(1313161555,mosRelayData.near2eth001);
         let near2eth001Receipt = await ethers.provider.getTransactionReceipt(near2eth001Data.hash)
-
-        let near2eth001Decode = ethers.utils.defaultAbiCoder.decode(['bytes','bytes','bytes32','uint256','uint256','bytes','uint256','bytes'],
+        //uint256,uint256,bytes32,bytes,bytes,bytes,uint256,bytes
+        let near2eth001Decode = ethers.utils.defaultAbiCoder.decode(['bytes32','bytes','bytes','bytes','uint256','bytes'],
             near2eth001Receipt.logs[1].data)
 
-        expect(near2eth001Decode[6]).to.equal("75000000000000000");
+        expect(near2eth001Decode[4]).to.equal("75000000000000000");
 
 
         // amount: 150000000000000000000000,
         let near2ethWData = await mossR.transferIn(1313161555,mosRelayData.near2ethW);
         let near2ethWReceipt = await ethers.provider.getTransactionReceipt(near2ethWData.hash)
-        let near2ethWDecode = ethers.utils.defaultAbiCoder.decode(['bytes','bytes','bytes32','uint256','uint256','bytes','uint256','bytes'],
+        let near2ethWDecode = ethers.utils.defaultAbiCoder.decode(['bytes32','bytes','bytes','bytes','uint256','bytes'],
             near2ethWReceipt.logs[2].data)
         //console.log(near2ethWDecode)
-        expect(near2ethWDecode[6]).to.equal("150000000000000000");
+        expect(near2ethWDecode[4]).to.equal("150000000000000000");
 
-        expect(await mapVault.vaultBalance(34434)).to.equal("-1150000000000000000")
+        expect(await mapVault.vaultBalance(97)).to.equal("-1150000000000000000")
         expect(await mapVault.vaultBalance(1313161555)).to.equal("-850000000000000000")
 
         //amount: 150000000000000000000000,
         let near2eth000Data =  await mossR.transferIn(1313161555,mosRelayData.near2eth000);
         let near2eth000Receipt = await ethers.provider.getTransactionReceipt(near2eth000Data.hash)
 
-        let near2eth000Decode = ethers.utils.defaultAbiCoder.decode(['bytes','bytes','bytes32','uint256','uint256','bytes','uint256','bytes'],
+        let near2eth000Decode = ethers.utils.defaultAbiCoder.decode(['bytes32','bytes','bytes','bytes','uint256','bytes'],
             near2eth000Receipt.logs[0].data)
         //console.log(near2eth000Decode)
-        expect(near2eth000Decode[6]).to.equal("150000000000000000");
+        expect(near2eth000Decode[4]).to.equal("150000000000000000");
 
         expect(await usdt.balanceOf(mossR.address)).to.equal("0");
         await usdt.mint(mossR.address,"150000000000000000");
@@ -263,7 +252,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         await mossR.transferIn(1313161555,mosRelayData.near2mapW);
         expect(await standardToken.totalSupply()).to.equal("1150000000000000000");
 
-        expect(await mapVault.vaultBalance(34434)).to.equal("-1150000000000000000")
+        expect(await mapVault.vaultBalance(97)).to.equal("-1150000000000000000")
         expect(await mapVault.vaultBalance(1313161555)).to.equal("-700000000000000000")
 
         expect(await wrapped.balanceOf(mossR.address)).to.equal("100000000000000000");
@@ -277,19 +266,19 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
     it('eth2map transferIn test', async function () {
         expect(await usdt.balanceOf(mossR.address)).to.equal("0");
         await usdt.mint(mossR.address,"100000000000000000000");
-        await mossR.transferIn(34434,mosRelayData.eth2mapMapToken);
+        await mossR.transferIn(97,mosRelayData.eth2mapMapToken);
         expect(await usdt.balanceOf(mossR.address)).to.equal("0")
 
         //300000000000000000000
-        await mossR.transferIn(34434,mosRelayData.eth2mapStandardToken);
+        await mossR.transferIn(97,mosRelayData.eth2mapStandardToken);
         expect(await standardToken.totalSupply()).to.equal("301150000000000000000");
 
-        expect(await mapVault.vaultBalance(34434)).to.equal("298850000000000000000")
+        expect(await mapVault.vaultBalance(97)).to.equal("298850000000000000000")
 
         expect(await wrapped.balanceOf(mossR.address)).to.equal("0");
-        await wrapped.deposit({value:"2000000000000000000"});
-        await wrapped.transfer(mossR.address,"2000000000000000000");
-        await mossR.transferIn(34434,mosRelayData.eth2mapNative);
+        await wrapped.deposit({value:"20000000000000000"});
+        await wrapped.transfer(mossR.address,"20000000000000000");
+        await mossR.transferIn(97,mosRelayData.eth2mapNative);
         expect(await wrapped.balanceOf(mossR.address)).to.equal("0");
     });
 
@@ -328,14 +317,14 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
     it('collectChainFee test', async function () {
         await usdt.mint(owner.address,"1000000000000000000");
         await usdt.connect(owner).approve(mossR.address,"100000000000000000000");
-        await mossR.connect(owner).transferOutToken(usdt.address,address2Bytes,"1000000000000000000",34434);
+        await mossR.connect(owner).transferOutToken(usdt.address,address2Bytes,"1000000000000000000",97);
 
         expect(await usdt.balanceOf(mossR.address)).to.be.equal("900000000000000000");
         //expect(await mapVaultU.correspondBalance()).to.be.equal("350000000000000000");
         expect(await usdt.balanceOf(addr3.address)).to.be.equal("115000000000000000");
 
-        // set standToken to 34434 fee rate 50%
-        await tokenRegister.setTokenFee(standardToken.address,34434,"1000000000000000","2000000000000000000","500000")
+        // set standToken to 97 fee rate 50%
+        await tokenRegister.setTokenFee(standardToken.address,97,"1000000000000000","2000000000000000000","500000")
 
         await mossR.connect(addr5).setDistributeRate(0,mossR.address,"400000")
         await mossR.connect(addr5).setDistributeRate(1,addr3.address,"200000")
@@ -343,7 +332,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         console.log(await standardToken.balanceOf(mossR.address));
         await standardToken.mint(owner.address,"1000000000000000000");
         await standardToken.connect(owner).approve(mossR.address,"100000000000000000000");
-        await mossR.connect(owner).transferOutToken(standardToken.address,address2Bytes,"1000000000000000000",34434);
+        await mossR.connect(owner).transferOutToken(standardToken.address,address2Bytes,"1000000000000000000",97);
 
         // to vault 200000000000000000
         //expect(await mapVault.correspondBalance()).to.be.equal("10000200000000000000000");
@@ -429,10 +418,6 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         expect(await mapVault.totalSupply()).to.equal("0");
         expect(await mapVaultU.totalSupply()).to.equal("0");
         expect(await mapVaultW.totalSupply()).to.equal("2000000000000000000");
-        //0x6d63735f746f6b656e5f302e6d63732e6d61703030312e746573746e6574
-        //100000000000000000
-        await expect(mossR.depositIn("5566818579631833089",mosRelayData.near2mapDepositeM01E)).to.be.revertedWith("invalid chain id");
-
 
         await mossR.depositIn("1313161555",mosRelayData.near2mapDepositeM01);
 
@@ -445,28 +430,14 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         expect(await mapVault.totalSupply()).to.equal("0");
         expect(await mapVaultU.totalSupply()).to.equal("100000000000000000");
         expect(await mapVaultW.totalSupply()).to.equal("2000000000000000000");
-        //
-        // await mossR.setmosContract(34434,"0xAC25DeA31A410900238c8669eD9973f328919160",1);
-        //0x777261702e746573746e6574
-        //100000000000000000
-        // await mossR.depositIn("5566818579631833089",mosRelayData.near2mapDepositeM01);
-        // expect(await mapVault.totalSupply()).to.equal("100000000000000000");
-        //
-        // expect(await standardToken.totalSupply()).to.equal("10301750000000000000000")
 
-        //0xd293ffec6c0ed1abda02a72ac0199858cd5cc4a9
-        await mossR.connect(addr5).registerChain(97,"0xd293ffec6c0ed1abda02a72ac0199858cd5cc4a9",1);
-
-        //satand token
         //100000000000000000
         await mossR.depositIn(97,mosRelayData.eth2mapDepositeU);
-        // expect(await standardToken.totalSupply()).to.equal("10301150000000000000000");
-        // expect(await mapVault.balanceOf("0x2e784874ddb32cd7975d68565b509412a5b519f4")).to.equal("10000000000000000000000")
-        // expect(await mapVault.totalSupply()).to.equal("10000000000000000000000");
         expect(await usdt.balanceOf(mossR.address)).to.equal("900000000000000000")
         expect(await standardToken.balanceOf(mossR.address)).to.equal("1000000000000000000")
         expect(await usdt.totalSupply()).to.equal("101165000000000000000")
-        expect(await mapVaultU.totalSupply()).to.equal("30403030303030303030");
+
+        expect(await mapVaultU.totalSupply()).to.equal("130303030303030303");
 
     });
 
@@ -483,8 +454,6 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
         await expect(mossR.transferIn(1313161555,mosRelayData.near2mapW)).to.be.revertedWith("order exist");
 
-        // await mossR.connect(addr5).setLightClientManager(addr4.address);
-        // expect(await mossR.lightClientManager()).to.be.equal(addr4.address);
     });
 
 
@@ -505,13 +474,13 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
         await standardToken.mint(addr2.address,"20000000000000000000");
         await standardToken.connect(addr2).approve(mossR.address,"2000000000000000000000");
-        await mossR.connect(addr2).transferOutToken(standardToken.address,address2Bytes,"20000000000000000000",34434)
+        await mossR.connect(addr2).transferOutToken(standardToken.address,address2Bytes,"20000000000000000000",97)
         //2008
         expect(await mapVault.totalVault()).to.equal("200800000000000000000");
         expect(await mapVault.totalSupply()).to.equal("200000000000000000000");
         await standardToken.mint(addr1.address,"1000000000000000000");
         await standardToken.connect(addr1).approve(mossR.address,"100000000000000000000");
-        await mossR.connect(addr1).transferOutToken(standardToken.address,address2Bytes,"1000000000000000000",34434)
+        await mossR.connect(addr1).transferOutToken(standardToken.address,address2Bytes,"1000000000000000000",97)
         //2010
         expect(await mapVault.totalVault()).to.equal("201000000000000000000");
         expect(await mapVault.totalSupply()).to.equal("200000000000000000000");

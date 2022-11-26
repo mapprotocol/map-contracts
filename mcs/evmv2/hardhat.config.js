@@ -114,7 +114,7 @@ module.exports = {
   },
   spdxLicenseIdentifier: {
     overwrite: true,
-    runOnCompile: true
+    runOnCompile: false
   },
   mocha: {
     timeout: 2000000
