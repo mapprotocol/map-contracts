@@ -128,13 +128,13 @@ The file LightNode.sol implements the main logic of eth2.0 PoS light client. Her
     BeaconBlockHeader memory _finalizedBeaconHeader,
     uint256 _finalizedExeHeaderNumber,
     bytes32 _finalizedExeHeaderHash,
-    bytes memory curSyncCommitteeAggPubKey,
-    bytes memory nextSyncCommitteeAggPubKey,
-    bytes32[] memory syncCommitteePubkeyHashes,
+    bytes memory _curSyncCommitteeAggPubKey,
+    bytes memory _nextSyncCommitteeAggPubKey,
+    bytes32[] memory _syncCommitteePubkeyHashes,
     bool _verifyUpdate
 ) public initializer;
 
-    function initSyncCommitteePubkey(bytes memory syncCommitteePubkeyPart) public;
+    function initSyncCommitteePubkey(bytes memory _syncCommitteePubkeyPart) public;
 
 ```
 
@@ -143,7 +143,7 @@ The file LightNode.sol implements the main logic of eth2.0 PoS light client. Her
   update information and save them if verification is passed.
 
 ```solidity
-    function updateLightClient(LightClientUpdate memory update) external override whenNotPaused;
+    function updateLightClient(bytes memory _data) external override whenNotPaused;
 
 ```
 
@@ -154,15 +154,14 @@ The file LightNode.sol implements the main logic of eth2.0 PoS light client. Her
   for further proof verification. The maintainer could not do the next light client update util the gap is filled.
 
 ```solidity
-    function updateExeBlockHeaders(BlockHeader[] memory headers);
+    function updateBlockHeader(bytes memory _blockHeader) external override whenNotPaused;
 ```
 
-* Below interface `verifyProofData` can verify the validity of the receipt and logs of a transaction in ethereum
-  execution layer
-  block if it's hash has already been stored in the light client through the above interface `updateExeBlockHeaders`.
+* Below interface `verifyProofData` can verify the validity of the receipt in ethereum execution layer
+  block if it's hash has already been stored in the light client through the above interface `updateBlockHeader`.
 
 ```solidity
-    function verifyProofData(bytes memory receiptProof)
+    function verifyProofData(bytes memory _receiptProof)
     external
     view
     override
@@ -180,8 +179,8 @@ The file LightNode.sol implements the main logic of eth2.0 PoS light client. Her
     function verifiableHeaderRange() external view returns (uint256, uint256);
 ```
 * When the maintainer starts, it should call first get the public state `exeHeaderUpdateInfo` which tells if the latest
- execution layer headers' gap is filled. If not, the maintainer should first call `updateExeBlockHeaders` to fill the gap.
- Then call below interface `finalizedSlot` to get the latest finalized slot of the light client. So that it can decide
+ execution layer headers' gap is filled. If not, the maintainer should first call `updateBlockHeader` to fill the gap.
+ Then call below interface `headerHeight` to get the latest finalized slot of the light client. So that it can decide
  whether to retrieve the period update information or the latest finality update information, and then call 
  `updateLightClient` to update the light client.
 ```solidity
@@ -193,7 +192,7 @@ The file LightNode.sol implements the main logic of eth2.0 PoS light client. Her
         bytes32 endHash;
     }
 
-    function finalizedSlot() external view override returns (uint256);
+    function headerHeight() external view override returns (uint256);
 ```
 
 ## More reference

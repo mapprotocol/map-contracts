@@ -429,9 +429,6 @@ mod tests {
         header.extra = extra.to_rlp(&IstanbulExtraVanity::default());
         let hash = header.hash_without_seal().unwrap();
 
-
-
-
         println!("{}", serde_json::to_string(&header).unwrap())
     }
 
@@ -442,5 +439,78 @@ mod tests {
         T::from_bytes(&hex::decode(data).unwrap())
             .unwrap()
             .to_owned()
+    }
+
+    #[test]
+    pub fn test_bitmap() {
+        /*
+        total validator:  30
+        bitmap [33 252 255 15]  big-endian
+        validator : 0   0xb4e1BC0856f70A55764FD6B3f8dD27F2162108E9 sign
+        validator : 1   0x7A3a26123DBD9CFeFc1725fe7779580B987251Cb sign
+        validator : 2   0x7607c9cdd733d8cDA0A644839Ec2bAc5Fa180eD4 sign
+        validator : 3   0x65b3FEe569Bf82FF148bddEd9c3793FB685f9333 sign
+        validator : 4   0xa9c044C42591C57362315130A0E9a80f7C3A0C2C nosign
+        validator : 5   0x8D3925c8fe63Ab483F113a6A6f52d09e02EC7d47 nosign
+        validator : 6   0x171Cea72aED36C6bCb51a5b915646e1f7aA6AC7f nosign
+        validator : 7   0x069633a9ADEaEd7A17ff78B24f2729503cff6C90 nosign
+        validator : 8   0xce5fC472c7B7D36c14043862FDce03402f2925Eb sign
+        validator : 9   0x01734524cC07A49a1237b950D72cAae98D946763 sign
+        validator : 10   0x48bcEB30BC96afA7F659a6Fb6BD8d1127a89e8E9 sign
+        validator : 11   0x37629d8d17F8cA81a003f76b750207417EED19fa sign
+        validator : 12   0x9e5665ACb994906c55bda5F18EC33f05012BB46a sign
+        validator : 13   0x8Df2a3A3fE8f1564E8f1F24572a3D69153fbF99E sign
+        validator : 14   0x4a032839455E7616054f38aDE3043Fa447a099Bf sign
+        validator : 15   0x59FF5a050c17BD2D191f4eB24b27afB50DC5EEdc sign
+        validator : 16   0xE4f125a24C0591795Cc880852a8aBc8395275939 nosign
+        validator : 17   0x2fE1E683A4A9e89CA9bf66F558d9019CE20060a4 nosign
+        validator : 18   0x2048a5809a027537C2Ffb1B0e957CC8b5F598D5b sign
+        validator : 19   0x6bE1F2DcDB6a846C9Df353aA77F622bc859574aB sign
+        validator : 20   0xEd846b40803E96bd8Abf561D6fC697be1AEd9eB1 sign
+        validator : 21   0xEBbFd202a69eC17889043Ab8f5922a9488f464eA sign
+        validator : 22   0xc39Ef66E5707ff7C8Fdb5524Aaa375A25652faCD sign
+        validator : 23   0x8A213d60FF5F32d74AAe8116d5A266c50873b676 sign
+        validator : 24   0xe498d13527524132736d804C42a288d72A979e46 sign
+        validator : 25   0x7d32c326ebfC9bFf2908edaF3B02dA543044e4C2 nosign
+        validator : 26   0xD98dC429cDC70FE3260Bf6dECA806a3b8e0FC7fA nosign
+        validator : 27   0x2dbb721077CFB8b9D18950175dDAE75924BDD1be nosign
+        validator : 28   0xDbBd0434BF5A280b19eFB4D4D740dA1E4Af5e9ee nosign
+        validator : 29   0xff5B060b0e6595890Cc6eCDF669997314068333f sign
+         all signer is 20
+         */
+        let data = "d683010000846765746886676f312e3139856c696e7578000000000000000000f8dbc0c0c080b8419a4d130b0b47e805e343c2838a48923f1144fe42b2b172c2b5149f70a4066a951e8338adebfb1ea09105e81c4632703225618349ce9697e64ac7cdc6173429b501f8488421fcff0fb84006c928b279c6a75b1ff26fc82a46e1b7a92cd2e298e2edfbcfaafee94ce5b561019ff2d1b934c8200889474e217ca2941da7fa21da6108ebd10e7f3629b1fff580f8488431fdff0fb8401a4d4a81399c1bb275e4e80168bcbfc9fd763eea7b3bc20de403b7f9759eced108d5789ab574267a4d69330a32518fc8537302d2a168360ee5cb5f55fe3981af80";
+        let extra = IstanbulExtra::from_rlp(hex::decode(data).unwrap().as_slice()).unwrap();
+        let bitmap = extra.aggregated_seal.bitmap;
+
+        assert!(bitmap.bit(0));
+        assert!(bitmap.bit(1));
+        assert!(bitmap.bit(2));
+        assert!(bitmap.bit(3));
+        assert!(!bitmap.bit(4));
+        assert!(!bitmap.bit(5));
+        assert!(!bitmap.bit(6));
+        assert!(!bitmap.bit(7));
+        assert!(bitmap.bit(8));
+        assert!(bitmap.bit(9));
+        assert!(bitmap.bit(10));
+        assert!(bitmap.bit(11));
+        assert!(bitmap.bit(12));
+        assert!(bitmap.bit(13));
+        assert!(bitmap.bit(14));
+        assert!(bitmap.bit(15));
+        assert!(!bitmap.bit(16));
+        assert!(!bitmap.bit(17));
+        assert!(bitmap.bit(18));
+        assert!(bitmap.bit(19));
+        assert!(bitmap.bit(20));
+        assert!(bitmap.bit(21));
+        assert!(bitmap.bit(22));
+        assert!(bitmap.bit(23));
+        assert!(bitmap.bit(24));
+        assert!(!bitmap.bit(25));
+        assert!(!bitmap.bit(26));
+        assert!(!bitmap.bit(27));
+        assert!(!bitmap.bit(28));
+        assert!(bitmap.bit(29));
     }
 }
