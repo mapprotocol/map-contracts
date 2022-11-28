@@ -47,6 +47,9 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     mapping(uint256 => bytes) public mosContracts;
     mapping(uint256 => chainType) public chainTypes;
 
+    event mapTransferRelay(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId,
+        address token, bytes from,  bytes to, uint256 amount);
+
     event mapDepositIn(uint256 indexed fromChain, uint256 indexed toChain, address indexed token, bytes32 orderId,
         bytes from, address to, uint256 amount);
 
@@ -260,6 +263,8 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         }
 
         bytes32 orderId = _getOrderId(_from, _to, _toChain);
+        emit mapTransferRelay(selfChainId, _toChain, orderId, _token, Utils.toBytes(_from),  _to, _amount);
+
         emit mapTransferOut(selfChainId, _toChain, orderId, Utils.toBytes(_token), Utils.toBytes(_from),  _to, outAmount, toToken);
     }
 
@@ -280,6 +285,8 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         if (tokenRegister.checkMintable(token)) {
             IMAPToken(token).mint(address(this), mapAmount);
         }
+
+        emit mapTransferRelay(_outEvent.fromChain, _outEvent.toChain, _outEvent.orderId, token, _outEvent.from, _outEvent.to, mapAmount);
 
         (uint256 mapOutAmount, uint256 outAmount)  = _collectFee(token, mapAmount, _outEvent.fromChain, _outEvent.toChain);
 
