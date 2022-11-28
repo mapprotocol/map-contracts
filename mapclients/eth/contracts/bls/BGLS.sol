@@ -48,7 +48,7 @@ contract BGLS is IBLSPoint {
     }
 
     function chkBit(bytes memory b, uint x) internal pure returns (bool) {
-        return uint(uint8(b[x / 8])) & (uint(1) << (x % 8)) != 0;
+        return uint(uint8(b[31 - x / 8])) & (uint(1) << (x % 8)) != 0;
     }
 
     function sumPoints(G1[] memory points, bytes memory indices) public view returns (G1 memory) {

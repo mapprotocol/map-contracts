@@ -137,7 +137,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
                 _pairKeysAdd[i] = blsCode.decodeG1(ist.addedG1PubKey[i]);
             }
         }
-        bytes memory bits = abi.encodePacked(uint8(ist.removeList));
+        bytes memory bits = abi.encodePacked(ist.removeList);
         uint256 epoch = getEpochNumber(bh.number) + 1;
         updateValidators(_pairKeysAdd, _weights, epoch, bits);
         emit UpdateBlockHeader(msg.sender, bh.number);
@@ -155,7 +155,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     returns (bool){
         uint256 epoch = getEpochNumber(bh.number);
         bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
-        bytes memory bits = abi.encodePacked(getLengthInBytes(ist.aggregatedSeal.bitmap));
+        bytes memory bits = abi.encodePacked(ist.aggregatedSeal.bitmap);
         G1 memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
         return checkSigTag(bits, message, sig, aggPk, epoch);
     }
