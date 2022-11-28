@@ -13,8 +13,7 @@ rm -rf $RES_DIR
 cd $SCRIPT_DIR/..
 echo "start to build map light client"
 
-export RUSTFLAGS='-C link-arg=-s'
-cargo build --workspace --target wasm32-unknown-unknown --release
+RUSTFLAGS='-C link-arg=-s' cargo build --workspace --target wasm32-unknown-unknown --release
 
 mkdir $RES_DIR
 cp $RELEASE_DIR/map_client_factory.wasm $RES_DIR

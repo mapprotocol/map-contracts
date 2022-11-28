@@ -1,11 +1,12 @@
-use std::fs;
+use map_light_client::{EpochRecord, Validator};
 use near_sdk::json_types::U64;
 use serde_json::json;
-use workspaces::{prelude::*, Worker, Contract};
+use std::fs;
 use workspaces::network::Sandbox;
-use map_light_client::{EpochRecord, Validator};
+use workspaces::{prelude::*, Contract, Worker};
 
-const MAP_CLIENT_WASM_FILEPATH: &str = "./target/wasm32-unknown-unknown/release/map_light_client.wasm";
+const MAP_CLIENT_WASM_FILEPATH: &str =
+    "./target/wasm32-unknown-unknown/release/map_light_client.wasm";
 const NEAR_SANDBOX_BIN_PATH: &str = "NEAR_SANDBOX_BIN_PATH";
 
 /*
@@ -253,7 +254,13 @@ async fn test_update_block_header_bad_number() -> anyhow::Result<()> {
         .await;
 
     assert!(res.is_err(), "update_block_header should fail");
-    assert!(res.err().unwrap().to_string().contains("block header height is incorrect"), "unexpected failure reason");
+    assert!(
+        res.err()
+            .unwrap()
+            .to_string()
+            .contains("block header height is incorrect"),
+        "unexpected failure reason"
+    );
 
     Ok(())
 }
@@ -330,7 +337,13 @@ async fn test_update_block_bad_ecdsa_signer() -> anyhow::Result<()> {
         .await;
 
     assert!(res.is_err(), "update_block_header should fail");
-    assert!(res.err().unwrap().to_string().contains("ecdsa signer is not correct"), "unexpected failure reason");
+    assert!(
+        res.err()
+            .unwrap()
+            .to_string()
+            .contains("ecdsa signer is not correct"),
+        "unexpected failure reason"
+    );
 
     Ok(())
 }
@@ -364,7 +377,13 @@ async fn test_update_block_bad_threshold() -> anyhow::Result<()> {
         .await;
 
     assert!(res.is_err(), "update_block_header should fail");
-    assert!(res.err().unwrap().to_string().contains("threshold is not satisfied"), "unexpected failure reason");
+    assert!(
+        res.err()
+            .unwrap()
+            .to_string()
+            .contains("threshold is not satisfied"),
+        "unexpected failure reason"
+    );
 
     Ok(())
 }
@@ -396,7 +415,13 @@ async fn test_update_block_bad_agg_pk() -> anyhow::Result<()> {
         .await;
 
     assert!(res.is_err(), "update_block_header should fail");
-    assert!(res.err().unwrap().to_string().contains("check g2 pub key failed"), "unexpected failure reason");
+    assert!(
+        res.err()
+            .unwrap()
+            .to_string()
+            .contains("check g2 pub key failed"),
+        "unexpected failure reason"
+    );
 
     Ok(())
 }
@@ -417,7 +442,8 @@ async fn test_verify_proof_single_receipt() -> anyhow::Result<()> {
 
     let mut header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
-    header["receiptHash"] = json!("0xc502fb6c3ccb075c3e4425885ce26c3b00dba0cf86f4016abcc375eb79dedfab");
+    header["receiptHash"] =
+        json!("0xc502fb6c3ccb075c3e4425885ce26c3b00dba0cf86f4016abcc375eb79dedfab");
     header["extra"] = json!("0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c080b84151bcd0f46fa9ec5d0d8ba37741e6336b7bf3c4de7077121f86f36c007690a5fe21db3dc88866bfd4a7455242f7ad7bf5e8484c5376d7495aac7b7c07b8ebfe2f00f84407b8402f7688147b3ee1e630e16b891d9ec9c8ab7c84021f9973877fd09493ef1925e81dd8906dcc2686feb95ae438c63b1009fe75f54d43dd7cb32ed5d61f9438b85f01c3808080");
     let res = contract
         .call(&worker, "verify_proof_data")
@@ -445,6 +471,7 @@ async fn test_verify_proof_single_receipt() -> anyhow::Result<()> {
         .await?;
 
     assert!(res.is_success());
+    println!("log: {:?}", res.logs());
 
     Ok(())
 }
@@ -539,7 +566,13 @@ async fn test_validator_remove_01() -> anyhow::Result<()> {
         .await;
 
     assert!(res.is_err(), "update_block_header should fail");
-    assert!(res.err().unwrap().to_string().contains("the header's coinbase is not in validators"), "unexpected failure reason");
+    assert!(
+        res.err()
+            .unwrap()
+            .to_string()
+            .contains("the header's coinbase is not in validators"),
+        "unexpected failure reason"
+    );
 
     Ok(())
 }
@@ -588,7 +621,6 @@ async fn test_validator_remove_02() -> anyhow::Result<()> {
         .await?;
 
     assert!(res.is_success(), "update_block_header should succeed");
-
 
     Ok(())
 }
@@ -654,7 +686,13 @@ async fn test_validator_remove_add() -> anyhow::Result<()> {
 
     assert!(res.is_err(), "update_block_header should fail");
     println!("error: {}", res.as_ref().err().unwrap());
-    assert!(res.err().unwrap().to_string().contains("threshold is not satisfied"), "get unexpected error");
+    assert!(
+        res.err()
+            .unwrap()
+            .to_string()
+            .contains("threshold is not satisfied"),
+        "get unexpected error"
+    );
 
     // use agg seal signed by validator 0, 1 and 2, and ecdsa signed by validator 0
     header["coinbase"] = json!("0x908D0FDaEAEFbb209BDcb540C2891e75616154b3");
@@ -694,9 +732,13 @@ async fn test_get_header_height() -> anyhow::Result<()> {
         .await?
         .json()?;
 
-    let epoch :u64 = init_args["epoch"].as_str().unwrap().parse().unwrap();
+    let epoch: u64 = init_args["epoch"].as_str().unwrap().parse().unwrap();
     let epoch_size: u64 = init_args["epoch_size"].as_str().unwrap().parse().unwrap();
-    assert_eq!(epoch_size * (epoch - 1), height.0, "get_header_height get unexpected result");
+    assert_eq!(
+        epoch_size * (epoch - 1),
+        height.0,
+        "get_header_height get unexpected result"
+    );
 
     let header: serde_json::Value = serde_json::from_str(HEADER_0_012).unwrap();
     let agg_pk: serde_json::Value = serde_json::from_str(AGG_PK_012).unwrap();
@@ -722,7 +764,10 @@ async fn test_get_header_height() -> anyhow::Result<()> {
 
     let height_no_prefix = header["number"].as_str().unwrap().trim_start_matches("0x");
     let exp_height: u64 = u64::from_str_radix(height_no_prefix, 16).unwrap();
-    assert_eq!(exp_height, height.0, "get_header_height get unexpected result");
+    assert_eq!(
+        exp_height, height.0,
+        "get_header_height get unexpected result"
+    );
 
     Ok(())
 }
@@ -747,8 +792,8 @@ async fn test_get_verifiable_header_range() -> anyhow::Result<()> {
         .view()
         .await?
         .json()?;
-    assert_eq!(2001, range.0.0, "wrong min verifiable header");
-    assert_eq!(3000, range.1.0, "wrong mac verifiable header");
+    assert_eq!(2001, range.0 .0, "wrong min verifiable header");
+    assert_eq!(3000, range.1 .0, "wrong mac verifiable header");
 
     let file = fs::File::open("./tests/data/header.json").unwrap();
     let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
@@ -774,8 +819,8 @@ async fn test_get_verifiable_header_range() -> anyhow::Result<()> {
         .view()
         .await?
         .json()?;
-    assert_eq!(4001, range.0.0, "wrong min verifiable header");
-    assert_eq!(24000, range.1.0, "wrong mac verifiable header");
+    assert_eq!(4001, range.0 .0, "wrong min verifiable header");
+    assert_eq!(24000, range.1 .0, "wrong mac verifiable header");
 
     Ok(())
 }
@@ -800,8 +845,11 @@ async fn test_get_epoch_size() -> anyhow::Result<()> {
         .await?
         .json()?;
 
-    let exp_epoch_size :u64 = init_args["epoch_size"].as_str().unwrap().parse().unwrap();
-    assert_eq!(exp_epoch_size, epoch_size.0, "get_epoch_size get unexpected result");
+    let exp_epoch_size: u64 = init_args["epoch_size"].as_str().unwrap().parse().unwrap();
+    assert_eq!(
+        exp_epoch_size, epoch_size.0,
+        "get_epoch_size get unexpected result"
+    );
 
     Ok(())
 }
@@ -940,17 +988,25 @@ async fn test_verify_proof() -> anyhow::Result<()> {
         .transact()
         .await;
 
-    assert!(res.is_err(), "verify_proof_data for block 187133 should fail");
+    assert!(
+        res.is_err(),
+        "verify_proof_data for block 187133 should fail"
+    );
     println!("error: {}", res.as_ref().err().unwrap());
-    assert!(res.err().unwrap().to_string().contains("cannot get epoch record for block"),
-            "should be epoch record not found error");
+    assert!(
+        res.err()
+            .unwrap()
+            .to_string()
+            .contains("cannot get epoch record for block"),
+        "should be epoch record not found error"
+    );
 
     let file = fs::File::open("./tests/data/header.json").unwrap();
     let headers: serde_json::Value = serde_json::from_reader(file).unwrap();
 
     let res = contract
         .call(&worker, "update_block_header")
-        .args_json(json!( headers["187000"]))?
+        .args_json(json!(headers["187000"]))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
@@ -966,7 +1022,10 @@ async fn test_verify_proof() -> anyhow::Result<()> {
         .await?;
 
     println!("logs {:?}", res.logs());
-    assert!(res.is_success(), "verify_proof_data for block 187133 failed");
+    assert!(
+        res.is_success(),
+        "verify_proof_data for block 187133 failed"
+    );
 
     Ok(())
 }
@@ -978,7 +1037,7 @@ async fn test_add_validator() -> anyhow::Result<()> {
 
     let file = fs::File::open("./tests/data/init_value.json").unwrap();
     let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
-    init_args["epoch"] =  json!("188");
+    init_args["epoch"] = json!("188");
     let res = contract
         .call(&worker, "new")
         .args_json(json!(init_args))?
@@ -1015,13 +1074,20 @@ async fn test_add_validator() -> anyhow::Result<()> {
     let validators = &init_args["validators"].as_array().unwrap();
     assert_eq!(4, record.threshold.0, "threshold check failed");
     assert_eq!(189, record.epoch.0, "epoch check failed");
-    assert_eq!(validators.len() + 1, record.validators.len(), "one validator should be added");
+    assert_eq!(
+        validators.len() + 1,
+        record.validators.len(),
+        "one validator should be added"
+    );
 
     for validator in record.validators.iter() {
         println!("{}", serde_json::to_string(validator).unwrap())
     }
 
-    assert_eq!(added_val, serde_json::to_string(record.validators.last().unwrap()).unwrap());
+    assert_eq!(
+        added_val,
+        serde_json::to_string(record.validators.last().unwrap()).unwrap()
+    );
 
     Ok(())
 }
@@ -1079,7 +1145,11 @@ async fn test_remove_validator() -> anyhow::Result<()> {
     let validators = &init_args["validators"].as_array().unwrap();
     assert_eq!(3, record.threshold.0, "threshold check failed");
     assert_eq!(204, record.epoch.0, "epoch check failed");
-    assert_eq!(validators.len() - 1, record.validators.len(), "one validator should be removed");
+    assert_eq!(
+        validators.len() - 1,
+        record.validators.len(),
+        "one validator should be removed"
+    );
 
     for validator in record.validators.iter() {
         println!("{}", serde_json::to_string(validator).unwrap());
@@ -1161,7 +1231,8 @@ async fn test_verify_proof_after_remove_validator() -> anyhow::Result<()> {
 }
 
 async fn deploy_contract() -> anyhow::Result<(Worker<Sandbox>, Contract)> {
-    std::env::var(NEAR_SANDBOX_BIN_PATH).expect("environment variable NEAR_SANDBOX_BIN_PATH should be set");
+    std::env::var(NEAR_SANDBOX_BIN_PATH)
+        .expect("environment variable NEAR_SANDBOX_BIN_PATH should be set");
 
     let worker = workspaces::sandbox().await?;
     let contract = worker

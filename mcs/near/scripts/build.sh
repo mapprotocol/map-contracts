@@ -45,13 +45,9 @@ cd $SCRIPT_DIR/../map-cross-chain-service
 echo "start to build mcs"
 cargo build --target wasm32-unknown-unknown --release
 
-cd $SCRIPT_DIR/../multisig
-echo "start to build multisig"
-cargo build --target wasm32-unknown-unknown --release
-
 cd $SCRIPT_DIR/..
 echo "start to build other packages"
-cargo build --workspace --exclude mcs-token --exclude multisig --target wasm32-unknown-unknown --release
+cargo build --workspace --exclude mcs-token --exclude --target wasm32-unknown-unknown --release
 
 mkdir $RES_DIR
 cp $RELEASE_DIR/*.wasm $RES_DIR

@@ -20,13 +20,13 @@ pub trait MapLightClient {
 
 pub type EthEventParams = Vec<(String, ParamType, bool)>;
 
-pub struct MapEvent {
-    pub mcs_address: Address,
+pub struct EVMEvent {
+    pub address: Address,
     pub log: Log,
 }
 
-impl MapEvent {
-    pub fn from_log_entry_data(name: &str, params: EthEventParams, log_entry: &LogEntry) -> Option<MapEvent> {
+impl EVMEvent {
+    pub fn from_log_entry_data(name: &str, params: EthEventParams, log_entry: &LogEntry) -> Option<EVMEvent> {
         let event = Event {
             name: name.to_string(),
             inputs: params
@@ -53,7 +53,7 @@ impl MapEvent {
 
         let log = event.parse_log(raw_log).ok()?;
         Some(Self {
-            mcs_address,
+            address: mcs_address,
             log,
         })
     }
@@ -69,7 +69,7 @@ mod tests {
         header::Hash as MapHash,
     };
 
-    impl MapEvent {
+    impl EVMEvent {
         pub fn to_log_entry_data(
             name: &str,
             params: EthEventParams,
