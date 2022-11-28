@@ -538,13 +538,13 @@ impl MapCrossChainService {
         log!("{}{}", TRANSFER_OUT_TYPE, event);
     }
 
-    /// Finish deposit out once the mcs token is burned from MCSToken contract.
+    /// Finish deposit out once the nep141 token is burned from MCSToken contract or native token is transferred.
     pub fn finish_deposit_out(
         &self,
         event: DepositOutEvent,
     ) {
         assert_self();
-        assert_eq!(PromiseResult::Successful(vec![]), env::promise_result(0), "burn mcs token failed");
+        assert_eq!(PromiseResult::Successful(vec![]), env::promise_result(0), "burn mcs token or call near_deposit() failed");
         log!("deposit out: {}", serde_json::to_string(&event).unwrap());
         log!("{}{}", DEPOSIT_OUT_TYPE, event);
     }
@@ -585,7 +585,7 @@ impl MapCrossChainService {
     }
 
     #[payable]
-    pub fn deposit_out_native(&mut self, to: Vec<u8>) {
+    pub fn deposit_out_native(&mut self, to: Vec<u8>) -> Promise {
         self.check_not_paused(PAUSE_DEPOSIT_OUT_NATIVE);
         self.check_to_account(to.clone(), self.map_chain_id);
 
@@ -607,8 +607,15 @@ impl MapCrossChainService {
             amount: amount.into(),
         };
 
-        log!("deposit out: {}", serde_json::to_string(&event).unwrap());
-        log!("{}{}", DEPOSIT_OUT_TYPE, event);
+        ext_wnear_token::ext(self.wrapped_token.parse().unwrap())
+            .with_static_gas(NEAR_DEPOSIT_GAS)
+            .with_attached_deposit(env::attached_deposit())
+            .near_deposit()
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(FINISH_DEPOSIT_OUT_GAS)
+                    .finish_deposit_out(event)
+            )
     }
 
     #[payable]

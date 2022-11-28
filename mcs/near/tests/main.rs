@@ -3582,11 +3582,15 @@ async fn test_deposit_out_native() -> anyhow::Result<()> {
     log!("balance_mcs_0:{}, balance_mcs_1:{}", balance_mcs_0, balance_mcs_1);
     log!("{}, {}", balance_from_0- balance_from_1, balance_mcs_1 - balance_mcs_0);
     assert!(balance_from_0 - balance_from_1 > amount);
-    assert!(balance_mcs_1 - balance_mcs_0 > amount);
-    assert!((balance_from_0 - balance_from_1 - amount) > (balance_mcs_1 - balance_mcs_0 - amount));
-    log!("{}", balance_from_0 - balance_from_1 - amount);
-    log!("{}", balance_mcs_1 - balance_mcs_0 - amount);
+    assert!(balance_mcs_1 - balance_mcs_0 < amount);
 
+    let balance = wnear
+        .call(&worker, "ft_balance_of")
+        .args_json((mcs.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    assert_eq!(amount, balance.0, "wnear balance of mcs contract account == transferred out native token amount");
     Ok(())
 }
 
@@ -3667,11 +3671,14 @@ async fn test_deposit_out_native_too_small() -> anyhow::Result<()> {
     log!("balance_mcs_2:{}, balance_mcs_1:{}", balance_mcs_2, balance_mcs_1);
     log!("{}, {}", balance_from_1- balance_from_2, balance_mcs_2 - balance_mcs_1);
     assert!(balance_from_1 - balance_from_2 > amount);
-    assert!(balance_mcs_2 - balance_mcs_1 > amount);
-    assert!((balance_from_1 - balance_from_2 - amount) > (balance_mcs_2 - balance_mcs_1 - amount));
-    log!("{}", balance_from_1 - balance_from_2 - amount);
-    log!("{}", balance_mcs_2 - balance_mcs_1 - amount);
 
+    let balance = wnear
+        .call(&worker, "ft_balance_of")
+        .args_json((mcs.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    assert_eq!(amount, balance.0, "wnear balance of mcs contract account == transferred out native token amount");
     Ok(())
 }
 
@@ -3720,17 +3727,22 @@ async fn test_deposit_out_native_no_deposit() -> anyhow::Result<()> {
         .await?;
     assert!(res.is_success(), "deposit_out_native should succeed");
     println!("logs: {:?}", res.logs());
-    assert!(res.logs().get(1).unwrap().contains(DEPOSIT_OUT_TYPE), "should be deposit out log");
+    assert!(res.logs().get(2).unwrap().contains(DEPOSIT_OUT_TYPE), "should be deposit out log");
     let balance_from_2 = from.view_account(&worker).await?.balance;
     let balance_mcs_2 = mcs.view_account(&worker).await?.balance;
     log!("balance_from_2:{}, balance_from_1:{}", balance_from_2, balance_from_1);
     log!("balance_mcs_2:{}, balance_mcs_1:{}", balance_mcs_2, balance_mcs_1);
     log!("{}, {}", balance_from_1- balance_from_2, balance_mcs_2 - balance_mcs_1);
     assert!(balance_from_1 - balance_from_2 > amount);
-    assert!(balance_mcs_2 - balance_mcs_1 > amount);
-    assert!((balance_from_1 - balance_from_2 - amount) > (balance_mcs_2 - balance_mcs_1 - amount));
-    log!("{}", balance_from_1 - balance_from_2 - amount);
-    log!("{}", balance_mcs_2 - balance_mcs_1 - amount);
+    assert!(balance_mcs_2 - balance_mcs_1 < amount);
+
+    let balance = wnear
+        .call(&worker, "ft_balance_of")
+        .args_json((mcs.id().to_string(), ))?
+        .view()
+        .await?
+        .json::<U128>()?;
+    assert_eq!(amount, balance.0, "wnear balance of mcs contract account == transferred out native token amount");
 
     Ok(())
 }
@@ -4630,7 +4642,7 @@ async fn test_deposit_out_mcs_token_amount_too_large() -> anyhow::Result<()> {
         .transact()
         .await;
     assert!(res.is_err(), "deposit_out_token should failed");
-    assert!(res.as_ref().err().unwrap().to_string().contains("burn mcs token failed"), "should be burn mcs token failed error");
+    assert!(res.as_ref().err().unwrap().to_string().contains("burn mcs token or call near_deposit() failed"), "should be burn mcs token failed error");
 
     let balance = from
         .call(&worker, &token_account, "ft_balance_of")
