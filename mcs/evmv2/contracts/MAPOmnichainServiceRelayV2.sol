@@ -256,14 +256,14 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         bytes memory toToken = tokenRegister.getToChainToken(_token, _toChain);
         require(!Utils.checkBytes(toToken, bytes("")), "out token not registered");
 
+        bytes32 orderId = _getOrderId(_from, _to, _toChain);
+        emit mapTransferRelay(selfChainId, _toChain, orderId, _token, Utils.toBytes(_from),  _to, _amount);
+
         (uint256 mapOutAmount, uint256 outAmount) = _collectFee(_token, _amount, selfChainId, _toChain);
 
         if (tokenRegister.checkMintable(_token)) {
             IMAPToken(_token).burn(mapOutAmount);
         }
-
-        bytes32 orderId = _getOrderId(_from, _to, _toChain);
-        emit mapTransferRelay(selfChainId, _toChain, orderId, _token, Utils.toBytes(_from),  _to, _amount);
 
         emit mapTransferOut(selfChainId, _toChain, orderId, Utils.toBytes(_token), Utils.toBytes(_from),  _to, outAmount, toToken);
     }
