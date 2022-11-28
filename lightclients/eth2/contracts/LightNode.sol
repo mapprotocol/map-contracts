@@ -159,7 +159,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         emit UpdateLightClient(msg.sender, finalizedExeHeaderNumber);
     }
 
-    function updateBlockHeader(bytes memory _blockHeader) external {
+    function updateBlockHeader(bytes memory _blockHeader) external override whenNotPaused {
         Types.BlockHeader[] memory headers = abi.decode(_blockHeader, (Types.BlockHeader[]));
         require(headers.length != 0, "invalid headers");
         require(exeHeaderUpdateInfo.endNumber != 0, "no need to update exe headers");
@@ -199,12 +199,11 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         require(initialized, "contract is not initialized");
         Types.ReceiptProof memory proof = abi.decode(_receiptProof, (Types.ReceiptProof));
         Types.BlockHeader memory header = proof.header;
-        bytes32 hash = Helper.getBlockHash(header);
 
         // verify block header
         require(header.number <= finalizedExeHeaderNumber, "the execution block is not finalized");
         require(finalizedExeHeaders[header.number] != bytes32(0), "the execution block header is not updated");
-        require(finalizedExeHeaders[header.number] == hash, "invalid execution block header");
+        require(finalizedExeHeaders[header.number] == Helper.getBlockHash(header), "invalid execution block header");
 
         // verify proof
         bytes memory bytesReceipt = Helper.encodeReceipt(proof.txReceipt);
