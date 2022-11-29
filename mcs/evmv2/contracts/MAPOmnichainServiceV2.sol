@@ -106,7 +106,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         } else if(_token == address(0)){
             TransferHelper.safeTransferETH(_receiver, _amount);
         }else {
-            IERC20(_token).transfer(_receiver, _amount);
+            TransferHelper.safeTransfer(_token,_receiver,_amount);
         }
     }
 
