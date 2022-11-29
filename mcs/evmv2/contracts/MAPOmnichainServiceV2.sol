@@ -46,9 +46,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     }
 
 
-    receive() external payable {
-        require(msg.sender == wToken, "only wToken");
-    }
+    receive() external payable {}
 
 
     modifier checkOrder(bytes32 _orderId) {
@@ -105,8 +103,10 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         if (_token == wToken) {
             TransferHelper.safeWithdraw(wToken, _amount);
             TransferHelper.safeTransferETH(_receiver, _amount);
-        } else {
-            IERC20(_token).transfer(_receiver, _amount);
+        } else if(_token == address(0)){
+            TransferHelper.safeTransferETH(_receiver, _amount);
+        }else {
+            TransferHelper.safeTransfer(_token,_receiver,_amount);
         }
     }
 

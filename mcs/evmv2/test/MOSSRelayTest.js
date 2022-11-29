@@ -219,16 +219,16 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         let near2eth001Receipt = await ethers.provider.getTransactionReceipt(near2eth001Data.hash)
         //uint256,uint256,bytes32,bytes,bytes,bytes,uint256,bytes
         let near2eth001Decode = ethers.utils.defaultAbiCoder.decode(['bytes32','bytes','bytes','bytes','uint256','bytes'],
-            near2eth001Receipt.logs[1].data)
+            near2eth001Receipt.logs[2].data)
 
         expect(near2eth001Decode[4]).to.equal("75000000000000000");
 
 
         // amount: 150000000000000000000000,
         let near2ethWData = await mossR.transferIn(1313161555,mosRelayData.near2ethW);
-        let near2ethWReceipt = await ethers.provider.getTransactionReceipt(near2ethWData.hash)
+        let near2ethWReceipt = await ethers.provider.getTransactionReceipt(near2ethWData.hash);
         let near2ethWDecode = ethers.utils.defaultAbiCoder.decode(['bytes32','bytes','bytes','bytes','uint256','bytes'],
-            near2ethWReceipt.logs[2].data)
+            near2ethWReceipt.logs[3].data)
         //console.log(near2ethWDecode)
         expect(near2ethWDecode[4]).to.equal("150000000000000000");
 
@@ -240,7 +240,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         let near2eth000Receipt = await ethers.provider.getTransactionReceipt(near2eth000Data.hash)
 
         let near2eth000Decode = ethers.utils.defaultAbiCoder.decode(['bytes32','bytes','bytes','bytes','uint256','bytes'],
-            near2eth000Receipt.logs[0].data)
+            near2eth000Receipt.logs[1].data)
         //console.log(near2eth000Decode)
         expect(near2eth000Decode[4]).to.equal("150000000000000000");
 

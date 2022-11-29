@@ -244,6 +244,20 @@ describe("MAPOmnichainServiceV2 start test", function () {
         )
         expect(await standardToken.balanceOf(moss.address)).to.equal("898000000000000000000000");
 
+        await addr1.sendTransaction({
+            to:moss.address,
+            value: ethers.utils.parseEther("2")
+        })
+        expect(await ethers.provider.getBalance(moss.address)).to.equal("2000000000000000000");
+
+        await moss.emergencyWithdraw(
+            "0x0000000000000000000000000000000000000000",
+            addr9.address,
+            "2000000000000000000"
+        )
+
+        expect(await ethers.provider.getBalance(addr9.address)).to.equal("10002850000000000000000");
+
     });
 
     it('set test', async function () {
