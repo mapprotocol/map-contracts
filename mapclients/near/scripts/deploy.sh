@@ -7,6 +7,7 @@ source $SCRIPT_DIR/config.sh
 
 RESPONSE=`curl -X POST $MAP_RPC_URL -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"istanbul_getEpochInfo","params":['$EPOCH_ID'],"id":1}'`
 INIT_ARGS_CLIENT=`echo $RESPONSE | jq  .result | jq --arg name $CLIENT_NAME '.name=$name'`
+INIT_ARGS_CLIENT=`echo $INIT_ARGS_CLIENT | jq --args '.owner = "'$OWNER'"'`
 
 FACTORY_ACCOUNT=$FACTORY_NAME.$MASTER_ACCOUNT
 echo $MASTER_ACCOUNT

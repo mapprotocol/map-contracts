@@ -409,7 +409,7 @@ mod tests {
             gas_used: Integer::from(0x5208),
             time: Integer::from(0x5c47775c),
             extra: Vec::default(),
-            min_digest: [0; HASH_LENGTH],
+            mix_digest: [0; HASH_LENGTH],
             nonce: [0; NONCE_LENGTH],
             base_fee: Default::default(),
         };

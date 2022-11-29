@@ -69,6 +69,25 @@ EPOCH_ID=300  # get the information of this epoch id to initialize the MAP light
     ./scripts/deploy.sh
 ```
 
+## Upgrade the contract
+
+**NOTE**: currently the script works on MacOS only. Below `scripts` is in directory `../../mcs/near/map-cross-chain-service/`.
+```shell
+MAP_CLIENT_WASM_FILE=/path/to/map/client/contract  # new MAP light client contract wasm file
+
+# request to upgrade MAP light client contract by multisig member
+./scripts/manage_multisig.sh request_and_confirm upgrade_map_client $MAP_CLIENT_WASM_FILE ${MEMBERS[1]}
+    
+# the request ID can be obtained from the last line of last command's output
+REQUEST_ID=
+    
+# confirm the request by another member
+./scripts/manage_multisig.sh confirm $REQUEST_ID ${MEMBERS[2]}
+
+# if the request is not executed because of the time lock, anyone can execute it after REQUEST_LOCK time
+# ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
+```
+
 
 ## Testing
 
