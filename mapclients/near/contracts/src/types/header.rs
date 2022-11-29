@@ -78,7 +78,7 @@ pub struct Header {
     pub extra: Vec<u8>,
 
     #[serde(with = "crate::serialization::bytes::hexstring")]
-    pub min_digest: Hash,
+    pub mix_digest: Hash,
 
     #[serde(with = "crate::serialization::bytes::hexstring")]
     pub nonce: Nonce,
@@ -101,7 +101,7 @@ impl Header {
             gas_used: Integer::default(),
             time: Integer::default(),
             extra: Vec::default(),
-            min_digest: Hash::default(),
+            mix_digest: Hash::default(),
             nonce: Nonce::default(),
             base_fee: Integer::default(),
         }
@@ -177,7 +177,7 @@ impl Encodable for Header {
         s.append(&self.extra);
 
         // min_digest
-        s.append(&self.min_digest.as_ref());
+        s.append(&self.mix_digest.as_ref());
 
         // nonce
         s.append(&self.nonce.as_ref());
@@ -201,7 +201,7 @@ impl Decodable for Header {
             gas_used: rlp_to_big_int(rlp, 8)?,
             time: rlp_to_big_int(rlp, 9)?,
             extra: rlp.val_at(10)?,
-            min_digest: rlp_list_field_from_bytes(rlp, 11)?,
+            mix_digest: rlp_list_field_from_bytes(rlp, 11)?,
             nonce: rlp_list_field_from_bytes(rlp, 12)?,
             base_fee: rlp_to_big_int(rlp, 13)?,
         })
@@ -285,7 +285,7 @@ mod tests {
             gas_used: Integer::from(0x5208),
             time: Integer::from(0x5c47775c),
             extra: Vec::default(),
-            min_digest: [0; HASH_LENGTH],
+            mix_digest: [0; HASH_LENGTH],
             nonce: [0; NONCE_LENGTH],
             base_fee: Default::default(),
         }];
