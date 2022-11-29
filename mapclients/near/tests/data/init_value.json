@@ -47,5 +47,6 @@
             "_BLSG1PublicKey": "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
             "_UncompressedBLSPublicKey": "Gsq81OIpjJHhdSYgqemenElRPq694arTgb8pRqQCFPAHHHKgLpEM8DGPlU49CViK9NDqX+xloMZRGwy2Qj3HbQbg14f6wraD+m8Z9zTfvdi94cuSkkaVZ52B4mXN7TfNB6Or5T6C+VfbkqTcJ5o7elWRx3X8H7eagYXZW7uTsrs="
         }
-    ]
+    ],
+    "owner": "multisig.test.near"
 }
