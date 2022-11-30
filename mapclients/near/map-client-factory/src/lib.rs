@@ -1,6 +1,6 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde_json::json;
-use near_sdk::{env, near_bindgen, Promise, Gas};
+use near_sdk::{env, near_bindgen, Promise, Gas, AccountId};
 use near_sdk::json_types::U64;
 use map_light_client::Validator;
 
@@ -22,7 +22,8 @@ impl Factory {
         threshold: U64,
         validators: Vec<Validator>,
         epoch: U64,
-        epoch_size: U64
+        epoch_size: U64,
+        owner: AccountId
     ) -> Promise {
         let account_id = format!("{}.{}", name, env::current_account_id());
         Promise::new(account_id.parse().unwrap())
@@ -35,7 +36,8 @@ impl Factory {
                     "threshold": threshold,
                     "validators": validators,
                     "epoch": epoch,
-                    "epoch_size": epoch_size })
+                    "epoch_size": epoch_size,
+                    "owner": owner})
                     .to_string()
                     .as_bytes()
                     .to_vec(),

@@ -65,7 +65,8 @@ const INIT_VALUE: &str = r#"{
                     }
                 ],
             "epoch":"1",
-            "epoch_size":"1000"
+            "epoch_size":"1000",
+            "owner": "multisig.test.near"
         }"#;
 
 const HEADER_0_012: &str = r#"{
@@ -80,7 +81,7 @@ const HEADER_0_012: &str = r#"{
                 "gasUsed":"0x5208",
                 "time":"0x5c47775c",
                 "extra":"0x0000000000000000000000000000000000000000000000000000000000000000f891c0c0c001b841b17d45ba282f76645e4af7b1653174cc3adb24fd9d1119f4238eb5f93c5647ed4728858861b0e96dacba7759df205c3f7a862cd345da975296b75cb419485f9600f84407b840276d8fe5533b4d570fbe9bc0b104022f9c67f5210d493c9558aef517db0713e0255250efd11d89993aac000054bcebd3bea74665a163030555bfd0ad01d8bedf01c3808080",
-                "minDigest":"0x0000000000000000000000000000000000000000000000000000000000000000",
+                "mixDigest":"0x0000000000000000000000000000000000000000000000000000000000000000",
                 "nonce":"0x0000000000000000",
                 "baseFee":"0x0"
             }"#;
@@ -139,6 +140,56 @@ async fn test_initialize() -> anyhow::Result<()> {
     assert!(res.is_success(), "call initialized fail");
     let result: bool = res.json()?;
     assert!(result, "contract should be initialized");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_manage_owner() -> anyhow::Result<()> {
+    let (worker, contract) = deploy_contract().await?;
+    let account = worker.dev_create_account().await?;
+
+    let mut init_args: serde_json::Value = serde_json::from_str(INIT_VALUE).unwrap();
+    init_args["owner"] = json!(contract.id());
+
+    let res = contract
+        .call(&worker, "new")
+        .args_json(json!(init_args))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+
+    assert!(res.is_success(), "new contract failed");
+
+    let res = contract
+        .call(&worker, "update_owner")
+        .args_json(json!({
+            "new_owner": account.id()
+        }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "update_owner failed");
+
+    let res = contract
+        .call(&worker, "update_owner")
+        .args_json(json!({
+            "new_owner": account.id()
+        }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await;
+    assert!(res.is_err(), "update_owner should fail");
+
+    let res = account
+        .call(&worker, contract.id(), "update_owner")
+        .args_json(json!({
+            "new_owner": contract.id()
+        }))?
+        .gas(300_000_000_000_000)
+        .transact()
+        .await?;
+    assert!(res.is_success(), "update_owner should succeed");
 
     Ok(())
 }

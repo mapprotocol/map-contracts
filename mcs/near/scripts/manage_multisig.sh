@@ -23,6 +23,7 @@ function printHelp() {
   echo "    remove_mcs    <token> <chain id>         remove mcs token to_chain"
   echo "    remove_ft    <token> <chain id>          remove fungible token to_chain"
   echo "    upgrade_multisig  <wasm file>            upgrade multisig contract"
+  echo "    upgrade_map_client  <wasm file>          upgrade map light client contract"
   echo "    upgrade_mcs  <wasm file>                 upgrade mcs contract"
   echo "    upgrade_mcs_token <token>  <wasm file>   upgrade mcs token contract"
   echo "    set_client  <map client account>         set new map light client account to mcs contract"
@@ -178,6 +179,19 @@ function prepare_request() {
         echo "upgrade multisig contract to $2"
         RECEIVER=$MULTISIG_ACCOUNT
         METHOD="upgrade_self"
+        CODE=`base64 -i $2`
+        ARGS=`echo '{"code": "'$CODE'"}'| base64`
+        MEMBER=$3
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
+    upgrade_map_client)
+      if [[ $# == 3 ]]; then
+        echo "upgrade map light client contract to $2"
+        RECEIVER=$CLIENT_ACCOUNT
+        METHOD="upgrade_client"
         CODE=`base64 -i $2`
         ARGS=`echo '{"code": "'$CODE'"}'| base64`
         MEMBER=$3
