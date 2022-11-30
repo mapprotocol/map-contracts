@@ -123,11 +123,11 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     }
 
     function setDistributeRate(uint _id, address _to, uint _rate) external onlyOwner checkAddress(_to) {
-        require(_id < 2, "Invalid rate id");
+        require(_id < 3, "Invalid rate id");
 
         distributeRate[_id] = Rate(_to, _rate);
 
-        require((distributeRate[0].rate).add(distributeRate[1].rate) <= 1000000, 'invalid rate value');
+        require((distributeRate[0].rate).add(distributeRate[1].rate).add(distributeRate[2].rate) <= 1000000, 'invalid rate value');
     }
 
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused {
@@ -244,7 +244,14 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             otherFee = fee - vaultFee;
 
             (uint256 out, address receiver) = getFee(1, fee);
-            _withdraw(token, payable(receiver), out);
+            if(out>0 && receiver != address(0)){
+                _withdraw(token, payable(receiver), out);
+            }
+
+            (uint256 protocolFee, address protocolReceiver) = getFee(2, fee);
+            if(protocolFee > 0 && protocolReceiver != address(0)){
+                _withdraw(token, payable(protocolReceiver), protocolFee);
+            }
         }
 
         IVaultTokenV2(vaultToken).transferToken(_fromChain, _mapAmount, _toChain, mapOutAmount, selfChainId, otherFee);

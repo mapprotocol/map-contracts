@@ -15,6 +15,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
     let addr6;
     let addr7;
     let addr8;
+    let addr9;
 
     let EvmDecoder;
     let evmDecoder;
@@ -55,7 +56,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
     beforeEach(async function () {
 
-        [deployer,owner, addr1, addr2, addr3, addr4, addr5,addr6,addr7,addr8] = await ethers.getSigners();
+        [deployer,owner, addr1, addr2, addr3, addr4, addr5,addr6,addr7,addr8,addr9] = await ethers.getSigners();
 
     });
 
@@ -502,6 +503,19 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         expect(await standardToken.balanceOf(addr8.address)).to.equal("201000000000000000000");
 
 
+    });
+
+    it('test protocolFee', async function () {
+        await expect(mossR.connect(addr5).setDistributeRate(2,addr9.address,"500000")).to.be.revertedWith("invalid rate value")
+        await mossR.connect(addr5).setDistributeRate(2,addr9.address,"400000");
+
+        await tokenRegister.setTokenFee(usdt.address,97,"1000000000000000","2000000000000000000","500000")
+
+        await usdt.mint(owner.address,"1000000000000000000");
+
+        await mossR.connect(owner).transferOutToken(usdt.address,address2Bytes,"1000000000000000000",97)
+
+        expect(await usdt.balanceOf(addr9.address)).to.equal("200000000000000000")
     });
 
 
