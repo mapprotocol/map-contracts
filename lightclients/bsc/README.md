@@ -1,4 +1,4 @@
-Improve Documentation## Brief Description
+## Brief Description
 
 The LightNode.sol contract is an custom implementation of BSC light client on map chain. [basis for implementation](https://docs.bnbchain.org/docs/learn/consensus)
 
