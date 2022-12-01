@@ -13,6 +13,16 @@ library Verify {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
 
+    uint256 internal constant ADDRESS_LENGTH = 20;
+
+    uint256 internal constant EXTRA_VANITY = 32;
+
+    uint256 internal constant EPOCH_NUM = 200;
+
+    uint256 internal constant EXTRASEAL = 65;
+
+    uint256 internal constant MIN_GAS_LIMIT = 5000;
+
     bytes32 constant SHA3_UNCLES =
         0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
 
@@ -59,11 +69,10 @@ library Verify {
         bytes data;
     }
 
-    function verifyHeaderSignature(BlockHeader memory _header, uint256 _chainId)
-        internal
-        pure
-        returns (bool)
-    {
+    function verifyHeaderSignature(
+        BlockHeader memory _header,
+        uint256 _chainId
+    ) internal pure returns (bool) {
         (bytes memory signature, bytes memory extraData) = splitExtra(
             _header.extraData
         );
@@ -95,11 +104,11 @@ library Verify {
         uint256 _parentGasLimit,
         uint256 _minEpochBlockExtraDataLen
     ) internal pure returns (bool) {
-        if (_header.extraData.length < 97) {
+        if (_header.extraData.length < (EXTRA_VANITY + EXTRASEAL)) {
             return false;
         }
         //Epoch block
-        if (_header.number % 200 == 0) {
+        if (_header.number % EPOCH_NUM == 0) {
             if (_header.extraData.length < _minEpochBlockExtraDataLen) {
                 return false;
             }
@@ -127,7 +136,7 @@ library Verify {
         }
         //2**63 - 1 maxGasLimit
         if (
-            _header.gasLimit > 2**63 - 1 || _header.gasLimit < _header.gasUsed
+            _header.gasLimit > 2 ** 63 - 1 || _header.gasLimit < _header.gasUsed
         ) {
             return false;
         }
@@ -136,7 +145,7 @@ library Verify {
             ? _parentGasLimit - _header.gasLimit
             : _header.gasLimit - _parentGasLimit;
         //5000 minGasLimit
-        if (diff >= _parentGasLimit / 256 || _header.gasLimit < 5000) {
+        if (diff >= _parentGasLimit / 256 || _header.gasLimit < MIN_GAS_LIMIT) {
             return false;
         }
 
@@ -198,12 +207,19 @@ library Verify {
         address _mptVerify
     ) internal pure returns (bool success, bytes memory logs) {
         bytes memory bytesReceipt = encodeReceipt(_receipt.txReceipt);
+        bytes memory expectedValue = bytesReceipt;
+        if (_receipt.txReceipt.receiptType > 0) {
+            expectedValue = abi.encodePacked(
+                bytes1(uint8(_receipt.txReceipt.receiptType)),
+                bytesReceipt
+            );
+        }
 
         success = IMPTVerify(_mptVerify).verifyTrieProof(
             _receiptsRoot,
             _receipt.keyIndex,
             _receipt.proof,
-            bytesReceipt
+            expectedValue
         );
 
         if (success)
@@ -237,48 +253,41 @@ library Verify {
             listLog[j] = logBytes;
         }
         list[3] = RLPEncode.encodeList(listLog);
-        if (_txReceipt.receiptType == 0) {
-            output = RLPEncode.encodeList(list);
-        } else {
-            bytes memory tempType = abi.encode(_txReceipt.receiptType);
-            bytes1 tip = tempType[31];
-            bytes memory temp = RLPEncode.encodeList(list);
-            output = abi.encodePacked(tip, temp);
-        }
+        output = RLPEncode.encodeList(list);
     }
 
-    function splitExtra(bytes memory _extraData)
-        internal
-        pure
-        returns (bytes memory signature, bytes memory extraData)
-    {
+    function splitExtra(
+        bytes memory _extraData
+    ) internal pure returns (bytes memory signature, bytes memory extraData) {
         uint256 ptr;
         assembly {
             ptr := _extraData
         }
-
+        // skip 32 byte data length
         ptr += 32;
         //extraData never less than 97
-        extraData = memoryToBytes(ptr, _extraData.length - 65);
+        extraData = memoryToBytes(ptr, _extraData.length - EXTRASEAL);
 
-        ptr += _extraData.length - 65;
+        ptr += _extraData.length - EXTRASEAL;
 
-        signature = memoryToBytes(ptr, 65);
+        signature = memoryToBytes(ptr, EXTRASEAL);
     }
 
-    function getValidators(bytes memory _extraData)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function getValidators(
+        bytes memory _extraData
+    ) internal pure returns (bytes memory) {
+
+        require(_extraData.length > (EXTRA_VANITY + EXTRASEAL),"_extraData length too short");
+
+        require((_extraData.length - EXTRA_VANITY - EXTRASEAL) % ADDRESS_LENGTH == 0,"invalid _extraData length");
         uint256 ptr;
         assembly {
             ptr := _extraData
         }
-
+        //skip 32 byte data length + 32 byte EXTRA_VANITY
         ptr += 64;
         //extraData never less than 97
-        return memoryToBytes(ptr, _extraData.length - 97);
+        return memoryToBytes(ptr, _extraData.length - (EXTRA_VANITY + EXTRASEAL));
     }
 
     function containValidator(
@@ -292,15 +301,16 @@ library Verify {
         assembly {
             ptr := _validators
         }
+        // skip 32 byte data length
         ptr += 32;
-        uint256 length = _validators.length / 20;
+        uint256 length = _validators.length / ADDRESS_LENGTH;
         for (uint256 i = 0; i < length; i++) {
             uint256 v;
-            uint256 tem = ptr + ((_index + i) % length) * 20;
+            uint256 tem = ptr + ((_index + i) % length) * ADDRESS_LENGTH;
             assembly {
                 v := mload(tem)
             }
-
+            // 96bit => 12byte
             if (v >> 96 == m) {
                 return true;
             }
@@ -309,11 +319,10 @@ library Verify {
         return false;
     }
 
-    function memoryToBytes(uint _ptr, uint _length)
-        internal
-        pure
-        returns (bytes memory res)
-    {
+    function memoryToBytes(
+        uint _ptr,
+        uint _length
+    ) internal pure returns (bytes memory res) {
         if (_length != 0) {
             assembly {
                 // 0x40 is the address of free memory pointer.
