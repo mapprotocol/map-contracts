@@ -442,6 +442,9 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     function _removeExcessEpochValidators() internal {
+        if(curHeight < MAX_SAVED_EPOCH_NUM * EPOCH_NUM) {
+            return;
+        }
         uint256 remove = curHeight - MAX_SAVED_EPOCH_NUM * EPOCH_NUM;
         if(minValidBlocknum < remove) {
             minValidBlocknum = remove;
