@@ -139,7 +139,11 @@ describe("LightNode start test", function () {
 
             expect(await proxy.getImplementation()).to.equal(lightClientP1.address);
 
-            await proxy.changeAdmin(addr1.address);
+            await proxy.setPendingAdmin(addr1.address)
+            console.log(addr1.address);
+            console.log(await proxy.pendingAdmin());
+
+            await (await proxy.connect(addr1)).changeAdmin();
 
             expect(await proxy.getAdmin()).to.equal(addr1.address);
 

@@ -51,6 +51,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     mapping(bytes => mapping(uint256 => uint256)) tokenOtherChainDecimals;
 
+    address private _pendingAdmin;
+
     struct txLog {
         address addr;
         bytes[] topics;
@@ -88,6 +90,8 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     event mapTokenRegister(bytes32 tokenID, address token);
     event mapDepositIn(address token, bytes from, address indexed to,
         bytes32 orderId, uint256 amount, uint256 fromChain, uint256 toChain);
+    event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
+    event AdminTransferred(address indexed previous, address indexed newAdmin);
 
     bytes32 public mapTransferOutTopic;
     bytes32 public nearTransferOut;
@@ -441,7 +445,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         }
     }
 
-    function emergencyWithdraw(address token, address payable receiver, uint256 amount) public onlyOwner {
+    function emergencyWithdraw(address token, address payable receiver, uint256 amount) public onlyOwner checkAddress(receiver){
         if (token == address(0)) {
             TransferHelper.safeWithdraw(wToken, amount);
             TransferHelper.safeTransferETH(receiver, amount);
@@ -645,10 +649,21 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 
-    function changeAdmin(address _admin) public onlyOwner {
-        require(_admin != address(0), "zero address");
+    function changeAdmin() public {
+        require(_pendingAdmin == msg.sender, "only pendingAdmin");
+        emit AdminTransferred(_getAdmin(),_pendingAdmin);
+        _changeAdmin(_pendingAdmin);
+    }
 
-        _changeAdmin(_admin);
+
+    function pendingAdmin() external view returns(address){
+        return _pendingAdmin;
+    }
+
+    function setPendingAdmin(address pendingAdmin_) public onlyOwner {
+        require(pendingAdmin_ != address(0), "Ownable: pendingAdmin is the zero address");
+        emit ChangePendingAdmin(_pendingAdmin, pendingAdmin_);
+        _pendingAdmin = pendingAdmin_;
     }
 
     function getAdmin() external view returns (address) {

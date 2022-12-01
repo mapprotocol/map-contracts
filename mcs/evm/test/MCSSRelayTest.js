@@ -126,8 +126,8 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
         await mcssR.addAuthToken([standardToken.address]);
 
-        await mapVault.addManager(mcssR.address);
-        await mapVaultU.addManager(mcssR.address);
+        await mapVault.transferOwnership(mcssR.address);
+        await mapVaultU.transferOwnership(mcssR.address);
 
         await feeCenter.setChainTokenGasFee(34434,usdt.address,"1000000000000000","2000000000000000000","500000")
 

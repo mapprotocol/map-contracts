@@ -118,7 +118,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         _withdraw(token, payable(msg.sender), amount);
     }
 
-    function emergencyWithdraw(address _token, address payable _receiver, uint256 _amount) external onlyOwner {
+    function emergencyWithdraw(address _token, address payable _receiver, uint256 _amount) external onlyOwner checkAddress(_receiver) {
         _withdraw(_token, _receiver, _amount);
     }
 

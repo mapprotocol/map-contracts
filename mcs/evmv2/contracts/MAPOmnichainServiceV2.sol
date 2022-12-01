@@ -99,7 +99,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         tokenMappingList[_toChain][_token] = _enable;
     }
 
-    function emergencyWithdraw(address _token, address payable _receiver, uint256 _amount) external onlyOwner {
+    function emergencyWithdraw(address _token, address payable _receiver, uint256 _amount) external onlyOwner checkAddress(_receiver) {
         if (_token == wToken) {
             TransferHelper.safeWithdraw(wToken, _amount);
             TransferHelper.safeTransferETH(_receiver, _amount);

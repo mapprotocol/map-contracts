@@ -5,7 +5,6 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interface/ILightNode.sol";
-import "./interface/IWeightedMultiSig.sol";
 import "./bls/BlsCode.sol";
 import "./bls/BGLS.sol";
 import "./interface/IVerifyTool.sol";
@@ -20,6 +19,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     validator[20] public validators;
     IVerifyTool public verifyTool;
     BlsCode blsCode;
+    address private _pendingAdmin;
+
 
     struct validator {
         G1[] pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
@@ -30,7 +31,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
     event mapInitializeValidators(uint256 _threshold, G1[] _pairKeys, uint[] _weights, uint256 epoch);
     event MapUpdateValidators(G1[] _pairKeysAdd, uint[] _weights, uint256 epoch, bytes bits);
-
+    event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
+    event AdminTransferred(address indexed previous, address indexed newAdmin);
 
     modifier onlyOwner() {
         require(msg.sender == _getAdmin(), "lightnode :: only admin");
@@ -321,10 +323,21 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 
-    function changeAdmin(address _admin) public onlyOwner {
-        require(_admin != address(0), "zero address");
+    function changeAdmin() public {
+        require(_pendingAdmin == msg.sender, "only pendingAdmin");
+        emit AdminTransferred(_getAdmin(),_pendingAdmin);
+        _changeAdmin(_pendingAdmin);
+    }
 
-        _changeAdmin(_admin);
+
+    function pendingAdmin() external view returns(address){
+        return _pendingAdmin;
+    }
+
+    function setPendingAdmin(address pendingAdmin_) public onlyOwner {
+        require(pendingAdmin_ != address(0), "Ownable: pendingAdmin is the zero address");
+        emit ChangePendingAdmin(_pendingAdmin, pendingAdmin_);
+        _pendingAdmin = pendingAdmin_;
     }
 
     function getAdmin() external view returns (address) {

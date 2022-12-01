@@ -23,7 +23,7 @@ library RLPEncode {
         returns (bytes memory)
     {
         bytes memory encoded;
-        if (self.length == 1 && uint8(self[0]) <= 128) {
+        if (self.length == 1 && uint8(self[0]) < 128) {
             encoded = self;
         } else {
             encoded = concat(encodeLength(self.length, 128), self);
