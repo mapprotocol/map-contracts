@@ -31,14 +31,19 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
         tokenVault[token] = tVault;
     }
 
-    function getTokenFee(uint to, address token, uint amount) external view override returns (uint){
-        gasFee memory gf =  chainTokenGasFee[to][token];
-        uint fee = amount.mul(gf.proportion).div(1000000);
+    function _getTokenFee(uint _to, address _token, uint _amount) internal view returns (uint){
+        gasFee memory gf =  chainTokenGasFee[_to][_token];
+        uint fee = _amount.mul(gf.proportion).div(1000000);
         if (fee > gf.highest){
             return gf.highest;
         }else if (fee < gf.lowest){
             return gf.lowest;
         }
+        return fee;
+    }
+
+    function getTokenFee(uint to, address token, uint amount) external view override returns (uint){
+        uint fee = _getTokenFee(to,token,amount);
         require(fee <= amount, "amount too small");
         return fee;
     }

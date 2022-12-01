@@ -4,13 +4,13 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./VERC20.sol";
 import "../interface/IVault.sol";
-import "../utils/Role.sol";
 import "../utils/TransferHelper.sol";
 
 
-contract MAPVaultToken is VERC20, IVault, Role {
+contract MAPVaultToken is VERC20, IVault,Ownable {
     using SafeMath for uint;
 
     address public correspond;
@@ -26,8 +26,6 @@ contract MAPVaultToken is VERC20, IVault, Role {
         uint8 decimals_) external {
         correspond = correspond_;
         init(name_, symbol_, decimals_);
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(MANAGER_ROLE, msg.sender);
     }
 
     function getVTokenQuantity(uint amount) public view returns (uint){
@@ -47,20 +45,21 @@ contract MAPVaultToken is VERC20, IVault, Role {
         return amount.mul(correspondBalance).div(allVToken);
     }
 
-    function stakingTo(uint amount, address to) external override onlyManager {
+    function stakingTo(uint amount, address to) external override onlyOwner {
         uint vToken = getVTokenQuantity(amount);
         _mint(to, vToken);
         correspondBalance += amount;
         emit VaultStaking(amount, vToken);
     }
 
-    function addFee(uint amount) external override onlyManager {
+    function addFee(uint amount) external override onlyOwner {
         correspondBalance += amount;
     }
 
-    function withdraw(uint amount, address to) external override onlyManager {
+    function withdraw(uint amount, address to) external override onlyOwner {
         _burn(to, amount);
-        correspondBalance -= getCorrespondQuantity(amount);
-        emit VaultWithdraw(getCorrespondQuantity(amount), amount);
+        uint correspondAmount = getCorrespondQuantity(amount);
+        correspondBalance -= correspondAmount;
+        emit VaultWithdraw(correspondAmount, amount);
     }
 }

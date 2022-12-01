@@ -41,6 +41,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     //Can storage tokens be cross-chain?
     mapping(uint256 => mapping(address => bool)) canBridgeToken;
 
+    address private _pendingAdmin;
 
     struct txLog {
         address addr;
@@ -57,6 +58,8 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     event mapTokenRegister(bytes32 tokenID, address token);
     event mapDepositOut(address indexed token, bytes from, bytes32 orderId,
         uint256 fromChain, uint256 toChain, address to, uint256 amount);
+    event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
+    event AdminTransferred(address indexed previous, address indexed newAdmin);
 
 
     bytes32 public constant mapTransferOutTopic = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
@@ -185,7 +188,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     }
 
 
-    function depositOutToken(address token, address from, address to, uint amount) external override payable whenNotPaused checkCanBridge(token, relayChainId) {
+    function depositOutToken(address token, address from, address to, uint amount) external override whenNotPaused checkCanBridge(token, relayChainId) {
         require(msg.sender == from, "from only sender");
         bytes32 orderId = getOrderID(token, from, _addressToBytes(to), amount, relayChainId);
         //        require(IERC20(token).balanceOf(from) >= amount, "balance too low");
@@ -215,12 +218,12 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     }
 
 
-    function withdraw(address token, address payable receiver, uint256 amount) public onlyOwner {
+    function withdraw(address token, address payable receiver, uint256 amount) public onlyOwner checkAddress(receiver){
         if (token == address(0)) {
             TransferHelper.safeWithdraw(wToken, amount);
             TransferHelper.safeTransferETH(receiver, amount);
         } else {
-            IERC20(token).transfer(receiver, amount);
+            TransferHelper.safeTransfer(token, receiver, amount);
         }
     }
 
@@ -262,8 +265,21 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 
-    function changeAdmin(address _admin) public onlyOwner checkAddress(_admin) {
-        _changeAdmin(_admin);
+    function changeAdmin() public {
+        require(_pendingAdmin == msg.sender, "only pendingAdmin");
+        emit AdminTransferred(_getAdmin(),_pendingAdmin);
+        _changeAdmin(_pendingAdmin);
+    }
+
+
+    function pendingAdmin() external view returns(address){
+        return _pendingAdmin;
+    }
+
+    function setPendingAdmin(address pendingAdmin_) public onlyOwner {
+        require(pendingAdmin_ != address(0), "Ownable: pendingAdmin is the zero address");
+        emit ChangePendingAdmin(_pendingAdmin, pendingAdmin_);
+        _pendingAdmin = pendingAdmin_;
     }
 
     function getAdmin() external view returns (address) {
