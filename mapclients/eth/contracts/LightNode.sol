@@ -57,7 +57,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         require(_epoch > 0, "Error initializing epco");
         _changeAdmin(msg.sender);
         maxValidators = 20;
-        epochSize = 1000;
         headerHeight = (_epoch - 1) * _epochSize;
         epochSize = _epochSize;
         validatorAddress = _validatorAddress;
