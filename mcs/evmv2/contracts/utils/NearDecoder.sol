@@ -17,7 +17,7 @@ library NearDecoder {
 
     function decodeNearLog(bytes memory logsHash)
     internal
-    view
+    pure
     returns (bytes memory executorId, IEvent.transferOutEvent[] memory _outEvents){
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
 
@@ -30,22 +30,26 @@ library NearDecoder {
             logs[i] = ls[1].toList()[i].toBytes();
         }
         bytes memory log;
+
+        _outEvents = new IEvent.transferOutEvent[](logs.length);
         for (uint256 i = 0; i < logs.length; i++) {
 
-            (bytes memory temp) = splitExtra(logs[i]);
-            if (keccak256(temp) == nearTransferOut) {
-                log = hexStrToBytes(logs[i]);
+            (bytes memory temp) = Utils.splitExtra(logs[i]);
+            if (keccak256(temp) == NEAR_TRANSFEROUT) {
+                log = Utils.hexStrToBytes(logs[i]);
                 RLPReader.RLPItem[] memory logList = log.toRlpItem().toList();
+
                 require(logList.length >= 8, "logsHash length to low");
-                IEvent.transferOutEvent memory _outEvent = transferOutEvent({
-                token : logList[0].toBytes(),
-                from : logList[1].toBytes(),
-                order_id : bytes32(logList[2].toBytes()),
-                from_chain : logList[3].toUint(),
-                to_chain : logList[4].toUint(),
+
+                IEvent.transferOutEvent memory _outEvent = IEvent.transferOutEvent({
+                fromChain : logList[0].toUint(),
+                toChain : logList[1].toUint(),
+                orderId : bytes32(logList[2].toBytes()),
+                token : logList[3].toBytes(),
+                from : logList[4].toBytes(),
                 to : logList[5].toBytes(),
                 amount : logList[6].toUint(),
-                to_chain_token : logList[7].toBytes()
+                toChainToken : logList[7].toBytes()
                 });
                 _outEvents[i] = _outEvent;
             }
@@ -53,8 +57,8 @@ library NearDecoder {
     }
 
     function decodeNearDepositLog(bytes memory logsHash)
-    public
-    view
+    internal
+    pure
     returns (bytes memory executorId, IEvent.depositOutEvent[] memory _outEvents){
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
         require(ls.length >= 2, "logsHash length to low");
@@ -68,21 +72,26 @@ library NearDecoder {
 
         }
         bytes memory log;
+
+        _outEvents = new IEvent.depositOutEvent[](logs.length);
+
         for (uint256 i = 0; i < logs.length; i++) {
 
-            (bytes memory temp) = splitExtra(logs[i]);
-            if (keccak256(temp) == nearDepositOut) {
-                log = hexStrToBytes(logs[i]);
+            (bytes memory temp) = Utils.splitExtra(logs[i]);
+            if (keccak256(temp) == NEAR_DEPOSITOUT) {
+                log = Utils.hexStrToBytes(logs[i]);
                 RLPReader.RLPItem[] memory logList = log.toRlpItem().toList();
 
                 require(logList.length >= 7, "logsHash length to low");
 
-                IEvent.depositOutEvent memory _outEvent = nearDepositOutEvent({
-                token : logList[0].toBytes(),
-                from : logList[1].toBytes(),
-                order_id : logList[2].toBytes(),
-                from_chain : logList[3].toUint(),
-                to_chain : logList[4].toUint(),
+                IEvent.depositOutEvent memory _outEvent = IEvent.depositOutEvent({
+                fromChain : logList[0].toUint(),
+                toChain : logList[1].toUint(),
+                orderId : bytes32(logList[2].toBytes()),
+
+                token : logList[3].toBytes(),
+                from : logList[4].toBytes(),
+
                 to : logList[5].toBytes(),
                 amount : logList[6].toUint()
                 });
