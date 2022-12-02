@@ -3,9 +3,6 @@ import { DeployFunction } from 'hardhat-deploy/types';
 
 
 
-let minEpochBlockExtraDataLen = 161
-
-
 const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts, ethers } = hre;
   const { deploy } = deployments;
@@ -14,7 +11,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   let LightNodeDeploy = await deploy('LightNode', {
     from: deployer,
-    args: [minEpochBlockExtraDataLen, deployer, deployer],
+    args: [],
     log: true,
     contract: 'LightNode'
   });
