@@ -341,7 +341,7 @@ contract VerifyTool is ILightNodePoint {
         list[2] = RLPEncode.encodeList(list3);
         list[3] = RLPEncode.encodeUint(ist.removeList);
         list[4] = new bytes(1);
-        list[4][0] = bytes1(uint8(STRING_SHORT_START));
+        list[4][0] = bytes1(STRING_SHORT_START);
         list[5] = new bytes(4);
         list[5][0] = bytes1(STRING_SHORT_ARRAY_START);
         list[5][1] = bytes1(STRING_SHORT_START);
