@@ -24,6 +24,7 @@
     "node-fetch": "^3.3.0",
     "prompt-sync": "^4.2.0",
     "read": "^1.0.7",
+    "request": "^2.88.2",
     "secp256k1": "^4.0.2",
     "source-map": "^0.7.3",
     "stdio": "^2.1.1"

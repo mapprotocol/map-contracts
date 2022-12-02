@@ -19,11 +19,7 @@ contract BlsCode is IBLSPoint{
     }
 
     function bytesToUint(bytes32 b) public pure returns (uint){
-        uint number;
-        for(uint i= 0; i<b.length; i++){
-            number = number + uint8(b[i])*(2**(8*(b.length-(i+1))));
-        }
-        return  number;
+        return  uint256(b);
     }
 
     function uintToBytes(uint x) public pure returns (bytes memory) {
