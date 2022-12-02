@@ -112,6 +112,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
 
     function addAuthToken(address[] memory token) external onlyOwner {
         for (uint i = 0; i < token.length; i++) {
+            require(token[i] != address(0), "address is zero");
             authToken[token[i]] = true;
         }
     }

@@ -23,6 +23,9 @@ library EvmDecoder {
         _txLogs = new IEvent.txLog[](ls.length);
         for (uint256 i = 0; i < ls.length; i++) {
             RLPReader.RLPItem[] memory item = ls[i].toList();
+
+            require(item.length >= 3, "log length to low");
+
             RLPReader.RLPItem[] memory firstItemList = item[1].toList();
             bytes[] memory topic = new bytes[](firstItemList.length);
             for (uint256 j = 0; j < firstItemList.length; j++) {
@@ -44,7 +47,7 @@ library EvmDecoder {
         outEvent.fromChain = abi.decode(log.topics[1], (uint256));
         outEvent.toChain = abi.decode(log.topics[2], (uint256));
 
-        (outEvent.orderId, outEvent.token, outEvent.from, outEvent.to, outEvent.amount,outEvent.toChainToken)
+        (outEvent.orderId, outEvent.token, outEvent.from, outEvent.to, outEvent.amount, outEvent.toChainToken)
         = abi.decode(log.data, (bytes32, bytes, bytes, bytes, uint256, bytes));
     }
 

@@ -57,9 +57,9 @@ contract MAPVaultToken is VERC20, IVault,Ownable {
     }
 
     function withdraw(uint amount, address to) external override onlyOwner {
-        _burn(to, amount);
         uint correspondAmount = getCorrespondQuantity(amount);
         correspondBalance -= correspondAmount;
+        _burn(to, amount);
         emit VaultWithdraw(correspondAmount, amount);
     }
 }

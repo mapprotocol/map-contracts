@@ -25,7 +25,7 @@ import "./utils/Utils.sol";
 contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable, IMOSV2, UUPSUpgradeable {
     using SafeMath for uint256;
 
-    struct Rate{
+    struct Rate {
         address receiver;
         uint rate;
     }
@@ -48,7 +48,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     mapping(uint256 => chainType) public chainTypes;
 
     event mapTransferRelay(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId,
-        address token, bytes from,  bytes to, uint256 amount);
+        address token, bytes from, bytes to, uint256 amount);
 
     event mapDepositIn(uint256 indexed fromChain, uint256 indexed toChain, address indexed token, bytes32 orderId,
         bytes from, address to, uint256 amount);
@@ -165,9 +165,12 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_chainId, _receiptProof);
         require(success, message);
         if (chainTypes[_chainId] == chainType.NEAR) {
-            (bytes memory mosContract, IEvent.transferOutEvent memory outEvent) = NearDecoder.decodeNearLog(logArray);
-            require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
-            _transferIn(_chainId, outEvent);
+            (bytes memory mosContract, IEvent.transferOutEvent[] memory outEvents) = NearDecoder.decodeNearLog(logArray);
+            for (uint i = 0; i < outEvents.length; i++) {
+                IEvent.transferOutEvent memory outEvent = outEvents[i];
+                require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
+                _transferIn(_chainId, outEvent);
+            }
         } else if (chainTypes[_chainId] == chainType.EVM) {
             IEvent.txLog[] memory logs = EvmDecoder.decodeTxLogs(logArray);
             for (uint256 i = 0; i < logs.length; i++) {
@@ -176,7 +179,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
                 if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC) {
                     (bytes memory mosContract, IEvent.transferOutEvent memory outEvent) = EvmDecoder.decodeTransferOutLog(log);
                     //require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
-                    if(Utils.checkBytes(mosContract, mosContracts[_chainId])) {
+                    if (Utils.checkBytes(mosContract, mosContracts[_chainId])) {
                         _transferIn(_chainId, outEvent);
                     }
                 }
@@ -200,7 +203,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             for (uint256 i = 0; i < logs.length; i++) {
                 if (abi.decode(logs[i].topics[0], (bytes32)) == EvmDecoder.MAP_DEPOSITOUT_TOPIC) {
                     (bytes memory mosContract, IEvent.depositOutEvent memory depositEvent) = EvmDecoder.decodeDepositOutLog(logs[i]);
-                    if(Utils.checkBytes(mosContract, mosContracts[_chainId])) {
+                    if (Utils.checkBytes(mosContract, mosContracts[_chainId])) {
                         _depositIn(_chainId, depositEvent);
                     }
                 }
@@ -244,12 +247,12 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             otherFee = fee - vaultFee;
 
             (uint256 out, address receiver) = getFee(1, fee);
-            if(out>0 && receiver != address(0)){
+            if (out > 0 && receiver != address(0)) {
                 _withdraw(token, payable(receiver), out);
             }
 
             (uint256 protocolFee, address protocolReceiver) = getFee(2, fee);
-            if(protocolFee > 0 && protocolReceiver != address(0)){
+            if (protocolFee > 0 && protocolReceiver != address(0)) {
                 _withdraw(token, payable(protocolReceiver), protocolFee);
             }
         }
@@ -264,7 +267,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         require(!Utils.checkBytes(toToken, bytes("")), "out token not registered");
 
         bytes32 orderId = _getOrderId(_from, _to, _toChain);
-        emit mapTransferRelay(selfChainId, _toChain, orderId, _token, Utils.toBytes(_from),  _to, _amount);
+        emit mapTransferRelay(selfChainId, _toChain, orderId, _token, Utils.toBytes(_from), _to, _amount);
 
         (uint256 mapOutAmount, uint256 outAmount) = _collectFee(_token, _amount, selfChainId, _toChain);
 
@@ -272,7 +275,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             IMAPToken(_token).burn(mapOutAmount);
         }
 
-        emit mapTransferOut(selfChainId, _toChain, orderId, Utils.toBytes(_token), Utils.toBytes(_from),  _to, outAmount, toToken);
+        emit mapTransferOut(selfChainId, _toChain, orderId, Utils.toBytes(_token), Utils.toBytes(_from), _to, outAmount, toToken);
     }
 
     function _transferIn(uint256 _chainId, IEvent.transferOutEvent memory _outEvent)
@@ -295,7 +298,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
 
         emit mapTransferRelay(_outEvent.fromChain, _outEvent.toChain, _outEvent.orderId, token, _outEvent.from, _outEvent.to, mapAmount);
 
-        (uint256 mapOutAmount, uint256 outAmount)  = _collectFee(token, mapAmount, _outEvent.fromChain, _outEvent.toChain);
+        (uint256 mapOutAmount, uint256 outAmount) = _collectFee(token, mapAmount, _outEvent.fromChain, _outEvent.toChain);
 
         if (_outEvent.toChain == selfChainId) {
             address payable toAddress = payable(Utils.fromBytes(_outEvent.to));
@@ -308,7 +311,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             }
             emit mapTransferIn(_outEvent.fromChain, _outEvent.toChain, _outEvent.orderId, token, _outEvent.from,
                 toAddress, mapOutAmount);
-        }else {
+        } else {
             if (tokenRegister.checkMintable(token)) {
                 IMAPToken(token).burn(mapOutAmount);
             }
@@ -334,12 +337,12 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     }
 
     function _deposit(address _token, bytes memory _from, address _to, uint256 _amount, bytes32 _orderId, uint256 _fromChain)
-    internal  {
+    internal {
         address vaultToken = tokenRegister.getVaultToken(_token);
         require(vaultToken != address(0), "vault token not registered");
 
         IVaultTokenV2(vaultToken).deposit(_fromChain, _amount, _to);
-        emit mapDepositIn( _fromChain, selfChainId, _token, _orderId, _from, _to, _amount);
+        emit mapDepositIn(_fromChain, selfChainId, _token, _orderId, _from, _to, _amount);
     }
 
     function _withdraw(address _token, address payable _receiver, uint256 _amount) internal {

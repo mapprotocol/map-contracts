@@ -228,10 +228,11 @@ describe("MAPCrossChainService start test", function () {
     });
 
     it('admin test', async function () {
+        await expect(mcss.setPendingAdmin("0x0000000000000000000000000000000000000000")).to.be.revertedWith("Ownable: pendingAdmin is the zero address")
 
-        await expect(mcss.changeAdmin("0x0000000000000000000000000000000000000000")).to.be.revertedWith("address is zero")
+        await mcss.setPendingAdmin(addr5.address);
 
-        await mcss.changeAdmin(addr5.address);
+        await mcss.connect(addr5).changeAdmin();
 
         expect(await mcss.getAdmin()).to.equal(addr5.address);
 
