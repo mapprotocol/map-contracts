@@ -71,7 +71,9 @@ contract TokenRegisterV2 is ITokenRegisterV2,Initializable,UUPSUpgradeable {
 
     function mapToken(address _token, uint256 _fromChain, bytes memory _fromToken, uint8 _decimals)
     external
-    onlyOwner {
+    onlyOwner
+    checkAddress(_token)
+    {
         require(!Utils.checkBytes(_fromToken, bytes("")), "invalid from token");
         Token storage token = tokenList[_token];
         require(token.vaultToken != address(0), "invalid map token");
@@ -82,7 +84,9 @@ contract TokenRegisterV2 is ITokenRegisterV2,Initializable,UUPSUpgradeable {
 
     function setTokenFee( address _token, uint256 _toChain, uint _lowest, uint _highest,uint _rate) 
     external 
-    onlyOwner {
+    onlyOwner
+    checkAddress(_token)
+    {
         Token storage token = tokenList[_token];
         require(token.vaultToken != address(0), "invalid map token");
         require(_highest >= _lowest, 'invalid highest and lowest');
