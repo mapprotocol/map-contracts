@@ -99,19 +99,17 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     returns (bool success, string memory message, bytes memory logsHash) {
         receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
         logsHash = verifyTool.encodeTxLog(_receiptProof.receipt.logs);
+        istanbulExtra memory ist = verifyTool.decodeExtraData(_receiptProof.header.extraData);
         (success, message) = verifyTool.getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
             return (success, message, logsHash);
         }
-        bytes32 hash;
-        bytes memory headerRlp = verifyTool.encodeHeader(_receiptProof.header);
-        (success, hash) = verifyTool.verifyHeader(headerRlp);
+        (success,) = verifyTool.verifyHeader(_receiptProof.header,ist);
         if (!success) {
             message = "verifyHeader error";
             return (success, message, logsHash);
         }
-        istanbulExtra memory ist = verifyTool.decodeExtraData(_receiptProof.header.extraData);
         success = checkSig(_receiptProof.header, ist, _receiptProof.aggPk);
         if (!success) {
             message = "bls error";
@@ -155,7 +153,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     view
     returns (bool){
         uint256 epoch = getEpochNumber(bh.number);
-        bytes memory message = getPrepareCommittedSeal(bh, ist.aggregatedSeal.round);
+        bytes memory message = getPrepareCommittedSeal(bh, ist);
         bytes memory bits = abi.encodePacked(ist.aggregatedSeal.bitmap);
         G1 memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
         return checkSigTag(bits, message, sig, aggPk, epoch);
@@ -274,11 +272,12 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     }
 
 
-    function getPrepareCommittedSeal(blockHeader memory bh, uint256 round)
+    function getPrepareCommittedSeal(blockHeader memory bh,istanbulExtra memory ist)
     internal
     view
     returns (bytes memory result){
-        bytes32 hash = verifyTool.getBlockHash(bh);
+        uint256 round = ist.aggregatedSeal.round;
+        bytes32 hash = verifyTool.getBlockHash(bh,ist);
         if (round == 0) {
             result = abi.encodePacked(hash, uint8(2));
         } else {

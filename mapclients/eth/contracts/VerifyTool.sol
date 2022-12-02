@@ -175,24 +175,21 @@ contract VerifyTool is ILightNodePoint {
         }
     }
 
-    function getBlockHash(blockHeader memory bh)
+    function getBlockHash(blockHeader memory bh,istanbulExtra memory ist)
     public
     pure
     returns (bytes32){
-        istanbulExtra memory ist = decodeExtraData(bh.extraData);
         bytes memory extraDataPre = splitExtra32(bh.extraData);
         bh.extraData = deleteAgg(ist, extraDataPre);
         bytes memory headerWithoutAgg = encodeHeader(bh);
         return keccak256(abi.encodePacked(headerWithoutAgg));
     }
 
-    function verifyHeader(bytes memory rlpHeader)
+    function verifyHeader(blockHeader memory bh,istanbulExtra memory ist)
     public
     pure
     returns (bool ret, bytes32 headerHash){
-        blockHeader memory bh = decodeHeader(rlpHeader);
-        istanbulExtra memory ist = decodeExtraData(bh.extraData);
-        headerHash = getHeaderHash(bh);
+        headerHash = getHeaderHash(bh,ist);
         ret = verifySign(
             ist.seal,
             headerHash,
@@ -264,11 +261,10 @@ contract VerifyTool is ILightNodePoint {
         }
     }
 
-    function getHeaderHash(blockHeader memory bh)
+    function getHeaderHash(blockHeader memory bh,istanbulExtra memory ist)
     public
     pure
     returns (bytes32){
-        istanbulExtra memory ist = decodeExtraData(bh.extraData);
         bytes memory extraDataPre = splitExtra32(bh.extraData);
         bh.extraData = deleteAgg(ist, extraDataPre);
         bh.extraData = deleteSealAndAgg(ist, bh.extraData);

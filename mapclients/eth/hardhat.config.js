@@ -17,6 +17,10 @@ accounts.push(PRIVATE_KEY);
 
 module.exports = {
   defaultNetwork: 'hardhat',
+  gasReporter: {
+    enabled: false,
+//    currency: 'CNY',
+  },
   abiExporter: {
     path: './abi',
     clear: false,

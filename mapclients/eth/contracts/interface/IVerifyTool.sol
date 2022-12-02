@@ -34,12 +34,12 @@ interface IVerifyTool is ILightNodePoint {
     view
     returns (txLog[] memory _txLogs);
 
-    function getBlockHash(blockHeader memory bh)
+    function getBlockHash(blockHeader memory bh,istanbulExtra memory ist)
     external
     view
     returns (bytes32);
 
-    function verifyHeader(bytes memory rlpHeader)
+    function verifyHeader(blockHeader memory bh,istanbulExtra memory ist)
     external
     view
     returns (bool ret, bytes32 headerHash);
