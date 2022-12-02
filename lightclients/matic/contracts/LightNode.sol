@@ -15,6 +15,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     uint256 internal constant MAX_SAVED_EPOCH_NUM = 121500;
 
+    uint256 internal constant ADDRESS_LENGTH = 20;
+
     address public mptVerify;
 
     uint256 public minValidBlocknum;
@@ -25,8 +27,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     uint256 internal _lastSyncedBlock;
 
+    uint256 public chainId;
+
+    uint256 public confirms;
+
     struct ProofData {
-        Verify.BlockHeader header;
+        Verify.BlockHeader[] headers;
         Verify.ReceiptProof receiptProof;
     }
 
@@ -35,28 +41,24 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         _;
     }
 
-    constructor(
-        uint256 _minEpochBlockExtraDataLen,
-        address _controller,
-        address _mptVerify
-    ) {
-        minEpochBlockExtraDataLen = _minEpochBlockExtraDataLen;
-        require(_controller != address(0), "_controller zero address");
-        require(_mptVerify != address(0), "_mptVerify zero address");
-        mptVerify = _mptVerify;
-        _changeAdmin(_controller);
-    }
+    constructor() {}
 
     function initialize(
+        uint256 _chainId,
         uint256 _minEpochBlockExtraDataLen,
         address _controller,
         address _mptVerify,
+        uint256 _confirms,
         Verify.BlockHeader memory _header
     ) public initializer {
+        require(_chainId > 0, "invalid _chainId");
+        require(_confirms > 0, "invalid _confirms");
         require(minEpochBlockExtraDataLen == 0, "already initialized");
         require(_controller != address(0), "_controller zero address");
         require(_mptVerify != address(0), "_mptVerify zero address");
+        chainId = _chainId;
         mptVerify = _mptVerify;
+        confirms = _confirms;
         _changeAdmin(_controller);
         minEpochBlockExtraDataLen = _minEpochBlockExtraDataLen;
         _initBlock(_header);
@@ -72,57 +74,60 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return true;
     }
 
-    function updateBlockHeader(bytes memory _blockHeadersBytes)
-        external
-        override
-        whenNotPaused
-    {
-        Verify.BlockHeader memory _blockHeader = abi.decode(
+    function updateBlockHeader(
+        bytes memory _blockHeadersBytes
+    ) external override whenNotPaused {
+        Verify.BlockHeader[] memory _blockHeaders = abi.decode(
             _blockHeadersBytes,
-            (Verify.BlockHeader)
+            (Verify.BlockHeader[])
         );
+
+        require(confirms > 0, " not initialize");
+
+        require(_blockHeaders.length == confirms, "not enough");
 
         _lastSyncedBlock += EPOCH_NUM;
 
         require(
-            _blockHeader.number == _lastSyncedBlock,
+            _blockHeaders[0].number == _lastSyncedBlock,
             "invalid syncing block"
         );
-
-        require(_verifyBlockHeaders(_blockHeader), "blocks verify fail");
-
+        // index 0 header verify by pre validators others by index 0 getValidators
         validators[(_lastSyncedBlock + 1) / EPOCH_NUM] = Verify.getValidators(
-            _blockHeader.extraData
+            _blockHeaders[0].extraData
         );
+        require(_verifyBlockHeaders(_blockHeaders), "blocks verify fail");
 
-        emit UpdateBlockHeader(tx.origin, _blockHeader.number);
+        emit UpdateBlockHeader(tx.origin, _blockHeaders[0].number);
     }
 
-    function verifyProofData(bytes memory _receiptProof)
+    function verifyProofData(
+        bytes memory _receiptProof
+    )
         external
         view
         override
-        returns (
-            bool success,
-            string memory message,
-            bytes memory logs
-        )
+        returns (bool success, string memory message, bytes memory logs)
     {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
 
-        Verify.BlockHeader memory header = proof.header;
+        Verify.BlockHeader[] memory headers = proof.headers;
+
+        require(confirms > 0, " not initialize");
+
+        require(headers.length == confirms, "not enough");
 
         require(
-            header.number >= minValidBlocknum &&
-                header.number <= maxCanVerifyNum(),
+            headers[0].number >= minValidBlocknum &&
+                headers[headers.length - 1].number <= maxCanVerifyNum(),
             "Can not verify blocks"
         );
 
-        success = _verifyBlockHeaders(header);
+        success = _verifyBlockHeaders(headers);
         if (!success) {
             message = "invalid proof blocks";
         } else {
-            bytes32 rootHash = bytes32(header.receiptsRoot);
+            bytes32 rootHash = bytes32(headers[0].receiptsRoot);
             (success, logs) = Verify.validateProof(
                 rootHash,
                 proof.receiptProof,
@@ -140,7 +145,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         require((_header.number + 1) % EPOCH_NUM == 0, "invalid init block");
 
         bytes memory validator = Verify.getValidators(_header.extraData);
-        require(validator.length > 20, "no validator init");
+        require(validator.length >= ADDRESS_LENGTH, "no validator init");
 
         validators[(_header.number + 1) / EPOCH_NUM] = validator;
 
@@ -149,30 +154,48 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         minValidBlocknum = _header.number + 1;
     }
 
-    function _verifyBlockHeaders(Verify.BlockHeader memory _blockHeader)
-        internal
-        view
-        returns (bool)
-    {
-        require(
-            Verify.validateHeader(_blockHeader, minEpochBlockExtraDataLen),
-            "invalid bock header"
-        );
+    function _verifyBlockHeaders(
+        Verify.BlockHeader[] memory _blockHeaders
+    ) internal view returns (bool) {
+        for (uint256 i = 0; i < _blockHeaders.length; i++) {
+            if (i == 0) {
+                require(
+                    Verify.validateHeader(
+                        _blockHeaders[i],
+                        minEpochBlockExtraDataLen,
+                        _blockHeaders[i]
+                    ),
+                    "invalid bock header"
+                );
+            } else {
+                require(
+                    Verify.validateHeader(
+                        _blockHeaders[i],
+                        minEpochBlockExtraDataLen,
+                        _blockHeaders[i - 1]
+                    ),
+                    "invalid bock header"
+                );
+            }
 
-        address signer = Verify.recoverSigner(_blockHeader);
-
-        require(
-            Verify.containValidator(
-                validators[_blockHeader.number / EPOCH_NUM],
-                signer
-            ),
-            "invalid block header singer"
-        );
+            address signer = Verify.recoverSigner(_blockHeaders[i]);
+            require(
+                Verify.containValidator(
+                    validators[_blockHeaders[i].number / EPOCH_NUM],
+                    signer
+                ),
+                "invalid block header singer"
+            );
+        }
 
         return true;
     }
 
     function _removeExcessEpochValidators() internal {
+
+        if(_lastSyncedBlock < EPOCH_NUM * MAX_SAVED_EPOCH_NUM) {
+            return;
+        }
         uint256 remove = _lastSyncedBlock - EPOCH_NUM * MAX_SAVED_EPOCH_NUM;
 
         if (
@@ -184,20 +207,16 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
-    function getBytes(ProofData memory _proof)
-        public
-        pure
-        returns (bytes memory)
-    {
+    function getBytes(
+        ProofData memory _proof
+    ) public pure returns (bytes memory) {
         return abi.encode(_proof);
     }
 
-    function getHeadersBytes(Verify.BlockHeader memory _blockHeader)
-        public
-        pure
-        returns (bytes memory)
-    {
-        return abi.encode(_blockHeader);
+    function getHeadersBytes(
+        Verify.BlockHeader[] memory _blockHeaders
+    ) public pure returns (bytes memory) {
+        return abi.encode(_blockHeaders);
     }
 
     function headerHeight() external view override returns (uint256) {

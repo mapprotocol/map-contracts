@@ -7,9 +7,11 @@ import {
 
 
 let uri = process.env.MATICURI;
-let minEpochBlockExtraDataLen = 161
+let minEpochBlockExtraDataLen = 137
 let mpt = process.env.MPT_VERIFY || 0;
 let start = process.env.START_SYNCY_BLOCK
+let chainId = process.env.CHAIN_Id
+let confirms = process.env.CONFIRMS
 let epochNum = 64;
 
 const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -47,7 +49,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   let LightNode = await ethers.getContractFactory("LightNode")
 
-  let initData = LightNode.interface.encodeFunctionData("initialize", [minEpochBlockExtraDataLen, deployer, mpt, lastHeader]);
+  let initData = LightNode.interface.encodeFunctionData("initialize", [chainId,minEpochBlockExtraDataLen, deployer, mpt,confirms,lastHeader]);
 
   await deploy('LightNodeProxy', {
     from: deployer,

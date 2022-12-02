@@ -1,3 +1,5 @@
+If consecutive blockheaders are signed by different signers in validatorSet we don't believe it was forged
+
 # Brief Description
 
 The LightNode.sol contract is an custom implementation of Matic light client on map chain. [basis for implementation](https://wiki.polygon.technology/docs/pos/bor/consensus/)
@@ -36,11 +38,11 @@ Here are some important public interfaces.
           external
           override
           whenNotPaused
-  // _blockHeadersBytes: abi.encode(_blockHeaders)  BlockHeader memory _blockHeaders
+  // _blockHeadersBytes: abi.encode(_blockHeaders)  BlockHeader[] memory _blockHeaders
 
   ```
 
-  submit epoch block header to keep track of validatorSet changes for each epoch.  If consecutive blockheader is signed by one of validatorSet, we don't believe it was forged.
+  submit epoch block header to keep track of validatorSet changes for each epoch.  To prove epoch block header legitimacy,confirms block headers need to be submitted consecutively.  If consecutive blockheaders are signed by signers in validatorSet we don't believe it was forged
 * verify transation receipt
 
   ```solidity
@@ -57,7 +59,7 @@ Here are some important public interfaces.
               string memory message,
               bytes memory logs
           )
-  // _receiptProof: abi.encode(_receiptProof)  ProofData memory _proof
+  // _receiptProof: abi.encode(_receiptProof)  ProofData[] memory _proof
   ```
 
   verify transation receipt and return receipt logs if succeed.
@@ -92,6 +94,9 @@ PRIVATE_KEY =
 MATICURI = 
 // 0 - for latest  block number start to syncing
 START_SYNCY_BLOCK = 0
+# 80001 for matic testnet 137 for matic mainnet
+CHAIN_Id = 137
+CONFIRMS = 10
 //MPTVerify address  if you not want to repeat the deployment of MPTVerify put deployed address it Otherwise empty
 MPT_VERIFY = 
 ```
