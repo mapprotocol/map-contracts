@@ -44,10 +44,15 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     mapping(uint256 => bytes32) epochIds;
 
+    address private _pendingAdmin;
+
     modifier onlyOwner() {
         require(msg.sender == _getAdmin(), "lightnode :: only admin");
         _;
     }
+
+    event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
+    event AdminTransferred(address indexed previous, address indexed newAdmin);
 
     //  event SetBlockProducers(bytes32[100] keys);
 
@@ -473,14 +478,28 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     /** UUPS *********************************************************/
-    function _authorizeUpgrade(address) internal view override {
+    function _authorizeUpgrade(address)
+    internal
+    view
+    override {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 
-    function changeAdmin(address _admin) public onlyOwner {
-        require(_admin != address(0), "zero address");
+    function changeAdmin() public {
+        require(_pendingAdmin == msg.sender, "only pendingAdmin");
+        emit AdminTransferred(_getAdmin(),_pendingAdmin);
+        _changeAdmin(_pendingAdmin);
+    }
 
-        _changeAdmin(_admin);
+
+    function pendingAdmin() external view returns(address){
+        return _pendingAdmin;
+    }
+
+    function setPendingAdmin(address pendingAdmin_) public onlyOwner {
+        require(pendingAdmin_ != address(0), "Ownable: pendingAdmin is the zero address");
+        emit ChangePendingAdmin(_pendingAdmin, pendingAdmin_);
+        _pendingAdmin = pendingAdmin_;
     }
 
     function getAdmin() external view returns (address) {
