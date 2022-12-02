@@ -1,8 +1,11 @@
 PRIVATE_KEY = 
 # matic rpc url
 MATICURI = 
-// 0 - for latest
+# 0 - for latest
 START_SYNCY_BLOCK = 0
+# 80001 for matic testnet 137 for matic mainnet
+CHAIN_Id = 137
+CONFIRMS = 10
 //MPTVerify address
 MPT_VERIFY = 
 

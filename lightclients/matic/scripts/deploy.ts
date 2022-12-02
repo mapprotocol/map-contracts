@@ -9,7 +9,9 @@ import {
 
 
 let uri: string = process.env.MATICURI || "";
-let minEpochBlockExtraDataLen = 161
+let minEpochBlockExtraDataLen = 137
+let chainId = process.env.CHAIN_Id
+let confirms = process.env.CONFIRMS || 10
 let epochNum = 64;
 
 
@@ -31,7 +33,7 @@ async function main() {
 
   const LightNode = await ethers.getContractFactory("LightNode");
 
-  const lightNode = await LightNode.deploy(minEpochBlockExtraDataLen, wallet.address, mPTVerify.address);
+  const lightNode = await LightNode.deploy();
 
   await lightNode.connect(wallet).deployed();
 
@@ -49,7 +51,7 @@ async function main() {
 
   console.log("init == ",lastHeader);
 
-  let initData = LightNode.interface.encodeFunctionData("initialize", [minEpochBlockExtraDataLen, wallet.address, mPTVerify.address, lastHeader]);
+  let initData = LightNode.interface.encodeFunctionData("initialize", [chainId,minEpochBlockExtraDataLen, wallet.address, mPTVerify.address,confirms,lastHeader]);
 
   const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
 
@@ -64,6 +66,7 @@ async function main() {
   let txHash = '0xbf684bda3767bd3b756e03f441c1b36b68c09ef5795702af642eddf884053e29';
 
   await verify(txHash,uri,LightNode.attach(lightNodeProxy.address));
+
 }
 
 
@@ -73,13 +76,18 @@ async function updateHeader(wallet: SignerWithAddress, lightNode: Contract) {
 
   let last: BigNumber = await lightNode.headerHeight();
 
-  // console.log(last);
+  // console.log(last); 
 
-  let lastHeader = await getBlock(last.toNumber() + epochNum, provider);
+  let headers :Array<BlockHeader> = new Array<BlockHeader>();
 
-  console.log("addBlock == ",lastHeader);
+  for(let i = 0;i < confirms;i++){
+    let lastHeader = await getBlock(last.toNumber() + epochNum + i, provider);
+      headers.push(lastHeader);
+  }
 
-  await (await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(lastHeader))).wait();
+  //console.log("addBlock == ",lastHeader);
+
+  await (await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(headers))).wait();
 
   console.log(await lightNode.headerHeight());
 }
@@ -87,7 +95,7 @@ async function updateHeader(wallet: SignerWithAddress, lightNode: Contract) {
 
 async function verify(txHash: string, rpc: string, lightNode: Contract) {
 
-  let proof = await getProof(txHash, rpc);
+  let proof = await getProof(txHash, rpc,confirms);
 
   console.log(proof);
 

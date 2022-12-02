@@ -5,6 +5,7 @@ pragma solidity 0.8.7;
 import "./RLPReader.sol";
 import "./RLPEncode.sol";
 import "../interface/IMPTVerify.sol";
+
 // import "hardhat/console.sol";
 
 library Verify {
@@ -13,6 +14,21 @@ library Verify {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
 
+    uint256 internal constant ADDRESS_LENGTH = 20;
+
+    uint256 internal constant POWER_LENGTH = 20;
+
+    uint256 internal constant EXTRA_VANITY = 32;
+
+    uint256 internal constant EPOCH_NUM = 64;
+
+    uint256 internal constant EXTRASEAL = 65;
+
+    uint256 internal constant MIN_GAS_LIMIT = 5000;
+
+    uint256 internal constant BASE_FEE_CHANGEDENOMINATOR = 8;
+
+    uint256 internal constant ELASTICITY_MULTIPLIER = 2;
     bytes32 constant SHA3_UNCLES =
         0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
 
@@ -60,11 +76,9 @@ library Verify {
         bytes data;
     }
 
-    function recoverSigner(BlockHeader memory _header)
-        internal
-        pure
-        returns (address)
-    {
+    function recoverSigner(
+        BlockHeader memory _header
+    ) internal pure returns (address) {
         (bytes memory signature, bytes memory extraData) = splitExtra(
             _header.extraData
         );
@@ -92,13 +106,14 @@ library Verify {
 
     function validateHeader(
         BlockHeader memory _header,
-        uint256 _minEpochBlockExtraDataLen
+        uint256 _minEpochBlockExtraDataLen,
+        BlockHeader memory _parent
     ) internal pure returns (bool) {
-        if (_header.extraData.length < 97) {
+        if (_header.extraData.length < (EXTRA_VANITY + EXTRASEAL)) {
             return false;
         }
         //Epoch block
-        if ((_header.number + 1) % 64 == 0) {
+        if ((_header.number + 1) % EPOCH_NUM == 0) {
             if (_header.extraData.length < _minEpochBlockExtraDataLen) {
                 return false;
             }
@@ -127,26 +142,79 @@ library Verify {
             return false;
         }
 
-        if (_header.mixHash.length != 32 || bytes32(_header.mixHash) != MIX_HASH) {
+        if (
+            _header.mixHash.length != 32 || bytes32(_header.mixHash) != MIX_HASH
+        ) {
             return false;
         }
         //2**63 - 1 maxGasLimit minGasLimit 5000
         if (
-            _header.gasLimit > 2**63 - 1 ||
-            _header.gasLimit < 5000 ||
+            _header.gasLimit > 2 ** 63 - 1 ||
+            _header.gasLimit < MIN_GAS_LIMIT ||
             _header.gasLimit < _header.gasUsed
         ) {
             return false;
         }
 
+        if (_header.number != _parent.number) {
+            
+            if(_header.timestamp <= _parent.timestamp) {
+                return false;
+            }
+            uint256 diff = _parent.gasLimit > _header.gasLimit
+                ? _parent.gasLimit - _header.gasLimit
+                : _header.gasLimit - _parent.gasLimit;
+          
+            if (diff >= _parent.gasLimit / 1024) {
+                return false;
+            }
+
+            uint256 expectedBaseFee = calcBaseFee(
+                _parent.gasUsed,
+                _parent.gasLimit,
+                _parent.baseFeePerGas
+            );
+
+            if (_header.baseFeePerGas != expectedBaseFee) {
+                return false;
+            }
+        }
+
         return true;
     }
 
-    function encodeSigHeader(BlockHeader memory _header, bytes memory _extraData)
-        internal
-        pure
-        returns (bytes memory output)
-    {
+    function calcBaseFee(
+        uint256 _parentGasUsed,
+        uint256 _parentGasLimit,
+        uint256 _parentBaseFee
+    ) internal pure returns (uint256) {
+        require(_parentGasLimit > 0, "_parentGasLimit not be zero");
+        uint256 parentGasTarget = _parentGasLimit / ELASTICITY_MULTIPLIER;
+        if (_parentGasUsed == parentGasTarget) {
+            _parentBaseFee;
+        }
+        if (_parentGasUsed > parentGasTarget) {
+            uint256 gasUsedDelta = _parentGasUsed - parentGasTarget;
+            uint256 x = _parentBaseFee * gasUsedDelta;
+            uint256 y = x / parentGasTarget;
+            uint256 baseFeeDelta = y / BASE_FEE_CHANGEDENOMINATOR > 1 ? y / BASE_FEE_CHANGEDENOMINATOR : 1;
+            return _parentBaseFee + baseFeeDelta;
+        } else {
+            uint256 gasUsedDelta = parentGasTarget - _parentGasUsed;
+            uint256 x = _parentBaseFee * gasUsedDelta;
+            uint256 y = x / parentGasTarget;
+            uint256 baseFeeDelta = y / 8;
+            return
+                baseFeeDelta > _parentBaseFee
+                    ? 0
+                    : _parentBaseFee - baseFeeDelta;
+        }
+    }
+
+    function encodeSigHeader(
+        BlockHeader memory _header,
+        bytes memory _extraData
+    ) internal pure returns (bytes memory output) {
         bytes[] memory list = new bytes[](16);
         list[0] = RLPEncode.encodeBytes(_header.parentHash);
         list[1] = RLPEncode.encodeBytes(_header.sha3Uncles);
@@ -188,15 +256,12 @@ library Verify {
             expectedValue
         );
 
-        if (success)
-            logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
+        if (success) logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
     }
 
-    function encodeReceipt(TxReceipt memory _txReceipt)
-        public
-        pure
-        returns (bytes memory output)
-    {
+    function encodeReceipt(
+        TxReceipt memory _txReceipt
+    ) public pure returns (bytes memory output) {
         bytes[] memory list = new bytes[](4);
         list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
         list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
@@ -222,40 +287,50 @@ library Verify {
         output = RLPEncode.encodeList(list);
     }
 
-    function splitExtra(bytes memory _extraData)
-        internal
-        pure
-        returns (bytes memory signature, bytes memory extraData)
-    {
+    function splitExtra(
+        bytes memory _extraData
+    ) internal pure returns (bytes memory signature, bytes memory extraData) {
         uint256 ptr;
         assembly {
             ptr := _extraData
         }
 
         ptr += 32;
-        //extraData never less than 97
-        extraData = memoryToBytes(ptr, _extraData.length - 65);
+        //extraData =  EXTRA_VANITY + (address + power)... + EXTRASEAL
+        extraData = memoryToBytes(ptr, _extraData.length - EXTRASEAL);
 
-        ptr += _extraData.length - 65;
+        ptr += _extraData.length - EXTRASEAL;
 
-        signature = memoryToBytes(ptr, 65);
+        signature = memoryToBytes(ptr, EXTRASEAL);
     }
 
-    function getValidators(bytes memory _extraData)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function getValidators(
+        bytes memory _extraData
+    ) internal pure returns (bytes memory) {
+        require(
+            _extraData.length > (EXTRA_VANITY + EXTRASEAL),
+            "_extraData length too short"
+        );
+
+        require(
+            (_extraData.length - EXTRA_VANITY - EXTRASEAL) %
+                (ADDRESS_LENGTH + POWER_LENGTH) ==
+                0,
+            "invalid _extraData length"
+        );
         uint256 ptr;
         assembly {
             ptr := _extraData
         }
+        //skip EXTRA_VANITY + data length
         ptr += 64;
-        uint256 legth = (_extraData.length - 97) / 40;
+        //extraData =  EXTRA_VANITY + (address + power)... + EXTRASEAL
+        uint256 legth = (_extraData.length - (EXTRA_VANITY + EXTRASEAL)) /
+            (ADDRESS_LENGTH + POWER_LENGTH);
         bytes memory result;
         for (uint256 i = 0; i < legth; i++) {
             bytes32 v;
-            uint256 tem = ptr + i * 40;
+            uint256 tem = ptr + i * (ADDRESS_LENGTH + POWER_LENGTH);
             assembly {
                 v := mload(tem)
             }
@@ -265,11 +340,10 @@ library Verify {
         return result;
     }
 
-    function containValidator(bytes memory _validators, address _miner)
-        internal
-        pure
-        returns (bool)
-    {
+    function containValidator(
+        bytes memory _validators,
+        address _miner
+    ) internal pure returns (bool) {
         uint256 m = uint256(uint160(_miner));
 
         uint256 ptr;
@@ -277,10 +351,10 @@ library Verify {
             ptr := _validators
         }
         ptr += 32;
-        uint256 length = _validators.length / 20;
+        uint256 length = _validators.length / ADDRESS_LENGTH;
         for (uint256 i = 0; i < length; i++) {
             uint256 v;
-            uint256 tem = ptr + i * 20;
+            uint256 tem = ptr + i * ADDRESS_LENGTH;
             assembly {
                 v := mload(tem)
             }
@@ -293,11 +367,10 @@ library Verify {
         return false;
     }
 
-    function memoryToBytes(uint _ptr, uint _length)
-        internal
-        pure
-        returns (bytes memory res)
-    {
+    function memoryToBytes(
+        uint _ptr,
+        uint _length
+    ) internal pure returns (bytes memory res) {
         if (_length != 0) {
             assembly {
                 // 0x40 is the address of free memory pointer.

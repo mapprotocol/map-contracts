@@ -11,8 +11,10 @@ import {
     ProofData
 } from "../utils/Util"
 
-
-let minEpochBlockExtraDataLen = 161
+// //extraData =  EXTRA_VANITY + (address + power)... + EXTRASEAL 32 + 40*n + 65
+let minEpochBlockExtraDataLen = 137
+let chainId = process.env.CHAIN_Id
+let confirms = process.env.CONFIRMS
 
 describe("LightNode", function () {
     // We define a fixture to reuse the same setup in every test.
@@ -29,7 +31,7 @@ describe("LightNode", function () {
 
         const LightNode = await ethers.getContractFactory("LightNode");
 
-        const lightNode = await LightNode.deploy(minEpochBlockExtraDataLen, wallet.address, mPTVerify.address);
+        const lightNode = await LightNode.deploy();
 
         await lightNode.connect(wallet).deployed();
 
@@ -37,7 +39,7 @@ describe("LightNode", function () {
 
         let initBlock = data.initBlock;
 
-        let initData = LightNode.interface.encodeFunctionData("initialize", [minEpochBlockExtraDataLen, wallet.address, mPTVerify.address, initBlock]);
+        let initData = LightNode.interface.encodeFunctionData("initialize", [chainId,minEpochBlockExtraDataLen, wallet.address, mPTVerify.address,confirms,initBlock]);
 
         const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
 
@@ -76,7 +78,7 @@ describe("LightNode", function () {
             expect(admin).to.not.eq(other.address);
 
             const LightNode = await ethers.getContractFactory("LightNode");
-            const newImplement = await LightNode.connect(wallet).deploy(minEpochBlockExtraDataLen, wallet.address, wallet.address);
+            const newImplement = await LightNode.connect(wallet).deploy();
             await newImplement.deployed();
 
             await expect(lightNode.connect(other).upgradeTo(newImplement.address)).to.be.revertedWith('LightNode: only Admin can upgrade');
@@ -94,7 +96,7 @@ describe("LightNode", function () {
             expect(admin).to.not.eq(other.address);
 
             const LightNode = await ethers.getContractFactory("LightNode");
-            const newImplement = await LightNode.connect(wallet).deploy(minEpochBlockExtraDataLen, wallet.address, wallet.address);
+            const newImplement = await LightNode.connect(wallet).deploy();
             await newImplement.deployed();
 
             let oldImplement = await lightNode.getImplementation();
@@ -197,7 +199,7 @@ describe("LightNode", function () {
 
             await lightNode.connect(wallet).togglePause(true);
 
-            await expect(lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.addBlock))).to.be.revertedWith('Pausable: paused');
+            await expect(lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.addBlock_1s))).to.be.revertedWith('Pausable: paused');
 
         });
 
@@ -208,13 +210,13 @@ describe("LightNode", function () {
             let lightNode = await loadFixture(deployFixture);
 
 
-            await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.addBlock));
+            await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.addBlock_1s));
 
             let current = await lightNode.headerHeight();
 
             expect(current).to.eq(34765887)
 
-            await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.addBlock1));
+            await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.addBlock_2s));
 
             current = await lightNode.headerHeight();
 
@@ -230,7 +232,7 @@ describe("LightNode", function () {
             let lightNode = await loadFixture(deployFixture);
 
 
-            await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.addBlock));
+            await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(data.addBlock_1s));
 
             let current = await lightNode.headerHeight();
 
@@ -238,7 +240,7 @@ describe("LightNode", function () {
 
             let receiptProof = new ReceiptProof(data.txReceipt, index2key(BigNumber.from(data.proof.key).toNumber(), data.proof.proof.length), data.proof.proof);
 
-            let proofData = new ProofData(data.proofHeader, receiptProof);
+            let proofData = new ProofData(data.proofHeaders, receiptProof);
 
             let proofBytes = await lightNode.getBytes(proofData);
 

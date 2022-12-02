@@ -142,12 +142,12 @@ export class ReceiptProof {
 
 
 export class ProofData {
-    public header?: BlockHeader;
+    public headers?: BlockHeader[];
     public receiptProof?: ReceiptProof;
 
 
-    constructor(headers: BlockHeader, receiptProof: ReceiptProof) {
-        this.header = headers;
+    constructor(headers: BlockHeader[], receiptProof: ReceiptProof) {
+        this.headers = headers;
         this.receiptProof = receiptProof;
 
     }
@@ -195,7 +195,7 @@ function buffer2hex(buffer: Buffer) {
 }
 
 
-export async function getProof(txHash: string, rpc: string) {
+export async function getProof(txHash: string, rpc: string,confirms:number|string) {
 
     const provider = new ethers.providers.JsonRpcProvider(rpc);
 
@@ -204,6 +204,13 @@ export async function getProof(txHash: string, rpc: string) {
     console.log(r.blockNumber)
 
     let block = await getBlock(r.blockNumber, provider);
+
+    let headers :Array<BlockHeader> = new Array<BlockHeader>();
+
+    for(let i = 0;i < confirms;i++){
+      let lastHeader = await getBlock(r.blockNumber + i, provider);
+        headers.push(lastHeader);
+    }
 
     let logs: TxLog[] = new Array<TxLog>();
 
@@ -220,7 +227,7 @@ export async function getProof(txHash: string, rpc: string) {
 
     let receiptProof = new ReceiptProof(txReceipt, index2key(BigNumber.from(r.transactionIndex).toNumber(), proof.proof.length), proof.proof);
 
-    let proofData = new ProofData(block, receiptProof);
+    let proofData = new ProofData(headers, receiptProof);
 
     return proofData;
 }
