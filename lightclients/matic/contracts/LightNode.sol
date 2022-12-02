@@ -163,7 +163,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         require(
             Verify.containValidator(
-                validators[_lastSyncedBlock / EPOCH_NUM],
+                validators[_blockHeader.number / EPOCH_NUM],
                 signer
             ),
             "invalid block header singer"
