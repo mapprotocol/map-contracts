@@ -189,7 +189,7 @@ library Verify {
         );
 
         if (success)
-            logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).toRlpBytes();
+            logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
     }
 
     function encodeReceipt(TxReceipt memory _txReceipt)
