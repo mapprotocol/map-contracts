@@ -64,13 +64,13 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         console.log("deployer address:",deployer.address)
         console.log(addr8.address)
 
-        EvmDecoder = await ethers.getContractFactory("EvmDecoder");
-        evmDecoder = await EvmDecoder.deploy();
-        console.log("EvmDecoder address:",evmDecoder.address);
-
-        NearDecoder = await ethers.getContractFactory("NearDecoder");
-        nearDecoder = await NearDecoder.deploy();
-        console.log("NearDecoder address:",nearDecoder.address);
+        // EvmDecoder = await ethers.getContractFactory("EvmDecoder");
+        // evmDecoder = await EvmDecoder.deploy();
+        // console.log("EvmDecoder address:",evmDecoder.address);
+        //
+        // NearDecoder = await ethers.getContractFactory("NearDecoder");
+        // nearDecoder = await NearDecoder.deploy();
+        // console.log("NearDecoder address:",nearDecoder.address);
 
         MOSSRelay = await ethers.getContractFactory("MAPOmnichainServiceRelayV2");
         // moss = await ethers.getContractAt("MapCrossChainService",mosData.mos);

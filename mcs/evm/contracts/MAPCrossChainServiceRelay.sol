@@ -260,6 +260,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
             (bytes memory mcsContract, transferOutEvent[] memory _outEvents) = decodeNearLog(logArray);
             for (uint i = 0; i < _outEvents.length; i++) {
                 transferOutEvent memory _outEvent = _outEvents[i];
+                if (_outEvent.to_chain == 0){continue;}
                 require(_checkBytes(mcsContract, bridgeAddress[chainId]), "Illegal across the chain");
                 bytes memory toChainToken = tokenRegister.getTargetToken(_outEvent.from_chain, _outEvent.token, _outEvent.to_chain);
                 uint256 outAmount = getToChainAmountOther(_outEvent.token, _outEvent.from_chain, _outEvent.to_chain, _outEvent.amount);
@@ -391,6 +392,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
             (bytes memory mcsContract,nearDepositOutEvent[] memory _outEvents) = decodeNearDepositLog(logArray);
             for (uint i = 0; i < _outEvents.length; i++) {
                 nearDepositOutEvent memory _outEvent = _outEvents[i];
+                if (_outEvent.to_chain == 0){continue;}
                 require(selfChainId == _outEvent.to_chain, "Illegal to chainID");
                 require(_fromChain == _outEvent.from_chain, "Illegal from chainID");
                 require(_checkBytes(mcsContract, bridgeAddress[_outEvent.from_chain]), "Illegal across the chain");
@@ -482,7 +484,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         _txLogs = new txLog[](ls.length);
         for (uint256 i = 0; i < ls.length; i++) {
             RLPReader.RLPItem[] memory item = ls[i].toList();
-            require(item.length >=3,"log length to low");
+            require(item.length >= 3, "log length to low");
             RLPReader.RLPItem[] memory firstItemList = item[1].toList();
             bytes[] memory topic = new bytes[](firstItemList.length);
             for (uint256 j = 0; j < firstItemList.length; j++) {
@@ -502,7 +504,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     returns (bytes memory executorId, transferOutEvent[] memory _outEvents){
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
 
-        require(ls.length >=2,"logsHash length to low");
+        require(ls.length >= 2, "logsHash length to low");
 
         executorId = ls[0].toBytes();
 
@@ -511,13 +513,16 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
             logs[i] = ls[1].toList()[i].toBytes();
         }
         bytes memory log;
+
+        _outEvents = new transferOutEvent[](logs.length);
+
         for (uint256 i = 0; i < logs.length; i++) {
 
             (bytes memory temp) = splitExtra(logs[i]);
             if (keccak256(temp) == nearTransferOut) {
                 log = hexStrToBytes(logs[i]);
                 RLPReader.RLPItem[] memory logList = log.toRlpItem().toList();
-                require(logList.length >=8,"logsHash length to low");
+                require(logList.length >= 8, "logsHash length to low");
                 transferOutEvent memory _outEvent = transferOutEvent({
                 token : logList[0].toBytes(),
                 from : logList[1].toBytes(),
@@ -538,7 +543,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     view
     returns (bytes memory executorId, nearDepositOutEvent[] memory _outEvents){
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
-        require(ls.length >=2,"logsHash length to low");
+        require(ls.length >= 2, "logsHash length to low");
 
         executorId = ls[0].toBytes();
 
@@ -549,13 +554,16 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
         }
         bytes memory log;
+        _outEvents = new nearDepositOutEvent[](logs.length);
         for (uint256 i = 0; i < logs.length; i++) {
 
             (bytes memory temp) = splitExtra(logs[i]);
             if (keccak256(temp) == nearDepositOut) {
                 log = hexStrToBytes(logs[i]);
                 RLPReader.RLPItem[] memory logList = log.toRlpItem().toList();
-                require(logList.length >=7,"logsHash length to low");
+
+                require(logList.length >= 7, "logsHash length to low");
+
                 nearDepositOutEvent memory _outEvent = nearDepositOutEvent({
                 token : logList[0].toBytes(),
                 from : logList[1].toBytes(),
