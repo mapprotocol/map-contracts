@@ -222,7 +222,7 @@ describe("LightNode start test", function () {
 
         let data220558 =  await lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedata220559));
         expect(data220558.success).to.equal(false);
-        expect(data220558.message).to.equal("bls error");
+        expect(data220558.message).to.equal("verifyHeaderSig fail");
 
         await lightClientDelete.updateBlockHeader(proofs.header220000,proofs.aggpk220000);
 
