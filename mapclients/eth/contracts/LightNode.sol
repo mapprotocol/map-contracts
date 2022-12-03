@@ -99,20 +99,15 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     returns (bool success, string memory message, bytes memory logsHash) {
         receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
         logsHash = verifyTool.encodeTxLog(_receiptProof.receipt.logs);
-        istanbulExtra memory ist = verifyTool.decodeExtraData(_receiptProof.header.extraData);
         (success, message) = verifyTool.getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
             return (success, message, logsHash);
         }
-        (success,) = verifyTool.verifyHeader(_receiptProof.header,ist);
-        if (!success) {
-            message = "verifyHeader error";
+        ( success,) = verifyHeaderSig(_receiptProof.header, _receiptProof.aggPk);
+        if(!success){
+            message = "verifyHeaderSig fail";
             return (success, message, logsHash);
-        }
-        success = checkSig(_receiptProof.header, ist, _receiptProof.aggPk);
-        if (!success) {
-            message = "bls error";
         }
         return (success, message, logsHash);
     }
@@ -124,8 +119,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         require(bh.number % epochSize == 0, "Header number is error");
         require(bh.number > headerHeight, "Header is have");
         headerHeight = bh.number;
-        istanbulExtra memory ist = verifyTool.decodeExtraData(bh.extraData);
-        bool success = checkSig(bh, ist, aggPk);
+        (bool success,istanbulExtra memory ist) = verifyHeaderSig(bh, aggPk);
         require(success, "checkSig error");
         uint256 len = ist.addedG1PubKey.length;
         G1[] memory _pairKeysAdd = new G1[](len);
@@ -143,20 +137,37 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         emit MapUpdateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 
+    function verifyHeaderSig(blockHeader memory _bh, G2 memory _aggPk) internal view returns(bool success,istanbulExtra memory){
+        bytes32 extraDataPre = bytes32(_bh.extraData);
+        istanbulExtra memory ist= verifyTool.decodeExtraData(_bh.extraData);
+
+        (bytes memory deleteAggBytes,
+        bytes memory deleteSealAndAggBytes)= verifyTool.manageAgg(ist);
+        deleteAggBytes = abi.encodePacked(extraDataPre, deleteAggBytes);
+        deleteSealAndAggBytes = abi.encodePacked(extraDataPre, deleteSealAndAggBytes);
+
+
+        (bytes memory deleteAggHeaderBytes,
+        bytes memory deleteSealAndAggHeaderBytes) = verifyTool.encodeHeader(_bh,deleteAggBytes,deleteSealAndAggBytes);
+        (success,) = verifyTool.verifyHeader(_bh.coinbase,ist.seal,deleteSealAndAggHeaderBytes);
+        success = checkSig(_bh, ist, _aggPk,deleteAggHeaderBytes);
+        return (success,ist);
+    }
+
     function verifiableHeaderRange() external view override returns (uint256, uint256){
 
         return (headerHeight - (maxValidators * epochSize) , headerHeight + epochSize);
     }
 
-    function checkSig(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk)
+    function checkSig(blockHeader memory _bh, istanbulExtra memory _ist, G2 memory _aggPk,bytes memory _headerWithoutAgg)
     internal
     view
     returns (bool){
-        uint256 epoch = getEpochNumber(bh.number);
-        bytes memory message = getPrepareCommittedSeal(bh, ist);
-        bytes memory bits = abi.encodePacked(ist.aggregatedSeal.bitmap);
-        G1 memory sig = blsCode.decodeG1(ist.aggregatedSeal.signature);
-        return checkSigTag(bits, message, sig, aggPk, epoch);
+        uint256 epoch = getEpochNumber(_bh.number);
+        bytes memory message = getPrepareCommittedSeal(_headerWithoutAgg, _ist.aggregatedSeal.round);
+        bytes memory bits = abi.encodePacked(_ist.aggregatedSeal.bitmap);
+        G1 memory sig = blsCode.decodeG1(_ist.aggregatedSeal.signature);
+        return checkSigTag(bits, message, sig, _aggPk, epoch);
     }
 
     function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch)
@@ -271,17 +282,15 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         && checkSignature(message, sig, aggPk);
     }
 
-
-    function getPrepareCommittedSeal(blockHeader memory bh,istanbulExtra memory ist)
+    function getPrepareCommittedSeal(bytes memory _headerWithoutAgg,uint256 _round)
     internal
     view
     returns (bytes memory result){
-        uint256 round = ist.aggregatedSeal.round;
-        bytes32 hash = verifyTool.getBlockHash(bh,ist);
-        if (round == 0) {
+        bytes32 hash = keccak256(_headerWithoutAgg);
+        if (_round == 0) {
             result = abi.encodePacked(hash, uint8(2));
         } else {
-            result = abi.encodePacked(hash, getLengthInBytes(round), uint8(2));
+            result = abi.encodePacked(hash, getLengthInBytes(_round), uint8(2));
         }
     }
 

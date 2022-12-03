@@ -63,30 +63,72 @@ contract VerifyTool is ILightNodePoint {
     }
 
 
-    function encodeHeader(blockHeader memory bh)
-    public
+    function encodeHeader(blockHeader memory _bh,bytes memory _deleteAggBytes,bytes memory _deleteSealAndAggBytes)
+    external
     pure
-    returns (bytes memory output){
+    returns (bytes memory deleteAggHeaderBytes,bytes memory deleteSealAndAggHeaderBytes){
         bytes[] memory list = new bytes[](14);
-        list[0] = RLPEncode.encodeBytes(bh.parentHash);
-        list[1] = RLPEncode.encodeAddress(bh.coinbase);
-        list[2] = RLPEncode.encodeBytes(bh.root);
-        list[3] = RLPEncode.encodeBytes(bh.txHash);
-        list[4] = RLPEncode.encodeBytes(bh.receiptHash);
-        list[5] = RLPEncode.encodeBytes(bh.bloom);
-        list[6] = RLPEncode.encodeUint(bh.number);
-        list[7] = RLPEncode.encodeUint(bh.gasLimit);
-        list[8] = RLPEncode.encodeUint(bh.gasUsed);
-        list[9] = RLPEncode.encodeUint(bh.time);
-        list[10] = RLPEncode.encodeBytes(bh.extraData);
-        list[11] = RLPEncode.encodeBytes(bh.mixDigest);
-        list[12] = RLPEncode.encodeBytes(bh.nonce);
-        list[13] = RLPEncode.encodeUint(bh.baseFee);
-        output = RLPEncode.encodeList(list);
+        list[0] = RLPEncode.encodeBytes(_bh.parentHash);
+        list[1] = RLPEncode.encodeAddress(_bh.coinbase);
+        list[2] = RLPEncode.encodeBytes(_bh.root);
+        list[3] = RLPEncode.encodeBytes(_bh.txHash);
+        list[4] = RLPEncode.encodeBytes(_bh.receiptHash);
+        list[5] = RLPEncode.encodeBytes(_bh.bloom);
+        list[6] = RLPEncode.encodeUint(_bh.number);
+        list[7] = RLPEncode.encodeUint(_bh.gasLimit);
+        list[8] = RLPEncode.encodeUint(_bh.gasUsed);
+        list[9] = RLPEncode.encodeUint(_bh.time);
+        list[10] = RLPEncode.encodeBytes(_deleteAggBytes);
+        list[11] = RLPEncode.encodeBytes(_bh.mixDigest);
+        list[12] = RLPEncode.encodeBytes(_bh.nonce);
+        list[13] = RLPEncode.encodeUint(_bh.baseFee);
+        deleteAggHeaderBytes = RLPEncode.encodeList(list);
+        list[10] = RLPEncode.encodeBytes(_deleteSealAndAggBytes);
+        deleteSealAndAggHeaderBytes = RLPEncode.encodeList(list);
+    }
+
+    function manageAgg(istanbulExtra memory ist)
+    external
+    pure
+    returns (bytes memory deleteAggBytes,bytes memory deleteSealAndAggBytes){
+        bytes[] memory list1 = new bytes[](ist.validators.length);
+        bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
+        bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
+        for (uint256 i = 0; i < ist.validators.length; i++) {
+            list1[i] = RLPEncode.encodeAddress(ist.validators[i]);
+        }
+        for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
+            list2[i] = RLPEncode.encodeBytes(ist.addedPubKey[i]);
+        }
+        for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
+            list3[i] = RLPEncode.encodeBytes(ist.addedG1PubKey[i]);
+        }
+        bytes[] memory manageList = new bytes[](7);
+        manageList[0] = RLPEncode.encodeList(list1);
+        manageList[1] = RLPEncode.encodeList(list2);
+        manageList[2] = RLPEncode.encodeList(list3);
+        manageList[3] = RLPEncode.encodeUint(ist.removeList);
+        manageList[4] = RLPEncode.encodeBytes(ist.seal);
+        manageList[5] = new bytes(4);
+        manageList[5][0] = bytes1(STRING_SHORT_ARRAY_START);
+        manageList[5][1] = bytes1(STRING_SHORT_START);
+        manageList[5][2] = bytes1(STRING_SHORT_START);
+        manageList[5][3] = bytes1(STRING_SHORT_START);
+        manageList[6] = encodeAggregatedSeal(
+            ist.parentAggregatedSeal.bitmap,
+            ist.parentAggregatedSeal.signature,
+            ist.parentAggregatedSeal.round
+        );
+        deleteAggBytes = RLPEncode.encodeList(manageList);
+
+        manageList[4] = new bytes(1);
+        manageList[4][0] = bytes1(STRING_SHORT_START);
+
+        deleteSealAndAggBytes = RLPEncode.encodeList(manageList);
     }
 
     function decodeExtraData(bytes memory extraData)
-    public
+    external
     pure
     returns (istanbulExtra memory ist){
         bytes memory decodeBytes = splitExtra(extraData);
@@ -131,8 +173,8 @@ contract VerifyTool is ILightNodePoint {
         round : item6.toList()[2].toUint()
         })
         });
-
     }
+
 
     function encodeTxLog(txLog[] memory _txLogs)
     public
@@ -175,29 +217,18 @@ contract VerifyTool is ILightNodePoint {
         }
     }
 
-    function getBlockHash(blockHeader memory bh,istanbulExtra memory ist)
-    public
-    pure
-    returns (bytes32){
-        bytes memory extraDataPre = splitExtra32(bh.extraData);
-        bh.extraData = deleteAgg(ist, extraDataPre);
-        bytes memory headerWithoutAgg = encodeHeader(bh);
-        return keccak256(abi.encodePacked(headerWithoutAgg));
-    }
-
-    function verifyHeader(blockHeader memory bh,istanbulExtra memory ist)
+    function verifyHeader(address _coinbase,bytes memory _seal,bytes memory _headerWithoutSealAndAgg)
     public
     pure
     returns (bool ret, bytes32 headerHash){
-        headerHash = getHeaderHash(bh,ist);
+
+        headerHash = keccak256(abi.encodePacked(keccak256(abi.encodePacked(_headerWithoutSealAndAgg))));
         ret = verifySign(
-            ist.seal,
+            _seal,
             headerHash,
-            bh.coinbase
+            _coinbase
         );
     }
-
-
 
     function splitExtra(bytes memory extra)
     internal
@@ -212,19 +243,6 @@ contract VerifyTool is ILightNodePoint {
         }
         return newExtra;
     }
-
-    function splitExtra32(bytes memory extra)
-    internal
-    pure
-    returns (bytes memory newExtra){
-        require(extra.length >= 32,"Invalid extra result type");
-        newExtra = new bytes(32);
-        for (uint i = 0; i < 32; i++) {
-            newExtra[i] = extra[i];
-        }
-        return newExtra;
-    }
-
 
 
     function getVerifyExpectedValueHash(txReceipt memory _txReceipt)
@@ -259,18 +277,6 @@ contract VerifyTool is ILightNodePoint {
             bytes memory temp = RLPEncode.encodeList(list);
             output = abi.encodePacked(tip, temp);
         }
-    }
-
-    function getHeaderHash(blockHeader memory bh,istanbulExtra memory ist)
-    public
-    pure
-    returns (bytes32){
-        bytes memory extraDataPre = splitExtra32(bh.extraData);
-        bh.extraData = deleteAgg(ist, extraDataPre);
-        bh.extraData = deleteSealAndAgg(ist, bh.extraData);
-        bytes memory headerWithoutSealAndAgg = encodeHeader(bh);
-        bytes32 hash2 = keccak256(abi.encodePacked(headerWithoutSealAndAgg));
-        return keccak256(abi.encodePacked(hash2));
     }
 
 
@@ -312,44 +318,6 @@ contract VerifyTool is ILightNodePoint {
             }
         }
         newExtra = output;
-    }
-
-
-    function deleteSealAndAgg(istanbulExtra memory ist, bytes memory rlpHeader)
-    internal
-    pure
-    returns (bytes memory newExtra){
-        bytes[] memory list1 = new bytes[](ist.validators.length);
-        bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
-        bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
-        for (uint256 i = 0; i < ist.validators.length; i++) {
-            list1[i] = RLPEncode.encodeAddress(ist.validators[i]);
-        }
-        for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
-            list2[i] = RLPEncode.encodeBytes(ist.addedPubKey[i]);
-        }
-        for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
-            list3[i] = RLPEncode.encodeBytes(ist.addedG1PubKey[i]);
-        }
-        bytes[] memory list = new bytes[](7);
-        list[0] = RLPEncode.encodeList(list1);
-        list[1] = RLPEncode.encodeList(list2);
-        list[2] = RLPEncode.encodeList(list3);
-        list[3] = RLPEncode.encodeUint(ist.removeList);
-        list[4] = new bytes(1);
-        list[4][0] = bytes1(STRING_SHORT_START);
-        list[5] = new bytes(4);
-        list[5][0] = bytes1(STRING_SHORT_ARRAY_START);
-        list[5][1] = bytes1(STRING_SHORT_START);
-        list[5][2] = bytes1(STRING_SHORT_START);
-        list[5][3] = bytes1(STRING_SHORT_START);
-        list[6] = encodeAggregatedSeal(
-            ist.parentAggregatedSeal.bitmap,
-            ist.parentAggregatedSeal.signature,
-            ist.parentAggregatedSeal.round
-        );
-        bytes memory b = RLPEncode.encodeList(list);
-        newExtra = abi.encodePacked(bytes32(rlpHeader), b);
     }
 
 

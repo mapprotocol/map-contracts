@@ -14,15 +14,20 @@ interface IVerifyTool is ILightNodePoint {
     view
     returns (blockHeader memory bh);
 
-    function encodeHeader(blockHeader memory bh)
+    function encodeHeader(blockHeader memory _bh,bytes memory _deleteAggBytes,bytes memory _deleteSealAndAggBytes)
     external
     view
-    returns (bytes memory output);
+    returns (bytes memory deleteAggHeaderBytes,bytes memory deleteSealAndAggHeaderBytes);
 
     function decodeExtraData(bytes memory extraData)
     external
     view
     returns (istanbulExtra memory ist);
+
+    function manageAgg(istanbulExtra memory ist)
+    external
+    pure
+    returns (bytes memory deleteAggBytes,bytes memory deleteSealAndAggBytes);
 
     function encodeTxLog(txLog[] memory _txLogs)
     external
@@ -34,12 +39,7 @@ interface IVerifyTool is ILightNodePoint {
     view
     returns (txLog[] memory _txLogs);
 
-    function getBlockHash(blockHeader memory bh,istanbulExtra memory ist)
-    external
-    view
-    returns (bytes32);
-
-    function verifyHeader(blockHeader memory bh,istanbulExtra memory ist)
+    function verifyHeader(address _coinbase,bytes memory _seal,bytes memory _headerWithoutSealAndAgg)
     external
     view
     returns (bool ret, bytes32 headerHash);
