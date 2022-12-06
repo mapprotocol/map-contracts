@@ -111,9 +111,9 @@ describe("LightNode start test", function () {
     });
 
     it('updateBlockHeader and verifyProofData', async function () {
-        await proxy.updateBlockHeader(proofs.header203000,proofs.aggpk203000);
-        await proxy.updateBlockHeader(proofs.header204000,proofs.aggpk204000);
-        await proxy.updateBlockHeader(proofs.header205000,proofs.aggpk205000);
+        await proxy.updateBlockHeader(proofs.header203000,proofs.ist203000, proofs.aggpk203000);
+        await proxy.updateBlockHeader(proofs.header204000,proofs.ist204000, proofs.aggpk204000);
+        await proxy.updateBlockHeader(proofs.header205000,proofs.ist205000, proofs.aggpk205000);
 
         let data205030 =  await proxy.callStatic.verifyProofData( await proxy.getBytes(proofs.provedata205030));
         expect(data205030.success).to.equal(true);
@@ -122,7 +122,7 @@ describe("LightNode start test", function () {
 
     it('add validator', async function () {
 
-        await proxy.updateBlockHeader(proofs.header206000,proofs.aggpk206000);
+        await proxy.updateBlockHeader(proofs.header206000,proofs.ist206000,proofs.aggpk206000);
 
         let data206460 =  await proxy.callStatic.verifyProofData( await proxy.getBytes(proofs.provedata206460));
         expect(data206460.success).to.equal(true);
@@ -140,14 +140,14 @@ describe("LightNode start test", function () {
             expect(await proxy.getImplementation()).to.equal(lightClientP1.address);
 
             await proxy.setPendingAdmin(addr1.address)
-            console.log(addr1.address);
-            console.log(await proxy.pendingAdmin());
+            // console.log(addr1.address);
+            // console.log(await proxy.pendingAdmin());
 
             await (await proxy.connect(addr1)).changeAdmin();
 
             expect(await proxy.getAdmin()).to.equal(addr1.address);
 
-            await proxy.updateBlockHeader(proofs.header207000,proofs.aggpk207000);
+            await proxy.updateBlockHeader(proofs.header207000,proofs.ist207000,proofs.aggpk207000);
 
             expect(await proxy.headerHeight()).to.equal("207000");
 
@@ -216,25 +216,23 @@ describe("LightNode start test", function () {
         await lightClientDelete.initialize(_threshold, addresss, g1ListDelete, _weights, _epoch, _epochSize,verifyToolContractAddress);
 
 
-        await lightClientDelete.updateBlockHeader(proofs.header217000,proofs.aggpk217000);
-        await lightClientDelete.updateBlockHeader(proofs.header218000,proofs.aggpk218000);
-        await lightClientDelete.updateBlockHeader(proofs.header219000,proofs.aggpk219000);
+        await lightClientDelete.updateBlockHeader(proofs.header217000,proofs.ist217000,proofs.aggpk217000);
+        await lightClientDelete.updateBlockHeader(proofs.header218000,proofs.ist218000,proofs.aggpk218000);
+        await lightClientDelete.updateBlockHeader(proofs.header219000,proofs.ist219000,proofs.aggpk219000);
 
         let data220558 =  await lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedata220559));
         expect(data220558.success).to.equal(false);
         expect(data220558.message).to.equal("verifyHeaderSig fail");
 
-        await lightClientDelete.updateBlockHeader(proofs.header220000,proofs.aggpk220000);
+        await lightClientDelete.updateBlockHeader(proofs.header220000,proofs.ist220000,proofs.aggpk220000);
 
         let data220559 =  await lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedata220559));
         expect(data220559.success).to.equal(true);
 
-
         await  expect( lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedataProofError))).to.be.revertedWith("verifyTrieProof root node hash invalid");
         //expect(dataProofError.message).to.equal("bls error");
-
-        await expect(lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedataHeaderError))).to.be.revertedWith("ECDSA: invalid signature")
-
+        let dataErr =  await lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedataHeaderError))
+        expect(dataErr.message).to.equal("receipt mismatch")
     });
 
 

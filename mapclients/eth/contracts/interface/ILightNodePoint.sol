@@ -26,11 +26,15 @@ interface ILightNodePoint is IBLSPoint {
 
 
     struct txReceipt {
-        uint256 receiptType;
         bytes postStateOrStatus;
         uint256 cumulativeGasUsed;
         bytes bloom;
-        txLog[] logs;
+        bytes logRlp;
+    }
+
+    struct TxReceiptRlp {
+        uint256 receiptType;
+        bytes receiptRlp;
     }
 
     struct txLog {
@@ -68,8 +72,9 @@ interface ILightNodePoint is IBLSPoint {
 
     struct receiptProof {
         blockHeader header;
+        istanbulExtra ist;
         G2 aggPk;
-        txReceipt receipt;
+        TxReceiptRlp txReceiptRlp;
         bytes keyIndex;
         bytes[] proof;
     }

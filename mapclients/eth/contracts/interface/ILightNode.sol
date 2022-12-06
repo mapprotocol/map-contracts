@@ -14,7 +14,7 @@ interface ILightNode is ILightNodePoint{
     returns (bool success, string memory message,bytes memory logsHash);
 
     //Validate headers and update validation members
-    function updateBlockHeader(blockHeader memory bh, G2 memory aggPk) external;
+    function updateBlockHeader(blockHeader memory bh,istanbulExtra memory ist, G2 memory aggPk) external;
 
     //Initialize the first validator
     function initialize(
