@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.0;
+pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -21,15 +21,21 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
 
-    uint256 public constant MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;
-    uint256 public constant FINALITY_TREE_DEPTH = 6;
+    uint256 public constant FINALITY_PROOF_SIZE = 6;
     uint256 public constant EXECUTION_PROOF_SIZE = 8;
+    uint256 public constant NEXT_SYNC_COMMITTEE_PROOF_SIZE = 5;
     uint256 public constant BLS_PUBKEY_LENGTH = 48;
+    uint256 public constant MAX_BLOCK_SAVED = 32 * 256 * 30;
 
     address public mptVerify;
     uint64 public chainId;
     uint256 public finalizedExeHeaderNumber;
-    Types.ExeHeaderUpdateInfo public exeHeaderUpdateInfo;
+
+    // execution layer headers to update
+    uint256 public exeHeaderStartNumber;
+    uint256 public exeHeaderEndNumber;
+    bytes32 public exeHeaderEndHash;
+
     Types.BeaconBlockHeader public finalizedBeaconHeader;
     Types.SyncCommittee[2] public syncCommittees;
     uint64 public initStage;
@@ -41,8 +47,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     bytes32[] private syncCommitteePubkeyHashes;
     bool verifyUpdate;
 
-    event UpdateLightClient(address indexed account, uint256 indexed height);
-    event UpdateExeBlockHeader(uint256 start, uint256 end);
+    event UpdateLightClient(address indexed account, uint256 slot, uint256 height);
+    event UpdateBlockHeader(address indexed account, uint256 start, uint256 end);
 
     modifier onlyOwner() {
         require(msg.sender == _getAdmin(), "lightnode :: only admin");
@@ -61,7 +67,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         bytes32[] memory _syncCommitteePubkeyHashes, // divide 512 pubkeys into 3 parts: 171 + 171 + 170
         bool _verifyUpdate
     ) public initializer {
-        require(!initialized, "contract is initialized!");
         require(_controller != address(0), "invalid controller address");
         require(_mptVerify != address(0), "invalid mptVerify address");
         require(_syncCommitteePubkeyHashes.length == 6, "invalid syncCommitteePubkeyHashes length");
@@ -91,8 +96,9 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     function initSyncCommitteePubkey(bytes memory _syncCommitteePubkeyPart) public {
         require(!initialized, "contract is initialized!");
-        uint256 pubkeyLength;
+        require(initStage != 0, "should call initialize() first!");
 
+        uint256 pubkeyLength;
         if (initStage % 3 != 0) {// initStage 1, 2, 4, 5
             pubkeyLength = 171;
         } else {
@@ -117,7 +123,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     function updateLightClient(bytes memory _data) external override whenNotPaused {
         require(initialized, "contract is not initialized!");
-        require(exeHeaderUpdateInfo.endNumber == 0, "previous exe block headers should be updated before update light client");
+        require(exeHeaderEndNumber == 0, "previous exe block headers should be updated before update light client");
 
         Types.LightClientUpdate memory update = abi.decode(_data, (Types.LightClientUpdate));
         require(update.attestedHeader.slot >= update.finalizedHeader.slot, "invalid attested header and finalized header slot");
@@ -127,10 +133,11 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         uint256 finalizedPeriod = Helper.compute_sync_committee_period(finalizedBeaconHeader.slot);
         uint256 updatePeriod = Helper.compute_sync_committee_period(update.finalizedHeader.slot);
         require(finalizedPeriod == updatePeriod || finalizedPeriod + 1 == updatePeriod, "unexpected update period");
-        require(update.finalityBranch.length == FINALITY_TREE_DEPTH, "invalid finality branch length");
+        require(update.finalityBranch.length == FINALITY_PROOF_SIZE, "invalid finality branch length");
+        require(update.exeFinalityBranch.length == EXECUTION_PROOF_SIZE, "invalid execution finality branch length");
 
         if (finalizedPeriod + 1 == updatePeriod) {
-            require(update.exeFinalityBranch.length == EXECUTION_PROOF_SIZE, "invalid execution finality branch length");
+            require(update.nextSyncCommitteeBranch.length == NEXT_SYNC_COMMITTEE_PROOF_SIZE, "invalid next sync committee branch length");
         }
 
         if (verifyUpdate) {
@@ -150,39 +157,44 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
 
         finalizedExeHeaders[update.finalizedExeHeader.number] = Helper.getBlockHash(update.finalizedExeHeader);
-        exeHeaderUpdateInfo.startNumber = finalizedExeHeaderNumber + 1;
-        exeHeaderUpdateInfo.endNumber = update.finalizedExeHeader.number - 1;
-        exeHeaderUpdateInfo.endHash = Helper.bytesToBytes32(update.finalizedExeHeader.parentHash, 0);
+        exeHeaderStartNumber = finalizedExeHeaderNumber + 1;
+        exeHeaderEndNumber = update.finalizedExeHeader.number - 1;
+        exeHeaderEndHash = Helper.bytesToBytes32(update.finalizedExeHeader.parentHash);
         finalizedExeHeaderNumber = update.finalizedExeHeader.number;
         finalizedBeaconHeader = update.finalizedHeader;
 
-        emit UpdateLightClient(msg.sender, finalizedExeHeaderNumber);
+        emit UpdateLightClient(msg.sender, finalizedBeaconHeader.slot, finalizedExeHeaderNumber);
     }
 
     function updateBlockHeader(bytes memory _blockHeader) external override whenNotPaused {
+        require(exeHeaderEndNumber != 0, "no need to update exe headers");
+
         Types.BlockHeader[] memory headers = abi.decode(_blockHeader, (Types.BlockHeader[]));
         require(headers.length != 0, "invalid headers");
-        require(exeHeaderUpdateInfo.endNumber != 0, "no need to update exe headers");
-        require(headers.length <= exeHeaderUpdateInfo.endNumber - exeHeaderUpdateInfo.startNumber + 1, "headers size too big");
-        require(headers[0].number >= exeHeaderUpdateInfo.startNumber, "invalid start exe header number");
-        require(headers[headers.length - 1].number == exeHeaderUpdateInfo.endNumber, "invalid end exe header number");
+        require(headers.length <= exeHeaderEndNumber - exeHeaderStartNumber + 1, "headers size too big");
+        require(headers[0].number >= exeHeaderStartNumber, "invalid start exe header number");
+        require(headers[headers.length - 1].number == exeHeaderEndNumber, "invalid end exe header number");
 
         for (uint256 i = 0; i < headers.length; i++) {
             Types.BlockHeader memory header = headers[headers.length - i - 1];
-            require(exeHeaderUpdateInfo.endNumber == header.number, "unexpected block number");
-            require(exeHeaderUpdateInfo.endHash == Helper.getBlockHash(header), "unexpected block parent hash");
+            require(exeHeaderEndNumber == header.number, "unexpected block number");
+            require(exeHeaderEndHash == Helper.getBlockHash(header), "unexpected block parent hash");
 
-            finalizedExeHeaders[exeHeaderUpdateInfo.endNumber] = exeHeaderUpdateInfo.endHash;
-            exeHeaderUpdateInfo.endNumber--;
-            exeHeaderUpdateInfo.endHash = Helper.bytesToBytes32(header.parentHash, 0);
+            finalizedExeHeaders[exeHeaderEndNumber] = exeHeaderEndHash;
+            exeHeaderEndNumber--;
+            exeHeaderEndHash = Helper.bytesToBytes32(header.parentHash);
         }
 
-        if (exeHeaderUpdateInfo.startNumber > exeHeaderUpdateInfo.endNumber) {
-            exeHeaderUpdateInfo.startNumber = 0;
-            exeHeaderUpdateInfo.endNumber = 0;
+        if (exeHeaderStartNumber > exeHeaderEndNumber) {
+            exeHeaderStartNumber = 0;
+            exeHeaderEndNumber = 0;
+            while (finalizedExeHeaderNumber - startExeHeaderNumber + 1 > MAX_BLOCK_SAVED) {
+                delete finalizedExeHeaders[startExeHeaderNumber];
+                startExeHeaderNumber++;
+            }
         }
 
-        emit UpdateExeBlockHeader(headers[0].number, headers[headers.length - 1].number);
+        emit UpdateBlockHeader(msg.sender, headers[0].number, headers[headers.length - 1].number);
     }
 
 
@@ -218,7 +230,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             if (proof.txReceipt.receiptType != 0) {
                 bytesReceipt = Helper.getBytesSlice(bytesReceipt, 1, bytesReceipt.length - 1);
             }
-            logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).toBytes();
+            logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes();
         } else {
             message = "mpt verify failed";
         }
@@ -228,12 +240,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return finalizedBeaconHeader.slot;
     }
 
-    function verifiableHeaderRange() external view returns (uint256, uint256) {
-        if (exeHeaderUpdateInfo.startNumber == 0) {
+    function verifiableHeaderRange() external view override returns (uint256, uint256) {
+        if (exeHeaderStartNumber == 0) {
             return (startExeHeaderNumber, finalizedExeHeaderNumber);
         }
 
-        return (startExeHeaderNumber, exeHeaderUpdateInfo.startNumber - 1);
+        return (startExeHeaderNumber, exeHeaderStartNumber - 1);
     }
 
     function togglePause(bool flag) external onlyOwner returns (bool) {

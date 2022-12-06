@@ -12,7 +12,7 @@ const config: HardhatUserConfig = {
     defaultNetwork: process.env.DEFAULT_NETWORK != undefined ? process.env.DEFAULT_NETWORK : 'hardhat',
     solidity: {
         compilers: [
-            {version: "0.8.9", settings: {optimizer: {enabled: true, runs: 200}}},
+            {version: "0.8.7", settings: {optimizer: {enabled: true, runs: 200}}},
         ],
     },
     namedAccounts: {

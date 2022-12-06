@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+
+pragma solidity 0.8.7;
 
 import "./Types.sol";
 import "./RLPEncode.sol";
@@ -78,22 +79,22 @@ library Helper {
         }
     }
 
-    function bytesToBytes32(bytes memory _b, uint256 _offset)
+    function bytesToBytes32(bytes memory _b)
     internal
     pure
-    returns (bytes32) {
-        bytes32 out;
+    returns (bytes32 part) {
+        require(_b.length > 31, "invalid bytes length");
 
-        for (uint256 i = 0; i < 32; i++) {
-            out |= bytes32(_b[_offset + i] & 0xFF) >> (i * 8);
+        assembly {
+            part := mload(add(_b, 32))
         }
-        return out;
     }
 
     function getBytesSlice(bytes memory _b, uint256 _start, uint256 _length)
     internal
     pure
     returns (bytes memory) {
+        require(_b.length > _start + _length - 1, "invalid bytes length");
         bytes memory out = new bytes(_length);
 
         for (uint256 i = 0; i < _length; i++) {

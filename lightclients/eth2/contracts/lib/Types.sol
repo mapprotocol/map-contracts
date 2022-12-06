@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.7;
 
 library Types {
     struct BeaconBlockHeader {
@@ -83,11 +83,5 @@ library Types {
     struct LightClientVerify {
         LightClientUpdate update;
         LightClientState state;
-    }
-
-    struct ExeHeaderUpdateInfo {
-        uint256 startNumber;
-        uint256 endNumber;
-        bytes32 endHash;
     }
 }
