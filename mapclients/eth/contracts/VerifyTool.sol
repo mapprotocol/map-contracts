@@ -20,10 +20,10 @@ contract VerifyTool is ILightNodePoint {
 
 
     function getVerifyTrieProof(receiptProof memory _receiptProof)
-    public
+    external
     pure
     returns (bool success, string memory message){
-        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptProof.receipt);
+        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptProof.txReceiptRlp.receiptType,_receiptProof.txReceiptRlp.receiptRlp);
         MPT.MerkleProof memory mp;
         mp.expectedRoot = bytes32(_receiptProof.header.receiptHash);
         mp.key = _receiptProof.keyIndex;
@@ -40,7 +40,7 @@ contract VerifyTool is ILightNodePoint {
     }
 
     function decodeHeader(bytes memory rlpBytes)
-    public
+    external
     pure
     returns (blockHeader memory bh){
         RLPReader.RLPItem[] memory ls = rlpBytes.toRlpItem().toList();
@@ -127,57 +127,8 @@ contract VerifyTool is ILightNodePoint {
         deleteSealAndAggBytes = RLPEncode.encodeList(manageList);
     }
 
-    function decodeExtraData(bytes memory extraData)
-    external
-    pure
-    returns (istanbulExtra memory ist){
-        bytes memory decodeBytes = splitExtra(extraData);
-        RLPReader.RLPItem[] memory ls = decodeBytes.toRlpItem().toList();
-        RLPReader.RLPItem[] memory item0 = ls[0].toList();
-        RLPReader.RLPItem[] memory item1 = ls[1].toList();
-        RLPReader.RLPItem[] memory item2 = ls[2].toList();
-        RLPReader.RLPItem memory item3 = ls[3];
-        RLPReader.RLPItem memory item4 = ls[4];
-        RLPReader.RLPItem memory item5 = ls[5];
-        RLPReader.RLPItem memory item6 = ls[6];
-        address[] memory validatorTemp = new address[](item0.length);
-        bytes[] memory addedPubKeyTemp = new bytes[](item1.length);
-        bytes[] memory addedG1PubKeyTemp = new bytes[](item2.length);
-
-        for (uint256 i = 0; i < item0.length; i++) {
-            validatorTemp[i] = item0[i].toAddress();
-        }
-
-        for (uint256 j = 0; j < item1.length; j++) {
-            addedPubKeyTemp[j] = item1[j].toBytes();
-        }
-
-        for (uint256 k = 0; k < item2.length; k++) {
-            addedG1PubKeyTemp[k] = item2[k].toBytes();
-        }
-
-        ist = istanbulExtra({
-        validators : validatorTemp,
-        addedPubKey : addedPubKeyTemp,
-        addedG1PubKey : addedG1PubKeyTemp,
-        removeList : item3.toUint(),
-        seal : item4.toBytes(),
-        aggregatedSeal : istanbulAggregatedSeal({
-        bitmap : item5.toList()[0].toUint(),
-        signature : item5.toList()[1].toBytes(),
-        round : item5.toList()[2].toUint()
-        }),
-        parentAggregatedSeal : istanbulAggregatedSeal({
-        bitmap : item6.toList()[0].toUint(),
-        signature : item6.toList()[1].toBytes(),
-        round : item6.toList()[2].toUint()
-        })
-        });
-    }
-
-
     function encodeTxLog(txLog[] memory _txLogs)
-    public
+    external
     pure
     returns (bytes memory output){
         bytes[] memory listLog = new bytes[](_txLogs.length);
@@ -197,7 +148,7 @@ contract VerifyTool is ILightNodePoint {
     }
 
     function decodeTxLog(bytes memory logsHash)
-    public
+    external
     pure
     returns (txLog[] memory _txLogs){
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
@@ -217,6 +168,14 @@ contract VerifyTool is ILightNodePoint {
         }
     }
 
+    function decodeTxReceipt(bytes memory _receiptRlp)
+    external
+    pure
+    returns (bytes memory logHash){
+        RLPReader.RLPItem[] memory ls = _receiptRlp.toRlpItem().toList();
+        logHash = ls[3].toBytes();
+    }
+
     function verifyHeader(address _coinbase,bytes memory _seal,bytes memory _headerWithoutSealAndAgg)
     public
     pure
@@ -228,6 +187,16 @@ contract VerifyTool is ILightNodePoint {
             headerHash,
             _coinbase
         );
+    }
+
+    function getVerifyExpectedValueHash(uint256 _receiptType,bytes memory receiptRlp) internal pure returns(bytes memory expectedValue){
+        if(_receiptType == 0){
+            return receiptRlp;
+        }else{
+            bytes memory tempType = abi.encode(_receiptType);
+            bytes1 tip = tempType[31];
+            return abi.encodePacked(tip, receiptRlp);
+        }
     }
 
     function splitExtra(bytes memory extra)
@@ -242,82 +211,6 @@ contract VerifyTool is ILightNodePoint {
             n = n + 1;
         }
         return newExtra;
-    }
-
-
-    function getVerifyExpectedValueHash(txReceipt memory _txReceipt)
-    internal
-    pure
-    returns (bytes memory output){
-        bytes[] memory list = new bytes[](4);
-        list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
-        list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
-        list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
-        ILightNodePoint.txLog[] memory items = _txReceipt.logs;
-        bytes[] memory listLog = new bytes[](items.length);
-        bytes[] memory loglist = new bytes[](3);
-        for (uint256 j = 0; j < items.length; j++) {
-            ILightNodePoint.txLog memory item = items[j];
-            loglist[0] = RLPEncode.encodeAddress(item.addr);
-            bytes[] memory loglist1 = new bytes[](item.topics.length);
-            for (uint256 i = 0; i < item.topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(item.topics[i]);
-            }
-            loglist[1] = RLPEncode.encodeList(loglist1);
-            loglist[2] = RLPEncode.encodeBytes(item.data);
-            bytes memory logBytes = RLPEncode.encodeList(loglist);
-            listLog[j] = logBytes;
-        }
-        list[3] = RLPEncode.encodeList(listLog);
-        if(_txReceipt.receiptType == 0){
-            output = RLPEncode.encodeList(list);
-        }else{
-            bytes memory tempType = abi.encode(_txReceipt.receiptType);
-            bytes1 tip = tempType[31];
-            bytes memory temp = RLPEncode.encodeList(list);
-            output = abi.encodePacked(tip, temp);
-        }
-    }
-
-
-    function deleteAgg(istanbulExtra memory ist, bytes memory extraDataPre)
-    internal
-    pure
-    returns (bytes memory newExtra){
-        bytes[] memory list1 = new bytes[](ist.validators.length);
-        bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
-        bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
-        for (uint256 i = 0; i < ist.validators.length; i++) {
-            list1[i] = RLPEncode.encodeAddress(ist.validators[i]);
-        }
-        for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
-            list2[i] = RLPEncode.encodeBytes(ist.addedPubKey[i]);
-        }
-        for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
-            list3[i] = RLPEncode.encodeBytes(ist.addedG1PubKey[i]);
-        }
-        bytes[] memory list = new bytes[](7);
-        list[0] = RLPEncode.encodeList(list1);
-        list[1] = RLPEncode.encodeList(list2);
-        list[2] = RLPEncode.encodeList(list3);
-        list[3] = RLPEncode.encodeUint(ist.removeList);
-        list[4] = RLPEncode.encodeBytes(ist.seal);
-        list[5] = new bytes(4);
-        list[5][0] = bytes1(STRING_SHORT_ARRAY_START);
-        list[5][1] = bytes1(STRING_SHORT_START);
-        list[5][2] = bytes1(STRING_SHORT_START);
-        list[5][3] = bytes1(STRING_SHORT_START);
-        list[6] = encodeAggregatedSeal(ist.parentAggregatedSeal.bitmap, ist.parentAggregatedSeal.signature, ist.parentAggregatedSeal.round);
-        bytes memory b = RLPEncode.encodeList(list);
-        bytes memory output = new bytes(b.length + 32);
-        for (uint i = 0; i < b.length + 32; i++) {
-            if (i < 32) {
-                output[i] = extraDataPre[i];
-            } else {
-                output[i] = b[i - 32];
-            }
-        }
-        newExtra = output;
     }
 
 

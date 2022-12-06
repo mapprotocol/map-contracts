@@ -39,6 +39,11 @@ interface IVerifyTool is ILightNodePoint {
     view
     returns (txLog[] memory _txLogs);
 
+    function decodeTxReceipt(bytes memory receiptRlp)
+    external
+    pure
+    returns (bytes memory logHash);
+
     function verifyHeader(address _coinbase,bytes memory _seal,bytes memory _headerWithoutSealAndAgg)
     external
     view

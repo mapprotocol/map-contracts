@@ -98,13 +98,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     override
     returns (bool success, string memory message, bytes memory logsHash) {
         receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
-        logsHash = verifyTool.encodeTxLog(_receiptProof.receipt.logs);
+        logsHash = verifyTool.decodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
         (success, message) = verifyTool.getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
             return (success, message, logsHash);
         }
-        ( success,) = verifyHeaderSig(_receiptProof.header, _receiptProof.aggPk);
+         success = verifyHeaderSig(_receiptProof.header, _receiptProof.ist, _receiptProof.aggPk);
         if(!success){
             message = "verifyHeaderSig fail";
             return (success, message, logsHash);
@@ -112,14 +112,14 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         return (success, message, logsHash);
     }
 
-    function updateBlockHeader(blockHeader memory bh, G2 memory aggPk)
+    function updateBlockHeader(blockHeader memory bh,istanbulExtra memory ist, G2 memory aggPk)
     external
     override
     {
         require(bh.number % epochSize == 0, "Header number is error");
         require(bh.number > headerHeight, "Header is have");
         headerHeight = bh.number;
-        (bool success,istanbulExtra memory ist) = verifyHeaderSig(bh, aggPk);
+        bool success = verifyHeaderSig(bh,ist, aggPk);
         require(success, "checkSig error");
         uint256 len = ist.addedG1PubKey.length;
         G1[] memory _pairKeysAdd = new G1[](len);
@@ -137,10 +137,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         emit MapUpdateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 
-    function verifyHeaderSig(blockHeader memory _bh, G2 memory _aggPk) internal view returns(bool success,istanbulExtra memory){
+    function verifyHeaderSig(blockHeader memory _bh, istanbulExtra memory ist, G2 memory _aggPk)
+    internal
+    view
+    returns(bool success){
         bytes32 extraDataPre = bytes32(_bh.extraData);
-        istanbulExtra memory ist= verifyTool.decodeExtraData(_bh.extraData);
-
         (bytes memory deleteAggBytes,
         bytes memory deleteSealAndAggBytes)= verifyTool.manageAgg(ist);
         deleteAggBytes = abi.encodePacked(extraDataPre, deleteAggBytes);
@@ -151,8 +152,9 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         bytes memory deleteSealAndAggHeaderBytes) = verifyTool.encodeHeader(_bh,deleteAggBytes,deleteSealAndAggBytes);
         (success,) = verifyTool.verifyHeader(_bh.coinbase,ist.seal,deleteSealAndAggHeaderBytes);
         success = checkSig(_bh, ist, _aggPk,deleteAggHeaderBytes);
-        return (success,ist);
+        return (success);
     }
+
 
     function verifiableHeaderRange() external view override returns (uint256, uint256){
 
@@ -284,7 +286,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
     function getPrepareCommittedSeal(bytes memory _headerWithoutAgg,uint256 _round)
     internal
-    view
+    pure
     returns (bytes memory result){
         bytes32 hash = keccak256(_headerWithoutAgg);
         if (_round == 0) {
