@@ -173,7 +173,7 @@ contract VerifyTool is ILightNodePoint {
     pure
     returns (bytes memory logHash){
         RLPReader.RLPItem[] memory ls = _receiptRlp.toRlpItem().toList();
-        logHash = ls[3].toBytes();
+        logHash = RLPReader.toRlpBytes(ls[3]);
     }
 
     function verifyHeader(address _coinbase,bytes memory _seal,bytes memory _headerWithoutSealAndAgg)
