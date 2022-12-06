@@ -31,6 +31,11 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     uint256 public confirms;
 
+   address private _pendingAdmin;
+
+    event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
+    event AdminTransferred(address indexed previous, address indexed newAdmin);
+
     struct ProofData {
         Verify.BlockHeader[] headers;
         Verify.ReceiptProof receiptProof;
@@ -241,10 +246,21 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 
-    function changeAdmin(address _admin) public onlyOwner {
-        require(_admin != address(0), "zero address");
+   function changeAdmin() public {
+        require(_pendingAdmin == msg.sender, "only pendingAdmin");
+        emit AdminTransferred(_getAdmin(),_pendingAdmin);
+        _changeAdmin(_pendingAdmin);
+    }
 
-        _changeAdmin(_admin);
+
+    function pendingAdmin() external view returns(address){
+        return _pendingAdmin;
+    }
+
+    function setPendingAdmin(address pendingAdmin_) public onlyOwner {
+        require(pendingAdmin_ != address(0), "Ownable: pendingAdmin is the zero address");
+        emit ChangePendingAdmin(_pendingAdmin, pendingAdmin_);
+        _pendingAdmin = pendingAdmin_;
     }
 
     function getAdmin() external view returns (address) {
