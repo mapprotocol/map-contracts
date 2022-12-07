@@ -37,6 +37,7 @@ task("tokenDeploy",
 )
     .addParam("name", "token name")
     .addParam("symbol", "token symbol")
+    .addOptionalParam("decimals", "default 18", 18, types.int)
     .addOptionalParam("balance", "init balance, default 0", 0, types.int)
 
 task("tokenGrant",
@@ -46,6 +47,13 @@ task("tokenGrant",
     .addParam("token", "token address")
     .addOptionalParam("minter", "minter address, default mos", "mos", types.string)
 
+task("tokenMint",
+    "mint token",
+    require("./tokenMint")
+)
+    .addParam("token", "token address")
+    .addParam("amount", "mint amount")
+
 task("mosSetRelay",
     "Initialize MapCrossChainServiceRelay address for MapCrossChainService",
     require("./mosSetRelay")
@@ -53,6 +61,11 @@ task("mosSetRelay",
     .addParam("relay", "map chain relay contract address")
     .addParam("chain", "map chain id")
 
+task("mosSetClient",
+    "Set light client address for MapCrossChainService",
+    require("./mosSetClient")
+)
+    .addParam("client", "light client address")
 
 task("mosRegisterToken",
     "MapCrossChainService settings allow cross-chain tokens",
@@ -60,6 +73,7 @@ task("mosRegisterToken",
 )
     .addParam("token", "token address")
     .addParam("chains", "chain ids allowed to cross, separated by ',', ex. `1,2,3` ")
+    .addOptionalParam("enable", "true or false", true, types.boolean)
 
 task("mosSetMintableToken",
     "MapCrossChainService settings mintable token",

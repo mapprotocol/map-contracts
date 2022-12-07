@@ -10,7 +10,7 @@ module.exports = async (taskArgs,hre) => {
 
     await deploy('MintableToken', {
         from: deployer.address,
-        args: [taskArgs.name, taskArgs.symbol],
+        args: [taskArgs.name, taskArgs.symbol, taskArgs.decimals],
         log: true,
         contract: 'MintableToken',
     })

@@ -17,7 +17,7 @@ module.exports = async (taskArgs,hre) => {
         await (await mos.connect(deployer).registerToken(
             taskArgs.token,
             ids[i],
-            true
+            taskArgs.enable
         )).wait();
 
         console.log(`mos register token ${taskArgs.token} to chain ${ids[i]} success`);
