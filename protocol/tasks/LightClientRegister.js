@@ -9,9 +9,13 @@ module.exports = async (taskArgs,hre) => {
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
-    let LightClientManager = await ethers.getContract('LightClientManager');
+    let proxy = await ethers.getContract('LightClientManagerProxy');
 
-    await LightClientManager.register(taskArgs.chain,taskArgs.contract);
+    console.log("Light Clinet Manager Proxy", proxy.address)
 
-    console.log("success")
+    let manager = await ethers.getContractAt("LightClientManager", proxy.address)
+
+    await manager.register(taskArgs.chain, taskArgs.contract);
+
+    console.log(`Register ${taskArgs.chain} light client ${taskArgs.contract} successfully`)
 }

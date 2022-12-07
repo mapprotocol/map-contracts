@@ -29,7 +29,7 @@ contract LightClientManager is ILightClientManager, Initializable,UUPSUpgradeabl
         _changeAdmin(msg.sender);
     }
 
-    function register(uint256 _chainId, address _contract) external override onlyOwner {
+    function register(uint256 _chainId, address _contract) external onlyOwner {
         lightClientContract[_chainId] = _contract;
     }
 
@@ -49,13 +49,8 @@ contract LightClientManager is ILightClientManager, Initializable,UUPSUpgradeabl
     function headerHeight(uint256 _chainId) external view override returns (uint256){
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
-        if (_chainId == 34434) {
-            (uint256 number,) = lightNode.currentNumberAndHash(_chainId);
-            return number;
-        } else {
-            return lightNode.headerHeight();
-        }
 
+        return lightNode.headerHeight();
     }
 
     function verifiableHeaderRange(uint256 _chainId) external view override returns (uint256, uint256){
