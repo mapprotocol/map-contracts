@@ -78,6 +78,10 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         _unpause();
     }
 
+    function setLightClient(address _lightNode) external onlyOwner checkAddress(_lightNode) {
+        lightNode = ILightNode(_lightNode);
+    }
+
     function addMintableToken(address[] memory _token) external onlyOwner {
         for (uint i = 0; i < _token.length; i++) {
             mintableTokens[_token[i]] = true;
