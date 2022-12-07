@@ -280,14 +280,13 @@ describe("LightNode", function () {
             let finalizedSlot = await lightNode.headerHeight();
             expect(finalizedSlot).to.eq(periodUpdate.update.finalizedHeader.slot);
 
-            let exeHeaderUpdateInfo = await lightNode.exeHeaderUpdateInfo();
-            expect(exeHeaderUpdateInfo.startNumber).to.eq(
+            expect(await lightNode.exeHeaderStartNumber()).to.eq(
                 bootstrap.finalizedExeHeaderNumber.toNumber() + 1
             );
-            expect(exeHeaderUpdateInfo.endNumber).to.eq(
+            expect(await lightNode.exeHeaderEndNumber()).to.eq(
                 periodUpdate.update.finalizedExeHeader.number - 1
             );
-            expect(exeHeaderUpdateInfo.endHash).to.eq(
+            expect(await lightNode.exeHeaderEndHash()).to.eq(
                 periodUpdate.update.finalizedExeHeader.parentHash
             );
         });
@@ -320,14 +319,15 @@ describe("LightNode", function () {
             let headers = await lightNode.getHeadersBytes(exedata.headers)
             await lightNode.updateBlockHeader(headers);
 
-            let exeHeaderUpdateInfo = await lightNode.exeHeaderUpdateInfo();
-            expect(exeHeaderUpdateInfo.startNumber).to.eq(
+            expect(await lightNode.exeHeaderStartNumber()).to.eq(
                 bootstrap.finalizedExeHeaderNumber.toNumber() + 1
             );
-            expect(exeHeaderUpdateInfo.endNumber).to.eq(
+            expect(await lightNode.exeHeaderEndNumber()).to.eq(
                 exedata.headers[0].number - 1
             );
-            expect(exeHeaderUpdateInfo.endHash).to.eq(exedata.headers[0].parentHash);
+            expect(await lightNode.exeHeaderEndHash()).to.eq(
+                exedata.headers[0].parentHash
+            );
         });
     });
 
@@ -340,11 +340,10 @@ describe("LightNode", function () {
             let headers = await lightNode.getHeadersBytes(exedata.headers)
             await lightNode.updateBlockHeader(headers);
 
-            let exeHeaderUpdateInfo = await lightNode.exeHeaderUpdateInfo();
-            expect(exeHeaderUpdateInfo.startNumber).to.eq(
+            expect(await lightNode.exeHeaderStartNumber()).to.eq(
                 bootstrap.finalizedExeHeaderNumber.toNumber() + 1
             );
-            expect(exeHeaderUpdateInfo.endNumber).to.eq(
+            expect(await lightNode.exeHeaderEndNumber()).to.eq(
                 exedata.headers[0].number - 1
             );
 
