@@ -120,7 +120,7 @@ describe("LightNode", function () {
 
             expect(admin).to.eq(wallet.address);
 
-            await expect(lightNode.connect(other).changeAdmin(other.address)).to.be.revertedWith("lightnode :: only admin");
+            await expect(lightNode.connect(other).setPendingAdmin(other.address)).to.be.revertedWith("lightnode :: only admin");
 
         });
 
@@ -134,7 +134,7 @@ describe("LightNode", function () {
 
             expect(admin).to.eq(wallet.address);
 
-            await expect(lightNode.connect(wallet).changeAdmin(ethers.constants.AddressZero)).to.be.revertedWith("zero address");
+            await expect(lightNode.connect(wallet).setPendingAdmin(ethers.constants.AddressZero)).to.be.revertedWith("Ownable: pendingAdmin is the zero address");
 
         });
 
@@ -146,11 +146,21 @@ describe("LightNode", function () {
 
             let admin = await lightNode.getAdmin();
 
-            expect(admin).to.eq(wallet.address);
+            expect(admin).to.eq(wallet.address); 
 
-            await lightNode.connect(wallet).changeAdmin(other.address);
+            await (await lightNode.connect(wallet).setPendingAdmin(other.address)).wait();
+
+            let pendingAdmin = await lightNode.pendingAdmin();
+
+            expect(pendingAdmin).eq(other.address);
+
+            await expect(lightNode.connect(wallet).changeAdmin()).to.be.revertedWith('only pendingAdmin');
+
+            await (await lightNode.connect(other).changeAdmin()).wait();
+
 
             expect(await lightNode.getAdmin()).to.eq(other.address);
+
 
         });
 
