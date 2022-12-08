@@ -508,9 +508,11 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
         executorId = ls[0].toBytes();
 
-        bytes[] memory logs = new bytes[](ls[1].toList().length);
-        for (uint256 i = 0; i < ls[1].toList().length; i++) {
-            logs[i] = ls[1].toList()[i].toBytes();
+        RLPReader.RLPItem[] memory listOne = ls[1].toList();
+
+        bytes[] memory logs = new bytes[](listOne.length);
+        for (uint256 i = 0; i < listOne.length; i++) {
+            logs[i] = listOne[i].toBytes();
         }
         bytes memory log;
 
