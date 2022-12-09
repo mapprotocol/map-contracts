@@ -78,10 +78,10 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         console.log("mossR address:",mossR.address);
 
         StandardToken = await ethers.getContractFactory("MintableToken");
-        standardToken = await  StandardToken.deploy("MapToken","MP");
+        standardToken = await  StandardToken.deploy("MapToken","MP", 18);
 
         UToken = await ethers.getContractFactory("MintableToken");
-        usdt = await  UToken.deploy("U Toeken","USDT");
+        usdt = await  UToken.deploy("U Toeken","USDT", 18);
 
         Wrapped = await ethers.getContractFactory("Wrapped");
         wrapped = await Wrapped.deploy();

@@ -52,11 +52,11 @@ describe("MAPOmnichainServiceV2 start test", function () {
         console.log("moss address:",moss.address);
 
         StandardToken = await ethers.getContractFactory("MintableToken");
-        standardToken = await StandardToken.deploy("MapToken","MP");
+        standardToken = await StandardToken.deploy("MapToken","MP", 18);
         console.log("StandardToken:",standardToken.address);
 
         UToken = await ethers.getContractFactory("MintableToken");
-        usdt = await  UToken.deploy("U Toeken","USDT");
+        usdt = await  UToken.deploy("U Toeken","USDT", 18);
         console.log("UToken:",usdt.address);
 
         Wrapped = await ethers.getContractFactory("Wrapped");
