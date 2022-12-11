@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./interface/IFeeCenter.sol";
@@ -23,6 +24,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     using SafeMath for uint;
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
+    using Address for address;
 
     uint public nonce;
     ILightNode public lightNode;
@@ -164,8 +166,11 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     function transferOutToken(address token, bytes memory toAddress, uint amount, uint toChain)
     external override
     whenNotPaused
-    checkCanBridge(token, toChain) {
+    checkCanBridge(token, toChain)
+    checkAddress(token)
+    {
         require(toChain != selfChainId, "only other chain");
+        require(token.isContract(),"token is not contract");
         bytes32 orderId = getOrderID(token, msg.sender, toAddress, amount, toChain);
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
         if (checkAuthToken(token)) {
@@ -189,10 +194,16 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     }
 
 
-    function depositOutToken(address token, address from, address to, uint amount) external override whenNotPaused checkCanBridge(token, relayChainId) {
+    function depositOutToken(address token, address from, address to, uint amount)
+    external override
+    whenNotPaused
+    checkCanBridge(token, relayChainId)
+    checkAddress(token)
+    {
         require(msg.sender == from, "from only sender");
+        require(token.isContract(),"token is not contract");
         bytes32 orderId = getOrderID(token, from, _addressToBytes(to), amount, relayChainId);
-        //        require(IERC20(token).balanceOf(from) >= amount, "balance too low");
+        require(IERC20(token).balanceOf(from) >= amount, "balance too low");
         TransferHelper.safeTransferFrom(token, from, address(this), amount);
         emit mapDepositOut(token, _addressToBytes(from), orderId, selfChainId, relayChainId, to, amount);
     }

@@ -75,8 +75,8 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
     }
 
     function setDistributeRate(uint id, address to, uint rate) external onlyOwner {
-        require(rate.add(distributeRate[0].rate).add(distributeRate[1].rate).sub(distributeRate[id].rate)<= 1000000, 'Invalid rate value');
         distributeRate[id] = Rate(to, rate);
+        require(distributeRate[0].rate.add(distributeRate[1].rate)<= 1000000, 'Invalid rate value');
     }
 
 }
