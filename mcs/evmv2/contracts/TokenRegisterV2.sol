@@ -118,7 +118,12 @@ contract TokenRegisterV2 is ITokenRegisterV2,Initializable,UUPSUpgradeable {
         }
         uint256 decimalsFrom = tokenList[_token].decimals;
 
+        require(decimalsFrom > 0 ,"from token decimals not register");
+
         uint256 decimalsTo = tokenList[_token].tokenDecimals[_toChain];
+
+        require(decimalsTo > 0 ,"from token decimals not register");
+
         if (decimalsFrom == decimalsTo) {
             return _amount;
         }

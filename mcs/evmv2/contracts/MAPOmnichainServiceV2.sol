@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./utils/TransferHelper.sol";
@@ -24,6 +25,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     using SafeMath for uint;
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
+    using Address for address;
 
     uint public immutable selfChainId = block.chainid;
     uint public nonce;
@@ -115,8 +117,10 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     }
 
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override nonReentrant whenNotPaused
-    checkBridgeable(_token, _toChain) {
+    checkBridgeable(_token, _toChain)
+    checkAddress(_token){
         require(_toChain != selfChainId, "only other chain");
+        require(_token.isContract(),"token is not contract");
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
 
         if (isMintable(_token)) {
@@ -141,7 +145,8 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     function depositToken(address _token, address _to, uint _amount) external override nonReentrant whenNotPaused
     checkBridgeable(_token, relayChainId){
         address from = msg.sender;
-        //require(IERC20(token).balanceOf(_from) >= _amount, "balance too low");
+        require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
+        require(_token.isContract(),"token is not contract");
 
         if (isMintable(_token)) {
             IMAPToken(_token).burnFrom(from, _amount);

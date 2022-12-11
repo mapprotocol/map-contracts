@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./interface/IFeeCenter.sol";
@@ -25,6 +26,7 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     using SafeMath for uint;
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
+    using Address for address;
 
     uint256 public nonce;
 
@@ -195,7 +197,9 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     function getToChainAmount(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
     public view returns (uint256){
         uint256 decimalsFrom = tokenOtherChainDecimals[token][fromChain];
+        require(decimalsFrom > 0 ,"from token decimals not register");
         uint256 decimalsTo = tokenOtherChainDecimals[token][toChain];
+        require(decimalsTo > 0 ,"to token decimals not register");
         return amount.mul(10 ** decimalsTo).div(10 ** decimalsFrom);
     }
 
@@ -298,8 +302,12 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         }
     }
 
-    function transferOutToken(address token, bytes memory to, uint256 amount, uint256 toChainId) external override whenNotPaused {
+    function transferOutToken(address token, bytes memory to, uint256 amount, uint256 toChainId)
+    external override
+    whenNotPaused
+    checkAddress(token){
         require(toChainId != selfChainId, "only other chain");
+        require(token.isContract(),"token is not contract");
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
         if (toChainId == nearChainId) {
             require(to.length >= 2 || to.length <= 64, "near address error");
@@ -548,11 +556,12 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
         require(ls.length >= 2, "logsHash length to low");
 
         executorId = ls[0].toBytes();
+        RLPReader.RLPItem[] memory listOne = ls[1].toList();
 
-        bytes[] memory logs = new bytes[](ls[1].toList().length);
+        bytes[] memory logs = new bytes[](listOne.length);
         for (uint256 i = 0; i < ls[1].toList().length; i++) {
 
-            logs[i] = ls[1].toList()[i].toBytes();
+            logs[i] = listOne[i].toBytes();
 
         }
         bytes memory log;

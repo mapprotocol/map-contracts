@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./interface/IVaultTokenV2.sol";
@@ -24,6 +25,7 @@ import "./utils/Utils.sol";
 
 contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable, IMOSV2, UUPSUpgradeable {
     using SafeMath for uint256;
+    using Address for address;
 
     struct Rate {
         address receiver;
@@ -133,6 +135,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused {
         require(_toChain != selfChainId, "only other chain");
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
+        require(_token.isContract(),"token is not contract");
 
         TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
         _transferOut(_token, msg.sender, _to, _amount, _toChain);
@@ -146,8 +149,15 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         _transferOut(wToken, msg.sender, _to, amount, _toChain);
     }
 
-    function depositToken(address _token, address _to, uint _amount) external override nonReentrant whenNotPaused {
+    function depositToken(address _token, address _to, uint _amount)
+    external override
+    nonReentrant
+    whenNotPaused
+    checkAddress(_token)
+    {
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
+
+        require(_token.isContract(),"token is not contract");
 
         TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
 
