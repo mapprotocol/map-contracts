@@ -120,7 +120,7 @@ library Verify {
             return false;
         }
         //Epoch block
-        if ((_header.number + 1) % EPOCH_NUM == 0) {
+        if ((_header.number + 1) % getEpochNumber(_chainId,_header.number) == 0) {
             if (_header.extraData.length < _minEpochBlockExtraDataLen) {
                 return false;
             }
@@ -389,6 +389,19 @@ library Verify {
         }
 
         return false;
+    }
+
+    function getEpochNumber(
+        uint256 _chainId,
+        uint256 _blockNumber
+    ) internal pure returns (uint256 epochNumber) {
+        epochNumber = EPOCH_NUM;
+        if (_chainId != MAINNET_CHAINID) {
+            if (_blockNumber >= MUMBAI_DELHI_BLOCK) epochNumber = EPOCH_NUM / 4;
+        } else {
+            if (MAINNET_DELHI_BLOCK > 0 && _blockNumber >= MAINNET_DELHI_BLOCK)
+                epochNumber = EPOCH_NUM / 4;
+        }
     }
 
     function memoryToBytes(
