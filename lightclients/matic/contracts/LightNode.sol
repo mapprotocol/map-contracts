@@ -168,7 +168,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                     Verify.validateHeader(
                         _blockHeaders[i],
                         minEpochBlockExtraDataLen,
-                        _blockHeaders[i]
+                        _blockHeaders[i],
+                        chainId
                     ),
                     "invalid bock header"
                 );
@@ -177,7 +178,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                     Verify.validateHeader(
                         _blockHeaders[i],
                         minEpochBlockExtraDataLen,
-                        _blockHeaders[i - 1]
+                        _blockHeaders[i - 1],
+                         chainId
                     ),
                     "invalid bock header"
                 );
