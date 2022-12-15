@@ -37,6 +37,12 @@ library Verify {
     bytes32 constant MIX_HASH =
         0x0000000000000000000000000000000000000000000000000000000000000000;
 
+    uint256 constant MAINNET_CHAINID = 137;
+
+    uint256 constant MAINNET_DELHI_BLOCK = 0;
+
+    uint256 constant MUMBAI_DELHI_BLOCK = 29638656;
+
     struct BlockHeader {
         bytes parentHash;
         bytes sha3Uncles;
@@ -107,13 +113,14 @@ library Verify {
     function validateHeader(
         BlockHeader memory _header,
         uint256 _minEpochBlockExtraDataLen,
-        BlockHeader memory _parent
+        BlockHeader memory _parent,
+        uint256 _chainId
     ) internal pure returns (bool) {
         if (_header.extraData.length < (EXTRA_VANITY + EXTRASEAL)) {
             return false;
         }
         //Epoch block
-        if ((_header.number + 1) % EPOCH_NUM == 0) {
+        if ((_header.number + 1) % getEpochNumber(_chainId,_header.number) == 0) {
             if (_header.extraData.length < _minEpochBlockExtraDataLen) {
                 return false;
             }
@@ -157,14 +164,13 @@ library Verify {
         }
 
         if (_header.number != _parent.number) {
-            
-            if(_header.timestamp <= _parent.timestamp) {
+            if (_header.timestamp <= _parent.timestamp) {
                 return false;
             }
             uint256 diff = _parent.gasLimit > _header.gasLimit
                 ? _parent.gasLimit - _header.gasLimit
                 : _header.gasLimit - _parent.gasLimit;
-          
+
             if (diff >= _parent.gasLimit / 1024) {
                 return false;
             }
@@ -172,7 +178,9 @@ library Verify {
             uint256 expectedBaseFee = calcBaseFee(
                 _parent.gasUsed,
                 _parent.gasLimit,
-                _parent.baseFeePerGas
+                _parent.baseFeePerGas,
+                _parent.number,
+                _chainId
             );
 
             if (_header.baseFeePerGas != expectedBaseFee) {
@@ -186,24 +194,40 @@ library Verify {
     function calcBaseFee(
         uint256 _parentGasUsed,
         uint256 _parentGasLimit,
-        uint256 _parentBaseFee
+        uint256 _parentBaseFee,
+        uint256 _parentNumber,
+        uint256 _chainId
     ) internal pure returns (uint256) {
         require(_parentGasLimit > 0, "_parentGasLimit not be zero");
         uint256 parentGasTarget = _parentGasLimit / ELASTICITY_MULTIPLIER;
         if (_parentGasUsed == parentGasTarget) {
             _parentBaseFee;
         }
+        uint256 baseFeeChangeDenominator = BASE_FEE_CHANGEDENOMINATOR;
+        if (MAINNET_CHAINID != _chainId) {
+            baseFeeChangeDenominator = _parentNumber < MUMBAI_DELHI_BLOCK
+                ? BASE_FEE_CHANGEDENOMINATOR
+                : BASE_FEE_CHANGEDENOMINATOR * 2;
+        } else {
+            if (MAINNET_DELHI_BLOCK > 0) {
+                baseFeeChangeDenominator = _parentNumber < MAINNET_DELHI_BLOCK
+                    ? BASE_FEE_CHANGEDENOMINATOR
+                    : BASE_FEE_CHANGEDENOMINATOR * 2;
+            }
+        }
         if (_parentGasUsed > parentGasTarget) {
             uint256 gasUsedDelta = _parentGasUsed - parentGasTarget;
             uint256 x = _parentBaseFee * gasUsedDelta;
             uint256 y = x / parentGasTarget;
-            uint256 baseFeeDelta = y / BASE_FEE_CHANGEDENOMINATOR > 1 ? y / BASE_FEE_CHANGEDENOMINATOR : 1;
+            uint256 baseFeeDelta = y / baseFeeChangeDenominator > 1
+                ? y / baseFeeChangeDenominator
+                : 1;
             return _parentBaseFee + baseFeeDelta;
         } else {
             uint256 gasUsedDelta = parentGasTarget - _parentGasUsed;
             uint256 x = _parentBaseFee * gasUsedDelta;
             uint256 y = x / parentGasTarget;
-            uint256 baseFeeDelta = y / 8;
+            uint256 baseFeeDelta = y / baseFeeChangeDenominator;
             return
                 baseFeeDelta > _parentBaseFee
                     ? 0
@@ -365,6 +389,19 @@ library Verify {
         }
 
         return false;
+    }
+
+    function getEpochNumber(
+        uint256 _chainId,
+        uint256 _blockNumber
+    ) internal pure returns (uint256 epochNumber) {
+        epochNumber = EPOCH_NUM;
+        if (_chainId != MAINNET_CHAINID) {
+            if (_blockNumber >= MUMBAI_DELHI_BLOCK) epochNumber = EPOCH_NUM / 4;
+        } else {
+            if (MAINNET_DELHI_BLOCK > 0 && _blockNumber >= MAINNET_DELHI_BLOCK)
+                epochNumber = EPOCH_NUM / 4;
+        }
     }
 
     function memoryToBytes(

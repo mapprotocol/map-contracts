@@ -13,7 +13,7 @@ import {
 
 // //extraData =  EXTRA_VANITY + (address + power)... + EXTRASEAL 32 + 40*n + 65
 let minEpochBlockExtraDataLen = 137
-let chainId = process.env.CHAIN_Id
+let chainId = 137
 let confirms = process.env.CONFIRMS
 
 describe("LightNode", function () {
