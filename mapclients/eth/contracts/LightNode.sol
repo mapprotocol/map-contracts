@@ -9,7 +9,6 @@ import "./bls/BlsCode.sol";
 import "./bls/BGLS.sol";
 import "./interface/IVerifyTool.sol";
 
-
 contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
     uint256 public maxValidators;
@@ -20,7 +19,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     IVerifyTool public verifyTool;
     BlsCode blsCode;
     address private _pendingAdmin;
-
+    uint256 public startHeight;
 
     struct validator {
         G1[] pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
@@ -58,6 +57,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         _changeAdmin(msg.sender);
         maxValidators = 20;
         headerHeight = (_epoch - 1) * _epochSize;
+        startHeight = headerHeight;
         epochSize = _epochSize;
         validatorAddress = _validatorAddress;
         setStateInternal(_threshold, _pairKeys, _weights, _epoch);
@@ -98,28 +98,39 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     override
     returns (bool success, string memory message, bytes memory logsHash) {
         receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
+
+        (uint min, uint max) = verifiableHeaderRange();
+        uint height = _receiptProof.header.number;
+        if (height <= min || height >= max) {
+            message = "header height error";
+            return (false, message, logsHash);
+        }
+
         logsHash = verifyTool.decodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
         (success, message) = verifyTool.getVerifyTrieProof(_receiptProof);
         if (!success) {
             message = "receipt mismatch";
             return (success, message, logsHash);
         }
-         success = verifyHeaderSig(_receiptProof.header, _receiptProof.ist, _receiptProof.aggPk);
-        if(!success){
+        success = verifyHeaderSig(_receiptProof.header, _receiptProof.ist, _receiptProof.aggPk);
+        if (!success) {
             message = "verifyHeaderSig fail";
             return (success, message, logsHash);
         }
         return (success, message, logsHash);
     }
 
-    function updateBlockHeader(blockHeader memory bh,istanbulExtra memory ist, G2 memory aggPk)
+    function updateBlockHeader(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk)
     external
     override
     {
         require(bh.number % epochSize == 0, "Header number is error");
         require(bh.number > headerHeight, "Header is have");
         headerHeight = bh.number;
-        bool success = verifyHeaderSig(bh,ist, aggPk);
+        if (startHeight == 0) {
+            startHeight = headerHeight - epochSize;
+        }
+        bool success = verifyHeaderSig(bh, ist, aggPk);
         require(success, "checkSig error");
         uint256 len = ist.addedG1PubKey.length;
         G1[] memory _pairKeysAdd = new G1[](len);
@@ -140,28 +151,31 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     function verifyHeaderSig(blockHeader memory _bh, istanbulExtra memory ist, G2 memory _aggPk)
     internal
     view
-    returns(bool success){
+    returns (bool success){
         bytes32 extraDataPre = bytes32(_bh.extraData);
         (bytes memory deleteAggBytes,
-        bytes memory deleteSealAndAggBytes)= verifyTool.manageAgg(ist);
+        bytes memory deleteSealAndAggBytes) = verifyTool.manageAgg(ist);
         deleteAggBytes = abi.encodePacked(extraDataPre, deleteAggBytes);
         deleteSealAndAggBytes = abi.encodePacked(extraDataPre, deleteSealAndAggBytes);
 
 
         (bytes memory deleteAggHeaderBytes,
-        bytes memory deleteSealAndAggHeaderBytes) = verifyTool.encodeHeader(_bh,deleteAggBytes,deleteSealAndAggBytes);
-        (success,) = verifyTool.verifyHeader(_bh.coinbase,ist.seal,deleteSealAndAggHeaderBytes);
-        success = checkSig(_bh, ist, _aggPk,deleteAggHeaderBytes);
+        bytes memory deleteSealAndAggHeaderBytes) = verifyTool.encodeHeader(_bh, deleteAggBytes, deleteSealAndAggBytes);
+        (success,) = verifyTool.verifyHeader(_bh.coinbase, ist.seal, deleteSealAndAggHeaderBytes);
+        success = checkSig(_bh, ist, _aggPk, deleteAggHeaderBytes);
         return (success);
     }
 
 
-    function verifiableHeaderRange() external view override returns (uint256, uint256){
-
-        return (headerHeight - (maxValidators * epochSize) , headerHeight + epochSize);
+    function verifiableHeaderRange() public view override returns (uint256, uint256){
+        uint start = headerHeight - (maxValidators * epochSize);
+        if (startHeight > 0 && startHeight > start) {
+            start = startHeight;
+        }
+        return (start, headerHeight + epochSize);
     }
 
-    function checkSig(blockHeader memory _bh, istanbulExtra memory _ist, G2 memory _aggPk,bytes memory _headerWithoutAgg)
+    function checkSig(blockHeader memory _bh, istanbulExtra memory _ist, G2 memory _aggPk, bytes memory _headerWithoutAgg)
     internal
     view
     returns (bool){
@@ -284,7 +298,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         && checkSignature(message, sig, aggPk);
     }
 
-    function getPrepareCommittedSeal(bytes memory _headerWithoutAgg,uint256 _round)
+    function getPrepareCommittedSeal(bytes memory _headerWithoutAgg, uint256 _round)
     internal
     pure
     returns (bytes memory result){
@@ -334,12 +348,12 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
     function changeAdmin() public {
         require(_pendingAdmin == msg.sender, "only pendingAdmin");
-        emit AdminTransferred(_getAdmin(),_pendingAdmin);
+        emit AdminTransferred(_getAdmin(), _pendingAdmin);
         _changeAdmin(_pendingAdmin);
     }
 
 
-    function pendingAdmin() external view returns(address){
+    function pendingAdmin() external view returns (address){
         return _pendingAdmin;
     }
 
