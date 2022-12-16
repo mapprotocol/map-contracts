@@ -33,7 +33,7 @@ pub struct SwapInfo {
 }
 
 #[near_bindgen]
-impl FungibleTokenReceiver for MapCrossChainService {
+impl FungibleTokenReceiver for MAPOServiceV2 {
     fn ft_on_transfer(
         &mut self,
         sender_id: AccountId,

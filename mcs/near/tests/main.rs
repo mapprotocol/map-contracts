@@ -16,7 +16,7 @@ use serde_json::json;
 
 // Additional convenient imports that allows workspaces to function readily.
 use map_light_client::{EpochRecord, Validator};
-use mcs::token_receiver::TokenReceiverMessage;
+use mos::token_receiver::TokenReceiverMessage;
 use workspaces::network::{Sandbox, Testnet};
 use workspaces::operations::CallTransaction;
 use workspaces::result::CallExecutionDetails;

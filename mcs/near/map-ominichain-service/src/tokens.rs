@@ -25,7 +25,7 @@ const OUTER_SET_METADATA_GAS: Gas = Gas(15_000_000_000_000);
 const CALLBACK_ADD_NATIVE_TO_CHAIN: Gas = Gas(5_000_000_000_000);
 
 #[near_bindgen]
-impl MapCrossChainService {
+impl MAPOServiceV2 {
     /// Admin method to set metadata with admin/controller access
     pub fn set_metadata(
         &mut self,
@@ -262,16 +262,6 @@ impl MapCrossChainService {
 
         self.native_to_chains.insert(to_chain.into())
     }
-
-    // #[private]
-    // pub fn callback_add_native_to_chain(&mut self, to_chain: U128) {
-    //     assert_eq!(env::promise_results_count(), 1, "ERR_TOO_MANY_RESULTS");
-    //
-    //     match env::promise_result(0) {
-    //         PromiseResult::Successful(x) => self.native_to_chains.insert(to_chain.into()),
-    //         _ => panic_str(&*format!("add wrap token to chain {} failed", to_chain.0)),
-    //     };
-    // }
 
     pub fn remove_native_to_chain(&mut self, to_chain: U128) {
         assert!(

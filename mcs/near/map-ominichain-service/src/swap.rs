@@ -56,7 +56,7 @@ pub struct SwapAction {
 }
 
 #[near_bindgen]
-impl MapCrossChainService {
+impl MAPOServiceV2 {
     pub fn add_butter_core(&mut self, butter_core: AccountId) -> Promise {
         assert!(
             self.is_owner(),
@@ -326,7 +326,7 @@ impl MapCrossChainService {
     }
 }
 
-impl MapCrossChainService {
+impl MAPOServiceV2 {
     fn check_swap_param(&self, token: &AccountId, amount: U128, swap_info: &SwapInfo) {
         if !swap_info.src_swap.is_empty() {
             let actions: Vec<SwapAction> = swap_info

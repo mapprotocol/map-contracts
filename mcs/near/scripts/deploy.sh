@@ -32,14 +32,14 @@ INIT_ARGS_MCS='{
 
 echo $INIT_ARGS_MCS
 
-echo "creating mcs factory account"
+echo "creating mos factory account"
 near create-account $MCS_FACTORY_ACCOUNT --masterAccount $MASTER_ACCOUNT --initialBalance 30
 
-echo "deploying mcs factory contract"
-near deploy --accountId $MCS_FACTORY_ACCOUNT --wasmFile $RES_DIR/mcs_factory.wasm
+echo "deploying mos factory contract"
+near deploy --accountId $MCS_FACTORY_ACCOUNT --wasmFile $RES_DIR/mos_factory.wasm
 
 echo "creating multisig contract"
 near call $MCS_FACTORY_ACCOUNT create_multisig "$INIT_ARGS_MULTISIG" --accountId $MASTER_ACCOUNT --gas 300000000000000 --deposit 20
 
-echo "creating mcs contract"
-near call $MCS_FACTORY_ACCOUNT create_mcs "$INIT_ARGS_MCS" --accountId $MASTER_ACCOUNT --gas 300000000000000 --deposit 30
+echo "creating mos contract"
+near call $MCS_FACTORY_ACCOUNT create_mos "$INIT_ARGS_MCS" --accountId $MASTER_ACCOUNT --gas 300000000000000 --deposit 30

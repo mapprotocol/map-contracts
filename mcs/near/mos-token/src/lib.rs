@@ -4,7 +4,7 @@ use near_contract_standards::fungible_token::metadata::{
 use near_contract_standards::fungible_token::FungibleToken;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{Base64VecU8, U128};
-use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, PromiseOrValue, StorageUsage, Gas};
+use near_sdk::{env, near_bindgen, AccountId, Gas, PanicOnDefault, PromiseOrValue, StorageUsage};
 
 const GAS_FOR_UPGRADE_SELF_DEPLOY: Gas = Gas(15_000_000_000_000);
 
@@ -51,7 +51,11 @@ impl MCSToken {
         decimals: Option<u8>,
         icon: Option<String>,
     ) {
-        assert_eq!(env::predecessor_account_id(), self.controller, "Only controller can call set_metadata");
+        assert_eq!(
+            env::predecessor_account_id(),
+            self.controller,
+            "Only controller can call set_metadata"
+        );
 
         name.map(|name| self.name = name);
         symbol.map(|symbol| self.symbol = symbol);
@@ -63,19 +67,24 @@ impl MCSToken {
 
     #[payable]
     pub fn mint(&mut self, account_id: AccountId, amount: U128) {
-        // in test mode, remove the check to allow anyone to mint token
-        #[cfg(feature = "release")]
-        assert_eq!(env::predecessor_account_id(), self.controller, "Only controller can call mint");
+        assert_eq!(
+            env::predecessor_account_id(),
+            self.controller,
+            "Only controller can call mint"
+        );
 
         self.storage_deposit(Some(account_id.clone()), None);
         self.token.internal_deposit(&account_id, amount.into());
     }
 
     pub fn burn(&mut self, account_id: AccountId, amount: U128) {
-        assert_eq!(env::predecessor_account_id(), self.controller, "Only controller can call burn");
+        assert_eq!(
+            env::predecessor_account_id(),
+            self.controller,
+            "Only controller can call burn"
+        );
 
-        self.token
-            .internal_withdraw(&account_id, amount.into());
+        self.token.internal_withdraw(&account_id, amount.into());
     }
 
     pub fn account_storage_usage(&self) -> StorageUsage {
@@ -83,7 +92,12 @@ impl MCSToken {
     }
 
     pub fn set_owner(&mut self, new_owner: AccountId) {
-        assert_eq!(self.owner, env::predecessor_account_id(), "unexpected caller {}", env::predecessor_account_id());
+        assert_eq!(
+            self.owner,
+            env::predecessor_account_id(),
+            "unexpected caller {}",
+            env::predecessor_account_id()
+        );
         self.owner = new_owner;
     }
 
@@ -92,7 +106,12 @@ impl MCSToken {
     }
 
     pub fn set_controller(&mut self, new_controller: AccountId) {
-        assert_eq!(self.owner, env::predecessor_account_id(), "unexpected caller {}", env::predecessor_account_id());
+        assert_eq!(
+            self.owner,
+            env::predecessor_account_id(),
+            "unexpected caller {}",
+            env::predecessor_account_id()
+        );
         self.controller = new_controller;
     }
 
@@ -101,7 +120,12 @@ impl MCSToken {
     }
 
     pub fn upgrade_self(&mut self, code: Base64VecU8) {
-        assert_eq!(self.owner, env::predecessor_account_id(), "unexpected caller {}", env::predecessor_account_id());
+        assert_eq!(
+            self.owner,
+            env::predecessor_account_id(),
+            "unexpected caller {}",
+            env::predecessor_account_id()
+        );
 
         let current_id = env::current_account_id();
         let promise_id = env::promise_batch_create(&current_id);

@@ -6,7 +6,7 @@ use near_sdk::PublicKey;
 use near_sdk::{env, near_bindgen, AccountId, Gas, Promise};
 
 const MCS_BINARY: &'static [u8] =
-    include_bytes!("../../target/wasm32-unknown-unknown/release/mcs.wasm");
+    include_bytes!("../../target/wasm32-unknown-unknown/release/mos.wasm");
 
 /// This gas spent on the call & account creation, the rest goes to the `new` call.
 const CREATE_CALL_GAS: Gas = Gas(200_000_000_000_000);
@@ -18,7 +18,7 @@ pub struct Factory {}
 #[near_bindgen]
 impl Factory {
     #[payable]
-    pub fn create_mcs(
+    pub fn create_mos(
         &mut self,
         name: String,
         owner: AccountId,

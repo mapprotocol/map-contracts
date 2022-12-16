@@ -37,7 +37,7 @@ mod tokens;
 mod traits;
 
 const MCS_TOKEN_BINARY: &'static [u8] =
-    include_bytes!("../../target/wasm32-unknown-unknown/release/mcs_token.wasm");
+    include_bytes!("../../target/wasm32-unknown-unknown/release/mos_token.wasm");
 
 const NO_DEPOSIT: Balance = 0;
 
@@ -107,7 +107,7 @@ const PAUSE_SWAP_OUT_NATIVE: Mask = 1 << 8;
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
-pub struct MapCrossChainService {
+pub struct MAPOServiceV2 {
     /// The account of the map light client that we can use to prove
     pub map_client_account: AccountId,
     /// Address of the MAP bridge contract.
@@ -150,7 +150,7 @@ pub struct MapCrossChainService {
 }
 
 #[near_bindgen]
-impl MapCrossChainService {
+impl MAPOServiceV2 {
     /// Initializes the contract.
     /// `map_client_account`: NEAR account of the MAP light client contract;
     /// `map_bridge_address`: the address of the MCS contract on MAP blockchain, in hex.
@@ -746,7 +746,7 @@ impl MapCrossChainService {
     }
 }
 
-impl MapCrossChainService {
+impl MAPOServiceV2 {
     fn mcs_token_out(
         &mut self,
         token: String,
@@ -1040,7 +1040,7 @@ impl MapCrossChainService {
     }
 }
 
-admin_controlled::impl_admin_controlled!(MapCrossChainService, paused);
+admin_controlled::impl_admin_controlled!(MAPOServiceV2, paused);
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
