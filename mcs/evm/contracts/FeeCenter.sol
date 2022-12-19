@@ -20,15 +20,20 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
     //id : 0 VToken  1:relayer
     mapping(uint => Rate) distributeRate;
 
+    event SetChainTokenGasFee(uint256 to ,address token,uint256 lowest,uint256 highest,uint256 proportion);
+    event SetTokenVault(address token,address valut);
+    event SetDistributeRate(uint256 id ,address to,uint256 rate);
 
     function setChainTokenGasFee(uint to, address token, uint lowest, uint highest,uint proportion) external onlyOwner {
         require(highest >= lowest, 'Invalid highest and lowest');
         require(proportion <= 1000000, 'Invalid proportion value');
         chainTokenGasFee[to][token] = gasFee(lowest,highest,proportion);
+        emit SetChainTokenGasFee(to,token,lowest,highest,proportion);
     }
 
     function setTokenVault(address token,address tVault) external onlyOwner{
         tokenVault[token] = tVault;
+        emit SetTokenVault(token,tVault);
     }
 
     function _getTokenFee(uint _to, address _token, uint _amount) internal view returns (uint){
@@ -77,6 +82,7 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Ownable {
     function setDistributeRate(uint id, address to, uint rate) external onlyOwner {
         distributeRate[id] = Rate(to, rate);
         require(distributeRate[0].rate.add(distributeRate[1].rate)<= 1000000, 'Invalid rate value');
+        emit SetDistributeRate(id,to,rate);
     }
 
 }

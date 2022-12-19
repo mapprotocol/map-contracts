@@ -29,7 +29,7 @@ library RLPReader {
      * @return The next element in the iteration.
      */
     function next(Iterator memory self) internal pure returns (RLPItem memory) {
-        require(hasNext(self));
+        require(hasNext(self), "not have next");
 
         uint256 ptr = self.nextPtr;
         uint256 itemLength = _itemLength(ptr);
@@ -52,9 +52,9 @@ library RLPReader {
      * @param item RLP encoded bytes
      */
     function toRlpItem(bytes memory item)
-        internal
-        pure
-        returns (RLPItem memory)
+    internal
+    pure
+    returns (RLPItem memory)
     {
         uint256 memPtr;
         assembly {
@@ -70,11 +70,11 @@ library RLPReader {
      * @return An 'Iterator' over the item.
      */
     function iterator(RLPItem memory self)
-        internal
-        pure
-        returns (Iterator memory)
+    internal
+    pure
+    returns (Iterator memory)
     {
-        require(isList(self));
+        require(isList(self), "check self list fail");
 
         uint256 ptr = self.memPtr + _payloadOffset(self.memPtr);
         return Iterator(self, ptr);
@@ -92,13 +92,14 @@ library RLPReader {
      * @return (memPtr, len) pair: location of the item's payload in memory.
      */
     function payloadLocation(RLPItem memory item)
-        internal
-        pure
-        returns (uint256, uint256)
+    internal
+    pure
+    returns (uint256, uint256)
     {
         uint256 offset = _payloadOffset(item.memPtr);
         uint256 memPtr = item.memPtr + offset;
-        uint256 len = item.len - offset; // data length
+        uint256 len = item.len - offset;
+        // data length
         return (memPtr, len);
     }
 
@@ -114,11 +115,11 @@ library RLPReader {
      * @param the RLP item containing the encoded list.
      */
     function toList(RLPItem memory item)
-        internal
-        pure
-        returns (RLPItem[] memory)
+    internal
+    pure
+    returns (RLPItem[] memory)
     {
-        require(isList(item));
+        require(isList(item), "is list fail");
 
         uint256 items = numItems(item);
         RLPItem[] memory result = new RLPItem[](items);
@@ -153,9 +154,9 @@ library RLPReader {
      * @return keccak256 hash of RLP encoded bytes.
      */
     function rlpBytesKeccak256(RLPItem memory item)
-        internal
-        pure
-        returns (bytes32)
+    internal
+    pure
+    returns (bytes32)
     {
         uint256 ptr = item.memPtr;
         uint256 len = item.len;
@@ -171,9 +172,9 @@ library RLPReader {
      * @return keccak256 hash of the item payload.
      */
     function payloadKeccak256(RLPItem memory item)
-        internal
-        pure
-        returns (bytes32)
+    internal
+    pure
+    returns (bytes32)
     {
         (uint256 memPtr, uint256 len) = payloadLocation(item);
         bytes32 result;
@@ -187,9 +188,9 @@ library RLPReader {
 
     // @returns raw rlp encoding in bytes
     function toRlpBytes(RLPItem memory item)
-        internal
-        pure
-        returns (bytes memory)
+    internal
+    pure
+    returns (bytes memory)
     {
         bytes memory result = new bytes(item.len);
         if (result.length == 0) return result;
@@ -205,7 +206,7 @@ library RLPReader {
 
     // any non-zero byte except "0x80" is considered true
     function toBoolean(RLPItem memory item) internal pure returns (bool) {
-        require(item.len == 1);
+        require(item.len == 1, "item len is not one");
         uint256 result;
         uint256 memPtr = item.memPtr;
         assembly {
@@ -225,13 +226,13 @@ library RLPReader {
 
     function toAddress(RLPItem memory item) internal pure returns (address) {
         // 1 byte for the length prefix
-        require(item.len == 21);
+        require(item.len == 21, "item len is not 21");
 
         return address(uint160(toUint(item)));
     }
 
     function toUint(RLPItem memory item) internal pure returns (uint256) {
-        require(item.len > 0 && item.len <= 33);
+        require(item.len > 0 && item.len <= 33, "item len is not uint");
 
         (uint256 memPtr, uint256 len) = payloadLocation(item);
 
@@ -239,7 +240,7 @@ library RLPReader {
         assembly {
             result := mload(memPtr)
 
-            // shfit to the correct location if neccesary
+        // shfit to the correct location if neccesary
             if lt(len, 32) {
                 result := div(result, exp(256, sub(32, len)))
             }
@@ -251,7 +252,7 @@ library RLPReader {
     // enforces 32 byte length
     function toUintStrict(RLPItem memory item) internal pure returns (uint256) {
         // one byte prefix
-        require(item.len == 33);
+        require(item.len == 33, "item is not uint strict");
 
         uint256 result;
         uint256 memPtr = item.memPtr + 1;
@@ -263,7 +264,7 @@ library RLPReader {
     }
 
     function toBytes(RLPItem memory item) internal pure returns (bytes memory) {
-        require(item.len > 0);
+        require(item.len > 0, "item len is zero");
 
         (uint256 memPtr, uint256 len) = payloadLocation(item);
         bytes memory result = new bytes(len);
@@ -289,7 +290,8 @@ library RLPReader {
         uint256 currPtr = item.memPtr + _payloadOffset(item.memPtr);
         uint256 endPtr = item.memPtr + item.len;
         while (currPtr < endPtr) {
-            currPtr = currPtr + _itemLength(currPtr); // skip over an item
+            currPtr = currPtr + _itemLength(currPtr);
+            // skip over an item
             count++;
         }
 
@@ -312,7 +314,7 @@ library RLPReader {
                 let byteLen := sub(byte0, 0xb7) // # of bytes the actual length is
                 memPtr := add(memPtr, 1) // skip over the first byte
 
-                /* 32 byte word size */
+            /* 32 byte word size */
                 let dataLen := div(mload(memPtr), exp(256, sub(32, byteLen))) // right shifting to get the len
                 itemLen := add(dataLen, add(byteLen, 1))
             }
@@ -344,7 +346,7 @@ library RLPReader {
             (byte0 >= LIST_SHORT_START && byte0 < LIST_LONG_START)
         ) return 1;
         else if (byte0 < LIST_SHORT_START)
-            // being explicit
+        // being explicit
             return byte0 - (STRING_LONG_START - 1) + 1;
         else return byte0 - (LIST_LONG_START - 1) + 1;
     }
@@ -373,7 +375,7 @@ library RLPReader {
 
         if (len > 0) {
             // left over bytes. Mask is used to remove unwanted bytes from the word
-            uint256 mask = 256**(WORD_SIZE - len) - 1;
+            uint256 mask = 256 ** (WORD_SIZE - len) - 1;
             assembly {
                 let srcpart := and(mload(src), not(mask)) // zero out src
                 let destpart := and(mload(dest), mask) // retrieve the bytes

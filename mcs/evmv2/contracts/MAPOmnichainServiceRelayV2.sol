@@ -57,6 +57,11 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
 
     event mapTransferExecute(uint256 indexed fromChain, uint256 indexed toChain, address indexed from);
 
+    event SetTokenRegister(address tokenRegister);
+    event SetLightClientManager(address lightClient);
+    event RegisterChain(uint256 _chainId, bytes _address, chainType _type);
+    event SetDistributeRate(uint _id, address _to, uint _rate);
+
     function initialize(address _wToken, address _managerAddress) public initializer
     checkAddress(_wToken) checkAddress(_managerAddress) {
         wToken = _wToken;
@@ -97,15 +102,18 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
 
     function setTokenManager(address _register) external onlyOwner checkAddress(_register) {
         tokenRegister = ITokenRegisterV2(_register);
+        emit SetTokenRegister(_register);
     }
 
     function setLightClientManager(address _managerAddress) external onlyOwner checkAddress(_managerAddress) {
         lightClientManager = ILightClientManager(_managerAddress);
+        emit SetLightClientManager(_managerAddress);
     }
 
     function registerChain(uint256 _chainId, bytes memory _address, chainType _type) external onlyOwner {
         mosContracts[_chainId] = _address;
         chainTypes[_chainId] = _type;
+        emit registerChain(_chainId, _address, _type);
     }
 
     // withdraw deposit token using vault token.
@@ -130,12 +138,13 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         distributeRate[_id] = Rate(_to, _rate);
 
         require((distributeRate[0].rate).add(distributeRate[1].rate).add(distributeRate[2].rate) <= 1000000, 'invalid rate value');
+        emit setDistributeRate(_id,_to,_rate);
     }
 
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused {
         require(_toChain != selfChainId, "only other chain");
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
-        require(_token.isContract(),"token is not contract");
+        require(_token.isContract(), "token is not contract");
 
         TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
         _transferOut(_token, msg.sender, _to, _amount, _toChain);
@@ -157,7 +166,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     {
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
 
-        require(_token.isContract(),"token is not contract");
+        require(_token.isContract(), "token is not contract");
 
         TransferHelper.safeTransferFrom(_token, msg.sender, address(this), _amount);
 
@@ -178,7 +187,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             (bytes memory mosContract, IEvent.transferOutEvent[] memory outEvents) = NearDecoder.decodeNearLog(logArray);
             for (uint i = 0; i < outEvents.length; i++) {
                 IEvent.transferOutEvent memory outEvent = outEvents[i];
-                if (outEvent.toChain == 0){continue;}
+                if (outEvent.toChain == 0) {continue;}
                 require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
                 _transferIn(_chainId, outEvent);
             }
@@ -207,9 +216,9 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         if (chainTypes[_chainId] == chainType.NEAR) {
             (bytes memory mosContract, IEvent.depositOutEvent[] memory depositEvents) = NearDecoder.decodeNearDepositLog(logArray);
 
-            for(uint i = 0;i< depositEvents.length;i++){
+            for (uint i = 0; i < depositEvents.length; i++) {
                 IEvent.depositOutEvent memory depositEvent = depositEvents[i];
-                if (depositEvent.toChain == 0){continue;}
+                if (depositEvent.toChain == 0) {continue;}
                 require(Utils.checkBytes(mosContract, mosContracts[_chainId]), "invalid mos contract");
                 _depositIn(_chainId, depositEvent);
             }

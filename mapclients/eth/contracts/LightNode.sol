@@ -158,12 +158,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         deleteAggBytes = abi.encodePacked(extraDataPre, deleteAggBytes);
         deleteSealAndAggBytes = abi.encodePacked(extraDataPre, deleteSealAndAggBytes);
 
+        (bytes memory deleteAggHeaderBytes,bytes memory deleteSealAndAggHeaderBytes) =
+        verifyTool.encodeHeader(_bh, deleteAggBytes, deleteSealAndAggBytes);
 
-        (bytes memory deleteAggHeaderBytes,
-        bytes memory deleteSealAndAggHeaderBytes) = verifyTool.encodeHeader(_bh, deleteAggBytes, deleteSealAndAggBytes);
         (success,) = verifyTool.verifyHeader(_bh.coinbase, ist.seal, deleteSealAndAggHeaderBytes);
+        if (!success) return success;
         success = checkSig(_bh, ist, _aggPk, deleteAggHeaderBytes);
-        return (success);
+        return success;
     }
 
 
