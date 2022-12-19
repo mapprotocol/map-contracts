@@ -467,14 +467,14 @@ describe("LightNode Test on MAP", function () {
             let finalizedSlot = await proxy.headerHeight();
             expect(finalizedSlot).to.eq(periodUpdate.update.finalizedHeader.slot);
 
-            let exeHeaderUpdateInfo = await proxy.exeHeaderUpdateInfo();
-            expect(exeHeaderUpdateInfo.startNumber).to.eq(
+
+            expect(await proxy.exeHeaderStartNumber()).to.eq(
                 bootstrap.finalizedExeHeaderNumber.toNumber() + 1
             );
-            expect(exeHeaderUpdateInfo.endNumber).to.eq(
+            expect(await proxy.exeHeaderEndNumber()).to.eq(
                 periodUpdate.update.finalizedExeHeader.number - 1
             );
-            expect(exeHeaderUpdateInfo.endHash).to.eq(
+            expect(await proxy.exeHeaderEndHash()).to.eq(
                 periodUpdate.update.finalizedExeHeader.parentHash
             );
         });
