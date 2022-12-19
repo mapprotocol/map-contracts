@@ -67,7 +67,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
             bootStrap.currentSyncCommittee.aggregatePubkey,
             periodUpdate.nextSyncCommittee.aggregatePubkey,
             hashes,
-            false
+            true
         ]
     );
 
