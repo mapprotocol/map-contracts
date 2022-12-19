@@ -8,7 +8,6 @@ use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, log, AccountId, CryptoHash};
 use rlp::{Encodable, RlpStream};
-use std::str::FromStr;
 
 const PATH_SEPARATOR: &str = "X";
 
@@ -44,7 +43,7 @@ impl MCSEvent {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(crate = "near_sdk::serde")]
 pub enum MsgType {
     Transfer,
@@ -52,7 +51,7 @@ pub enum MsgType {
     Swap,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TransferOutEvent {
     pub from_chain: U128,
@@ -266,7 +265,7 @@ impl SwapParam {
 
         SwapAction {
             pool_id: self.router_index.into(),
-            token_in: split.get(0).unwrap().parse().unwrap(),
+            token_in: split.first().unwrap().parse().unwrap(),
             amount_in: if self.amount_in.0 == 0 {
                 None
             } else {
@@ -336,24 +335,25 @@ impl SwapData {
     pub fn abi_encode(&self) -> Vec<u8> {
         let mut swap_param_token: Vec<Token> = Vec::new();
         for param in self.swap_param.clone() {
-            let mut tuple: Vec<Token> = Vec::new();
-            tuple.push(Token::Uint(param.amount_in.0.into()));
-            tuple.push(Token::Uint(param.min_amount_out.0.into()));
-            tuple.push(Token::Bytes(param.path));
-            tuple.push(Token::Uint(param.router_index.0.into()));
+            let tuple = vec![
+                Token::Uint(param.amount_in.0.into()),
+                Token::Uint(param.min_amount_out.0.into()),
+                Token::Bytes(param.path),
+                Token::Uint(param.router_index.0.into()),
+            ];
             swap_param_token.push(Token::Tuple(tuple));
         }
         let tokens: Vec<Token> = vec![
             Token::Array(swap_param_token),
             Token::Bytes(self.target_token.clone()),
-            Token::Address(self.map_target_token.clone().into()),
+            Token::Address(self.map_target_token.into()),
         ];
 
         ethabi::encode(tokens.as_slice())
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(crate = "near_sdk::serde")]
 pub struct SwapOutEvent {
     pub from_chain: U128,
@@ -465,7 +465,7 @@ impl SwapOutEvent {
                 String::from_utf8(self.raw_swap_data.swap_param.get(0).unwrap().path.clone())
                     .unwrap();
             let split: Vec<&str> = path.split(PATH_SEPARATOR).collect();
-            split.get(0).unwrap().parse().unwrap()
+            split.first().unwrap().parse().unwrap()
         }
     }
 
@@ -516,7 +516,7 @@ impl Transferable for SwapOutEvent {
                     String::from_utf8(self.raw_swap_data.swap_param.get(0).unwrap().path.clone())
                         .unwrap();
                 let split: Vec<&str> = path.split(PATH_SEPARATOR).collect();
-                split.get(0).unwrap().parse().unwrap()
+                split.first().unwrap().parse().unwrap()
             },
             to: if self.raw_swap_data.swap_param.is_empty() {
                 String::from_utf8(self.to.clone()).unwrap().parse().unwrap()
@@ -592,7 +592,7 @@ impl Transferable for SwapOutEvent {
         } else {
             let path = String::from_utf8(self.raw_swap_data.swap_param[0].path.clone()).unwrap();
             let split: Vec<&str> = path.split(PATH_SEPARATOR).collect();
-            split.get(0).unwrap().parse().unwrap()
+            split.first().unwrap().parse().unwrap()
         }
     }
 }

@@ -52,9 +52,10 @@ impl MCSToken {
         icon: Option<String>,
     ) {
         assert_eq!(
+            self.owner,
             env::predecessor_account_id(),
-            self.controller,
-            "Only controller can call set_metadata"
+            "unexpected caller {}",
+            env::predecessor_account_id()
         );
 
         name.map(|name| self.name = name);

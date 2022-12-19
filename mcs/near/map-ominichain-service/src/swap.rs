@@ -1,18 +1,12 @@
 use crate::token_receiver::SwapInfo;
-use crate::traits::*;
 use crate::*;
 use admin_controlled::AdminControlled;
 use near_contract_standards::fungible_token::core::ext_ft_core;
-use near_contract_standards::storage_management::StorageBalanceBounds;
 use near_sdk::env::panic_str;
-use near_sdk::json_types::{ValidAccountId, U128};
+use near_sdk::json_types::U128;
 use near_sdk::{env, AccountId, Gas, PromiseResult};
 use std::collections::HashMap;
-use std::fmt::format;
 
-/// Gas to call storage_balance_bounds on ext fungible contract
-const STORAGE_BALANCE_BOUNDS_GAS: Gas = Gas(5_000_000_000_000);
-const CALLBACK_STORAGE_DEPOSIT_GAS: Gas = Gas(10_000_000_000_000 + 3 * STORAGE_DEPOSIT_GAS.0);
 const FT_TRANSFER_CALL_CORE_GAS: Gas = Gas(235_000_000_000_000);
 const CALL_CORE_SWAP_DIRECTLY_GAS: Gas = Gas(140_000_000_000_000);
 /// Gas to call callback_swap_out_token method.
@@ -84,7 +78,7 @@ impl MAPOServiceV2 {
             promise = promise.then(
                 ext_fungible_token::ext(token.parse().unwrap())
                     .with_static_gas(STORAGE_DEPOSIT_GAS)
-                    .with_attached_deposit(self.mcs_storage_transfer_in_required)
+                    .with_attached_deposit(self.mcs_storage_balance_min)
                     .storage_deposit(Some(butter_core.clone()), Some(true)),
             );
         }
@@ -92,7 +86,7 @@ impl MAPOServiceV2 {
             .then(
                 ext_fungible_token::ext(self.wrapped_token.clone())
                     .with_static_gas(STORAGE_DEPOSIT_GAS)
-                    .with_attached_deposit(self.mcs_storage_transfer_in_required)
+                    .with_attached_deposit(self.mcs_storage_balance_min)
                     .storage_deposit(Some(butter_core.clone()), Some(true)),
             )
             .then(
@@ -112,7 +106,7 @@ impl MAPOServiceV2 {
 
         match env::promise_result(0) {
             PromiseResult::NotReady => env::abort(),
-            PromiseResult::Successful(x) => {
+            PromiseResult::Successful(_) => {
                 self.core_idle.push(butter_core.clone());
                 self.core_total.push(butter_core)
             }
@@ -123,16 +117,13 @@ impl MAPOServiceV2 {
     }
 
     pub fn get_butter_core(&self) -> HashMap<AccountId, String> {
-        // (self.core_idle.clone(), self.core_total.clone())
         let mut map: HashMap<AccountId, String> = HashMap::new();
 
         for core in self.core_idle.clone() {
             map.insert(core, "idle".to_string());
         }
         for core in self.core_total.clone() {
-            if !map.contains_key(&core) {
-                map.insert(core, "working".to_string());
-            }
+            map.entry(core).or_insert_with(|| "working".to_string());
         }
 
         map
@@ -144,7 +135,7 @@ impl MAPOServiceV2 {
             "unexpected caller {}",
             env::predecessor_account_id()
         );
-        self.core_idle.push(core.clone())
+        self.core_idle.push(core)
     }
 
     pub fn get_ref_exchange(&self) -> AccountId {
@@ -191,7 +182,7 @@ impl MAPOServiceV2 {
             };
             let msg = serde_json::to_string(&core_swap_msg).unwrap();
             // call core to do swap
-            ext_ft_core::ext(token.clone())
+            ext_ft_core::ext(token)
                 .with_static_gas(FT_TRANSFER_CALL_CORE_GAS)
                 .with_attached_deposit(1)
                 .ft_transfer_call(core.clone(), amount, None, msg)
@@ -290,7 +281,7 @@ impl MAPOServiceV2 {
                             .with_attached_deposit(token_in_storage_balance)
                             .storage_deposit(Some(to.clone()), Some(true))
                             .then(
-                                ext_ft_core::ext(token_in.clone())
+                                ext_ft_core::ext(token_in)
                                     .with_static_gas(FT_TRANSFER_GAS)
                                     .with_attached_deposit(1)
                                     .ft_transfer(to, amount, None),
@@ -306,7 +297,7 @@ impl MAPOServiceV2 {
                             .transfer(ret_deposit - token_in_storage_balance)
                     } else {
                         // amount < used amount
-                        self.revert_event(
+                        self.revert_state(
                             ret_deposit,
                             None,
                             "used amount != amount in && used amount != 0, please check core state!".to_string(),
@@ -320,7 +311,7 @@ impl MAPOServiceV2 {
             PromiseResult::Failed => {
                 let err_msg = format!("[SWAP FAILURE] call core to do swap in failed, maybe mos doesn't have enough token {:?}", token_in);
                 self.core_idle.push(core);
-                self.revert_event(ret_deposit, Some(order_id), err_msg)
+                self.revert_state(ret_deposit, Some(order_id), err_msg)
             }
         }
     }
@@ -366,6 +357,7 @@ impl MAPOServiceV2 {
             .ft_transfer_call(core.clone(), amount, None, msg)
             .then(
                 Self::ext(env::current_account_id())
+                    .with_attached_deposit(ret_deposit)
                     .with_static_gas(CALLBACK_POST_SWAP_IN_GAS)
                     .callback_post_swap_in(
                         core,

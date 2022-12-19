@@ -57,7 +57,7 @@ impl FungibleTokenReceiver for MAPOServiceV2 {
             TokenReceiverMessage::Transfer { to, to_chain } => {
                 self.check_not_paused(PAUSE_TRANSFER_OUT_TOKEN);
                 assert!(
-                    self.valid_fungible_token_out(&token.to_string(), to_chain),
+                    self.valid_fungible_token_out(&token, to_chain),
                     "transfer token {} to chain {} is not supported",
                     token,
                     to_chain.0
@@ -83,7 +83,7 @@ impl FungibleTokenReceiver for MAPOServiceV2 {
             TokenReceiverMessage::Deposit { to } => {
                 self.check_not_paused(PAUSE_DEPOSIT_OUT_TOKEN);
                 assert!(
-                    self.valid_fungible_token_out(&token.to_string(), self.map_chain_id.into()),
+                    self.valid_fungible_token_out(&token, self.map_chain_id.into()),
                     "deposit token {} to chain {} is not supported",
                     token,
                     self.map_chain_id

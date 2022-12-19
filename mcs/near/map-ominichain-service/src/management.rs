@@ -3,7 +3,7 @@ use crate::*;
 
 const GAS_FOR_UPGRADE_SELF_DEPLOY: Gas = Gas(15_000_000_000_000);
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug, PartialEq)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub enum ChainType {
     EvmChain,
@@ -196,6 +196,13 @@ impl MAPOServiceV2 {
 
 impl MAPOServiceV2 {
     fn from(mos: MAPOServiceV1) -> Self {
+        let mut registered_tokens = UnorderedMap::new(b"r".to_vec());
+        for token in mos.mcs_tokens.keys() {
+            registered_tokens.insert(&token.parse().unwrap(), &true);
+        }
+        for token in mos.fungible_tokens.keys() {
+            registered_tokens.insert(&token.parse().unwrap(), &true);
+        }
         Self {
             map_client_account: mos.map_client_account,
             map_bridge_address: mos.map_bridge_address,
@@ -207,12 +214,13 @@ impl MAPOServiceV2 {
             chain_id_type_map: mos.chain_id_type_map,
             used_events: mos.used_events,
             owner: mos.owner,
-            mcs_storage_transfer_in_required: mos.mcs_storage_transfer_in_required,
+            mcs_storage_balance_min: mos.mcs_storage_transfer_in_required,
             wrapped_token: mos.wrapped_token.parse().unwrap(),
             near_chain_id: mos.near_chain_id,
             map_chain_id: mos.map_chain_id,
             nonce: mos.nonce,
             paused: mos.paused,
+            registered_tokens,
             ref_exchange: "ref-finance-101.testnet".to_string().parse().unwrap(),
             core_idle: vec![],
             core_total: vec![],
