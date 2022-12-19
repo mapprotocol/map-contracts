@@ -39,6 +39,11 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     mapping(uint256 => mapping(address => bool)) public tokenMappingList;
 
     event mapTransferExecute(uint256 indexed fromChain, uint256 indexed toChain, address indexed from);
+    event SetLightClient(address _lightNode);
+    event AddMintableToken(address[] _token);
+    event RemoveMintableToken(address[] _token);
+    event SetRelayContract(uint256 _chainId, address _relay);
+    event RegisterToken(address _token, uint _toChain, bool _enable);
 
     function initialize(address _wToken, address _lightNode)
     public initializer checkAddress(_wToken) checkAddress(_lightNode) {
@@ -82,27 +87,32 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
 
     function setLightClient(address _lightNode) external onlyOwner checkAddress(_lightNode) {
         lightNode = ILightNode(_lightNode);
+        emit SetLightClient(_lightNode);
     }
 
     function addMintableToken(address[] memory _token) external onlyOwner {
         for (uint i = 0; i < _token.length; i++) {
             mintableTokens[_token[i]] = true;
         }
+        emit AddMintableToken(_token);
     }
 
     function removeMintableToken(address[] memory _token) external onlyOwner {
         for (uint i = 0; i < _token.length; i++) {
             mintableTokens[_token[i]] = false;
         }
+        emit RemoveMintableToken(_token);
     }
 
     function setRelayContract(uint256 _chainId, address _relay) external onlyOwner checkAddress(_relay) {
         relayContract = _relay;
         relayChainId = _chainId;
+        emit setRelayContract(_chainId,_relay);
     }
 
     function registerToken(address _token, uint _toChain, bool _enable) external onlyOwner {
         tokenMappingList[_toChain][_token] = _enable;
+        emit RegisterToken(_token,_toChain,_enable);
     }
 
     function emergencyWithdraw(address _token, address payable _receiver, uint256 _amount) external onlyOwner checkAddress(_receiver) {

@@ -63,6 +63,11 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
 
+    event AddAuthToken(address[] token);
+    event RemoveAuthToken(address[] token);
+    event SetBridge(address _bridge,uint256 _num);
+    event SetCanBridgeToken(address token,uint256 chainId,bool canBridge);
+
 
     bytes32 public constant mapTransferOutTopic = keccak256(abi.encodePacked("mapTransferOut(bytes,bytes,bytes32,uint256,uint256,bytes,uint256,bytes)"));
 
@@ -117,17 +122,20 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
             require(token[i] != address(0), "address is zero");
             authToken[token[i]] = true;
         }
+        emit AddAuthToken(token);
     }
 
     function removeAuthToken(address[] memory token) external onlyOwner {
         for (uint i = 0; i < token.length; i++) {
             authToken[token[i]] = false;
         }
+        emit RemoveAuthToken(token);
     }
 
     function setBridge(address _bridge, uint256 _num) public onlyOwner checkAddress(_bridge) {
         relayChainId = _num;
         relayContract = _bridge;
+        emit SetBridge(_bridge,_num);
     }
 
     function checkAuthToken(address token) public view returns (bool) {
@@ -136,6 +144,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
 
     function setCanBridgeToken(address token, uint chainId, bool canBridge) public onlyOwner {
         canBridgeToken[chainId][token] = canBridge;
+        emit SetCanBridgeToken(token,chainId,canBridge);
     }
 
 
