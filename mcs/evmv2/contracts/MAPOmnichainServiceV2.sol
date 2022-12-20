@@ -107,7 +107,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     function setRelayContract(uint256 _chainId, address _relay) external onlyOwner checkAddress(_relay) {
         relayContract = _relay;
         relayChainId = _chainId;
-        emit setRelayContract(_chainId,_relay);
+        emit SetRelayContract(_chainId,_relay);
     }
 
     function registerToken(address _token, uint _toChain, bool _enable) external onlyOwner {
