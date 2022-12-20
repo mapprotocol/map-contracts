@@ -98,7 +98,7 @@ contract TokenRegisterV2 is ITokenRegisterV2, Initializable, UUPSUpgradeable {
 
         token.fees[_toChain] = FeeRate(_lowest, _highest, _rate);
 
-        emit setTokenFee(_token, _toChain, _lowest, _highest, _rate);
+        emit SetTokenFee(_token, _toChain, _lowest, _highest, _rate);
     }
 
 

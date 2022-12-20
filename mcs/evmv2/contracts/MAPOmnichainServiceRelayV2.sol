@@ -113,7 +113,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     function registerChain(uint256 _chainId, bytes memory _address, chainType _type) external onlyOwner {
         mosContracts[_chainId] = _address;
         chainTypes[_chainId] = _type;
-        emit registerChain(_chainId, _address, _type);
+        emit RegisterChain(_chainId, _address, _type);
     }
 
     // withdraw deposit token using vault token.
@@ -138,7 +138,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         distributeRate[_id] = Rate(_to, _rate);
 
         require((distributeRate[0].rate).add(distributeRate[1].rate).add(distributeRate[2].rate) <= 1000000, 'invalid rate value');
-        emit setDistributeRate(_id,_to,_rate);
+        emit SetDistributeRate(_id, _to, _rate);
     }
 
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused {
