@@ -130,6 +130,7 @@ describe("MAPCrossChainServiceRelay start test", function () {
         await mapVaultU.transferOwnership(mcssR.address);
 
         await feeCenter.setChainTokenGasFee(34434,usdt.address,"1000000000000000","2000000000000000000","500000")
+        await feeCenter.setChainTokenGasFee(97,usdt.address,"1000000000000000","2000000000000000000","500000")
 
         await feeCenter.setDistributeRate(0,addr2.address,"400000")
         await feeCenter.setDistributeRate(1,addr3.address,"200000")
@@ -144,8 +145,9 @@ describe("MAPCrossChainServiceRelay start test", function () {
         await tokenRegister.registerToken(212,usdt.address,mcsRelayData.ethUsdtToken);
         await tokenRegister.registerToken(212,standardToken.address,mcsRelayData.ethStanardToken);
         await tokenRegister.registerToken(1313161555,mcsRelayData.nearUsdtToken,usdt.address);
-        await tokenRegister.registerToken(1313161555,mcsRelayData.nearWethToken,standardToken.address);
-        await tokenRegister.registerToken(1313161555,"0x0000000000000000000000000000000000000000",wrapped.address);
+//        await tokenRegister.registerToken(1313161555,mcsRelayData.nearWethToken,standardToken.address);
+        await tokenRegister.registerToken(1313161555,mcsRelayData.nearStandToken,standardToken.address);
+        await tokenRegister.registerToken(1313161555,mcsRelayData.nearWethToken,wrapped.address);
         await tokenRegister.registerToken(212,wrapped.address,"0x0000000000000000000000000000000000000000");
         await tokenRegister.registerToken(34434,"0x0000000000000000000000000000000000000000",wrapped.address);
         await tokenRegister.registerToken(97,"0x0000000000000000000000000000000000000000",wrapped.address);
@@ -241,11 +243,11 @@ describe("MAPCrossChainServiceRelay start test", function () {
         console.log(await standardToken.balanceOf(mcssR.address));
 
         await usdt.mint(mcssR.address,"15000000000000000");
-
+       // console.log(await mcssR.getBytes("754971536701598691399384046710519749659100780320142630167019565356049780"));
         let near2eth001Data = await mcssR.transferIn(1313161555,mcsRelayData.near2eth001);
 
         let near2eth001Receipt = await ethers.provider.getTransactionReceipt(near2eth001Data.hash)
-
+        
         let near2eth001Decode = ethers.utils.defaultAbiCoder.decode(['bytes','bytes','bytes32','uint256','uint256','bytes','uint256','bytes'],
             near2eth001Receipt.logs[1].data)
 
@@ -276,7 +278,7 @@ describe("MAPCrossChainServiceRelay start test", function () {
         await mcssR.transferIn(1313161555,mcsRelayData.near2map001);
 
         expect(await usdt.balanceOf(mcssR.address)).to.equal("0")
-
+    
         await mcssR.transferIn(1313161555,mcsRelayData.near2mapW);
 
         expect(await standardToken.totalSupply()).to.equal("1150000000000000000");
