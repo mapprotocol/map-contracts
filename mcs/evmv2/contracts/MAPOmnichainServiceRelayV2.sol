@@ -21,6 +21,7 @@ import "./utils/TransferHelper.sol";
 import "./utils/EvmDecoder.sol";
 import "./utils/NearDecoder.sol";
 import "./utils/Utils.sol";
+import "hardhat/console.sol";
 
 
 contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable, IMOSV2, UUPSUpgradeable {
@@ -142,6 +143,8 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     }
 
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused {
+        console.logUint(_toChain);
+        require(Utils.isValidAddress(_to, uint256(chainTypes[_toChain])), "to address is error");
         require(_toChain != selfChainId, "only other chain");
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
         require(_token.isContract(), "token is not contract");
@@ -151,6 +154,8 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     }
 
     function transferOutNative(bytes memory _to, uint256 _toChain) external override payable whenNotPaused {
+        console.logUint(_toChain);
+        require(Utils.isValidAddress(_to, uint256(chainTypes[_toChain])), "to address is error");
         require(_toChain != selfChainId, "only other chain");
         uint256 amount = msg.value;
         require(amount > 0, "value too low");

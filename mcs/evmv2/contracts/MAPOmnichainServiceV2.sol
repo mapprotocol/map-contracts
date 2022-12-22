@@ -34,9 +34,17 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     uint256 public relayChainId;
     ILightNode public lightNode;
 
+    enum chainType{
+        NULL,
+        EVM,
+        NEAR
+    }
+
     mapping(bytes32 => bool) public orderList;
     mapping(address => bool) public mintableTokens;
     mapping(uint256 => mapping(address => bool)) public tokenMappingList;
+    mapping(uint256 => chainType) public chainTypes;
+
 
     event mapTransferExecute(uint256 indexed fromChain, uint256 indexed toChain, address indexed from);
     event SetLightClient(address _lightNode);
@@ -44,6 +52,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     event RemoveMintableToken(address[] _token);
     event SetRelayContract(uint256 _chainId, address _relay);
     event RegisterToken(address _token, uint _toChain, bool _enable);
+    event RegisterChain(uint256 _chainId, chainType _type);
 
     function initialize(address _wToken, address _lightNode)
     public initializer checkAddress(_wToken) checkAddress(_lightNode) {
@@ -104,6 +113,11 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         emit RemoveMintableToken(_token);
     }
 
+    function registerChain(uint256 _chainId, chainType _type) external onlyOwner {
+        chainTypes[_chainId] = _type;
+        emit RegisterChain(_chainId, _type);
+    }
+
     function setRelayContract(uint256 _chainId, address _relay) external onlyOwner checkAddress(_relay) {
         relayContract = _relay;
         relayChainId = _chainId;
@@ -129,6 +143,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override nonReentrant whenNotPaused
     checkBridgeable(_token, _toChain)
     checkAddress(_token){
+        require(Utils.isValidAddress(_to, uint256(chainTypes[_toChain])), "to address is error");
         require(_toChain != selfChainId, "only other chain");
         require(_token.isContract(),"token is not contract");
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
@@ -144,6 +159,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
 
     function transferOutNative(bytes memory _to, uint _toChain) external override payable nonReentrant whenNotPaused
     checkBridgeable(wToken, _toChain) {
+        require(Utils.isValidAddress(_to, uint256(chainTypes[_toChain])), "to address is error");
         require(_toChain != selfChainId, "only other chain");
         uint amount = msg.value;
         require(amount > 0, "balance is zero");
