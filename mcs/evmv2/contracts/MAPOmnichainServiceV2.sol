@@ -125,6 +125,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     }
 
     function registerToken(address _token, uint _toChain, bool _enable) external onlyOwner {
+        require(_token.isContract(),"token is not contract");
         tokenMappingList[_toChain][_token] = _enable;
         emit RegisterToken(_token,_toChain,_enable);
     }
@@ -145,7 +146,6 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     checkAddress(_token){
         require(Utils.isValidAddress(_to, uint256(chainTypes[_toChain])), "to address is error");
         require(_toChain != selfChainId, "only other chain");
-        require(_token.isContract(),"token is not contract");
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
 
         if (isMintable(_token)) {
@@ -172,7 +172,6 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     checkBridgeable(_token, relayChainId){
         address from = msg.sender;
         require(IERC20(_token).balanceOf(msg.sender) >= _amount, "balance too low");
-        require(_token.isContract(),"token is not contract");
 
         if (isMintable(_token)) {
             IMAPToken(_token).burnFrom(from, _amount);
