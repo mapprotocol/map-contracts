@@ -2,8 +2,11 @@
 
 pragma solidity 0.8.7;
 
+import "hardhat/console.sol";
 
 library Utils {
+    uint constant MIN_NEAR_ADDRESS_LEN = 2;
+    uint constant MAX_NEAR_ADDRESS_LEN = 64;
 
     function checkBytes(bytes memory b1, bytes memory b2) internal pure returns (bool){
         return keccak256(b1) == keccak256(b2);
@@ -90,11 +93,48 @@ library Utils {
                 revert("hexStrToBytes: invalid input");
 
             bytes_array[i / 2 - 32] = bytes1(16 * tetrad1 + tetrad2);
-
-
         }
 
         return bytes_array;
     }
 
+
+    function isValidNearAddress(bytes memory _addr) internal pure returns (bool){
+        if (_addr.length < MIN_NEAR_ADDRESS_LEN || _addr.length > MAX_NEAR_ADDRESS_LEN) {
+            return false;
+        }
+        bool last_char_is_separator = true;
+        for (uint i = 0; i < _addr.length; i++) {
+            uint8 char = uint8(_addr[i]);
+            bool current_char_is_separator = false;
+
+            //char 97-122 is a-z, 48-57 is 0-9 , 45 is - ,46 is .,95 is _
+            if ((char >= 97 && char <= 122) || (char >= 48 && char <= 57) || (char == 45 || char == 46 || char == 95)) {
+                if ((char == 45 || char == 46 || char == 95)) {
+                    current_char_is_separator = true;
+                }
+            } else {
+                return false;
+            }
+
+            if (current_char_is_separator && last_char_is_separator) {
+                return false;
+            }
+
+            last_char_is_separator = current_char_is_separator;
+        }
+        return !last_char_is_separator;
+    }
+
+    function isValidEvmAddress(bytes memory _addr) internal pure returns (bool){
+        return _addr.length == 20;
+    }
+
+    function isValidAddress(bytes memory _addr, uint chainType) internal view returns (bool){
+        console.logBytes(_addr);
+        console.logUint(chainType);
+        if (chainType == 1) return isValidEvmAddress(_addr);
+        if (chainType == 2) return isValidNearAddress(_addr);
+        return false;
+    }
 }
