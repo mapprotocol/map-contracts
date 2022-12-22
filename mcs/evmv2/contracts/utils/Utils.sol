@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.7;
 
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 
 library Utils {
     uint constant MIN_NEAR_ADDRESS_LEN = 2;
@@ -131,8 +131,6 @@ library Utils {
     }
 
     function isValidAddress(bytes memory _addr, uint chainType) internal view returns (bool){
-        console.logBytes(_addr);
-        console.logUint(chainType);
         if (chainType == 1) return isValidEvmAddress(_addr);
         if (chainType == 2) return isValidNearAddress(_addr);
         return false;
