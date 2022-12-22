@@ -173,7 +173,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
         //chainID 31337
         //address2Bytes = await mossR._addressToBytes(addr2.address);
         address2Bytes = "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
-
+        let addressNear = "0x70616e646172722e746573746e6574";
         let mintRole = await  standardToken.MINTER_ROLE();
 
         await standardToken.grantRole(mintRole,mossR.address);
@@ -192,7 +192,7 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
 
         await tokenRegister.registerToken(standardToken.address,mapVault.address, false);
 
-        await mossR.connect(owner).transferOutToken(standardToken.address,address2Bytes,"1000000000000000000",1313161555)
+        await mossR.connect(owner).transferOutToken(standardToken.address,addressNear,"1000000000000000000",1313161555)
 
         expect(await mapVault.vaultBalance(1313161555)).to.equal("-1000000000000000000")
         expect(await standardToken.totalSupply()).to.equal("1000000000000000000");
@@ -201,8 +201,8 @@ describe("MAPOmnichainServiceRelayV2 start test", function () {
     });
 
     it('transferOutNative test ', async function () {
-
-        await mossR.connect(owner).transferOutNative(address2Bytes,1313161555,{value:"100000000000000000"});
+        let addressNear = "0x70616e646172722e746573746e6574";
+        await mossR.connect(owner).transferOutNative(addressNear,1313161555,{value:"100000000000000000"});
 
         expect(await wrapped.balanceOf(mossR.address)).to.equal("100000000000000000")
     });
