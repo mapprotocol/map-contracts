@@ -118,6 +118,7 @@ describe("MAPCrossChainServiceRelay start test", function () {
 
         await mcssR.setIdTable(1313161555, 1);
 
+
         //expect(await mcssR.ChainIdTable(1)).to.equal(1313161555)
 
         await mcssR.setFeeCenter(feeCenter.address);
@@ -151,25 +152,26 @@ describe("MAPCrossChainServiceRelay start test", function () {
         await tokenRegister.registerToken(212,wrapped.address,"0x0000000000000000000000000000000000000000");
         await tokenRegister.registerToken(34434,"0x0000000000000000000000000000000000000000",wrapped.address);
         await tokenRegister.registerToken(97,"0x0000000000000000000000000000000000000000",wrapped.address);
+        await tokenRegister.registerToken(1313161555,wrapped.address,"0x0000000000000000000000000000000000000000");
     });
 
     it('mcsRelay setVaultBalance', async function () {
 
-        await mcssR.setVaultBalance(34434,standardToken.address,"1000000000000000000000000000000");
-        await mcssR.setVaultBalance(212,standardToken.address,"1000000000000000000000000000000");
-        await mcssR.setVaultBalance(1313161555,standardToken.address,"1000000000000000000000000000000");
-
-        await mcssR.setVaultBalance(34434,usdt.address,"1000000000000000000000000000000");
-        await mcssR.setVaultBalance(212,usdt.address,"1000000000000000000000000000000");
-        await mcssR.setVaultBalance(1313161555,usdt.address,"1000000000000000000000000000000");
-
-        await mcssR.setVaultBalance(34434,wrapped.address,"1000000000000000000000000000000");
-        await mcssR.setVaultBalance(212,wrapped.address,"1000000000000000000000000000000");
-        await mcssR.setVaultBalance(1313161555,wrapped.address,"1000000000000000000000000000000");
-
-        await mcssR.setVaultBalance(34434,"0x0000000000000000000000000000000000000000","1000000000000000000000000000000");
-        await mcssR.setVaultBalance(212,"0x0000000000000000000000000000000000000000","1000000000000000000000000000000");
-        await mcssR.setVaultBalance(1313161555,"0x0000000000000000000000000000000000000000","1000000000000000000000000000000");
+        // await mcssR.setVaultBalance(34434,standardToken.address,"1000000000000000000000000000000");
+        // await mcssR.setVaultBalance(212,standardToken.address,"1000000000000000000000000000000");
+        // await mcssR.setVaultBalance(1313161555,standardToken.address,"1000000000000000000000000000000");
+        //
+        // await mcssR.setVaultBalance(34434,usdt.address,"1000000000000000000000000000000");
+        // await mcssR.setVaultBalance(212,usdt.address,"1000000000000000000000000000000");
+        // await mcssR.setVaultBalance(1313161555,usdt.address,"1000000000000000000000000000000");
+        //
+        // await mcssR.setVaultBalance(34434,wrapped.address,"1000000000000000000000000000000");
+        // await mcssR.setVaultBalance(212,wrapped.address,"1000000000000000000000000000000");
+        // await mcssR.setVaultBalance(1313161555,wrapped.address,"1000000000000000000000000000000");
+        //
+        // await mcssR.setVaultBalance(34434,"0x0000000000000000000000000000000000000000","1000000000000000000000000000000");
+        // await mcssR.setVaultBalance(212,"0x0000000000000000000000000000000000000000","1000000000000000000000000000000");
+        // await mcssR.setVaultBalance(1313161555,"0x0000000000000000000000000000000000000000","1000000000000000000000000000000");
 
     });
 
