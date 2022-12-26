@@ -42,6 +42,6 @@ contract TokenRegister is Ownable {
         }else{
             mapToken = mapCorrespond[targetChain][sourceCorrespond[sourceChain][sourceToken]];
         }
-
+        require(mapToken.length > 0,"token not register");
     }
 }

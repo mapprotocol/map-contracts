@@ -45,8 +45,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
 
     mapping(address => bool) public authToken;
 
-    mapping(uint256 => mapping(address => uint)) public vaultBalance;
-
     mapping(uint256 => bytes) bridgeAddress;
 
     mapping(uint256 => uint256) ChainIdTable;
@@ -95,7 +93,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
 
-    event SetVaultBalance(uint256 tochain,address token,uint256 amount);
     event SetTokenRegister(address tokenRegister);
     event SetLightClientManager(address lightClient);
     event SetBridgeAddress(uint256 _chainId, bytes _addr);
@@ -141,11 +138,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     modifier checkAddress(address _address){
         require(_address != address(0), "address is zero");
         _;
-    }
-
-    function setVaultBalance(uint256 tochain, address token, uint256 amount) external onlyOwner {
-        vaultBalance[tochain][token] = amount;
-        emit SetVaultBalance(tochain,token,amount);
     }
 
     function setTokenRegister(address _register) external onlyOwner checkAddress(_register) {
@@ -226,7 +218,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
     function getToChainAmountOther(bytes memory token, uint256 fromChain, uint256 toChain, uint256 amount)
     internal view returns (uint256){
         bytes memory tokenMap = getMapToken(token, fromChain);
-        require(tokenMap.length > 0, "Token no register");
         return getToChainAmount(tokenMap, fromChain, toChain, amount);
     }
 
@@ -453,7 +444,6 @@ contract MAPCrossChainServiceRelay is ReentrancyGuard, Initializable, Pausable, 
             IMAPToken(token).mint(address(this), amount);
         }
         IVault(vaultTokenAddress).stakingTo(amount, to);
-        //vaultBalance[fromChain][token] += amount;
         emit mapDepositIn(token, from, to, orderId, amount, fromChain, toChain);
     }
 
