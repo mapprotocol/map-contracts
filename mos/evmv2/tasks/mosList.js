@@ -1,5 +1,5 @@
 
-const chainlist = [1,
+const chainlist = [1, 5,
     56, 97,  // bsc
     137, 80001, // matic
     212, 22776,  // mapo

@@ -1,5 +1,5 @@
 
-const chainlist = [1,
+const chainlist = [1, 5,
     56, 97,  // bsc
     137, 80001, // matic
     212, 22776,  // mapo
@@ -30,14 +30,17 @@ module.exports = async (taskArgs,hre) => {
     let lightClientManager = await mos.lightClientManager();
 
     let vaultFee = await mos.distributeRate(0);
-    let mistFee = await mos.distributeRate(1);
+    let relayFee = await mos.distributeRate(1);
+    let protocolFee = await mos.distributeRate(2);
 
     console.log("selfChainId:\t", selfChainId.toString());
     console.log("light client manager:", lightClientManager);
     console.log("Token manager:\t", tokenmanager);
     console.log("wToken address:\t", wtoken);
 
-    console.log(`distribute rate: vault(${vaultFee[1]}), receiver(${mistFee[0]}), rate(${mistFee[1]})`);
+    console.log(`distribute vault rate: rate(${vaultFee[1]})`);
+    console.log(`distribute relay rate: rate(${relayFee[1]}), receiver(${relayFee[0]})`);
+    console.log(`distribute protocol rate: rate(${protocolFee[1]}), receiver(${protocolFee[0]})`);
 
     let manager = await ethers.getContractAt('TokenRegisterV2', tokenmanager);
 

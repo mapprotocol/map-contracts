@@ -84,6 +84,11 @@ module.exports = {
       chainId : 1,
       accounts: accounts
     },
+    Goerli: {
+      url: `https://goerli.infura.io/v3/` + INFURA_KEY,
+      chainId : 5,
+      accounts: accounts
+    },
     Sepolia: {
       url: `https://rpc.sepolia.org`,
       chainId : 11155111,

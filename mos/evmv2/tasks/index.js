@@ -67,6 +67,13 @@ task("mosSetClient",
 )
     .addParam("client", "light client address")
 
+task("mosRegisterChain",
+    "Register chain type",
+    require("./mosRegisterChain")
+)
+    .addParam("chain", "chain id")
+    .addOptionalParam("type", "chain type, default 1", 1, types.int)
+
 task("mosRegisterToken",
     "MapCrossChainService settings allow cross-chain tokens",
     require("./mosRegisterToken")
