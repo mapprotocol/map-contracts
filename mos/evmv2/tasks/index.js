@@ -199,9 +199,21 @@ task("customData",
     .addOptionalParam("timelockaddress", "The time lock contract address","0x6559AfD04c08d8ebF6c45f0C750237D04f80a8A2",types.string)
 
 task("executeTimeLock",
-    "",
+    "Run timelock execute",
     require("./executeTimeLock")
 
 )
     .addParam("executeid","This is using Gnosis safe's nonce as credential")
     .addOptionalParam("timelockaddress", "withdraw value","0x6559AfD04c08d8ebF6c45f0C750237D04f80a8A2",types.string)
+
+task("timeLockCreate",
+    "Create a timelock contract",
+    require("./timeLockCreate")
+)
+    .addParam("salt", "This is a bytes32 salt")
+    .addOptionalParam("factory", "This is the deployment factory contract address","0x22Be25989dE6EC15e3A1E8A9F5204333554318dC",types.string)
+    .addOptionalParam("timenum", "It's just minimal latency","50",types.string)
+    .addOptionalParam("proposer", "Has the PROPOSER_ROLE permission address","0x49d6Dae5D59B3aF296DF35BDc565371c8A563ef6,0x21624d0634c696f6c357cBd8c5B7f629aFf045f7",types.string)
+    .addOptionalParam("executor", " Has the EXECUTOR_ROLE permission address","0x49d6Dae5D59B3aF296DF35BDc565371c8A563ef6,0x21624d0634c696f6c357cBd8c5B7f629aFf045f7",types.string)
+    .addOptionalParam("admin", "Administrator address","0x49d6Dae5D59B3aF296DF35BDc565371c8A563ef6",types.string)
+    .addOptionalParam("valuenum", "Whether a transfer is required when the contract is created","0",types.string)
