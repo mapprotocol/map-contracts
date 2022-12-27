@@ -1,7 +1,7 @@
 
 task("LightClientRegister",
     "Deploy LightClientRegister",
-    require("./LightClientRegister")
+    require("./clientRegister")
 )
     .addParam("chain", "chain id for light client")
     .addParam("contract", "contract for light client")
