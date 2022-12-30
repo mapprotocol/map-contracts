@@ -1,5 +1,5 @@
 [package]
-name = "mcs-token"
+name = "mos-token"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -10,7 +10,3 @@ crate-type = ["cdylib"]
 [dependencies]
 near-sdk = "4.0.0"
 near-contract-standards = "4.0.0"
-
-[features]
-default = ["release"]
-release = []

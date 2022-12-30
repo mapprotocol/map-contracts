@@ -5,7 +5,10 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet};
 use near_sdk::json_types::{Base64VecU8, U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near_bindgen, serde_json, AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise, PromiseOrValue, PublicKey, log, assert_one_yocto};
+use near_sdk::{
+    assert_one_yocto, env, log, near_bindgen, serde_json, AccountId, BorshStorageKey, Gas,
+    PanicOnDefault, Promise, PromiseOrValue, PublicKey,
+};
 
 /// Unlimited allowance for multisig keys.
 const DEFAULT_ALLOWANCE: u128 = 0;
@@ -362,10 +365,18 @@ impl MultiSigContract {
     /// Execute given request which is in queue
     pub fn execute(&mut self, request_id: RequestId) -> PromiseOrValue<bool> {
         let ret = self.schedule.get(&request_id);
-        assert!(ret.is_some(), "The request {} is not in scheduled", request_id);
+        assert!(
+            ret.is_some(),
+            "The request {} is not in scheduled",
+            request_id
+        );
         let cur_timestamp = env::block_timestamp();
-        assert!(cur_timestamp >= ret.unwrap(),
-                "Current block time {} is smaller than min execute time {}", cur_timestamp, ret.unwrap());
+        assert!(
+            cur_timestamp >= ret.unwrap(),
+            "Current block time {} is smaller than min execute time {}",
+            cur_timestamp,
+            ret.unwrap()
+        );
 
         let request = self.remove_request(request_id);
         self.execute_request(request)
@@ -509,7 +520,7 @@ impl MultiSigContract {
             .requests
             .get(&request_id)
             .unwrap_or_else(|| env::panic_str("No such request")))
-            .request
+        .request
     }
 
     pub fn get_num_requests_per_member(&self, member: MultisigMember) -> u32 {
@@ -537,7 +548,12 @@ impl MultiSigContract {
     }
 
     pub fn upgrade_self(&mut self, code: Base64VecU8) {
-        assert_eq!(env::current_account_id(), env::predecessor_account_id(), "unexpected caller {}", env::predecessor_account_id());
+        assert_eq!(
+            env::current_account_id(),
+            env::predecessor_account_id(),
+            "unexpected caller {}",
+            env::predecessor_account_id()
+        );
 
         let current_id = env::current_account_id();
         let promise_id = env::promise_batch_create(&current_id);
@@ -623,9 +639,9 @@ mod tests {
                 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
                 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
             ])
-                .unwrap(),
+            .unwrap(),
             amount,
-            deposit
+            deposit,
         )
     }
 
@@ -633,7 +649,7 @@ mod tests {
         account_id: AccountId,
         key: PublicKey,
         amount: Balance,
-        deposit: Balance
+        deposit: Balance,
     ) -> VMContext {
         VMContextBuilder::new()
             .current_account_id(contract())
@@ -650,7 +666,7 @@ mod tests {
         key: PublicKey,
         timestamp: u64,
         amount: Balance,
-        deposit: Balance
+        deposit: Balance,
     ) -> VMContext {
         VMContextBuilder::new()
             .current_account_id(contract())
@@ -737,11 +753,13 @@ mod tests {
         testing_env!(context_with_account(alice(), amount, 1));
         c.confirm(request_id);
 
-        testing_env!(context_with_account_key_timestamp(bob(),
+        testing_env!(context_with_account_key_timestamp(
+            bob(),
             PublicKey::from(NON_MEMBER_KEY.parse().unwrap()),
             REQUEST_COOLDOWN + 1,
             amount,
-            1));
+            1
+        ));
         c.delete_request(request_id);
     }
 
@@ -808,11 +826,13 @@ mod tests {
         };
         let request_id = c.add_request_and_confirm(request.clone());
 
-        testing_env!(context_with_account_key_timestamp(bob(),
+        testing_env!(context_with_account_key_timestamp(
+            bob(),
             PublicKey::from(NON_MEMBER_KEY.parse().unwrap()),
             REQUEST_COOLDOWN + 1,
             amount,
-            0));
+            0
+        ));
         c.delete_request(request_id);
     }
 
@@ -856,11 +876,7 @@ mod tests {
 
         testing_env!(context_with_account_key_timestamp(
             contract(),
-            PublicKey::from(
-                    NON_MEMBER_KEY
-                        .parse()
-                        .unwrap(),
-                ),
+            PublicKey::from(NON_MEMBER_KEY.parse().unwrap(),),
             REQUEST_LOCK,
             amount,
             0
@@ -949,11 +965,7 @@ mod tests {
         assert_eq!(c.get_confirmations(request_id).len(), 2);
         testing_env!(context_with_account_key_timestamp(
             bob(),
-            PublicKey::from(
-                    NON_MEMBER_KEY
-                        .parse()
-                        .unwrap(),
-                ),
+            PublicKey::from(NON_MEMBER_KEY.parse().unwrap(),),
             REQUEST_LOCK,
             amount,
             1
@@ -986,10 +998,13 @@ mod tests {
             receiver_id: contract(),
             actions: vec![MultiSigRequestAction::AddKey {
                 public_key: new_key.clone(),
-                permission: Some(FunctionCallPermission{
+                permission: Some(FunctionCallPermission {
                     allowance: Some(U128(1000000)),
                     receiver_id: contract(),
-                    method_names: MULTISIG_METHOD_NAMES.split(",").map(|s|s.to_string()).collect()
+                    method_names: MULTISIG_METHOD_NAMES
+                        .split(",")
+                        .map(|s| s.to_string())
+                        .collect(),
                 }),
             }],
         };
@@ -1000,11 +1015,7 @@ mod tests {
 
         testing_env!(context_with_account_key_timestamp(
             contract(),
-            PublicKey::from(
-                    NON_MEMBER_KEY
-                        .parse()
-                        .unwrap(),
-                ),
+            PublicKey::from(NON_MEMBER_KEY.parse().unwrap(),),
             REQUEST_LOCK,
             amount,
             0
@@ -1052,11 +1063,7 @@ mod tests {
 
         testing_env!(context_with_account_key_timestamp(
             contract(),
-            PublicKey::from(
-                    NON_MEMBER_KEY
-                        .parse()
-                        .unwrap(),
-                ),
+            PublicKey::from(NON_MEMBER_KEY.parse().unwrap(),),
             REQUEST_LOCK,
             amount,
             0
@@ -1085,7 +1092,8 @@ mod tests {
         let new_key: PublicKey = PublicKey::from(
             "ed25519:HghiythFFPjVXwc9BLNi8uqFmfQc1DWFrJQ4nE6ANo7R"
                 .parse()
-                .unwrap());
+                .unwrap(),
+        );
         // vm current_account_id is contract, receiver_id must be contract
         let request = MultiSigRequest {
             receiver_id: bob(),
@@ -1098,11 +1106,7 @@ mod tests {
         let request_id = c.add_request_and_confirm(request);
         testing_env!(context_with_account_key_timestamp(
             contract(),
-            PublicKey::from(
-                    NON_MEMBER_KEY
-                        .parse()
-                        .unwrap(),
-                ),
+            PublicKey::from(NON_MEMBER_KEY.parse().unwrap(),),
             REQUEST_LOCK,
             amount,
             0
@@ -1215,11 +1219,7 @@ mod tests {
             }],
         });
         testing_env!(context_with_key(
-            PublicKey::from(
-                    NON_MEMBER_KEY
-                        .parse()
-                        .unwrap(),
-                ),
+            PublicKey::from(NON_MEMBER_KEY.parse().unwrap(),),
             amount
         ));
         c.delete_request(request_id);
