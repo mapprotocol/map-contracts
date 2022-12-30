@@ -5,8 +5,12 @@ pragma solidity 0.8.7;
 interface ILightClientManager {
     function updateBlockHeader(uint256 _chainId, bytes memory _blockHeader) external;
 
-    function verifyProofData(uint _chainId, bytes memory _receiptProof) external
+    function updateLightClient(uint256 _chainId, bytes memory _data) external;
+
+    function verifyProofData(uint256 _chainId, bytes memory _receiptProof) external
     view returns (bool success, string memory message,bytes memory logs);
+
+    function clientState(uint256 _chainId) external view returns(bytes memory);
 
     function headerHeight(uint256 _chainId) external view returns (uint256);
 
