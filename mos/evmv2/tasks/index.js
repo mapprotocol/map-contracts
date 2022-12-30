@@ -71,7 +71,7 @@ task("mosRegisterChain",
     "Register chain type",
     require("./mosRegisterChain")
 )
-    .addParam("chain", "chain id")
+    .addParam("chains", "chain ids allowed to cross, separated by ',', ex. `1,2,3` ")
     .addOptionalParam("type", "chain type, default 1", 1, types.int)
 
 task("mosRegisterToken",
