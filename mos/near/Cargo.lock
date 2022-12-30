@@ -1331,39 +1331,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3e378b66a060d48947b590737b30a1be76706c8dd7b8ba0f2fe3989c68a853f"
 
 [[package]]
-name = "mcs"
-version = "0.1.0"
-dependencies = [
- "admin-controlled",
- "ethabi",
- "hex 0.4.3",
- "map-light-client",
- "near-contract-standards",
- "near-sdk",
- "num",
- "num-bigint 0.4.3",
- "rlp 0.5.1",
- "serde_json",
- "tiny-keccak 1.5.0",
- "uint 0.8.5",
-]
-
-[[package]]
-name = "mcs-factory"
-version = "0.1.0"
-dependencies = [
- "near-sdk",
-]
-
-[[package]]
-name = "mcs-token"
-version = "0.1.0"
-dependencies = [
- "near-contract-standards",
- "near-sdk",
-]
-
-[[package]]
 name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1410,9 +1377,35 @@ dependencies = [
 ]
 
 [[package]]
-name = "multisig"
+name = "mos"
 version = "0.1.0"
 dependencies = [
+ "admin-controlled",
+ "ethabi",
+ "hex 0.4.3",
+ "map-light-client",
+ "near-contract-standards",
+ "near-sdk",
+ "num",
+ "num-bigint 0.4.3",
+ "rlp 0.5.1",
+ "serde_json",
+ "tiny-keccak 1.5.0",
+ "uint 0.8.5",
+]
+
+[[package]]
+name = "mos-factory"
+version = "0.1.0"
+dependencies = [
+ "near-sdk",
+]
+
+[[package]]
+name = "mos-token"
+version = "0.1.0"
+dependencies = [
+ "near-contract-standards",
  "near-sdk",
 ]
 
@@ -1441,6 +1434,7 @@ dependencies = [
  "anyhow",
  "hex 0.4.3",
  "map-light-client",
+ "mos",
  "near-sdk",
  "near-units",
  "serde_json",

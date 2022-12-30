@@ -1,0 +1,13 @@
+[profile.release]
+codegen-units = 1
+opt-level = "s"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
+
+[workspace]
+members = [
+    "multisig",
+    "multisig-factory",
+]
