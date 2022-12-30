@@ -4,6 +4,7 @@ node_modules
 coverage
 coverage.json
 typechain
+target
 
 #Hardhat files
 cache
@@ -11,4 +12,4 @@ artifacts
 abi
 deployments
 /mapclients/near/scripts/res/
-/mcs/near/scripts/res/
+/mos/near/scripts/res/
