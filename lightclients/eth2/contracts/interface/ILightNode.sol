@@ -9,6 +9,8 @@ interface ILightNode {
 
     function updateLightClient(bytes memory _data) external;
 
+    function clientState() external view returns(bytes memory);
+
     function headerHeight() external view returns (uint256 height);
 
     function verifiableHeaderRange() external view returns (uint256, uint256);

@@ -236,6 +236,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
+    function clientState() external view override returns(bytes memory) {
+        return abi.encode(exeHeaderStartNumber, exeHeaderEndNumber);
+    }
+
     function headerHeight() external view override returns (uint256) {
         return finalizedBeaconHeader.slot;
     }
@@ -270,9 +274,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return abi.encode(_update);
     }
 
-    function clientState() external view returns(bytes memory) {
-        return abi.encode(exeHeaderStartNumber, exeHeaderEndNumber);
-    }
+
 
     function encodeUpdateAndState(Types.LightClientUpdate memory update)
     internal
