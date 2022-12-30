@@ -270,6 +270,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return abi.encode(_update);
     }
 
+    function clientState() external view returns(bytes memory) {
+        return abi.encode(exeHeaderStartNumber, exeHeaderEndNumber);
+    }
+
     function encodeUpdateAndState(Types.LightClientUpdate memory update)
     internal
     view
