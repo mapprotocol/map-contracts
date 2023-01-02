@@ -259,6 +259,7 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
     }
 
 
+
     function decodeTxLog(bytes memory logsHash)
     internal
     pure
@@ -266,14 +267,17 @@ contract MapCrossChainService is ReentrancyGuard, Initializable, Pausable, IMCS,
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
         _txLogs = new txLog[](ls.length);
         for (uint256 i = 0; i < ls.length; i++) {
-            bytes[] memory topic = new bytes[](ls[i].toList()[1].toList().length);
-            for (uint256 j = 0; j < ls[i].toList()[1].toList().length; j++) {
-                topic[j] = ls[i].toList()[1].toList()[j].toBytes();
+            RLPReader.RLPItem[] memory item = ls[i].toList();
+            require(item.length >= 3, "log length to low");
+            RLPReader.RLPItem[] memory firstItemList = item[1].toList();
+            bytes[] memory topic = new bytes[](firstItemList.length);
+            for (uint256 j = 0; j < firstItemList.length; j++) {
+                topic[j] = firstItemList[j].toBytes();
             }
             _txLogs[i] = txLog({
-            addr : ls[i].toList()[0].toAddress(),
+            addr : item[0].toAddress(),
             topics : topic,
-            data : ls[i].toList()[2].toBytes()
+            data : item[2].toBytes()
             });
         }
     }
