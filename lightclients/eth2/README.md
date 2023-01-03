@@ -79,11 +79,13 @@ Create an .env file and fill in the following contents.
 ```
 # your private key on the MAP blockchain the contracts will be deployed to
 PRIVATE_KEY=
-# beacon chain rpc url
+# beacon chain RPC url. The RPC should contain the light client API, suggest to use lodestar RPC
 URL=
 # eth mainnet 1 Goerli 5
 CHAIN_ID =
-# initialize the light client base on the trusted root
+# initialize the light client base on the trusted root. You can get the trusted root through the beacon chain API 
+# "/eth/v1/beacon/states/<state_id>/finality_checkpoints", and make sure the bootstrap of the root is not empty through
+# beacon chain API "/eth/v1/beacon/light_client/bootstrap/<root>"
 TRUSTED_BLOCK_ROOT=
 ```
 
@@ -178,19 +180,13 @@ The file LightNode.sol implements the main logic of eth2.0 PoS light client. Her
 ```solidity
     function verifiableHeaderRange() external view returns (uint256, uint256);
 ```
-* When the maintainer starts, it should call first get the public state `exeHeaderUpdateInfo` which tells if the latest
+* When the maintainer starts, it should call first get the public state `clientState()` which tells if the latest
  execution layer headers' gap is filled. If not, the maintainer should first call `updateBlockHeader` to fill the gap.
  Then call below interface `headerHeight` to get the latest finalized slot of the light client. So that it can decide
  whether to retrieve the period update information or the latest finality update information, and then call 
  `updateLightClient` to update the light client.
 ```solidity
-    ExeHeaderUpdateInfo public exeHeaderUpdateInfo;
-
-    struct ExeHeaderUpdateInfo {
-        uint256 startNumber;
-        uint256 endNumber;
-        bytes32 endHash;
-    }
+    function clientState() external view override returns(bytes memory);
 
     function headerHeight() external view override returns (uint256);
 ```
