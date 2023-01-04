@@ -83,10 +83,8 @@ PRIVATE_KEY=
 URL=
 # eth mainnet 1 Goerli 5
 CHAIN_ID =
-# initialize the light client base on the trusted root. You can get the trusted root through the beacon chain API 
-# "/eth/v1/beacon/states/<state_id>/finality_checkpoints", and make sure the bootstrap of the root is not empty through
-# beacon chain API "/eth/v1/beacon/light_client/bootstrap/<root>"
-TRUSTED_BLOCK_ROOT=
+# initialize the light client with the information of this period
+PERIOD=
 ```
 
 The deployment script is located in `deploy/` folder. We can run the following commands to deploy.

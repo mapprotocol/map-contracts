@@ -1,8 +1,8 @@
 # your private key on the blockchain the contracts will be deployed to
 PRIVATE_KEY=
-# beacon chain rpc url
+# beacon chain rpc url. The RPC should contain the light client API, suggest to use lodestar RPC
 URL=
 # 1 for eth mainnet, 5 for Goerli testnet
 CHAIN_ID =
-# initialize the light client base on the trusted root
-TRUSTED_BLOCK_ROOT=
+# initialize the light client with the information of this period
+PERIOD=
