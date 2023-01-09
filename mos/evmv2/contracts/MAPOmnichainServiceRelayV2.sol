@@ -208,7 +208,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
                 }
             }
         } else {
-            require(true, "chain type error");
+            require(false, "chain type error");
         }
         emit mapTransferExecute(_chainId, selfChainId, msg.sender);
     }
@@ -236,7 +236,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
                 }
             }
         } else {
-            require(true, "chain type error");
+            require(false, "chain type error");
         }
         emit mapTransferExecute(_chainId, selfChainId, msg.sender);
     }
