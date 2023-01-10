@@ -72,8 +72,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         from: deployer,
         args: [lightNode.address, initData],
         log: true,
-        contract: 'LightNodeProxy',
-        gasLimit: 20000000
+        contract: 'LightNodeProxy'
     });
 
     let proxy = LightNode.attach(lightNodeProxy.address);

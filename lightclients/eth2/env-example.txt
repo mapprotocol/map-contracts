@@ -3,6 +3,6 @@ PRIVATE_KEY=
 # beacon chain rpc url. The RPC should contain the light client API, suggest to use lodestar RPC
 URL=
 # 1 for eth mainnet, 5 for Goerli testnet
-CHAIN_ID =
+CHAIN_ID=
 # initialize the light client with the information of this period
 PERIOD=
