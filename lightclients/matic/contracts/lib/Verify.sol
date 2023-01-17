@@ -39,7 +39,7 @@ library Verify {
 
     uint256 constant MAINNET_CHAINID = 137;
 
-    uint256 constant MAINNET_DELHI_BLOCK = 0;
+    uint256 constant MAINNET_DELHI_BLOCK = 38189056;
 
     uint256 constant MUMBAI_DELHI_BLOCK = 29638656;
 
