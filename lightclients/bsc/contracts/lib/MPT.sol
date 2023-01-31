@@ -138,11 +138,11 @@ library MPT {
             }
         } else if (prefix == 0) {
             // extension even
-            uint256 extensionLength = nodekey.length - 1;
+            uint256 extensionLength = nodekey.length ;
             bytes memory shared_nibbles = sliceTransform(
                 nodekey,
                 1,
-                extensionLength,
+                extensionLength - 1,
                 false
             );
             bytes memory restKey = sliceTransform(
