@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "./interface/IWToken.sol";
-import "./interface/IMAPToken.sol";
 import "./interface/ILightClientManager.sol";
 import "./interface/IMOSV2.sol";
 import "./utils/TransferHelper.sol";

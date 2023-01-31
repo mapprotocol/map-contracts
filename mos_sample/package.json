@@ -1,11 +1,9 @@
 {
-  "name": "MAPOmnichainService",
+  "name": "MAPOmnichainServiceSample",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "map:deploy:FeeCebter": "npx hardhat deploy --tags FeeCenter --network Map",
-    "map:deploy:TokenRegister": "npx hardhat deploy --tags TokenRegister --network Map",
     "map:deploy:MAPVaultToken": "npx hardhat deploy --tags MAPVaultToken --network Map",
     "map:deploy:MapCrossChainServiceProxyUp": "npx hardhat deploy --tags MAPCrossChainServiceRelayProxyUp --network Bsc",
     "map:deploy:MapCrossChainServiceRelayProxyUp": "npx hardhat deploy --tags MapCrossChainServiceRelayProxyUp --network Map"
