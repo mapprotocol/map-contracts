@@ -13,6 +13,7 @@ library EvmDecoder {
 
     bytes32 constant MAP_TRANSFEROUT_TOPIC = keccak256(bytes('mapTransferOut(uint256,uint256,bytes32,bytes,bytes,bytes,uint256,bytes)'));
     bytes32 constant MAP_DEPOSITOUT_TOPIC = keccak256(bytes('mapDepositOut(uint256,uint256,bytes32,address,bytes,address,uint256)'));
+    bytes32 constant MAP_DATA_TOPIC = keccak256(bytes('mapDataOut(uint256,uint256,bytes32,bytes)'));
 
 
     function decodeTxLogs(bytes memory logsHash)

@@ -16,7 +16,7 @@ import "./interface/IMAPToken.sol";
 import "./interface/IVaultTokenV2.sol";
 import "./interface/ITokenRegisterV2.sol";
 import "./interface/ILightClientManager.sol";
-import "./interface/IMOSV2.sol";
+import "./interface/IMOSV3.sol";
 import "./utils/TransferHelper.sol";
 import "./utils/EvmDecoder.sol";
 import "./utils/NearDecoder.sol";
@@ -24,7 +24,7 @@ import "./utils/Utils.sol";
 //import "hardhat/console.sol";
 
 
-contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable, IMOSV2, UUPSUpgradeable {
+contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable, IMOSV3, UUPSUpgradeable {
     using SafeMath for uint256;
     using Address for address;
 
@@ -142,6 +142,20 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         emit SetDistributeRate(_id, _to, _rate);
     }
 
+    function transferOut(uint256 _toChain,CallData memory _callData) external override
+    nonReentrant
+    whenNotPaused
+    returns(bool)
+    {
+
+        bytes32 orderId = _getOrderId(msg.sender, _callData.target, _toChain);
+
+        bytes memory callData = abi.encode(_callData);
+
+        emit mapDataOut(selfChainId, _toChain, orderId, callData);
+        return true;
+    }
+
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused {
         require(Utils.isValidAddress(_to, uint256(chainTypes[_toChain])), "to address is error");
         require(_toChain != selfChainId, "only other chain");
@@ -239,6 +253,36 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             require(false, "chain type error");
         }
         emit mapTransferExecute(_chainId, selfChainId, msg.sender);
+    }
+
+    function executeIn(uint256 _chainId, bytes memory _receiptProof) external nonReentrant whenNotPaused {
+        (bool success,string memory message,bytes memory logArray) = lightClientManager.verifyProofData(_chainId, _receiptProof);
+        require(success, message);
+        if (chainTypes[_chainId] == chainType.EVM) {
+            IEvent.txLog[] memory logs = EvmDecoder.decodeTxLogs(logArray);
+            for (uint256 i = 0; i < logs.length; i++) {
+                IEvent.txLog memory log = logs[i];
+                bytes32 topic = abi.decode(log.topics[0], (bytes32));
+                if (topic == EvmDecoder.MAP_DATA_TOPIC) {
+                    uint256 toChain = abi.decode(log.topics[2], (uint256));
+                    if(toChain == selfChainId){
+                        (bytes32 orderId, bytes memory callData)
+                        = abi.decode(log.data, (bytes32, bytes));
+                        require(!orderList[orderId], "order exist");
+                        CallData memory cData = abi.decode(callData,(CallData));
+                        address callDataAddress = Utils.fromBytes(cData.target);
+                        (bool success, ) = callDataAddress.call{value: cData.value,gas:cData.gasLimit}(cData.callData);
+                        orderList[orderId] = true;
+                    }else{
+                        (bytes32 orderId, bytes memory callData)
+                        = abi.decode(log.data, (bytes32, bytes));
+                        require(!orderList[orderId], "order exist");
+                        orderList[orderId] = true;
+                        emit mapDataOut(selfChainId,toChain,orderId,callData);
+                    }
+                }
+            }
+        }
     }
 
 
