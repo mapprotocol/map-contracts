@@ -14,14 +14,14 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./utils/TransferHelper.sol";
-import "./interface/IMOSV2.sol";
+import "./interface/IMOSV3.sol";
 import "./interface/ILightNode.sol";
 import "./utils/RLPReader.sol";
 import "./utils/Utils.sol";
 import "./utils/EvmDecoder.sol";
 
 
-contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOSV2, UUPSUpgradeable {
+contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOSV3, UUPSUpgradeable {
     using SafeMath for uint;
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
@@ -47,6 +47,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
 
 
     event mapTransferExecute(uint256 indexed fromChain, uint256 indexed toChain, address indexed from);
+    event mapDataExecute(uint256 indexed fromChain, uint256 indexed toChain, address indexed from);
     event SetLightClient(address _lightNode);
     event AddMintableToken(address[] _token);
     event RemoveMintableToken(address[] _token);
@@ -125,7 +126,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
     }
 
     function registerToken(address _token, uint _toChain, bool _enable) external onlyOwner {
-        require(_token.isContract(),"token is not contract");
+        //require(_token.isContract(),"token is not contract");
         tokenMappingList[_toChain][_token] = _enable;
         emit RegisterToken(_token,_toChain,_enable);
     }
@@ -139,6 +140,51 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, Pausable, IMOS
         }else {
             TransferHelper.safeTransfer(_token,_receiver,_amount);
         }
+    }
+
+    function transferOut(uint256 _toChain,CallData memory _callData) external override
+    nonReentrant
+    whenNotPaused
+    checkBridgeable(Utils.fromBytes(_callData.target), _toChain)
+    returns(bool)
+    {
+
+        bytes32 orderId = _getOrderID(msg.sender, _callData.target, _toChain);
+
+        bytes memory callData = abi.encode(_callData);
+
+        emit mapDataOut(selfChainId, _toChain, orderId, callData);
+        return true;
+    }
+
+    function executeIn(uint256 _chainId, bytes memory _receiptProof) external nonReentrant whenNotPaused returns(bool) {
+        require(_chainId == relayChainId, "invalid chain id");
+        (bool sucess, string memory message, bytes memory logArray) = lightNode.verifyProofData(_receiptProof);
+        require(sucess, message);
+        IEvent.txLog[] memory logs = EvmDecoder.decodeTxLogs(logArray);
+
+        for (uint i = 0; i < logs.length; i++) {
+            IEvent.txLog memory log = logs[i];
+            bytes32 topic = abi.decode(log.topics[0], (bytes32));
+
+            if (topic == EvmDecoder.MAP_DATA_TOPIC && relayContract == log.addr) {
+                uint256 toChainId = abi.decode(log.topics[2], (uint256));
+                if(toChainId == selfChainId){
+                    (bytes32 orderId, bytes memory callData)
+                    = abi.decode(log.data, (bytes32, bytes));
+                    require(!orderList[orderId], "order exist");
+                    CallData memory cData = abi.decode(callData,(CallData));
+                    address callDataAddress = Utils.fromBytes(cData.target);
+                    (bool success, ) = callDataAddress.call{value: cData.value,gas:cData.gasLimit}(cData.callData);
+                    orderList[orderId] = true;
+                    if(!success){
+                        return false;
+                    }
+                }
+            }
+        }
+        emit mapDataExecute(_chainId, selfChainId, msg.sender);
+        return true;
     }
 
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override nonReentrant whenNotPaused
