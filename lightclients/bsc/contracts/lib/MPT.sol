@@ -1,16 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.7;
-//pragma experimental ABIEncoderV2;
+
 
 import "./RLPReader.sol";
 
-/*
-    Documentation:
-    - https://eth.wiki/en/fundamentals/patricia-tree
-    - https://github.com/blockchainsllc/in3/wiki/Ethereum-Verification-and-MerkleProof
-    - https://easythereentropy.wordpress.com/2014/06/04/understanding-the-ethereum-trie/
-*/
+
 library MPT {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;

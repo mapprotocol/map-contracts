@@ -69,15 +69,15 @@ library Verify {
         bytes data;
     }
 
-    function verifyHeaderSignature(
+    function _verifyHeaderSignature(
         BlockHeader memory _header,
         uint256 _chainId
     ) internal pure returns (bool) {
-        (bytes memory signature, bytes memory extraData) = splitExtra(
+        (bytes memory signature, bytes memory extraData) = _splitExtra(
             _header.extraData
         );
 
-        bytes32 hash = keccak256(encodeSigHeader(_header, extraData, _chainId));
+        bytes32 hash = keccak256(_encodeSigHeader(_header, extraData, _chainId));
 
         bytes32 r;
         bytes32 s;
@@ -99,7 +99,7 @@ library Verify {
         return signer == _header.miner;
     }
 
-    function validateHeader(
+    function _validateHeader(
         BlockHeader memory _header,
         uint256 _parentGasLimit,
         uint256 _minEpochBlockExtraDataLen
@@ -152,7 +152,7 @@ library Verify {
         return true;
     }
 
-    function encodeSigHeader(
+    function _encodeSigHeader(
         BlockHeader memory _header,
         bytes memory _extraData,
         uint256 _chainId
@@ -177,7 +177,7 @@ library Verify {
         output = RLPEncode.encodeList(list);
     }
 
-    function getBlockHash(BlockHeader memory _header)
+    function _getBlockHash(BlockHeader memory _header)
         internal
         pure
         returns (bytes32)
@@ -201,12 +201,12 @@ library Verify {
         return keccak256(RLPEncode.encodeList(list));
     }
 
-    function validateProof(
+    function _validateProof(
         bytes32 _receiptsRoot,
         ReceiptProof memory _receipt,
         address _mptVerify
     ) internal pure returns (bool success, bytes memory logs) {
-        bytes memory bytesReceipt = encodeReceipt(_receipt.txReceipt);
+        bytes memory bytesReceipt = _encodeReceipt(_receipt.txReceipt);
         bytes memory expectedValue = bytesReceipt;
         if (_receipt.txReceipt.receiptType > 0) {
             expectedValue = abi.encodePacked(
@@ -226,8 +226,8 @@ library Verify {
             logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
     }
 
-    function encodeReceipt(TxReceipt memory _txReceipt)
-        public
+    function _encodeReceipt(TxReceipt memory _txReceipt)
+        internal
         pure
         returns (bytes memory output)
     {
@@ -256,7 +256,7 @@ library Verify {
         output = RLPEncode.encodeList(list);
     }
 
-    function splitExtra(
+    function _splitExtra(
         bytes memory _extraData
     ) internal pure returns (bytes memory signature, bytes memory extraData) {
         uint256 ptr;
@@ -266,14 +266,14 @@ library Verify {
         // skip 32 byte data length
         ptr += 32;
         //extraData never less than 97
-        extraData = memoryToBytes(ptr, _extraData.length - EXTRASEAL);
+        extraData = _memoryToBytes(ptr, _extraData.length - EXTRASEAL);
 
         ptr += _extraData.length - EXTRASEAL;
 
-        signature = memoryToBytes(ptr, EXTRASEAL);
+        signature = _memoryToBytes(ptr, EXTRASEAL);
     }
 
-    function getValidators(
+    function _getValidators(
         bytes memory _extraData
     ) internal pure returns (bytes memory) {
 
@@ -287,10 +287,10 @@ library Verify {
         //skip 32 byte data length + 32 byte EXTRA_VANITY
         ptr += 64;
         //extraData never less than 97
-        return memoryToBytes(ptr, _extraData.length - (EXTRA_VANITY + EXTRASEAL));
+        return _memoryToBytes(ptr, _extraData.length - (EXTRA_VANITY + EXTRASEAL));
     }
 
-    function containValidator(
+    function _containsValidator(
         bytes memory _validators,
         address _miner,
         uint256 _index
@@ -319,7 +319,7 @@ library Verify {
         return false;
     }
 
-    function memoryToBytes(
+    function _memoryToBytes(
         uint _ptr,
         uint _length
     ) internal pure returns (bytes memory res) {

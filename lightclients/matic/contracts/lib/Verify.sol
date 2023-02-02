@@ -6,7 +6,6 @@ import "./RLPReader.sol";
 import "./RLPEncode.sol";
 import "../interface/IMPTVerify.sol";
 
-// import "hardhat/console.sol";
 
 library Verify {
     using RLPReader for bytes;
@@ -82,14 +81,14 @@ library Verify {
         bytes data;
     }
 
-    function recoverSigner(
+    function _recoverSigner(
         BlockHeader memory _header
     ) internal pure returns (address) {
-        (bytes memory signature, bytes memory extraData) = splitExtra(
+        (bytes memory signature, bytes memory extraData) = _splitExtra(
             _header.extraData
         );
 
-        bytes32 hash = keccak256(encodeSigHeader(_header, extraData));
+        bytes32 hash = keccak256(_encodeSigHeader(_header, extraData));
 
         bytes32 r;
         bytes32 s;
@@ -110,7 +109,7 @@ library Verify {
         return signer;
     }
 
-    function validateHeader(
+    function _validateHeader(
         BlockHeader memory _header,
         uint256 _minEpochBlockExtraDataLen,
         BlockHeader memory _parent,
@@ -120,7 +119,7 @@ library Verify {
             return false;
         }
         //Epoch block
-        if ((_header.number + 1) % getEpochNumber(_chainId,_header.number) == 0) {
+        if ((_header.number + 1) % _getEpochNumber(_chainId,_header.number) == 0) {
             if (_header.extraData.length < _minEpochBlockExtraDataLen) {
                 return false;
             }
@@ -175,7 +174,7 @@ library Verify {
                 return false;
             }
 
-            uint256 expectedBaseFee = calcBaseFee(
+            uint256 expectedBaseFee = _calcBaseFee(
                 _parent.gasUsed,
                 _parent.gasLimit,
                 _parent.baseFeePerGas,
@@ -191,7 +190,7 @@ library Verify {
         return true;
     }
 
-    function calcBaseFee(
+    function _calcBaseFee(
         uint256 _parentGasUsed,
         uint256 _parentGasLimit,
         uint256 _parentBaseFee,
@@ -201,7 +200,7 @@ library Verify {
         require(_parentGasLimit > 0, "_parentGasLimit not be zero");
         uint256 parentGasTarget = _parentGasLimit / ELASTICITY_MULTIPLIER;
         if (_parentGasUsed == parentGasTarget) {
-            _parentBaseFee;
+           return _parentBaseFee;
         }
         uint256 baseFeeChangeDenominator = BASE_FEE_CHANGEDENOMINATOR;
         if (MAINNET_CHAINID != _chainId) {
@@ -235,7 +234,7 @@ library Verify {
         }
     }
 
-    function encodeSigHeader(
+    function _encodeSigHeader(
         BlockHeader memory _header,
         bytes memory _extraData
     ) internal pure returns (bytes memory output) {
@@ -259,12 +258,12 @@ library Verify {
         output = RLPEncode.encodeList(list);
     }
 
-    function validateProof(
+    function _validateProof(
         bytes32 _receiptsRoot,
         ReceiptProof memory _receipt,
         address _mptVerify
     ) internal pure returns (bool success, bytes memory logs) {
-        bytes memory bytesReceipt = encodeReceipt(_receipt.txReceipt);
+        bytes memory bytesReceipt = _encodeReceipt(_receipt.txReceipt);
         bytes memory expectedValue = bytesReceipt;
         if (_receipt.txReceipt.receiptType > 0) {
             expectedValue = abi.encodePacked(
@@ -283,9 +282,9 @@ library Verify {
         if (success) logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
     }
 
-    function encodeReceipt(
+    function _encodeReceipt(
         TxReceipt memory _txReceipt
-    ) public pure returns (bytes memory output) {
+    ) internal pure returns (bytes memory output) {
         bytes[] memory list = new bytes[](4);
         list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
         list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
@@ -311,7 +310,7 @@ library Verify {
         output = RLPEncode.encodeList(list);
     }
 
-    function splitExtra(
+    function _splitExtra(
         bytes memory _extraData
     ) internal pure returns (bytes memory signature, bytes memory extraData) {
         uint256 ptr;
@@ -321,14 +320,14 @@ library Verify {
 
         ptr += 32;
         //extraData =  EXTRA_VANITY + (address + power)... + EXTRASEAL
-        extraData = memoryToBytes(ptr, _extraData.length - EXTRASEAL);
+        extraData = _memoryToBytes(ptr, _extraData.length - EXTRASEAL);
 
         ptr += _extraData.length - EXTRASEAL;
 
-        signature = memoryToBytes(ptr, EXTRASEAL);
+        signature = _memoryToBytes(ptr, EXTRASEAL);
     }
 
-    function getValidators(
+    function _getValidators(
         bytes memory _extraData
     ) internal pure returns (bytes memory) {
         require(
@@ -364,7 +363,7 @@ library Verify {
         return result;
     }
 
-    function containValidator(
+    function _containsValidator(
         bytes memory _validators,
         address _miner
     ) internal pure returns (bool) {
@@ -391,7 +390,7 @@ library Verify {
         return false;
     }
 
-    function getEpochNumber(
+    function _getEpochNumber(
         uint256 _chainId,
         uint256 _blockNumber
     ) internal pure returns (uint256 epochNumber) {
@@ -404,7 +403,7 @@ library Verify {
         }
     }
 
-    function memoryToBytes(
+    function _memoryToBytes(
         uint _ptr,
         uint _length
     ) internal pure returns (bytes memory res) {
