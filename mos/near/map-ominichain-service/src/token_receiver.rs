@@ -109,14 +109,18 @@ impl FungibleTokenReceiver for MAPOServiceV2 {
                 to,
                 to_chain,
                 swap_info,
-            } => self.process_token_swap_out(
-                to_chain,
-                env::predecessor_account_id(),
-                sender_id,
-                to,
-                amount,
-                swap_info,
-            ),
+            } => {
+                let token = env::predecessor_account_id();
+                self.process_token_swap_out(
+                    to_chain,
+                    token.to_string(),
+                    token,
+                    sender_id,
+                    to,
+                    amount,
+                    swap_info,
+                )
+            }
             TokenReceiverMessage::LostFound { account, is_native } => {
                 let mut token_amount = self.lost_found.remove(&account).unwrap_or_default();
                 let total = token_amount.remove(&token).unwrap_or_default();

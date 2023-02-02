@@ -146,6 +146,7 @@ impl MAPOServiceV2 {
     pub fn process_token_swap_out(
         &mut self,
         to_chain: U128,
+        src_token: String,
         token: AccountId,
         from: AccountId,
         to: Vec<u8>,
@@ -156,7 +157,16 @@ impl MAPOServiceV2 {
         self.check_swap_param(&token, amount, &swap_info);
 
         if swap_info.src_swap.is_empty() {
-            self.swap_out_token(to_chain, token, from, to, amount, swap_info.dst_swap)
+            self.swap_out_token(
+                to_chain,
+                src_token,
+                amount,
+                token,
+                from,
+                to,
+                amount,
+                swap_info.dst_swap,
+            )
         } else {
             let core = self
                 .core_idle
@@ -192,6 +202,7 @@ impl MAPOServiceV2 {
                         .callback_swap_out_token(
                             core,
                             to_chain,
+                            src_token,
                             last_action.token_out,
                             from,
                             to,
@@ -208,6 +219,7 @@ impl MAPOServiceV2 {
         &mut self,
         core: AccountId,
         to_chain: U128,
+        src_token: String,
         token_out: AccountId,
         from: AccountId,
         to: Vec<u8>,
@@ -235,6 +247,8 @@ impl MAPOServiceV2 {
                     });
                     self.swap_out_token(
                         to_chain,
+                        src_token,
+                        amount,
                         token_out,
                         from,
                         to,
