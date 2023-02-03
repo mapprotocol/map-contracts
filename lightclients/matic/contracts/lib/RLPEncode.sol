@@ -92,6 +92,7 @@ library RLPEncode {
      * @return The RLP encoded int in bytes.
      */
     function encodeInt(int256 self) internal pure returns (bytes memory) {
+        require(self >= 0, "value must be positive");
         return encodeUint(uint256(self));
     }
 

@@ -28,7 +28,7 @@ describe("LightNode", function () {
 
         const LightNode = await ethers.getContractFactory("LightNode");
 
-        const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen, wallet.address, mPTVerify.address);
+        const lightNode = await LightNode.deploy();
 
         await lightNode.connect(wallet).deployed();
 
@@ -75,7 +75,7 @@ describe("LightNode", function () {
             expect(admin).to.not.eq(other.address);
 
             const LightNode = await ethers.getContractFactory("LightNode");
-            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen, wallet.address, wallet.address);
+            const newImplement = await LightNode.connect(wallet).deploy();
             await newImplement.deployed();
 
             await expect(lightNode.connect(other).upgradeTo(newImplement.address)).to.be.revertedWith('LightNode: only Admin can upgrade');
@@ -94,7 +94,7 @@ describe("LightNode", function () {
             expect(admin).to.not.eq(other.address);
 
             const LightNode = await ethers.getContractFactory("LightNode");
-            const newImplement = await LightNode.connect(wallet).deploy(chainId, minEpochBlockExtraDataLen, wallet.address, wallet.address);
+            const newImplement = await LightNode.connect(wallet).deploy();
             await newImplement.deployed();
 
             let oldImplement = await lightNode.getImplementation();
