@@ -84,10 +84,7 @@ library Verify {
     function _recoverSigner(
         BlockHeader memory _header
     ) internal pure returns (address) {
-        (bytes memory signature, bytes memory extraData) = _splitExtra(
-            _header.extraData
-        );
-
+        (bytes memory signature, bytes memory extraData) = _splitExtra(_header.extraData);
         bytes32 hash = keccak256(_encodeSigHeader(_header, extraData));
 
         bytes32 r;
@@ -266,10 +263,7 @@ library Verify {
         bytes memory bytesReceipt = _encodeReceipt(_receipt.txReceipt);
         bytes memory expectedValue = bytesReceipt;
         if (_receipt.txReceipt.receiptType > 0) {
-            expectedValue = abi.encodePacked(
-                bytes1(uint8(_receipt.txReceipt.receiptType)),
-                bytesReceipt
-            );
+            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.txReceipt.receiptType)),bytesReceipt);
         }
 
         success = IMPTVerify(_mptVerify).verifyTrieProof(
@@ -291,15 +285,13 @@ library Verify {
         list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
         bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
         bytes[] memory loglist = new bytes[](3);
+        
         for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
             loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[](
-                _txReceipt.logs[j].topics.length
-            );
+            bytes[] memory loglist1 = new bytes[]( _txReceipt.logs[j].topics.length);
+
             for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(
-                    _txReceipt.logs[j].topics[i]
-                );
+                loglist1[i] = RLPEncode.encodeBytes( _txReceipt.logs[j].topics[i]);
             }
             loglist[1] = RLPEncode.encodeList(loglist1);
             loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);

@@ -87,14 +87,11 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         require(_lastSyncedBlock > 0, "light node not initialized");
         _lastSyncedBlock += EPOCH_NUM;
 
-        require(
-            _blockHeaders[0].number == _lastSyncedBlock,
-            "invalid start block"
-        );
+        require(_blockHeaders[0].number == _lastSyncedBlock,"invalid start block");
         // min is number of validators half + 1
         uint256 min = _getValidatorNum(validators[_lastSyncedBlock - EPOCH_NUM]) / 2 + 1;
 
-        require(_blockHeaders.length >= min, "not enough");
+        require(_blockHeaders.length >= min, "proof headers not enough");
 
         (bool result, string memory message) = _verifyBlockHeaders(_blockHeaders,min);
 
@@ -144,7 +141,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 min = _getValidatorNum(validators[recently]) / 2 + 1;
             }
         }
-        require(headers.length >= min, "headers not enough");
+        require(headers.length >= min, "proof headers not enough");
 
         (success, message) = _verifyBlockHeaders(headers, min);
 
@@ -163,14 +160,9 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         require(_headers[0].number + EPOCH_NUM == _headers[1].number);
 
-        for (uint256 i = 0; i < 2; i++) {
+        for (uint256 i = 0; i < 2; i++) {  
             require( _headers[i].number % EPOCH_NUM == 0,"invalid init block number");
-
-            require(
-                _headers[i].extraData.length >= minEpochBlockExtraDataLen,
-                "invalid init block"
-            );
-
+            require( _headers[i].extraData.length >= minEpochBlockExtraDataLen,"invalid init block");
             validators[_headers[i].number] = Verify._getValidators(_headers[i].extraData);
         }
 
@@ -218,23 +210,17 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             preBlockTime = _blockHeaders[i].timestamp;
 
             if (
-                !Verify._validateHeader(
-                    _blockHeaders[i],
-                    preGasLimt,
-                    minEpochBlockExtraDataLen
-                )
+                !Verify._validateHeader( _blockHeaders[i],preGasLimt,minEpochBlockExtraDataLen)
             ) {
                 return (false, "invalid block");
             }
 
             preGasLimt = _blockHeaders[i].gasLimit;
 
-            uint256 recently = _blockHeaders[i].number -
-                (_blockHeaders[i].number % EPOCH_NUM);
+            uint256 recently = _blockHeaders[i].number - (_blockHeaders[i].number % EPOCH_NUM);
             // get the block validators
             if (
-                _blockHeaders[i].number % EPOCH_NUM >
-                _getValidatorNum(validators[recently - EPOCH_NUM]) / 2
+                _blockHeaders[i].number % EPOCH_NUM > _getValidatorNum(validators[recently - EPOCH_NUM]) / 2
             ) {
                 vals = validators[recently];
             } else {
@@ -242,11 +228,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             }
 
             if (
-                !Verify._containsValidator(
-                    vals,
-                    _blockHeaders[i].miner,
-                    _blockHeaders[i].number % (_getValidatorNum(vals))
-                )
+                !Verify._containsValidator(vals,_blockHeaders[i].miner,_blockHeaders[i].number % (_getValidatorNum(vals)))
             ) {
                 return (false, "invalid miner");
             }
@@ -286,13 +268,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             uint256 remove = _lastSyncedBlock - EPOCH_NUM * MAX_SAVED_EPOCH_NUM;
 
             if (
-                remove + EPOCH_NUM > minValidBlocknum &&
-                validators[remove].length > 0
-            ) {
-                minValidBlocknum =
-                    remove +
-                    EPOCH_NUM +
-                    _getValidatorNum(validators[remove]) / 2 + 1;
+                remove + EPOCH_NUM > minValidBlocknum && validators[remove].length > 0
+            ) { 
+                uint256 bond = _getValidatorNum(validators[remove]) / 2 + 1;
+                minValidBlocknum = remove + EPOCH_NUM + bond;
                 delete validators[remove];
             }
         }
