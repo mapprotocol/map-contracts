@@ -338,6 +338,8 @@ impl MAPOServiceV2 {
     pub fn swap_out_token(
         &mut self,
         to_chain: U128,
+        src_token: String,
+        src_amount: U128,
         token: AccountId,
         from: AccountId,
         to: Vec<u8>,
@@ -358,7 +360,10 @@ impl MAPOServiceV2 {
             to,
             amount,
             swap_data: swap_data.abi_encode(),
-            raw_swap_data: swap_data,
+            raw_swap_data: swap_data.clone(),
+            src_token,
+            src_amount,
+            dst_token: swap_data.target_token,
         };
 
         if self.valid_mcs_token_out(&token, to_chain) {
@@ -412,6 +417,7 @@ impl MAPOServiceV2 {
                     .with_static_gas(PROCESS_SWAP_OUT_GAS)
                     .process_token_swap_out(
                         to_chain,
+                        "NEAR".to_string(),
                         self.native_token_address().1.parse().unwrap(),
                         env::signer_account_id(),
                         to,
