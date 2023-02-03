@@ -97,10 +97,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         require(_blockHeaders.length == confirms, "not enough");
 
-        _lastSyncedBlock += Verify._getEpochNumber(
-            chainId,
-            _lastSyncedBlock + 1
-        );
+        _lastSyncedBlock += Verify._getEpochNumber(chainId,_lastSyncedBlock + 1);
 
         require(
             _blockHeaders[0].number == _lastSyncedBlock,
@@ -109,13 +106,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         // index 0 header verify by pre validators others by index 0 getValidators
         validators[
             (_lastSyncedBlock + 1) /
-                Verify._getEpochNumber(chainId, _lastSyncedBlock + 1)
+            Verify._getEpochNumber(chainId, _lastSyncedBlock + 1)
         ] = Verify._getValidators(_blockHeaders[0].extraData);
-        (bool result, string memory message) = _verifyBlockHeaders(
-            _blockHeaders
-        );
-        require(result, message);
 
+        (bool result, string memory message) = _verifyBlockHeaders( _blockHeaders);
+
+        require(result, message);
         emit UpdateBlockHeader(tx.origin, _blockHeaders[0].number);
     }
 
@@ -137,11 +133,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         require(
             headers[0].number >= minValidBlocknum &&
-                headers[headers.length - 1].number <= maxCanVerifyNum(),
+            headers[headers.length - 1].number <= maxCanVerifyNum(),
             "Can not verify blocks"
         );
 
         (success, message) = _verifyBlockHeaders(headers);
+
         if (success) {
             bytes32 rootHash = bytes32(headers[0].receiptsRoot);
             (success, logs) = Verify._validateProof(
@@ -160,8 +157,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         require(_lastSyncedBlock == 0, "already init");
         require(
             (_header.number + 1) %
-                Verify._getEpochNumber(chainId, _header.number + 1) ==
-                0,
+            Verify._getEpochNumber(chainId, _header.number + 1) == 0,
             "invalid init block"
         );
 
@@ -170,7 +166,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         validators[
             (_header.number + 1) /
-                Verify._getEpochNumber(chainId, _header.number + 1)
+            Verify._getEpochNumber(chainId, _header.number + 1)
         ] = validator;
 
         _lastSyncedBlock = _header.number;
@@ -212,10 +208,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 !Verify._containsValidator(
                     validators[
                         _blockHeaders[i].number /
-                            Verify._getEpochNumber(
-                                chainId,
-                                _blockHeaders[i].number
-                            )
+                        Verify._getEpochNumber(chainId,_blockHeaders[i].number)
                     ],
                     signer
                 )
@@ -236,17 +229,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         if (
             remove + Verify._getEpochNumber(chainId, remove) >
             minValidBlocknum &&
-            validators[(remove + 1) / Verify._getEpochNumber(chainId, remove)]
-                .length >
-            0
+            validators[(remove + 1) / Verify._getEpochNumber(chainId, remove)].length > 0
+            
         ) {
-            minValidBlocknum =
-                remove +
-                Verify._getEpochNumber(chainId, remove) +
-                1;
-            delete validators[
-                (remove + 1) / Verify._getEpochNumber(chainId, remove)
-            ];
+            minValidBlocknum = remove +Verify._getEpochNumber(chainId, remove) +1;
+
+            delete validators[(remove + 1) / Verify._getEpochNumber(chainId, remove)];
         }
     }
 

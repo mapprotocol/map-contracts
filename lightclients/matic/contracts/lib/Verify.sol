@@ -337,8 +337,7 @@ library Verify {
 
         require(
             (_extraData.length - EXTRA_VANITY - EXTRASEAL) %
-                (ADDRESS_LENGTH + POWER_LENGTH) ==
-                0,
+            (ADDRESS_LENGTH + POWER_LENGTH) == 0,
             "invalid _extraData length"
         );
         uint256 ptr;

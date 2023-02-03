@@ -4,7 +4,6 @@ pragma solidity 0.8.7;
 
 import "./RLPReader.sol";
 import "./RLPEncode.sol";
-//import "./MPT.sol";
 import "../interface/IMPTVerify.sol";
 
 library Verify {

@@ -83,10 +83,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     function updateBlockHeader(
         bytes memory _blockHeadersBytes
     ) external override whenNotPaused {
-        Verify.BlockHeader[] memory _blockHeaders = abi.decode(
-            _blockHeadersBytes,
-            (Verify.BlockHeader[])
-        );
+        Verify.BlockHeader[] memory _blockHeaders = abi.decode(_blockHeadersBytes,(Verify.BlockHeader[]));
         require(_lastSyncedBlock > 0, "light node not initialized");
         _lastSyncedBlock += EPOCH_NUM;
 
@@ -95,24 +92,15 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             "invalid start block"
         );
         // min is number of validators half + 1
-        uint256 min = _getValidatorNum(
-            validators[_lastSyncedBlock - EPOCH_NUM]
-        ) /
-            2 +
-            1;
+        uint256 min = _getValidatorNum(validators[_lastSyncedBlock - EPOCH_NUM]) / 2 + 1;
 
         require(_blockHeaders.length >= min, "not enough");
 
-        (bool result, string memory message) = _verifyBlockHeaders(
-            _blockHeaders,
-            min
-        );
+        (bool result, string memory message) = _verifyBlockHeaders(_blockHeaders,min);
 
         require(result, message);
 
-        validators[_lastSyncedBlock] = Verify._getValidators(
-            _blockHeaders[0].extraData
-        );
+        validators[_lastSyncedBlock] = Verify._getValidators(_blockHeaders[0].extraData);
 
         _removeExcessEpochValidators();
 
@@ -133,8 +121,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         require(
             minValidBlocknum > 0 &&
-                headers[0].number >= minValidBlocknum &&
-                headers[headers.length - 1].number <= maxCanVerifyNum(),
+            headers[0].number >= minValidBlocknum &&
+            headers[headers.length - 1].number <= maxCanVerifyNum(),
             "Can not verify blocks"
         );
         // min is number of min validators half + 1
@@ -144,19 +132,13 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             uint256 recently = headers[0].number - beyond;
 
             if (beyond == 0) {
-                min =
-                    _getValidatorNum(validators[recently - EPOCH_NUM]) /
-                    2 +
-                    1;
+                min = _getValidatorNum(validators[recently - EPOCH_NUM]) / 2 + 1;
                 //Spanning two validator sets if Spanning two validator validators[recently].lenght must > 0
                 //take the recently one
             } else if (
                 beyond <= _getValidatorNum(validators[recently - EPOCH_NUM]) / 2
             ) {
-                require(
-                    validators[recently].length > 0,
-                    "wait for updateBlockHeader"
-                );
+                require(validators[recently].length > 0,"wait for updateBlockHeader");
                 min = _getValidatorNum(validators[recently]) / 2 + 1;
             } else {
                 min = _getValidatorNum(validators[recently]) / 2 + 1;
@@ -168,11 +150,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         if (success) {
             bytes32 rootHash = bytes32(headers[0].receiptsRoot);
-            (success, logs) = Verify._validateProof(
-                rootHash,
-                proof.receiptProof,
-                mptVerify
-            );
+            (success, logs) = Verify._validateProof(rootHash,proof.receiptProof,mptVerify);
 
             if (!success) {
                 message = "mpt verify fail";
@@ -186,19 +164,14 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         require(_headers[0].number + EPOCH_NUM == _headers[1].number);
 
         for (uint256 i = 0; i < 2; i++) {
-            require(
-                _headers[i].number % EPOCH_NUM == 0,
-                "invalid init block number"
-            );
+            require( _headers[i].number % EPOCH_NUM == 0,"invalid init block number");
 
             require(
                 _headers[i].extraData.length >= minEpochBlockExtraDataLen,
                 "invalid init block"
             );
 
-            validators[_headers[i].number] = Verify._getValidators(
-                _headers[i].extraData
-            );
+            validators[_headers[i].number] = Verify._getValidators(_headers[i].extraData);
         }
 
         minValidBlocknum = _headers[1].number;
@@ -319,9 +292,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 minValidBlocknum =
                     remove +
                     EPOCH_NUM +
-                    _getValidatorNum(validators[remove]) /
-                    2 +
-                    1;
+                    _getValidatorNum(validators[remove]) / 2 + 1;
                 delete validators[remove];
             }
         }
@@ -353,8 +324,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return
             _lastSyncedBlock +
             EPOCH_NUM +
-            _getValidatorNum(validators[_lastSyncedBlock]) /
-            2;
+            _getValidatorNum(validators[_lastSyncedBlock]) / 2;
     }
 
     function verifiableHeaderRange()

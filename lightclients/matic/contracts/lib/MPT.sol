@@ -3,7 +3,13 @@
 pragma solidity 0.8.7;
 
 import "./RLPReader.sol";
- 
+
+/*
+    Documentation:
+    - https://ethereum.org/en/developers/docs/data-structures-and-encoding/patricia-merkle-trie/
+    - https://github.com/blockchainsllc/in3/wiki/Ethereum-Verification-and-MerkleProof
+    - https://easythereentropy.wordpress.com/2014/06/04/understanding-the-ethereum-trie/
+*/
 library MPT {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
