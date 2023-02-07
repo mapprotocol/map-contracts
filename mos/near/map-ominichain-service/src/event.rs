@@ -604,6 +604,20 @@ impl Transferable for SwapOutEvent {
     }
 }
 
+#[derive(Serialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct SwapInEvent {
+    #[serde(with = "crate::bytes::hexstring")]
+    pub order_id: CryptoHash,
+    pub amount_out: U128,
+}
+
+impl SwapInEvent {
+    pub fn emit(&self) {
+        log!("swap in: {}", serde_json::to_string(self).unwrap());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
