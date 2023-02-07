@@ -26,6 +26,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     uint256 public constant NEXT_SYNC_COMMITTEE_PROOF_SIZE = 5;
     uint256 public constant BLS_PUBKEY_LENGTH = 48;
     uint256 public constant MAX_BLOCK_SAVED = 32 * 256 * 30;
+    uint256 public constant MAX_DELETE_COUNT = 100;
 
     address public mptVerify;
     uint64 public chainId;
@@ -185,13 +186,18 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             exeHeaderEndHash = Helper.bytesToBytes32(header.parentHash);
         }
 
+        uint256 savedHeaders = finalizedExeHeaderNumber - exeHeaderEndNumber + exeHeaderStartNumber - startExeHeaderNumber;
+        uint256 deletedHeaders = 0;
+        while (savedHeaders > MAX_BLOCK_SAVED && startExeHeaderNumber + 1 < exeHeaderStartNumber && deletedHeaders < MAX_DELETE_COUNT) {
+            delete finalizedExeHeaders[startExeHeaderNumber];
+            startExeHeaderNumber++;
+            savedHeaders--;
+            deletedHeaders++;
+        }
+
         if (exeHeaderStartNumber > exeHeaderEndNumber) {
             exeHeaderStartNumber = 0;
             exeHeaderEndNumber = 0;
-            while (finalizedExeHeaderNumber - startExeHeaderNumber + 1 > MAX_BLOCK_SAVED) {
-                delete finalizedExeHeaders[startExeHeaderNumber];
-                startExeHeaderNumber++;
-            }
         }
 
         emit UpdateBlockHeader(msg.sender, headers[0].number, headers[headers.length - 1].number);
