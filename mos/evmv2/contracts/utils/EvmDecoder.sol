@@ -52,6 +52,18 @@ library EvmDecoder {
         = abi.decode(log.data, (bytes32, bytes, bytes, bytes, uint256, bytes));
     }
 
+    function decodeDataLog(IEvent.txLog memory log)
+    internal
+    pure
+    returns (bytes memory executorId, IEvent.dataOutEvent memory outEvent){
+        executorId = Utils.toBytes(log.addr);
+        outEvent.fromChain = abi.decode(log.topics[1], (uint256));
+        outEvent.toChain = abi.decode(log.topics[2], (uint256));
+
+        (outEvent.orderId, outEvent.cData)
+        = abi.decode(log.data, (bytes32, bytes));
+    }
+
     function decodeDepositOutLog(IEvent.txLog memory log)
     internal
     pure

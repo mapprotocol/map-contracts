@@ -30,4 +30,12 @@ interface IEvent {
         bytes[] topics;
         bytes data;
     }
+
+    struct dataOutEvent {
+        bytes32 orderId;
+        uint256 fromChain;
+        uint256 toChain;
+        bytes cData;
+    }
+
 }
