@@ -16,7 +16,7 @@ import "./interface/IMAPToken.sol";
 import "./interface/IVaultTokenV2.sol";
 import "./interface/ITokenRegisterV2.sol";
 import "./interface/ILightClientManager.sol";
-import "./interface/IMOSV2.sol";
+import "./interface/IMOSV3.sol";
 import "./utils/TransferHelper.sol";
 import "./utils/EvmDecoder.sol";
 import "./utils/NearDecoder.sol";
@@ -24,7 +24,7 @@ import "./utils/Utils.sol";
 //import "hardhat/console.sol";
 
 
-contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable, IMOSV2, UUPSUpgradeable {
+contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable, IMOSV3, UUPSUpgradeable {
     using SafeMath for uint256;
     using Address for address;
 
@@ -50,6 +50,8 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     mapping(uint256 => bytes) public mosContracts;
     mapping(uint256 => chainType) public chainTypes;
 
+    mapping(bytes => bool) public executeWhiteList;
+
     event mapTransferRelay(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId,
         address token, bytes from, bytes to, uint256 amount);
 
@@ -62,6 +64,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     event SetLightClientManager(address lightClient);
     event RegisterChain(uint256 _chainId, bytes _address, chainType _type);
     event SetDistributeRate(uint _id, address _to, uint _rate);
+    event AddWhiteList(bytes _executeAddress, bool _enable);
 
     function initialize(address _wToken, address _managerAddress) public initializer
     checkAddress(_wToken) checkAddress(_managerAddress) {
@@ -117,6 +120,12 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         emit RegisterChain(_chainId, _address, _type);
     }
 
+    function addWhiteList(bytes memory _executeAddress,bool _enable) external onlyOwner {
+
+        executeWhiteList[_executeAddress] = _enable;
+        emit AddWhiteList(_executeAddress,_enable);
+    }
+
     // withdraw deposit token using vault token.
     function withdraw(address _vaultToken, uint256 _vaultAmount) external {
         require(_vaultToken != address(0), "vault token not registered");
@@ -140,6 +149,28 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
 
         require((distributeRate[0].rate).add(distributeRate[1].rate).add(distributeRate[2].rate) <= 1000000, 'invalid rate value');
         emit SetDistributeRate(_id, _to, _rate);
+    }
+
+    function transferOut(uint256 _toChain,CallData memory _callData) external  override
+    payable
+    nonReentrant
+    whenNotPaused
+    returns(bool)
+    {
+        require(_toChain != selfChainId, "only other chain");
+        require(_callData.gasLimit >= 21000 ,"Execution gas too low");
+        require(_callData.gasLimit < 1000000000000000000 ,"Execution gas too high");
+        uint amount = msg.value;
+        if(amount > 0 && amount == _callData.value){
+            IWToken(wToken).deposit{value : amount}();
+        }
+
+        bytes32 orderId = _getOrderId(msg.sender, _callData.target, _toChain);
+
+        bytes memory callData = abi.encode(_callData);
+
+        emit mapDataOut(selfChainId, _toChain, orderId, callData);
+        return true;
     }
 
     function transferOutToken(address _token, bytes memory _to, uint256 _amount, uint256 _toChain) external override whenNotPaused {
@@ -206,6 +237,10 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
                         _transferIn(_chainId, outEvent);
                     }
                 }
+                if (topic == EvmDecoder.MAP_DATA_TOPIC) {
+                    (, IEvent.dataOutEvent memory outEvent) = EvmDecoder.decodeDataLog(log);
+                    _executeIn(outEvent);
+                }
             }
         } else {
             require(false, "chain type error");
@@ -239,6 +274,29 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
             require(false, "chain type error");
         }
         emit mapTransferExecute(_chainId, selfChainId, msg.sender);
+    }
+
+    function _executeIn(IEvent.dataOutEvent memory _outEvent) internal checkOrder(_outEvent.orderId)  {
+
+        if(_outEvent.toChain == selfChainId){
+
+            CallData memory cData = abi.decode(_outEvent.cData,(CallData));
+
+            address callDataAddress = Utils.fromBytes(cData.target);
+
+            bool success;
+
+            if(executeWhiteList[cData.target]){
+                (success, ) = callDataAddress.call{gas:cData.gasLimit}(cData.callData);
+            }
+
+            emit mapExecuteIn(_outEvent.fromChain, _outEvent.toChain,_outEvent.orderId, success);
+
+        }else{
+
+            emit mapDataOut(selfChainId,_outEvent.toChain,_outEvent.orderId,_outEvent.cData);
+        }
+
     }
 
 

@@ -13,6 +13,7 @@ library EvmDecoder {
 
     bytes32 constant MAP_TRANSFEROUT_TOPIC = keccak256(bytes('mapTransferOut(uint256,uint256,bytes32,bytes,bytes,bytes,uint256,bytes)'));
     bytes32 constant MAP_DEPOSITOUT_TOPIC = keccak256(bytes('mapDepositOut(uint256,uint256,bytes32,address,bytes,address,uint256)'));
+    bytes32 constant MAP_DATA_TOPIC = keccak256(bytes('mapDataOut(uint256,uint256,bytes32,bytes)'));
 
 
     function decodeTxLogs(bytes memory logsHash)
@@ -49,6 +50,18 @@ library EvmDecoder {
 
         (outEvent.orderId, outEvent.token, outEvent.from, outEvent.to, outEvent.amount, outEvent.toChainToken)
         = abi.decode(log.data, (bytes32, bytes, bytes, bytes, uint256, bytes));
+    }
+
+    function decodeDataLog(IEvent.txLog memory log)
+    internal
+    pure
+    returns (bytes memory executorId, IEvent.dataOutEvent memory outEvent){
+        executorId = Utils.toBytes(log.addr);
+        outEvent.fromChain = abi.decode(log.topics[1], (uint256));
+        outEvent.toChain = abi.decode(log.topics[2], (uint256));
+
+        (outEvent.orderId, outEvent.cData)
+        = abi.decode(log.data, (bytes32, bytes));
     }
 
     function decodeDepositOutLog(IEvent.txLog memory log)
