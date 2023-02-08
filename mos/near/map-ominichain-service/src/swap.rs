@@ -8,7 +8,8 @@ use near_sdk::{env, AccountId, Gas, PromiseResult};
 use std::collections::HashMap;
 
 const FT_TRANSFER_CALL_CORE_GAS: Gas = Gas(210_000_000_000_000);
-const CALL_CORE_SWAP_DIRECTLY_GAS: Gas = Gas(140_000_000_000_000);
+const CALL_CORE_SWAP_IN_DIRECTLY_GAS: Gas = Gas(140_000_000_000_000);
+const CALL_CORE_SWAP_OUT_DIRECTLY_GAS: Gas = Gas(170_000_000_000_000);
 /// Gas to call callback_swap_out_token method.
 const CALLBACK_SWAP_OUT_TOKEN_GAS: Gas =
     Gas(10_000_000_000_000 + BURN_GAS.0 + FINISH_TOKEN_OUT_GAS.0);
@@ -190,27 +191,39 @@ impl MAPOServiceV2 {
                 target_account: env::current_account_id(),
                 target_token: None,
             };
-            let msg = serde_json::to_string(&core_swap_msg).unwrap();
+            // let msg = serde_json::to_string(&core_swap_msg).unwrap();
             // call core to do swap
-            ext_ft_core::ext(token)
-                .with_static_gas(FT_TRANSFER_CALL_CORE_GAS)
-                .with_attached_deposit(1)
-                .ft_transfer_call(core.clone(), amount, None, msg)
-                .then(
-                    Self::ext(env::current_account_id())
-                        .with_static_gas(CALLBACK_SWAP_OUT_TOKEN_GAS)
-                        .callback_swap_out_token(
-                            core,
-                            to_chain,
-                            src_token,
-                            last_action.token_out,
-                            from,
-                            to,
-                            amount,
-                            swap_info,
-                        ),
-                )
-                .into()
+            // ext_ft_core::ext(token)
+            //     .with_static_gas(FT_TRANSFER_CALL_CORE_GAS)
+            //     .with_attached_deposit(1)
+            //     .ft_transfer_call(core.clone(), amount, None, msg)
+            //     .then(
+            //         Self::ext(env::current_account_id())
+            //             .with_static_gas(CALLBACK_SWAP_OUT_TOKEN_GAS)
+            //             .callback_swap_out_token(
+            //                 core,
+            //                 to_chain,
+            //                 src_token,
+            //                 last_action.token_out,
+            //                 from,
+            //                 to,
+            //                 amount,
+            //                 swap_info,
+            //             ),
+            //     )
+            //     .into()
+            self.call_core_swap_out_directly(
+                to_chain,
+                src_token,
+                last_action.token_out,
+                token,
+                from,
+                to,
+                amount,
+                core,
+                core_swap_msg,
+                swap_info,
+            )
         }
     }
 
@@ -236,7 +249,7 @@ impl MAPOServiceV2 {
         match env::promise_result(0) {
             PromiseResult::NotReady => env::abort(),
             PromiseResult::Successful(x) => {
-                let used_amount = serde_json::from_slice::<U128>(&x).unwrap();
+                let (used_amount, _) = serde_json::from_slice::<(U128, U128)>(&x).unwrap();
                 if amount != used_amount {
                     log!("used amount is unexpected, swap in core failed, expected: {:?}, actual: {:?}!", amount, used_amount);
                     PromiseOrValue::Value(U128(amount.0 - used_amount.0))
@@ -286,7 +299,7 @@ impl MAPOServiceV2 {
         match env::promise_result(0) {
             PromiseResult::NotReady => env::abort(),
             PromiseResult::Successful(x) => {
-                let used_amount = serde_json::from_slice::<U128>(&x).unwrap();
+                let (used_amount, amount_out) = serde_json::from_slice::<(U128, U128)>(&x).unwrap();
                 if amount != used_amount {
                     log!("[SWAP FAILURE] call core to do swap failed, used amount is unexpected, expected: {:?}, actual: {:?}, transfer token in to user!", amount, used_amount);
                     if used_amount.0 == 0 {
@@ -318,6 +331,11 @@ impl MAPOServiceV2 {
                         )
                     }
                 } else {
+                    SwapInEvent {
+                        order_id,
+                        amount_out,
+                    }
+                    .emit();
                     self.core_idle.push(core);
                     Promise::new(env::signer_account_id()).transfer(ret_deposit)
                 }
@@ -408,7 +426,7 @@ impl MAPOServiceV2 {
         }
         .then(
             ext_butter_core::ext(core.clone())
-                .with_static_gas(CALL_CORE_SWAP_DIRECTLY_GAS)
+                .with_static_gas(CALL_CORE_SWAP_IN_DIRECTLY_GAS)
                 .swap(amount, msg),
         )
         .then(
@@ -425,5 +443,37 @@ impl MAPOServiceV2 {
                     token_in_storage_balance,
                 ),
         )
+    }
+
+    fn call_core_swap_out_directly(
+        &self,
+        to_chain: U128,
+        src_token: String,
+        token_out: AccountId,
+        token: AccountId,
+        from: AccountId,
+        to: Vec<u8>,
+        amount: U128,
+        core: AccountId,
+        msg: CoreSwapMessage,
+        swap_info: SwapInfo,
+    ) -> PromiseOrValue<U128> {
+        ext_ft_core::ext(token)
+            .with_static_gas(FT_TRANSFER_GAS)
+            .with_attached_deposit(1)
+            .ft_transfer(core.clone(), amount, None)
+            .then(
+                ext_butter_core::ext(core.clone())
+                    .with_static_gas(CALL_CORE_SWAP_OUT_DIRECTLY_GAS)
+                    .swap(amount, msg),
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(CALLBACK_SWAP_OUT_TOKEN_GAS)
+                    .callback_swap_out_token(
+                        core, to_chain, src_token, token_out, from, to, amount, swap_info,
+                    ),
+            )
+            .into()
     }
 }
