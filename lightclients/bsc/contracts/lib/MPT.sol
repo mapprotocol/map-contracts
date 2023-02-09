@@ -28,18 +28,18 @@ library MPT {
         RLPReader.Iterator memory dec = RLPReader.toRlpItem(node).iterator();
 
         if (data.keyIndex == 0) {
-            require(
-                keccak256(node) == data.expectedRoot,
-                "verifyTrieProof root node hash invalid"
-            );
+            if(keccak256(node) != data.expectedRoot) {
+                return false;
+            }
         } else if (node.length < 32) {
             bytes32 root = bytes32(dec.next().toUint());
-            require(root == data.expectedRoot, "verifyTrieProof < 32");
-        } else {
-            require(
-                keccak256(node) == data.expectedRoot,
-                "verifyTrieProof else"
-            );
+            if(root != data.expectedRoot){
+                return false;
+            }
+        } else { 
+            if(keccak256(node) != data.expectedRoot){
+                return false;
+            }
         }
 
         uint256 numberItems = RLPReader.numItems(dec.item);
@@ -77,7 +77,7 @@ library MPT {
             .toRlpItem(node)
             .toList()[index].toBytes();
 
-            if (!(_newExpectedRoot.length == 0)) {
+            if ((_newExpectedRoot.length != 0)) {
                 data.expectedRoot = b2b32(_newExpectedRoot);
                 data.keyIndex += 1;
                 data.proofIndex += 1;
@@ -184,7 +184,7 @@ library MPT {
                 return verifyTrieProof(data);
             }
         } else {
-            revert("Invalid proof");
+           return false;
         }
         if (data.expectedValue.length == 0) return true;
         else return false;
