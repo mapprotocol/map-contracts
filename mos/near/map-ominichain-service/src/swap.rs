@@ -16,7 +16,7 @@ const CALLBACK_SWAP_OUT_TOKEN_GAS: Gas =
 
 const CALLBACK_ADD_BUTTER_CORE_GAS: Gas = Gas(5_000_000_000_000);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct CoreSwapMessage {
     /// List of sequential actions.
@@ -283,6 +283,7 @@ impl MAPOServiceV2 {
         &mut self,
         core: AccountId,
         token_in: AccountId,
+        token_out: AccountId,
         to: AccountId,
         amount: U128,
         // ret_deposit: Balance,
@@ -308,12 +309,18 @@ impl MAPOServiceV2 {
                             .with_attached_deposit(token_in_storage_balance)
                             .storage_deposit(Some(to.clone()), Some(true))
                             .then(
-                                ext_ft_core::ext(token_in)
+                                ext_ft_core::ext(token_in.clone())
                                     .with_static_gas(FT_TRANSFER_GAS)
                                     .with_attached_deposit(1)
                                     .ft_transfer(to, amount, None),
                             );
 
+                        SwapInEvent {
+                            order_id,
+                            token_out: token_in,
+                            amount_out: amount,
+                        }
+                        .emit();
                         self.core_idle.push(core);
                         log!(
                             "prepaid gas: {:?}, used gas {:?}",
@@ -333,6 +340,7 @@ impl MAPOServiceV2 {
                 } else {
                     SwapInEvent {
                         order_id,
+                        token_out,
                         amount_out,
                     }
                     .emit();
@@ -372,36 +380,36 @@ impl MAPOServiceV2 {
         self.check_amount(token, amount.0);
     }
 
-    pub fn call_core_swap_in(
-        &self,
-        core: AccountId,
-        token_in: AccountId,
-        target_account: AccountId,
-        amount: U128,
-        msg: String,
-        ret_deposit: Balance,
-        order_id: CryptoHash,
-        token_in_storage_balance: Balance,
-    ) -> Promise {
-        ext_ft_core::ext(token_in.clone())
-            .with_static_gas(FT_TRANSFER_CALL_CORE_GAS)
-            .with_attached_deposit(1)
-            .ft_transfer_call(core.clone(), amount, None, msg)
-            .then(
-                Self::ext(env::current_account_id())
-                    .with_attached_deposit(ret_deposit)
-                    .with_static_gas(CALLBACK_POST_SWAP_IN_GAS)
-                    .callback_post_swap_in(
-                        core,
-                        token_in,
-                        target_account,
-                        amount,
-                        // ret_deposit,
-                        order_id,
-                        token_in_storage_balance,
-                    ),
-            )
-    }
+    // pub fn call_core_swap_in(
+    //     &self,
+    //     core: AccountId,
+    //     token_in: AccountId,
+    //     target_account: AccountId,
+    //     amount: U128,
+    //     msg: String,
+    //     ret_deposit: Balance,
+    //     order_id: CryptoHash,
+    //     token_in_storage_balance: Balance,
+    // ) -> Promise {
+    //     ext_ft_core::ext(token_in.clone())
+    //         .with_static_gas(FT_TRANSFER_CALL_CORE_GAS)
+    //         .with_attached_deposit(1)
+    //         .ft_transfer_call(core.clone(), amount, None, msg)
+    //         .then(
+    //             Self::ext(env::current_account_id())
+    //                 .with_attached_deposit(ret_deposit)
+    //                 .with_static_gas(CALLBACK_POST_SWAP_IN_GAS)
+    //                 .callback_post_swap_in(
+    //                     core,
+    //                     token_in,
+    //                     target_account,
+    //                     amount,
+    //                     // ret_deposit,
+    //                     order_id,
+    //                     token_in_storage_balance,
+    //                 ),
+    //         )
+    // }
 
     pub fn call_core_swap_in_directly(
         &self,
@@ -427,7 +435,7 @@ impl MAPOServiceV2 {
         .then(
             ext_butter_core::ext(core.clone())
                 .with_static_gas(CALL_CORE_SWAP_IN_DIRECTLY_GAS)
-                .swap(amount, msg),
+                .swap(amount, msg.clone()),
         )
         .then(
             Self::ext(env::current_account_id())
@@ -436,6 +444,7 @@ impl MAPOServiceV2 {
                 .callback_post_swap_in(
                     core,
                     token_in,
+                    msg.target_token.unwrap(),
                     target_account,
                     amount,
                     // ret_deposit,
