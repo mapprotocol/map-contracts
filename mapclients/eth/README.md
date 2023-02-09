@@ -1,5 +1,5 @@
 
-# Map chain light client, deployed on EVM chains.
+# Mapo relay chain light client, deployed on EVM chains.
 
 
 

@@ -38,7 +38,7 @@ module.exports = {
       timeout: 2000000,
       chainId:212
     },
-    Map: {
+    Mapo: {
       url: `https://rpc.maplabs.io/`,
       chainId : 22776,
       accounts: accounts
@@ -78,6 +78,16 @@ module.exports = {
       chainId : 97,
       accounts: accounts,
       gasPrice: 11 * 1000000000
+    },
+    Klay: {
+      url: `https://public-node-api.klaytnapi.com/v1/cypress`,
+      chainId : 8217,
+      accounts: accounts
+    },
+    KlayTest: {
+      url: `https://api.baobab.klaytn.net:8651/`,
+      chainId : 1001,
+      accounts: accounts
     },
     Eth: {
       url: `https://mainnet.infura.io/v3/` + INFURA_KEY,
