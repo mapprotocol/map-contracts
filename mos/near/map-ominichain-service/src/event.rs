@@ -609,6 +609,7 @@ impl Transferable for SwapOutEvent {
 pub struct SwapInEvent {
     #[serde(with = "crate::bytes::hexstring")]
     pub order_id: CryptoHash,
+    pub token_out: AccountId,
     pub amount_out: U128,
 }
 
