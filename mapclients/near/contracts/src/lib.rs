@@ -365,11 +365,10 @@ impl MapLightClient {
         };
 
         log!(
-            "epoch {} validators: remove: {}, add: {:?}, total: {:?}",
+            "epoch {} validators: remove: {}, add: {:?}",
             next_epoch,
             extra.removed_validators,
-            serde_json::to_string(&extra.added_validators).unwrap(),
-            serde_json::to_string(&next_epoch_record).unwrap()
+            serde_json::to_string(&extra.added_validators).unwrap()
         );
 
         self.epoch_records.insert(&next_epoch, &next_epoch_record);
