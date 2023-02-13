@@ -26,8 +26,8 @@ interface IMOSV3 {
     event mapDepositOut(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId,
         address token, bytes from, address to, uint256 amount);
 
-    event mapDataOut(uint256 indexed fromChain, uint256 indexed toChain,bytes32 orderId, bytes callData);
+    event mapMessageOut(uint256 indexed fromChain, uint256 indexed toChain,bytes32 orderId, bytes callData);
 
-    event mapExecuteIn(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId, bool executeTag);
+    event mapMessageIn(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId, bool executeTag);
 
 }

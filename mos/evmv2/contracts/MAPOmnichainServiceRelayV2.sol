@@ -37,10 +37,12 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         EVM,
         NEAR
     }
-
+    uint256 gasLimitMin;
+    uint256 gasLimitMax;
     uint256 public immutable selfChainId = block.chainid;
     uint256 public nonce;
     address public wToken;        // native wrapped token
+    address public receiverFee;
     //id : 0 VToken  1:relayer
     ITokenRegisterV2 public tokenRegister;
     ILightClientManager public lightClientManager;
@@ -49,8 +51,9 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     mapping(bytes32 => bool) public orderList;
     mapping(uint256 => bytes) public mosContracts;
     mapping(uint256 => chainType) public chainTypes;
+    mapping(address => bool) public messageWhiteList;
+    mapping(uint256 => mapping(address => uint256)) public messageFee;
 
-    mapping(bytes => bool) public executeWhiteList;
 
     event mapTransferRelay(uint256 indexed fromChain, uint256 indexed toChain, bytes32 orderId,
         address token, bytes from, bytes to, uint256 amount);
@@ -64,12 +67,14 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     event SetLightClientManager(address lightClient);
     event RegisterChain(uint256 _chainId, bytes _address, chainType _type);
     event SetDistributeRate(uint _id, address _to, uint _rate);
-    event AddWhiteList(bytes _executeAddress, bool _enable);
+    event AddWhiteList(address _messageAddress, bool _enable);
 
     function initialize(address _wToken, address _managerAddress) public initializer
     checkAddress(_wToken) checkAddress(_managerAddress) {
         wToken = _wToken;
         lightClientManager = ILightClientManager(_managerAddress);
+        gasLimitMin = 21000;
+        gasLimitMax = 10000000;
         _changeAdmin(msg.sender);
     }
 
@@ -120,10 +125,10 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         emit RegisterChain(_chainId, _address, _type);
     }
 
-    function addWhiteList(bytes memory _executeAddress,bool _enable) external onlyOwner {
+    function addWhiteList(address _messageAddress,bool _enable) external onlyOwner {
 
-        executeWhiteList[_executeAddress] = _enable;
-        emit AddWhiteList(_executeAddress,_enable);
+        messageWhiteList[_messageAddress] = _enable;
+        emit AddWhiteList(_messageAddress,_enable);
     }
 
     // withdraw deposit token using vault token.
@@ -157,19 +162,23 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
     whenNotPaused
     returns(bool)
     {
-        require(_toChain != selfChainId, "only other chain");
-        require(_callData.gasLimit >= 21000 ,"Execution gas too low");
-        require(_callData.gasLimit < 1000000000000000000 ,"Execution gas too high");
+        require(_toChain != selfChainId, "Only other chain");
+        require(_callData.gasLimit >= gasLimitMin ,"Execution gas too low");
+        require(_callData.gasLimit <= gasLimitMax ,"Execution gas too high");
+        require(messageWhiteList[msg.sender],"Non-whitelisted address");
         uint amount = msg.value;
-        if(amount > 0 && amount == _callData.value){
-            IWToken(wToken).deposit{value : amount}();
+        require(amount >= messageFee[_toChain][msg.sender],"Please pay fee");
+        require(amount - messageFee[_toChain][msg.sender]  == _callData.value,"Value error");
+
+        if(amount > 0 ){
+            TransferHelper.safeTransferETH(receiverFee, amount);
         }
 
         bytes32 orderId = _getOrderId(msg.sender, _callData.target, _toChain);
 
         bytes memory callData = abi.encode(_callData);
 
-        emit mapDataOut(selfChainId, _toChain, orderId, callData);
+        emit mapMessageOut(selfChainId, _toChain, orderId, callData);
         return true;
     }
 
@@ -239,7 +248,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
                 }
                 if (topic == EvmDecoder.MAP_DATA_TOPIC) {
                     (, IEvent.dataOutEvent memory outEvent) = EvmDecoder.decodeDataLog(log);
-                    _executeIn(outEvent);
+                    _messageIn(outEvent);
                 }
             }
         } else {
@@ -276,7 +285,7 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
         emit mapTransferExecute(_chainId, selfChainId, msg.sender);
     }
 
-    function _executeIn(IEvent.dataOutEvent memory _outEvent) internal checkOrder(_outEvent.orderId)  {
+    function _messageIn(IEvent.dataOutEvent memory _outEvent) internal checkOrder(_outEvent.orderId)  {
 
         if(_outEvent.toChain == selfChainId){
 
@@ -286,15 +295,15 @@ contract MAPOmnichainServiceRelayV2 is ReentrancyGuard, Initializable, Pausable,
 
             bool success;
 
-            if(executeWhiteList[cData.target]){
+            if(messageWhiteList[callDataAddress]){
                 (success, ) = callDataAddress.call{gas:cData.gasLimit}(cData.callData);
             }
 
-            emit mapExecuteIn(_outEvent.fromChain, _outEvent.toChain,_outEvent.orderId, success);
+            emit mapMessageIn(_outEvent.fromChain, _outEvent.toChain,_outEvent.orderId, success);
 
         }else{
 
-            emit mapDataOut(selfChainId,_outEvent.toChain,_outEvent.orderId,_outEvent.cData);
+            emit mapMessageOut(selfChainId,_outEvent.toChain,_outEvent.orderId,_outEvent.cData);
         }
 
     }
