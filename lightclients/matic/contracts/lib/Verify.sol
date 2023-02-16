@@ -309,7 +309,7 @@ library Verify {
         assembly {
             ptr := _extraData
         }
-
+        // skip 32 byte data length
         ptr += 32;
         //extraData =  EXTRA_VANITY + (address + power)... + EXTRASEAL
         extraData = _memoryToBytes(ptr, _extraData.length - EXTRASEAL);
@@ -339,10 +339,10 @@ library Verify {
         //skip EXTRA_VANITY + data length
         ptr += 64;
         //extraData =  EXTRA_VANITY + (address + power)... + EXTRASEAL
-        uint256 legth = (_extraData.length - (EXTRA_VANITY + EXTRASEAL)) /
+        uint256 length = (_extraData.length - (EXTRA_VANITY + EXTRASEAL)) /
             (ADDRESS_LENGTH + POWER_LENGTH);
         bytes memory result;
-        for (uint256 i = 0; i < legth; i++) {
+        for (uint256 i = 0; i < length; i++) {
             bytes32 v;
             uint256 tem = ptr + i * (ADDRESS_LENGTH + POWER_LENGTH);
             assembly {
