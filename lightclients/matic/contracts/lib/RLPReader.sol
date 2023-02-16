@@ -226,13 +226,13 @@ library RLPReader {
 
     function toAddress(RLPItem memory item) internal pure returns (address) {
         // 1 byte for the length prefix
-        require(item.len == 21, "item len is not 21");
+        require(item.len == 21, "item length is not 21");
 
         return address(uint160(toUint(item)));
     }
 
     function toUint(RLPItem memory item) internal pure returns (uint256) {
-        require(item.len > 0 && item.len <= 33, "item len is not uint");
+        require(item.len > 0 && item.len <= 33, "item length's type is not");
 
         (uint256 memPtr, uint256 len) = payloadLocation(item);
 
@@ -240,7 +240,7 @@ library RLPReader {
         assembly {
             result := mload(memPtr)
 
-        // shfit to the correct location if neccesary
+        // shift to the correct location if neccesary
             if lt(len, 32) {
                 result := div(result, exp(256, sub(32, len)))
             }
