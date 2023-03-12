@@ -210,19 +210,19 @@ impl MAPOServiceV2 {
             mcs_tokens.insert(&mos_token, &chains);
         }
 
-        let mut fungible_tokens = UnorderedMap::new(b"f".to_vec());
+        let mut fungible_tokens = UnorderedMap::new(b"g".to_vec());
         for (token, chains) in mos.fungible_tokens.iter() {
             let ft: AccountId = token.parse().unwrap();
             fungible_tokens.insert(&ft, &chains);
         }
 
-        let mut fungible_tokens_storage_balance = UnorderedMap::new(b"t".to_vec());
+        let mut fungible_tokens_storage_balance = UnorderedMap::new(b"b".to_vec());
         for (token, balance) in mos.fungible_tokens_storage_balance.iter() {
             let ft: AccountId = token.parse().unwrap();
             fungible_tokens_storage_balance.insert(&ft, &balance);
         }
 
-        let mut token_decimals = UnorderedMap::new(b"d".to_vec());
+        let mut token_decimals = UnorderedMap::new(b"c".to_vec());
         for (token, decimal) in mos.token_decimals.iter() {
             let ft: AccountId = token.parse().unwrap();
             token_decimals.insert(&ft, &decimal);
@@ -258,5 +258,72 @@ impl MAPOServiceV2 {
             amount_out: Default::default(),
             lost_found: UnorderedMap::new(b"l".to_vec()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ethabi::Token;
+    use hex;
+    use near_sdk::json_types::U64;
+    use near_sdk::AccountId;
+    use std::str::FromStr;
+    use std::string::String;
+    use tiny_keccak::keccak256;
+
+    #[test]
+    fn test_migrate() {
+        let mut to_chain_set: HashSet<u128> = HashSet::new();
+        to_chain_set.insert(212);
+        let mut mcs_tokens: UnorderedMap<String, HashSet<u128>> = UnorderedMap::new(b"t".to_vec());
+        mcs_tokens.insert(&"mcs.map009.test".to_string(), &to_chain_set);
+        println!(
+            "mcs_tokens: {:?}",
+            mcs_tokens.get(&"mcs.map009.test".to_string()).is_some()
+        );
+
+        let mut fungible_tokens: UnorderedMap<String, HashSet<u128>> =
+            UnorderedMap::new(b"f".to_vec());
+        fungible_tokens.insert(&"ft.map009.test".to_string(), &to_chain_set);
+
+        let mut fungible_tokens_storage_balance: UnorderedMap<String, u128> =
+            UnorderedMap::new(b"s".to_vec());
+        fungible_tokens_storage_balance.insert(&"ft.map009.test".to_string(), &10000);
+
+        let mut token_decimals: UnorderedMap<String, u8> = UnorderedMap::new(b"d".to_vec());
+        token_decimals.insert(&"ft.map009.test".to_string(), &10);
+
+        let mut native_to_chains: HashSet<u128> = HashSet::new();
+        native_to_chains.insert(212);
+
+        let mut chain_id_type_map: UnorderedMap<u128, ChainType> = UnorderedMap::new(b"c".to_vec());
+        chain_id_type_map.insert(&212, &EvmChain);
+
+        let mut used_events: UnorderedSet<CryptoHash> = UnorderedSet::new(b"u".to_vec());
+        used_events.insert(&[1 as u8; 32]);
+
+        let old_msc = MAPOServiceV1 {
+            map_client_account: "client3.cfac2.maplabs.testnet".parse().unwrap(),
+            map_bridge_address: validate_eth_address(
+                "B6c1b689291532D11172Fb4C204bf13169EC0dCA".to_string(),
+            ),
+            mcs_tokens,
+            fungible_tokens,
+            fungible_tokens_storage_balance,
+            token_decimals,
+            native_to_chains,
+            chain_id_type_map,
+            used_events,
+            owner: "multisig.map009.testnet".parse().unwrap(),
+            mcs_storage_transfer_in_required: 20000,
+            wrapped_token: "wrap.testnet".to_string(),
+            near_chain_id: 5566818579631833089,
+            map_chain_id: 212,
+            nonce: 10,
+            paused: 63,
+        };
+
+        let mos = MAPOServiceV2::from(old_msc);
     }
 }
