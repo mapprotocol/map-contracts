@@ -1,5 +1,5 @@
 
-task("LightClientRegister",
+task("clientRegister",
     "Deploy LightClientRegister",
     require("./clientRegister")
 )

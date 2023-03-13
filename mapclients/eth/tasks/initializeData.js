@@ -34,5 +34,5 @@ module.exports = async (taskArgs,hre) => {
 
     fs.writeFileSync('./deploy/config.js', datar);
 
-    console.log(`write in epco  ${data.result.epoch} success`)
+    console.log(`write in epoch  ${data.result.epoch} success`)
 }

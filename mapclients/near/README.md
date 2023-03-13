@@ -71,7 +71,7 @@ EPOCH_ID=300  # get the information of this epoch id to initialize the MAP light
 
 ## Upgrade the contract
 
-**NOTE**: currently the script works on MacOS only. Below `scripts` is in directory `../../mcs/near/map-cross-chain-service/`.
+**NOTE**: currently the script works on MacOS only. Below `scripts` is in directory `../../mos/near/`.
 ```shell
 MAP_CLIENT_WASM_FILE=/path/to/map/client/contract  # new MAP light client contract wasm file
 
