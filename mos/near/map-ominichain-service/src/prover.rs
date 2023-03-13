@@ -1,7 +1,7 @@
-use std::convert::From;
 use ethabi::{Event, EventParam, Hash, Log, ParamType, RawLog};
+use map_light_client::proof::{LogEntry, ReceiptProof};
 use near_sdk::ext_contract;
-use map_light_client::proof::{ReceiptProof, LogEntry};
+use std::convert::From;
 
 pub type Address = [u8; 20];
 
@@ -26,7 +26,11 @@ pub struct EVMEvent {
 }
 
 impl EVMEvent {
-    pub fn from_log_entry_data(name: &str, params: EthEventParams, log_entry: &LogEntry) -> Option<EVMEvent> {
+    pub fn from_log_entry_data(
+        name: &str,
+        params: EthEventParams,
+        log_entry: &LogEntry,
+    ) -> Option<EVMEvent> {
         let event = Event {
             name: name.to_string(),
             inputs: params
@@ -40,11 +44,7 @@ impl EVMEvent {
             anonymous: false,
         };
         let mcs_address = log_entry.address;
-        let topics = log_entry
-            .topics
-            .iter()
-            .map(Hash::from)
-            .collect();
+        let topics = log_entry.topics.iter().map(Hash::from).collect();
 
         let raw_log = RawLog {
             topics,
@@ -62,12 +62,9 @@ impl EVMEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethabi::{Token, param_type::Writer};
+    use ethabi::{param_type::Writer, Token};
+    use map_light_client::{header::Hash as MapHash, traits::FromVec};
     use tiny_keccak::Keccak;
-    use map_light_client::{
-        traits::FromVec,
-        header::Hash as MapHash,
-    };
 
     impl EVMEvent {
         pub fn to_log_entry_data(
@@ -90,7 +87,10 @@ mod tests {
                 anonymous: false,
             };
             let params: Vec<ParamType> = event.inputs.iter().map(|p| p.kind.clone()).collect();
-            let topics = indexes.into_iter().map(|value| MapHash::from_vec(&value).unwrap()).collect();
+            let topics = indexes
+                .into_iter()
+                .map(|value| MapHash::from_vec(&value).unwrap())
+                .collect();
             LogEntry {
                 address: locker_address,
                 topics: vec![vec![long_signature(&event.name, &params)], topics].concat(),

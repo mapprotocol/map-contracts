@@ -147,6 +147,15 @@ First, we should set the chain type of target blockchain. Currently only **EvmCh
     # ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
 ```
 
+Then, we should register the token to MOS.
+```shell
+    TOKEN="usdt.map007.testnet" # token Account Id
+    Mintable=true               # the token is mintable
+    
+    # register the token
+    ./scripts/manage_ft_token.sh register $TOKEN $Mintable
+```
+
 If you want to add target chain ID to mcs token, run below commands:
 
 ```shell

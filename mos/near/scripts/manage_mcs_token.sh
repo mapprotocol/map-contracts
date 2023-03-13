@@ -8,18 +8,24 @@ function printHelp() {
   echo "Usage:"
   echo "  $FILE_NAME <command>"
   echo "Commands:"
-  echo "  deploy <token name>                               deploy mcs token"
-  echo "  list                                              view deployed mcs tokens and their to chains"
-  echo "  transfer <token> <to chain> <from> <to> <amount>  transfer out mcs token"
-  echo "  deposit <token> <from> <to> <amount>              deposit out mcs token"
-  echo "  balance <token> <account>                         view account balance of mcs token"
-  echo "  help                                              show help"
+  echo "  deploy <token name>                                   deploy mcs token"
+  echo "  list                                                  view deployed mcs tokens and their to chains"
+  echo "  register <token> <mintable>  transfer out ft token    register token"
+  echo "  transfer <token> <to chain> <from> <to> <amount>      transfer out mcs token"
+  echo "  deposit <token> <from> <to> <amount>                  deposit out mcs token"
+  echo "  balance <token> <account>                             view account balance of mcs token"
+  echo "  help                                                  show help"
 }
 
 function deploy() {
     echo "deploying $1 contract by $2"
     echo near call $MCS_ACCOUNT deploy_mcs_token '{"address": "'$1'"}'  --accountId $2 --deposit 10 --gas 80000000000000
     near call $MCS_ACCOUNT deploy_mcs_token '{"address": "'$1'"}'  --accountId $2 --deposit 10 --gas 80000000000000
+}
+
+function register() {
+    echo "registering token $1"
+    near call $MCS_ACCOUNT register_token '{"token":"'$1'", "mintable":'$2'}' --accountId $MASTER_ACCOUNT --deposit 1 --gas 300000000000000
 }
 
 function list_tokens() {
@@ -48,6 +54,15 @@ if [[ $# -gt 0 ]]; then
     deploy)
       if [[ $# == 3 ]]; then
         deploy $2 $3
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
+    register)
+      if [[ $# == 3 ]]; then
+        shift
+        register $@
       else
         printHelp
         exit 1
