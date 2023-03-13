@@ -8,12 +8,17 @@ function printHelp() {
   echo "Usage:"
   echo "  $FILE_NAME <command>"
   echo "Commands:"
-  echo "  list                                              view registered fungible tokens and their to chains"
-  echo "  transfer <token> <to chain> <from> <to> <amount>  transfer out ft token"
-  echo "  deposit <token> <from> <to> <amount>              deposit out ft token"
-  echo "  swap <token> <from> <to chain> <to> <amount>              swap out ft token"
-  echo "  balance <token> <account>                         view account balance of ft token"
-  echo "  help                                              show help"
+  echo "  list                                                  view registered fungible tokens and their to chains"
+  echo "  register <token> <mintable>  transfer out ft token    register token"
+  echo "  transfer <token> <to chain> <from> <to> <amount>      transfer out ft token"
+  echo "  deposit <token> <from> <to> <amount>                  deposit out ft token"
+  echo "  swap <token> <from> <to chain> <to> <amount>          swap out ft token"
+  echo "  balance <token> <account>                             view account balance of ft token"
+  echo "  help                                                  show help"
+}
+function register() {
+    echo "registering token $1"
+    near call $MCS_ACCOUNT register_token '{"token":"'$1'", "mintable":'$2'}' --accountId $MASTER_ACCOUNT --deposit 1 --gas 300000000000000
 }
 
 function list_tokens() {
@@ -46,6 +51,15 @@ if [[ $# -gt 0 ]]; then
     list)
       if [[ $# == 1 ]]; then
         list_tokens
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
+    register)
+      if [[ $# == 3 ]]; then
+        shift
+        register $@
       else
         printHelp
         exit 1
