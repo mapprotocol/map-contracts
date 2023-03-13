@@ -3,7 +3,7 @@ use crate::*;
 
 const GAS_FOR_UPGRADE_SELF_DEPLOY: Gas = Gas(15_000_000_000_000);
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
 pub enum ChainType {
     EvmChain,
@@ -222,7 +222,7 @@ impl MAPOServiceV2 {
             fungible_tokens_storage_balance.insert(&ft, &balance);
         }
 
-        let mut token_decimals = UnorderedMap::new(b"c".to_vec());
+        let mut token_decimals = UnorderedMap::new(b"l".to_vec());
         for (token, decimal) in mos.token_decimals.iter() {
             let ft: AccountId = token.parse().unwrap();
             token_decimals.insert(&ft, &decimal);
@@ -256,7 +256,7 @@ impl MAPOServiceV2 {
             core_idle: vec![],
             core_total: vec![],
             amount_out: Default::default(),
-            lost_found: UnorderedMap::new(b"l".to_vec()),
+            lost_found: UnorderedMap::new(b"n".to_vec()),
         }
     }
 }
@@ -278,10 +278,6 @@ mod tests {
         to_chain_set.insert(212);
         let mut mcs_tokens: UnorderedMap<String, HashSet<u128>> = UnorderedMap::new(b"t".to_vec());
         mcs_tokens.insert(&"mcs.map009.test".to_string(), &to_chain_set);
-        println!(
-            "mcs_tokens: {:?}",
-            mcs_tokens.get(&"mcs.map009.test".to_string()).is_some()
-        );
 
         let mut fungible_tokens: UnorderedMap<String, HashSet<u128>> =
             UnorderedMap::new(b"f".to_vec());
@@ -325,5 +321,30 @@ mod tests {
         };
 
         let mos = MAPOServiceV2::from(old_msc);
+
+        assert_eq!(mos.mcs_tokens.len(), 1);
+        let token = "mcs.map009.test".parse().unwrap();
+        let chains = mos.mcs_tokens.get(&token).unwrap();
+        assert!(chains.get(&212).is_some());
+
+        assert_eq!(mos.fungible_tokens.len(), 1);
+        let token = "ft.map009.test".parse().unwrap();
+        let chains = mos.fungible_tokens.get(&token).unwrap();
+        assert!(chains.get(&212).is_some());
+
+        assert_eq!(mos.token_decimals.len(), 1);
+        let token = "ft.map009.test".parse().unwrap();
+        assert_eq!(mos.token_decimals.get(&token).unwrap(), 10);
+
+        assert_eq!(mos.native_to_chains.len(), 1);
+        assert!(mos.native_to_chains.contains(&212));
+
+        assert_eq!(mos.chain_id_type_map.len(), 1);
+        assert_eq!(mos.chain_id_type_map.get(&212).unwrap(), EvmChain);
+
+        assert_eq!(mos.used_events.len(), 1);
+        assert!(mos.used_events.contains(&[1 as u8; 32]));
+
+        assert_eq!(mos.ref_exchange, "ref-finance-101.testnet".parse().unwrap());
     }
 }
