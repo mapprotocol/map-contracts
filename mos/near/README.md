@@ -459,6 +459,25 @@ REQUEST_ID=
 # ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
 ```
 
+
+### 4. Add butter core
+
+```shell
+# request to add butter core by multisig member
+CORE=core0.corefac.maplabs.testnet
+
+./scripts/manage_multisig.sh request_and_confirm add_core $CORE ${MEMBERS[1]}
+    
+# the request ID can be obtained from the last line of last command's output
+REQUEST_ID=
+    
+# confirm the request by another member
+./scripts/manage_multisig.sh confirm $REQUEST_ID ${MEMBERS[2]}
+
+# if the request is not executed because of the time lock, anyone can execute it after REQUEST_LOCK time
+# ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
+```
+
 ## Testing
 1. How to run unit testing?
 
