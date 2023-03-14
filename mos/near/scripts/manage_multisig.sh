@@ -16,6 +16,7 @@ function printHelp() {
   echo "    add_native <chain id>                    add native token to_chain"
   echo "    add_mcs    <token> <chain id>            add mcs token to_chain"
   echo "    add_ft    <token> <chain id>             add fungible token to_chain"
+  echo "    add_core   <core>                        add butter core"
   echo "    near_chain_id    <near chain id>         set near chain id"
   echo "    map_chain_id    <map chain id>           set map chain id"
   echo "    map_relay_address   <map relay address>  set map relay address"
@@ -78,6 +79,19 @@ function prepare_request() {
         exit 1
       fi
       ;;
+    add_core)
+      echo $#
+      if [[ $# == 3 ]]; then
+        echo "add core $2 to mos contract"
+        RECEIVER=$MCS_ACCOUNT
+        METHOD="add_butter_core"
+        ARGS=`echo '{"butter_core": "'$2'"}'| base64`
+        MEMBER=$3
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
     remove_native)
       if [[ $# == 3 ]]; then
         echo "remove native token to_chain $2 from mcs contract"
@@ -117,9 +131,9 @@ function prepare_request() {
     metadata)
       if [[ $# == 4 ]]; then
         echo "set metadata of mcs token $2's decimals to $3"
-        RECEIVER=$MCS_ACCOUNT
+        RECEIVER=$2
         METHOD="set_metadata"
-        ARGS=`echo '{"address": "'$2'", "decimals": '$3'}'| base64`
+        ARGS=`echo '{"decimals": '$3'}'| base64`
         MEMBER=$4
       else
         printHelp

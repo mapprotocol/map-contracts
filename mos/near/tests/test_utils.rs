@@ -190,7 +190,7 @@ pub async fn deploy_mcs_token_and_set_decimals(
 
     let res = contract
         .call(&worker, "new")
-        .args_json(json!({"owner": contract.id()}))?
+        .args_json(json!({"controller": contract.id(), "owner": contract.id()}))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
@@ -287,7 +287,7 @@ pub async fn deploy_and_init_ft_with_decimal(
 
     let res = contract
         .call(&worker, "new")
-        .args_json(json!({"owner": contract.id()}))?
+        .args_json(json!({"controller": contract.id(), "owner": contract.id()}))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
@@ -470,7 +470,7 @@ pub async fn deploy_and_init_light_client(worker: &Worker<Sandbox>) -> anyhow::R
     let mut init_args: serde_json::Value = serde_json::from_reader(file).unwrap();
     let res = contract
         .call(&worker, "new")
-        .args_json(json!(init_args))?
+        // .args_json(json!(init_args))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;
@@ -494,7 +494,7 @@ pub async fn deploy_token_with_account(
 
     let res = contract
         .call(&worker, "new")
-        .args_json(json!({"owner": contract.id()}))?
+        .args_json(json!({"controller": contract.id(), "owner": contract.id()}))?
         .gas(300_000_000_000_000)
         .transact()
         .await?;

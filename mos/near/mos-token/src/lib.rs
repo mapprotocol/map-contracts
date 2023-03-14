@@ -27,10 +27,10 @@ pub struct MCSToken {
 #[near_bindgen]
 impl MCSToken {
     #[init]
-    pub fn new(owner: AccountId) -> Self {
+    pub fn new(controller: AccountId, owner: AccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         Self {
-            controller: env::predecessor_account_id(),
+            controller,
             owner,
             token: FungibleToken::new(b"t".to_vec()),
             name: String::default(),

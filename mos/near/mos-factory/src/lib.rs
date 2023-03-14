@@ -52,19 +52,29 @@ impl Factory {
     }
 
     #[payable]
-    pub fn deploy_mcs_token(&mut self, token: AccountId, owner: AccountId) -> Promise {
+    pub fn deploy_mcs_token(
+        &mut self,
+        name: String,
+        controller: AccountId,
+        owner: AccountId,
+    ) -> Promise {
         assert!(
             env::attached_deposit() >= MCS_TOKEN_INIT_BALANCE,
             "Not enough attached deposit to complete mcs token creation"
         );
 
-        Promise::new(token)
+        let account_id = format!("{}.{}", name, env::current_account_id());
+
+        Promise::new(account_id.parse().unwrap())
             .create_account()
             .transfer(MCS_TOKEN_INIT_BALANCE)
             .deploy_contract(MCS_TOKEN_BINARY.to_vec())
             .function_call(
                 "new".to_string(),
-                json!({ "owner": owner }).to_string().as_bytes().to_vec(),
+                json!({ "controller": controller, "owner": owner })
+                    .to_string()
+                    .as_bytes()
+                    .to_vec(),
                 0,
                 env::prepaid_gas() - CREATE_CALL_GAS,
             )
