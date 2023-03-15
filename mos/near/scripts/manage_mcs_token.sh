@@ -18,9 +18,9 @@ function printHelp() {
 }
 
 function deploy() {
-    echo "deploying $1 contract by $2"
-    echo near call $MCS_ACCOUNT deploy_mcs_token '{"address": "'$1'"}'  --accountId $2 --deposit 10 --gas 80000000000000
-    near call $MCS_ACCOUNT deploy_mcs_token '{"address": "'$1'"}'  --accountId $2 --deposit 10 --gas 80000000000000
+    echo "deploying $1 contract"
+    echo near call $MCS_FACTORY_ACCOUNT deploy_mcs_token '{"name": "'$1'", "controller":"'$MCS_ACCOUNT'", "owner": "'$MULTISIG_ACCOUNT'"}'  --accountId $MASTER_ACCOUNT --deposit 10 --gas 300000000000000
+    near call $MCS_FACTORY_ACCOUNT deploy_mcs_token '{"name": "'$1'", "controller":"'$MCS_ACCOUNT'", "owner": "'$MULTISIG_ACCOUNT'"}' --accountId $MASTER_ACCOUNT --deposit 10 --gas 300000000000000
 }
 
 function register() {
@@ -52,8 +52,9 @@ function balance() {
 if [[ $# -gt 0 ]]; then
   case $1 in
     deploy)
-      if [[ $# == 3 ]]; then
-        deploy $2 $3
+      if [[ $# == 2 ]]; then
+        shift
+        deploy $@
       else
         printHelp
         exit 1

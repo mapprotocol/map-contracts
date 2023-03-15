@@ -103,13 +103,13 @@ source ./scripts/config.sh
 
 **1. Support new NEP-141 mcs token to cross chain through MCS service**
 ```shell
-    MCS_TOKEN_NAME="mcs_token_0"  # the mcs token name, the token account will be $MCS_TOKEN_NAME.$MCS_ACCOUNT
-    MCS_TOKEN=$MCS_TOKEN_NAME.$MCS_ACCOUNT # mcs token account ID
+    MCS_TOKEN_NAME="mcs_token_0"  # the mcs token name, the token account will be $MCS_TOKEN_NAME.$MCS_FACTORY_ACCOUNT
+    MCS_TOKEN=$MCS_TOKEN_NAME.$MCS_FACTORY_ACCOUNT # mcs token account ID
     DECIMALS=24
-    USER_ACCOUNT="map002.testnet"  # the account to deploy new mcs token contract, make sure it is created on NEAR blockchain
+    USER_ACCOUNT="map002.testnet"
     
     # deploy mcs token contract
-    ./scripts/manage_mcs_token.sh deploy $MCS_TOKEN_NAME $USER_ACCOUNT
+    ./scripts/manage_mcs_token.sh deploy $MCS_TOKEN_NAME
     
     # request to set metadata by multisig member
     ./scripts/manage_multisig.sh request_and_confirm metadata $MCS_TOKEN $DECIMALS ${MEMBERS[1]}
@@ -122,14 +122,11 @@ source ./scripts/config.sh
     
     # if the request is not executed because of the time lock, anyone can execute it after REQUEST_LOCK time
     # ./scripts/manage_multisig.sh execute $REQUEST_ID $USER_ACCOUNT
-    
-    # list mcs tokes
-    ./scripts/manage_mcs_token.sh list
 ```
 
 **2. Allow the mcs/ft/native token to transfer to a specified target blockchain**
 
-First, we should set the chain type of target blockchain. Currently only **EvmChain** type is supported.
+First set the chain type of target blockchain. Currently only **EvmChain** type is supported.
 ```shell
     TO_CHAIN=212 # to chain ID
     CHAIN_TYPE="EvmChain"  # to chain type
@@ -147,12 +144,15 @@ First, we should set the chain type of target blockchain. Currently only **EvmCh
     # ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
 ```
 
-Then, we should register the token to MOS.
+Then register the mcs/ft token to MOS.
 ```shell
     TOKEN="usdt.map007.testnet" # token Account Id
     Mintable=true               # the token is mintable
     
-    # register the token
+    # register the mcs token
+    ./scripts/manage_mcs_token.sh register $MCS_TOKEN $Mintable
+    
+    # register the ft token
     ./scripts/manage_ft_token.sh register $TOKEN $Mintable
 ```
 
