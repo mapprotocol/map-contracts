@@ -51,7 +51,7 @@ impl MAPOServiceV2 {
     #[private]
     #[init(ignore_state)]
     pub fn migrate() -> Self {
-        let old_mcs: MAPOServiceV1 = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
+        let old_mcs: MAPOServiceV2 = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
         MAPOServiceV2::from(old_mcs)
     }
     pub fn set_chain_type(&mut self, chain_id: U128, chain_type: ChainType) {
@@ -195,68 +195,35 @@ impl MAPOServiceV2 {
 }
 
 impl MAPOServiceV2 {
-    fn from(mos: MAPOServiceV1) -> Self {
-        let mut registered_tokens = UnorderedMap::new(b"r".to_vec());
-        for token in mos.mcs_tokens.keys() {
-            registered_tokens.insert(&token.parse().unwrap(), &true);
-        }
+    fn from(mos: MAPOServiceV2) -> Self {
+        let mut registered_tokens = mos.registered_tokens;
         for token in mos.fungible_tokens.keys() {
-            registered_tokens.insert(&token.parse().unwrap(), &true);
+            registered_tokens.insert(&token, &false);
         }
-
-        let mut mcs_tokens = UnorderedMap::new(b"m".to_vec());
-        for (token, chains) in mos.mcs_tokens.iter() {
-            let mos_token: AccountId = token.parse().unwrap();
-            mcs_tokens.insert(&mos_token, &chains);
-        }
-
-        let mut fungible_tokens = UnorderedMap::new(b"g".to_vec());
-        for (token, chains) in mos.fungible_tokens.iter() {
-            let ft: AccountId = token.parse().unwrap();
-            fungible_tokens.insert(&ft, &chains);
-        }
-
-        let mut fungible_tokens_storage_balance = UnorderedMap::new(b"b".to_vec());
-        for (token, balance) in mos.fungible_tokens_storage_balance.iter() {
-            let ft: AccountId = token.parse().unwrap();
-            fungible_tokens_storage_balance.insert(&ft, &balance);
-        }
-
-        let mut token_decimals = UnorderedMap::new(b"l".to_vec());
-        for (token, decimal) in mos.token_decimals.iter() {
-            let ft: AccountId = token.parse().unwrap();
-            token_decimals.insert(&ft, &decimal);
-        }
-
-        let ref_exchange: AccountId = if mos.wrapped_token == "wrap.testnet" {
-            "ref-finance-101.testnet".to_string().parse().unwrap()
-        } else {
-            "v2.ref-finance.near".to_string().parse().unwrap()
-        };
 
         Self {
             map_client_account: mos.map_client_account,
             map_bridge_address: mos.map_bridge_address,
-            mcs_tokens,
-            fungible_tokens,
-            fungible_tokens_storage_balance,
-            token_decimals,
+            mcs_tokens: mos.mcs_tokens,
+            fungible_tokens: mos.fungible_tokens,
+            fungible_tokens_storage_balance: mos.fungible_tokens_storage_balance,
+            token_decimals: mos.token_decimals,
             native_to_chains: mos.native_to_chains,
             chain_id_type_map: mos.chain_id_type_map,
             used_events: mos.used_events,
             owner: mos.owner,
-            mcs_storage_balance_min: mos.mcs_storage_transfer_in_required,
-            wrapped_token: mos.wrapped_token.parse().unwrap(),
+            mcs_storage_balance_min: mos.mcs_storage_balance_min,
+            wrapped_token: mos.wrapped_token,
             near_chain_id: mos.near_chain_id,
             map_chain_id: mos.map_chain_id,
             nonce: mos.nonce,
             paused: mos.paused,
             registered_tokens,
-            ref_exchange,
-            core_idle: vec![],
-            core_total: vec![],
-            amount_out: Default::default(),
-            lost_found: UnorderedMap::new(b"n".to_vec()),
+            ref_exchange: mos.ref_exchange,
+            core_idle: mos.core_idle,
+            core_total: mos.core_total,
+            amount_out: mos.amount_out,
+            lost_found: mos.lost_found,
         }
     }
 }
@@ -276,19 +243,24 @@ mod tests {
     fn test_migrate() {
         let mut to_chain_set: HashSet<u128> = HashSet::new();
         to_chain_set.insert(212);
-        let mut mcs_tokens: UnorderedMap<String, HashSet<u128>> = UnorderedMap::new(b"t".to_vec());
-        mcs_tokens.insert(&"mcs.map009.test".to_string(), &to_chain_set);
+        let mut mcs_tokens: UnorderedMap<AccountId, HashSet<u128>> =
+            UnorderedMap::new(b"t".to_vec());
+        mcs_tokens.insert(&"mcs.map009.test".parse().unwrap(), &to_chain_set);
 
-        let mut fungible_tokens: UnorderedMap<String, HashSet<u128>> =
+        let mut fungible_tokens: UnorderedMap<AccountId, HashSet<u128>> =
             UnorderedMap::new(b"f".to_vec());
-        fungible_tokens.insert(&"ft.map009.test".to_string(), &to_chain_set);
+        fungible_tokens.insert(&"ft.map009.test".parse().unwrap(), &to_chain_set);
 
-        let mut fungible_tokens_storage_balance: UnorderedMap<String, u128> =
+        let mut registered_tokens: UnorderedMap<AccountId, bool> = UnorderedMap::new(b"r".to_vec());
+        registered_tokens.insert(&"mcs.map009.test".parse().unwrap(), &true);
+        registered_tokens.insert(&"ft.map009.test".parse().unwrap(), &true);
+
+        let mut fungible_tokens_storage_balance: UnorderedMap<AccountId, u128> =
             UnorderedMap::new(b"s".to_vec());
-        fungible_tokens_storage_balance.insert(&"ft.map009.test".to_string(), &10000);
+        fungible_tokens_storage_balance.insert(&"ft.map009.test".parse().unwrap(), &10000);
 
-        let mut token_decimals: UnorderedMap<String, u8> = UnorderedMap::new(b"d".to_vec());
-        token_decimals.insert(&"ft.map009.test".to_string(), &10);
+        let mut token_decimals: UnorderedMap<AccountId, u8> = UnorderedMap::new(b"d".to_vec());
+        token_decimals.insert(&"ft.map009.test".parse().unwrap(), &10);
 
         let mut native_to_chains: HashSet<u128> = HashSet::new();
         native_to_chains.insert(212);
@@ -299,7 +271,7 @@ mod tests {
         let mut used_events: UnorderedSet<CryptoHash> = UnorderedSet::new(b"u".to_vec());
         used_events.insert(&[1 as u8; 32]);
 
-        let old_msc = MAPOServiceV1 {
+        let old_msc = MAPOServiceV2 {
             map_client_account: "client3.cfac2.maplabs.testnet".parse().unwrap(),
             map_bridge_address: validate_eth_address(
                 "B6c1b689291532D11172Fb4C204bf13169EC0dCA".to_string(),
@@ -312,12 +284,18 @@ mod tests {
             chain_id_type_map,
             used_events,
             owner: "multisig.map009.testnet".parse().unwrap(),
-            mcs_storage_transfer_in_required: 20000,
-            wrapped_token: "wrap.testnet".to_string(),
+            wrapped_token: "wrap.testnet".parse().unwrap(),
             near_chain_id: 5566818579631833089,
             map_chain_id: 212,
             nonce: 10,
             paused: 63,
+            registered_tokens,
+            ref_exchange: "ref-finance-101.testnet".parse().unwrap(),
+            core_idle: vec!["core.butter.testnet".parse().unwrap()],
+            core_total: vec!["core.butter.testnet".parse().unwrap()],
+            amount_out: Default::default(),
+            mcs_storage_balance_min: 100,
+            lost_found: UnorderedMap::new(b"l".to_vec()),
         };
 
         let mos = MAPOServiceV2::from(old_msc);
@@ -331,6 +309,15 @@ mod tests {
         let token = "ft.map009.test".parse().unwrap();
         let chains = mos.fungible_tokens.get(&token).unwrap();
         assert!(chains.get(&212).is_some());
+
+        assert!(mos
+            .registered_tokens
+            .get(&"mcs.map009.test".parse().unwrap())
+            .unwrap());
+        assert!(!mos
+            .registered_tokens
+            .get(&"ft.map009.test".parse().unwrap())
+            .unwrap());
 
         assert_eq!(mos.token_decimals.len(), 1);
         let token = "ft.map009.test".parse().unwrap();
@@ -346,5 +333,12 @@ mod tests {
         assert!(mos.used_events.contains(&[1 as u8; 32]));
 
         assert_eq!(mos.ref_exchange, "ref-finance-101.testnet".parse().unwrap());
+
+        assert_eq!(mos.core_idle.len(), 1);
+        assert_eq!(mos.core_idle[0], "core.butter.testnet".parse().unwrap());
+        assert_eq!(mos.core_total.len(), 1);
+        assert_eq!(mos.core_total[0], "core.butter.testnet".parse().unwrap());
+
+        assert_eq!(mos.mcs_storage_balance_min, 100);
     }
 }
