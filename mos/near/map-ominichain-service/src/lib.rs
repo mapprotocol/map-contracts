@@ -68,9 +68,9 @@ const FINISH_TOKEN_OUT_GAS: Gas = Gas(5_000_000_000_000);
 const REPORT_FAILURE_GAS: Gas = Gas(5_000_000_000_000);
 
 /// Gas to call verify_log_entry on prover.
-const VERIFY_LOG_ENTRY_GAS: Gas = Gas(83_000_000_000_000);
+const VERIFY_LOG_ENTRY_GAS: Gas = Gas(80_000_000_000_000);
 /// Gas to call process_swap_in method.
-const PROCESS_SWAP_IN_GAS: Gas = Gas(200_000_000_000_000);
+const PROCESS_SWAP_IN_GAS: Gas = Gas(205_000_000_000_000);
 /// Gas to call process_swap_out method.
 const PROCESS_SWAP_OUT_GAS: Gas = Gas(250_000_000_000_000);
 /// Gas to call callback_process_native_swap method.

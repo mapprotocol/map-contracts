@@ -8,7 +8,7 @@ use near_sdk::{env, AccountId, Gas, PromiseResult};
 use std::collections::HashMap;
 
 const FT_TRANSFER_CALL_CORE_GAS: Gas = Gas(210_000_000_000_000);
-const CALL_CORE_SWAP_IN_DIRECTLY_GAS: Gas = Gas(140_000_000_000_000);
+const CALL_CORE_SWAP_IN_DIRECTLY_GAS: Gas = Gas(150_000_000_000_000);
 const CALL_CORE_SWAP_OUT_DIRECTLY_GAS: Gas = Gas(170_000_000_000_000);
 /// Gas to call callback_swap_out_token method.
 const CALLBACK_SWAP_OUT_TOKEN_GAS: Gas =
