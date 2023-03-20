@@ -1230,4 +1230,31 @@ mod tests {
 
         contract.transfer_out_token(token, to, U128(1_000), ETH_CHAIN_ID.into());
     }
+
+    #[test]
+    fn test_clean_idle_core() {
+        let mut contract = mcs_contract();
+        contract.core_idle.push("core0.testnet".parse().unwrap());
+        contract.core_idle.push("core1.testnet".parse().unwrap());
+        contract.core_total.push("core0.testnet".parse().unwrap());
+        contract.core_total.push("core1.testnet".parse().unwrap());
+        contract.core_total.push("core2.testnet".parse().unwrap());
+
+        set_env!(
+            predecessor_account_id: contract.owner.clone()
+        );
+
+        assert_eq!(3, contract.core_total.len());
+        assert_eq!(2, contract.core_idle.len());
+
+        contract.clean_idle_core();
+
+        assert_eq!(1, contract.core_total.len());
+        assert_eq!(0, contract.core_idle.len());
+
+        assert_eq!(
+            "core2.testnet".to_string(),
+            contract.core_total.first().unwrap().to_string()
+        )
+    }
 }

@@ -478,6 +478,41 @@ REQUEST_ID=
 # ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
 ```
 
+### 5. Clean idle butter cores
+
+```shell
+# request to clean idle butter cores by multisig member
+./scripts/manage_multisig.sh request_and_confirm clean_core ${MEMBERS[1]}
+    
+# the request ID can be obtained from the last line of last command's output
+REQUEST_ID=
+    
+# confirm the request by another member
+./scripts/manage_multisig.sh confirm $REQUEST_ID ${MEMBERS[2]}
+
+# if the request is not executed because of the time lock, anyone can execute it after REQUEST_LOCK time
+# ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
+```
+
+### 6. Reset working butter core to idle
+
+```shell
+# request to reset butter core by multisig member
+CORE=core0.corefac.maplabs.testnet
+
+# request to clean idle butter cores by multisig member
+./scripts/manage_multisig.sh request_and_confirm reset_core $CORE ${MEMBERS[1]}
+    
+# the request ID can be obtained from the last line of last command's output
+REQUEST_ID=
+    
+# confirm the request by another member
+./scripts/manage_multisig.sh confirm $REQUEST_ID ${MEMBERS[2]}
+
+# if the request is not executed because of the time lock, anyone can execute it after REQUEST_LOCK time
+# ./scripts/manage_multisig.sh execute $REQUEST_ID $MASTER_ACCOUNT
+```
+
 ## Testing
 1. How to run unit testing?
 

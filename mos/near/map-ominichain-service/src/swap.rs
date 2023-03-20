@@ -139,6 +139,19 @@ impl MAPOServiceV2 {
         self.core_idle.push(core)
     }
 
+    pub fn clean_idle_core(&mut self) {
+        assert!(
+            self.is_owner(),
+            "unexpected caller {}",
+            env::predecessor_account_id()
+        );
+
+        for core in self.core_idle.clone() {
+            self.core_idle.retain(|x| *x != core);
+            self.core_total.retain(|x| *x != core);
+        }
+    }
+
     pub fn get_ref_exchange(&self) -> AccountId {
         self.ref_exchange.clone()
     }
