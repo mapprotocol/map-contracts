@@ -68,9 +68,9 @@ const FINISH_TOKEN_OUT_GAS: Gas = Gas(5_000_000_000_000);
 const REPORT_FAILURE_GAS: Gas = Gas(5_000_000_000_000);
 
 /// Gas to call verify_log_entry on prover.
-const VERIFY_LOG_ENTRY_GAS: Gas = Gas(83_000_000_000_000);
+const VERIFY_LOG_ENTRY_GAS: Gas = Gas(80_000_000_000_000);
 /// Gas to call process_swap_in method.
-const PROCESS_SWAP_IN_GAS: Gas = Gas(200_000_000_000_000);
+const PROCESS_SWAP_IN_GAS: Gas = Gas(205_000_000_000_000);
 /// Gas to call process_swap_out method.
 const PROCESS_SWAP_OUT_GAS: Gas = Gas(250_000_000_000_000);
 /// Gas to call callback_process_native_swap method.
@@ -1229,5 +1229,32 @@ mod tests {
         );
 
         contract.transfer_out_token(token, to, U128(1_000), ETH_CHAIN_ID.into());
+    }
+
+    #[test]
+    fn test_clean_idle_core() {
+        let mut contract = mcs_contract();
+        contract.core_idle.push("core0.testnet".parse().unwrap());
+        contract.core_idle.push("core1.testnet".parse().unwrap());
+        contract.core_total.push("core0.testnet".parse().unwrap());
+        contract.core_total.push("core1.testnet".parse().unwrap());
+        contract.core_total.push("core2.testnet".parse().unwrap());
+
+        set_env!(
+            predecessor_account_id: contract.owner.clone()
+        );
+
+        assert_eq!(3, contract.core_total.len());
+        assert_eq!(2, contract.core_idle.len());
+
+        contract.clean_idle_core();
+
+        assert_eq!(1, contract.core_total.len());
+        assert_eq!(0, contract.core_idle.len());
+
+        assert_eq!(
+            "core2.testnet".to_string(),
+            contract.core_total.first().unwrap().to_string()
+        )
     }
 }

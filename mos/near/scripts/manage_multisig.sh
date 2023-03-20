@@ -17,6 +17,8 @@ function printHelp() {
   echo "    add_mcs    <token> <chain id>            add mcs token to_chain"
   echo "    add_ft    <token> <chain id>             add fungible token to_chain"
   echo "    add_core   <core>                        add butter core"
+  echo "    reset_core   <core>                      reset butter core to idle core"
+  echo "    clean_core                               clean all idle core"
   echo "    near_chain_id    <near chain id>         set near chain id"
   echo "    map_chain_id    <map chain id>           set map chain id"
   echo "    map_relay_address   <map relay address>  set map relay address"
@@ -27,6 +29,7 @@ function printHelp() {
   echo "    upgrade_map_client  <wasm file>          upgrade map light client contract"
   echo "    upgrade_mcs  <wasm file>                 upgrade mcs contract"
   echo "    upgrade_mcs_token <token>  <wasm file>   upgrade mcs token contract"
+  echo "    upgrade_core <core> <wasm file>          upgrade butter core contract"
   echo "    set_client  <map client account>         set new map light client account to mcs contract"
   echo "    set_owner  <multisig account>            set new multisig light client account to mcs contract"
   echo "    set_paused  <mask>                       set paused flag to mcs contract"
@@ -87,6 +90,32 @@ function prepare_request() {
         METHOD="add_butter_core"
         ARGS=`echo '{"butter_core": "'$2'"}'| base64`
         MEMBER=$3
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
+    reset_core)
+      echo $#
+      if [[ $# == 3 ]]; then
+        echo "reset working core $2 to idle"
+        RECEIVER=$MCS_ACCOUNT
+        METHOD="reset_butter_core"
+        ARGS=`echo '{"core": "'$2'"}'| base64`
+        MEMBER=$3
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
+    clean_core)
+      echo $#
+      if [[ $# == 2 ]]; then
+        echo "clean all idle cores"
+        RECEIVER=$MCS_ACCOUNT
+        METHOD="clean_idle_core"
+        ARGS=`echo '{}'| base64`
+        MEMBER=$2
       else
         printHelp
         exit 1
@@ -230,6 +259,19 @@ function prepare_request() {
     upgrade_mcs_token)
       if [[ $# == 4 ]]; then
         echo "upgrade mcs token $2 to $3"
+        RECEIVER=$2
+        METHOD="upgrade_self"
+        CODE=`base64 -i $3`
+        ARGS=`echo '{"code": "'$CODE'"}'| base64`
+        MEMBER=$4
+      else
+        printHelp
+        exit 1
+      fi
+      ;;
+    upgrade_core)
+      if [[ $# == 4 ]]; then
+        echo "upgrade buttor core $2 to $3"
         RECEIVER=$2
         METHOD="upgrade_self"
         CODE=`base64 -i $3`

@@ -8,7 +8,7 @@ use near_sdk::{env, AccountId, Gas, PromiseResult};
 use std::collections::HashMap;
 
 const FT_TRANSFER_CALL_CORE_GAS: Gas = Gas(210_000_000_000_000);
-const CALL_CORE_SWAP_IN_DIRECTLY_GAS: Gas = Gas(140_000_000_000_000);
+const CALL_CORE_SWAP_IN_DIRECTLY_GAS: Gas = Gas(150_000_000_000_000);
 const CALL_CORE_SWAP_OUT_DIRECTLY_GAS: Gas = Gas(170_000_000_000_000);
 /// Gas to call callback_swap_out_token method.
 const CALLBACK_SWAP_OUT_TOKEN_GAS: Gas =
@@ -137,6 +137,19 @@ impl MAPOServiceV2 {
             env::predecessor_account_id()
         );
         self.core_idle.push(core)
+    }
+
+    pub fn clean_idle_core(&mut self) {
+        assert!(
+            self.is_owner(),
+            "unexpected caller {}",
+            env::predecessor_account_id()
+        );
+
+        for core in self.core_idle.clone() {
+            self.core_idle.retain(|x| *x != core);
+            self.core_total.retain(|x| *x != core);
+        }
     }
 
     pub fn get_ref_exchange(&self) -> AccountId {
