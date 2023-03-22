@@ -80,16 +80,26 @@ module.exports = {
       accounts: accounts,
       gasPrice: 11 * 1000000000
     },
+    Klay: {
+      url: `https://public-node-api.klaytnapi.com/v1/cypress`,
+      chainId : 8217,
+      accounts: accounts
+    },
+    KlayTest: {
+      url: `https://api.baobab.klaytn.net:8651/`,
+      chainId : 1001,
+      accounts: accounts
+    },
     Eth: {
       url: `https://mainnet.infura.io/v3/` + INFURA_KEY,
       chainId : 1,
       accounts: accounts
     },
-    Sepolia: {
-      url: `https://rpc.sepolia.org`,
-      chainId : 11155111,
+    Goerli: {
+      url: `https://goerli.infura.io/v3/` + INFURA_KEY,
+      chainId : 5,
       accounts: accounts
-    },
+    }
   },
   solidity: {
     compilers: [

@@ -11,7 +11,7 @@ module.exports = async function ({ethers, deployments}) {
         args: [],
         log: true,
         contract: 'DeployFactory',
-        deterministicDeployment: true
+        deterministicDeployment: false
     })
 
     let deployFactory = await ethers.getContract('DeployFactory');
