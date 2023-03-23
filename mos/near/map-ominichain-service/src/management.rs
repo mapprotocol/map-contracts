@@ -51,8 +51,8 @@ impl MAPOServiceV2 {
     #[private]
     #[init(ignore_state)]
     pub fn migrate() -> Self {
-        let old_mcs: MAPOServiceV2 = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
-        MAPOServiceV2::from(old_mcs)
+        let mos: MAPOServiceV2 = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
+        mos
     }
     pub fn set_chain_type(&mut self, chain_id: U128, chain_type: ChainType) {
         assert!(
