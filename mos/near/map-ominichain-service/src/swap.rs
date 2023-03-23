@@ -188,7 +188,6 @@ impl MAPOServiceV2 {
                 .unwrap_or_else(|| panic_str("no idle core!"));
 
             let last_action = swap_info.src_swap.last().unwrap().to_swap_action();
-            self.check_token_to_chain(&token, to_chain);
             self.check_token_to_chain(&last_action.token_out, to_chain);
             self.check_to_account(to.clone(), to_chain.into());
             self.check_amount(&last_action.token_out, last_action.min_amount_out.into());
