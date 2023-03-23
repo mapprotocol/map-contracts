@@ -524,17 +524,6 @@ async fn test_swap_out_native_token() -> anyhow::Result<()> {
     let res = gen_call_transaction(
         &worker,
         &mcs,
-        "add_native_to_chain",
-        json!({ "to_chain": to_chain }),
-        false,
-    )
-    .transact()
-    .await?;
-    assert!(res.is_success(), "add_native_to_chain should succeed");
-
-    let res = gen_call_transaction(
-        &worker,
-        &mcs,
         "set_chain_type",
         json!({"chain_id": to_chain, "chain_type": "EvmChain"}),
         false,
@@ -674,17 +663,6 @@ async fn test_swap_out_native_token_min_amount_out_too_big() -> anyhow::Result<(
 
     let pool_id =
         add_ref_exchange_pool(&worker, &ref_exchange, &owner, &usdc, &wnear, amount).await?;
-
-    let res = gen_call_transaction(
-        &worker,
-        &mcs,
-        "add_native_to_chain",
-        json!({ "to_chain": to_chain }),
-        false,
-    )
-    .transact()
-    .await?;
-    assert!(res.is_success(), "add_native_to_chain should succeed");
 
     let res = gen_call_transaction(
         &worker,
