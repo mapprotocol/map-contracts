@@ -1,10 +1,17 @@
-use hex::FromHex;
-use near_sdk::json_types::{U128, U64};
 use crate::crypto::G2;
-use rlp::{Rlp, Encodable, RlpStream};
-use crate::types::header::{Header, Address, Bloom, Hash};
-use near_sdk::serde::{Serialize, ser::Serializer, Deserialize, de::Deserializer};
+use crate::slice_as_array_ref;
+use crate::traits::ToRlp;
+use crate::types::errors::Kind;
+use crate::types::header::{Address, Bloom, Hash, Header};
+use hex::FromHex;
+use near_sdk::env::keccak256;
+use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::de::Error;
+use near_sdk::serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
+use near_sdk::CryptoHash;
+use rlp::{Encodable, Rlp, RlpStream};
+
+pub const HASH_LENGTH: usize = 32;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -18,10 +25,47 @@ pub struct ReceiptProof {
 }
 
 #[derive(Clone, Debug)]
-pub struct ProofEntry (Vec<u8>);
+pub struct ProofEntry(Vec<u8>);
+
+impl ReceiptProof {
+    pub fn hash(&self) -> CryptoHash {
+        let digest = keccak256(&rlp::encode(self));
+
+        slice_as_array_ref!(&digest[..HASH_LENGTH], HASH_LENGTH)
+            .unwrap()
+            .to_owned()
+    }
+}
+
+impl Encodable for ReceiptProof {
+    fn rlp_append(&self, s: &mut RlpStream) {
+        s.begin_list(5);
+
+        // header
+        s.append(&self.header);
+
+        // agg_pk
+        s.append(&self.agg_pk);
+
+        // receipt
+        s.append(&self.receipt.encode_index());
+
+        // key_index
+        s.append(&self.key_index);
+
+        // proof
+        s.begin_list(self.proof.len());
+        for proof in self.proof.iter() {
+            s.append(&proof.0);
+        }
+    }
+}
 
 impl Serialize for ProofEntry {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         let hex_string = hex::encode(self.0.as_slice());
         if hex_string.is_empty() {
             return serializer.serialize_str("");
@@ -32,19 +76,19 @@ impl Serialize for ProofEntry {
 }
 
 impl<'de> Deserialize<'de> for ProofEntry {
-    fn deserialize< D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where D: Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+    where
+        D: Deserializer<'de>,
+    {
         let s = <String as Deserialize>::deserialize(deserializer)?;
-        if  !s.starts_with("0x") {
+        if !s.starts_with("0x") {
             return Err(Error::custom("should start with 0x"));
         }
 
-        let data = Vec::from_hex(&s[2..]).map_err(|err| {
-            Error::custom(err.to_string())
-        })?;
+        let data = Vec::from_hex(&s[2..]).map_err(|err| Error::custom(err.to_string()))?;
         Ok(ProofEntry(data))
     }
 }
-
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -140,7 +184,12 @@ fn _verify_trie_proof(
     let node = &proof[proof_index].0;
 
     if key_index == 0 || node.len() >= 32 {
-        assert_eq!(expected_root.as_slice(), near_keccak256(node), "incorrect root for node {:?}", node);
+        assert_eq!(
+            expected_root.as_slice(),
+            near_keccak256(node),
+            "incorrect root for node {:?}",
+            node
+        );
     } else {
         assert_eq!(expected_root, node.as_slice(), "incorrect node root");
     }
@@ -150,7 +199,11 @@ fn _verify_trie_proof(
     if node.iter().count() == 17 {
         // Branch node
         if key_index == key.len() {
-            assert_eq!(proof_index + 1, proof.len(), "incorrect proof length for branch node");
+            assert_eq!(
+                proof_index + 1,
+                proof.len(),
+                "incorrect proof length for branch node"
+            );
             get_vec(&node, 16)
         } else {
             let new_expected_root = get_vec(&node, key[key_index] as usize);
@@ -180,12 +233,24 @@ fn _verify_trie_proof(
             path.push(val / 16);
             path.push(val % 16);
         }
-        assert_eq!(path.as_slice(), &key[key_index..key_index + path.len()], "incorrect path");
+        assert_eq!(
+            path.as_slice(),
+            &key[key_index..key_index + path.len()],
+            "incorrect path"
+        );
 
         if head >= 2 {
             // Leaf node
-            assert_eq!(proof_index + 1, proof.len(), "incorrect proof length for leaf node");
-            assert_eq!(key_index + path.len(), key.len(), "incorrect key length for leaf node");
+            assert_eq!(
+                proof_index + 1,
+                proof.len(),
+                "incorrect proof length for leaf node"
+            );
+            assert_eq!(
+                key_index + path.len(),
+                key.len(),
+                "incorrect key length for leaf node"
+            );
             get_vec(&node, 1)
         } else {
             // Extension node
@@ -216,51 +281,132 @@ fn get_vec(data: &Rlp, pos: usize) -> Vec<u8> {
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
-    use near_sdk::{serde, serde_json};
     use super::*;
-    use crate::types::header::{ADDRESS_LENGTH, BLOOM_BYTE_LENGTH, Nonce};
     use crate::traits::FromBytes;
+    use crate::types::header::{Nonce, ADDRESS_LENGTH, BLOOM_BYTE_LENGTH};
+    use crate::Integer;
+    use near_sdk::{serde, serde_json};
+    use num_bigint::Sign;
 
     const RECEIPT_TINY_LEGACY: &str = "f901068080b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0";
     const RECEIPT_SIMPLE_ACCESS_LIST: &str = "f9011e0102b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d8d7940000000000000000000000000000000000000000c080";
 
+    fn receipt_proof() -> ReceiptProof {
+        let header = Header {
+            parent_hash: Hash::from_bytes(
+                &hex::decode("7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7")
+                    .unwrap(),
+            )
+            .unwrap()
+            .to_owned(),
+            coinbase: Address::from_bytes(
+                &hex::decode("908D0FDaEAEFbb209BDcb540C2891e75616154b3").unwrap(),
+            )
+            .unwrap()
+            .to_owned(),
+            root: Hash::from_bytes(
+                &hex::decode("7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7")
+                    .unwrap(),
+            )
+            .unwrap()
+            .to_owned(),
+            tx_hash: Hash::from_bytes(
+                &hex::decode("7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7")
+                    .unwrap(),
+            )
+            .unwrap()
+            .to_owned(),
+            receipt_hash: Hash::from_bytes(
+                &hex::decode("7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7")
+                    .unwrap(),
+            )
+            .unwrap()
+            .to_owned(),
+            bloom: [1; BLOOM_BYTE_LENGTH],
+            number: Default::default(),
+            gas_limit: Default::default(),
+            gas_used: Default::default(),
+            time: Default::default(),
+            extra: vec![1, 2, 3],
+            mix_digest: Hash::from_bytes(
+                &hex::decode("7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7")
+                    .unwrap(),
+            )
+            .unwrap()
+            .to_owned(),
+            nonce: Nonce::from_bytes(&hex::decode("7285abd5b24742ff").unwrap())
+                .unwrap()
+                .to_owned(),
+            base_fee: Default::default(),
+        };
+
+        let agg_pk = G2 {
+            xr: [0; 32],
+            xi: [1; 32],
+            yr: [2; 32],
+            yi: [3; 32],
+        };
+        let receipt = Receipt {
+            receipt_type: U128(1),
+            post_state_or_status: vec![1, 2, 3],
+            cumulative_gas_used: U64(10000),
+            bloom: [0; 256],
+            logs: vec![LogEntry {
+                address: [1; 20],
+                topics: vec![[1; 32], [2; 32]],
+                data: vec![3, 2, 1, 9],
+            }],
+        };
+
+        ReceiptProof {
+            header,
+            agg_pk,
+            receipt,
+            key_index: vec![1, 2],
+            proof: vec![ProofEntry { 0: vec![1, 2] }, ProofEntry { 0: vec![1, 2] }],
+        }
+    }
+
     #[test]
     fn encodes_receipt_to_rlp() {
-        let mut receipt = Receipt{
+        let mut receipt = Receipt {
             receipt_type: U128(0),
             post_state_or_status: vec![],
             cumulative_gas_used: U64(0),
-            bloom: [0;BLOOM_BYTE_LENGTH],
-            logs: vec![]
+            bloom: [0; BLOOM_BYTE_LENGTH],
+            logs: vec![],
         };
 
         let bytes: Vec<u8> = rlp::encode(&receipt);
 
-        assert_eq!( hex::decode(RECEIPT_TINY_LEGACY).unwrap(), bytes);
+        assert_eq!(hex::decode(RECEIPT_TINY_LEGACY).unwrap(), bytes);
 
         receipt.receipt_type = U128(1);
         receipt.post_state_or_status = vec![1];
         receipt.cumulative_gas_used = U64(2);
-        receipt.logs = vec![LogEntry{
+        receipt.logs = vec![LogEntry {
             address: [0; ADDRESS_LENGTH],
             topics: vec![],
-            data: vec![]
+            data: vec![],
         }];
-        assert_eq!( hex::decode(RECEIPT_SIMPLE_ACCESS_LIST).unwrap(), rlp::encode(&receipt));
+        assert_eq!(
+            hex::decode(RECEIPT_SIMPLE_ACCESS_LIST).unwrap(),
+            rlp::encode(&receipt)
+        );
     }
 
     #[test]
     fn encodes_log_entry_to_rlp() {
-        const LOG_ENTRY_EMPTY : &str = "d7940000000000000000000000000000000000000000c080";
-        let entry = LogEntry{
+        const LOG_ENTRY_EMPTY: &str = "d7940000000000000000000000000000000000000000c080";
+        let entry = LogEntry {
             address: [0; ADDRESS_LENGTH],
             topics: vec![],
-            data: vec![]
+            data: vec![],
         };
 
         let bytes: Vec<u8> = rlp::encode(&entry);
 
-        assert_eq!( hex::decode(LOG_ENTRY_EMPTY).unwrap(), bytes);
+        assert_eq!(hex::decode(LOG_ENTRY_EMPTY).unwrap(), bytes);
     }
 
     #[test]
@@ -276,62 +422,18 @@ mod tests {
         let key = hex::decode(key).unwrap();
         let proof = proof_rlp
             .into_iter()
-            .map(|x|  ProofEntry{0:hex::decode(x).unwrap()})
+            .map(|x| ProofEntry {
+                0: hex::decode(x).unwrap(),
+            })
             .collect();
         let expected_value = hex::decode(expected_value).unwrap();
 
-        assert_eq!(
-            verify_trie_proof(expected_root, key, proof),
-            expected_value
-        );
+        assert_eq!(verify_trie_proof(expected_root, key, proof), expected_value);
     }
 
     #[test]
     fn test_serde_json_receipt() {
-        let header = Header{
-            parent_hash: Hash::from_bytes(&hex::decode("7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7").unwrap()).unwrap().to_owned(),
-            coinbase: Address::from_bytes(&hex::decode("908D0FDaEAEFbb209BDcb540C2891e75616154b3").unwrap()).unwrap().to_owned(),
-            root: Hash::from_bytes(&hex::decode("7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7").unwrap()).unwrap().to_owned(),
-            tx_hash: Hash::from_bytes(&hex::decode("7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7").unwrap()).unwrap().to_owned(),
-            receipt_hash: Hash::from_bytes(&hex::decode("7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7").unwrap()).unwrap().to_owned(),
-            bloom: [1;BLOOM_BYTE_LENGTH],
-            number: Default::default(),
-            gas_limit: Default::default(),
-            gas_used: Default::default(),
-            time: Default::default(),
-            extra: vec![1,2,3],
-            mix_digest: Hash::from_bytes(&hex::decode("7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7").unwrap()).unwrap().to_owned(),
-            nonce: Nonce::from_bytes(&hex::decode("7285abd5b24742ff").unwrap()).unwrap().to_owned(),
-            base_fee: Default::default()
-        };
-
-        let agg_pk = G2{
-            xr: [0;32],
-            xi: [1;32],
-            yr: [2;32],
-            yi: [3;32]
-        };
-        let receipt = Receipt{
-            receipt_type: U128(1),
-            post_state_or_status: vec![1, 2, 3],
-            cumulative_gas_used: U64(10000),
-            bloom: [0;256],
-            logs: vec![LogEntry{
-                address: [1;20],
-                topics: vec![[1;32], [2; 32]],
-                data: vec![3, 2, 1, 9]
-            }],
-        };
-
-
-        let receipt_proof = ReceiptProof{
-            header,
-            agg_pk,
-            receipt,
-            key_index: vec![1,2],
-            proof: vec![ ProofEntry{0:vec![1,2]}, ProofEntry{0:vec![1,2]} ]
-        };
-
+        let receipt_proof = receipt_proof();
         let exp = r#"{"header":{"parentHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7","coinbase":"0x908d0fdaeaefbb209bdcb540c2891e75616154b3","root":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7","txHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7","receiptHash":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7","bloom":"0x01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101","number":"0x0","gasLimit":"0x0","gasUsed":"0x0","time":"0x0","extra":"0x010203","mixDigest":"0x7285abd5b24742f184ad676e31f6054663b3529bc35ea2fcad8a3e0f642a46f7","nonce":"0x7285abd5b24742ff","baseFee":"0x0"},"agg_pk":{"xr":"0x0000000000000000000000000000000000000000000000000000000000000000","xi":"0x0101010101010101010101010101010101010101010101010101010101010101","yr":"0x0202020202020202020202020202020202020202020202020202020202020202","yi":"0x0303030303030303030303030303030303030303030303030303030303030303"},"receipt":{"receipt_type":"1","post_state_or_status":"0x010203","cumulative_gas_used":"10000","bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","logs":[{"address":"0x0101010101010101010101010101010101010101","topics":["0x0101010101010101010101010101010101010101010101010101010101010101","0x0202020202020202020202020202020202020202020202020202020202020202"],"data":"0x03020109"}]},"key_index":"0x0102","proof":["0x0102","0x0102"]}"#;
 
         let serialized = serde_json::to_string(&receipt_proof).unwrap();
@@ -342,5 +444,15 @@ mod tests {
 
         let serialized = serde_json::to_string(&deserialized).unwrap();
         assert_eq!(exp, serialized);
+    }
+
+    #[test]
+    fn test_receipt_proof_hash() {
+        let receipt_proof = receipt_proof();
+        let hash = receipt_proof.hash();
+
+        let exp = "59782bb85c6089aa78745ba1151145bd378742d4af16443db9342daf26baff7f";
+
+        assert_eq!(exp, hex::encode(hash));
     }
 }

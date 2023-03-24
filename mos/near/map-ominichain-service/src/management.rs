@@ -11,19 +11,19 @@ pub enum ChainType {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct MAPOServiceV1 {
+pub struct MAPOServiceV1_1 {
     /// The account of the map light client that we can use to prove
     pub map_client_account: AccountId,
     /// Address of the MAP bridge contract.
     pub map_bridge_address: Address,
     /// Set of created MCSToken contracts.
-    pub mcs_tokens: UnorderedMap<String, HashSet<u128>>,
+    pub mcs_tokens: UnorderedMap<AccountId, HashSet<u128>>,
     /// Set of other fungible token contracts.
-    pub fungible_tokens: UnorderedMap<String, HashSet<u128>>,
+    pub fungible_tokens: UnorderedMap<AccountId, HashSet<u128>>,
     /// Map of other fungible token contracts and their min storage balance.
-    pub fungible_tokens_storage_balance: UnorderedMap<String, u128>,
+    pub fungible_tokens_storage_balance: UnorderedMap<AccountId, u128>,
     /// Map of token contracts and their decimals
-    pub token_decimals: UnorderedMap<String, u8>,
+    pub token_decimals: UnorderedMap<AccountId, u8>,
     /// Set of other fungible token contracts.
     pub native_to_chains: HashSet<u128>,
     /// Map of chain id and chain type
@@ -33,9 +33,9 @@ pub struct MAPOServiceV1 {
     /// Account of the owner
     pub owner: AccountId,
     /// Balance required to register a new account in the MCSToken
-    pub mcs_storage_transfer_in_required: Balance,
+    pub mcs_storage_balance_min: Balance,
     // Wrap token for near
-    pub wrapped_token: String,
+    pub wrapped_token: AccountId,
     // Near chain id
     pub near_chain_id: u128,
     // MAP chain id
@@ -44,6 +44,15 @@ pub struct MAPOServiceV1 {
     pub nonce: u128,
     /// Mask determining all paused functions
     pub paused: Mask,
+
+    pub registered_tokens: UnorderedMap<AccountId, bool>,
+
+    /// SWAP related
+    pub ref_exchange: AccountId,
+    pub core_idle: Vec<AccountId>,
+    pub core_total: Vec<AccountId>,
+    pub amount_out: HashMap<AccountId, U128>,
+    pub lost_found: UnorderedMap<AccountId, HashMap<AccountId, Balance>>,
 }
 
 #[near_bindgen]
@@ -51,8 +60,8 @@ impl MAPOServiceV2 {
     #[private]
     #[init(ignore_state)]
     pub fn migrate() -> Self {
-        let mos: MAPOServiceV2 = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
-        mos
+        let old_mos: MAPOServiceV1_1 = env::state_read().expect("ERR_CONTRACT_IS_NOT_INITIALIZED");
+        MAPOServiceV2::from(old_mos)
     }
     pub fn set_chain_type(&mut self, chain_id: U128, chain_type: ChainType) {
         assert!(
@@ -195,12 +204,7 @@ impl MAPOServiceV2 {
 }
 
 impl MAPOServiceV2 {
-    fn from(mos: MAPOServiceV2) -> Self {
-        let mut registered_tokens = mos.registered_tokens;
-        for token in mos.fungible_tokens.keys() {
-            registered_tokens.insert(&token, &false);
-        }
-
+    fn from(mos: MAPOServiceV1_1) -> Self {
         Self {
             map_client_account: mos.map_client_account,
             map_bridge_address: mos.map_bridge_address,
@@ -211,6 +215,7 @@ impl MAPOServiceV2 {
             native_to_chains: mos.native_to_chains,
             chain_id_type_map: mos.chain_id_type_map,
             used_events: mos.used_events,
+            proof_hashes: UnorderedSet::new(StorageKey::ProofHashes),
             owner: mos.owner,
             mcs_storage_balance_min: mos.mcs_storage_balance_min,
             wrapped_token: mos.wrapped_token,
@@ -218,7 +223,7 @@ impl MAPOServiceV2 {
             map_chain_id: mos.map_chain_id,
             nonce: mos.nonce,
             paused: mos.paused,
-            registered_tokens,
+            registered_tokens: mos.registered_tokens,
             ref_exchange: mos.ref_exchange,
             core_idle: mos.core_idle,
             core_total: mos.core_total,

@@ -1,21 +1,23 @@
+use crate::hash::{hash_to_g1, prime};
+use crate::serialization::rlp::big_int_to_rlp_compat_bytes;
+use crate::types::header::Hash;
+use crate::types::istanbul::{IstanbulAggregatedSeal, IstanbulMsg, G1_PUBLIC_KEY_LENGTH};
+use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::env;
+use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::serde_json;
+use num_bigint::{BigInt as Integer, BigInt, Sign};
+use rlp::{Encodable, RlpStream};
 use std::convert::TryFrom;
 use std::ops::Sub;
-use near_sdk::env;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::serde::{Serialize, Deserialize};
-use near_sdk::serde_json;
-use crate::types::istanbul::{IstanbulAggregatedSeal, IstanbulMsg, G1_PUBLIC_KEY_LENGTH};
-use crate::types::header::Hash;
-use num_bigint::{BigInt as Integer, BigInt, Sign};
-use crate::serialization::rlp::big_int_to_rlp_compat_bytes;
-use crate::hash::{hash_to_g1, prime};
-
 
 const ALT_BN128_REGISTER: u64 = 1;
 pub const REGISTER_EXPECTED_ERR: &str =
     "Register was expected to have data because we just wrote it into it.";
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(
+    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug,
+)]
 #[serde(crate = "near_sdk::serde")]
 pub struct G1 {
     #[serde(with = "crate::serialization::bytes::hexstring")]
@@ -91,8 +93,23 @@ impl G1 {
     }
 }
 
+impl Encodable for G2 {
+    fn rlp_append(&self, s: &mut RlpStream) {
+        s.begin_list(4);
+
+        s.append(&self.xr.as_ref());
+        s.append(&self.xi.as_ref());
+        s.append(&self.yr.as_ref());
+        s.append(&self.yi.as_ref());
+    }
+}
+
 pub(crate) fn integer_to_vec_32(i: &BigInt, be: bool) -> Vec<u8> {
-    let mut bytes: Vec<u8> = if be { i.to_signed_bytes_be() } else { i.to_signed_bytes_le() };
+    let mut bytes: Vec<u8> = if be {
+        i.to_signed_bytes_be()
+    } else {
+        i.to_signed_bytes_le()
+    };
     if bytes.len() < 32 {
         let mut res: Vec<u8> = vec![0; 32 - bytes.len()];
         if be {
@@ -113,13 +130,15 @@ fn get_g1() -> G1 {
 }
 
 fn get_g2() -> G2 {
-    serde_json::from_str("{\
+    serde_json::from_str(
+        "{\
     \"xr\":\"0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed\",\
     \"xi\":\"0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2\",\
     \"yr\":\"0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa\",\
     \"yi\":\"0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b\"\
-    }"
-    ).unwrap()
+    }",
+    )
+    .unwrap()
 }
 
 pub fn sum_points<'a>(points: &'a Vec<G1>, bitmap: &'a Integer) -> G1 {
@@ -143,7 +162,12 @@ pub fn sum_points<'a>(points: &'a Vec<G1>, bitmap: &'a Integer) -> G1 {
     }
 
     let res = env::read_register(ALT_BN128_REGISTER).expect(REGISTER_EXPECTED_ERR);
-    assert_eq!(G1_PUBLIC_KEY_LENGTH, res.len(), "result of alt_bn128_g1_sum get invalid length: {}", res.len());
+    assert_eq!(
+        G1_PUBLIC_KEY_LENGTH,
+        res.len(),
+        "result of alt_bn128_g1_sum get invalid length: {}",
+        res.len()
+    );
 
     G1::from_le_slice(res.as_slice()).unwrap()
 }
@@ -162,7 +186,11 @@ pub fn check_aggregated_g2_pub_key(points: &Vec<G1>, bitmap: &Integer, agg_g2_pk
     res == 1
 }
 
-pub fn check_sealed_signature(agg_seal: &IstanbulAggregatedSeal, hash: &Hash, agg_g2_pk: &G2) -> bool {
+pub fn check_sealed_signature(
+    agg_seal: &IstanbulAggregatedSeal,
+    hash: &Hash,
+    agg_g2_pk: &G2,
+) -> bool {
     let sig_on_g1 = G1::from_slice(agg_seal.signature.as_slice()).unwrap();
     let g2 = get_g2();
     let proposal_seal = prepare_commited_seal(*hash, &agg_seal.round);
@@ -191,8 +219,9 @@ pub(crate) fn pack_points(p0: &G1, p1: &G2, p2: &G1, p3: &G2) -> Vec<u8> {
         to_le_bytes(&p3.xr),
         to_le_bytes(&p3.xi),
         to_le_bytes(&p3.yr),
-        to_le_bytes(&p3.yi)
-    ].concat()
+        to_le_bytes(&p3.yi),
+    ]
+    .concat()
 }
 
 fn to_le_bytes(bytes: &[u8; 32]) -> [u8; 32] {
