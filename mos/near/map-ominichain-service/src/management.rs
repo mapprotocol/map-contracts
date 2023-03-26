@@ -276,7 +276,7 @@ mod tests {
         let mut used_events: UnorderedSet<CryptoHash> = UnorderedSet::new(b"u".to_vec());
         used_events.insert(&[1 as u8; 32]);
 
-        let old_msc = MAPOServiceV2 {
+        let old_msc = MAPOServiceV1_1 {
             map_client_account: "client3.cfac2.maplabs.testnet".parse().unwrap(),
             map_bridge_address: validate_eth_address(
                 "B6c1b689291532D11172Fb4C204bf13169EC0dCA".to_string(),

@@ -745,20 +745,26 @@ mod tests {
     #[test]
     fn test_swap_event_data() {
         let mut swap_param: Vec<SwapParam> = Vec::new();
-        swap_param.push(SwapParam {
-            amount_in: U128(0),
-            min_amount_out: U128(1),
-            path: "mcs_token_0.mos.map007.testnetXwrap.testnet"
-                .as_bytes()
-                .to_vec(),
-            router_index: U64(1791),
-        });
         // swap_param.push(SwapParam {
         //     amount_in: U128(0),
         //     min_amount_out: U128(1),
-        //     path: "wrap.testnetXusdc.map007.testnet".as_bytes().to_vec(),
-        //     router_index: U64(1787),
+        //     path: "usdc.map007.testnetXusdt.map007.testnet"
+        //         .as_bytes()
+        //         .to_vec(),
+        //     router_index: U64(1821),
         // });
+
+        // let raw_swap_data = SwapData {
+        //     swap_param,
+        //     target_token: "usdt.map007.testnet".as_bytes().to_vec(),
+        //     map_target_token: [4; 20],
+        // };
+        swap_param.push(SwapParam {
+            amount_in: U128(0),
+            min_amount_out: U128(1),
+            path: "usdc.map007.testnetXwrap.testnet".as_bytes().to_vec(),
+            router_index: U64(1786),
+        });
 
         let raw_swap_data = SwapData {
             swap_param,
@@ -767,12 +773,12 @@ mod tests {
         };
         let event = SwapOutEvent {
             from_chain: U128(212),
-            to_chain: U128(5566818579631833089),
-            order_id: [1; 32],
+            to_chain: U128(1360100178526210),
+            order_id: [8; 32],
             token: vec![1; 20],
             from: vec![2; 20],
-            to: "map011.testnet".as_bytes().to_vec(),
-            amount: U128(1000000000000000000),
+            to: "pandarr.testnet".as_bytes().to_vec(),
+            amount: U128(100000),
             swap_data: raw_swap_data.abi_encode(),
             raw_swap_data,
             src_token: "".to_string(),
@@ -780,7 +786,7 @@ mod tests {
             dst_token: vec![],
         };
 
-        let mcs = validate_eth_address("B6c1b689291532D11172Fb4C204bf13169EC0dCA".to_string());
+        let mcs = validate_eth_address("630105189c7114667a7179Aa57f07647a5f42B7F".to_string());
 
         let data = event.to_log_entry_data(mcs);
         let result = SwapOutEvent::from_log_entry_data(&data).unwrap();

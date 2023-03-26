@@ -34,7 +34,7 @@ mod traits;
 const NO_DEPOSIT: Balance = 0;
 
 /// Gas to call ft_transfer on ext fungible contract
-const FT_TRANSFER_GAS: Gas = Gas(8_000_000_000_000);
+const FT_TRANSFER_GAS: Gas = Gas(6_000_000_000_000);
 /// Gas to call callback_post_swap_in on core contract
 const CALLBACK_POST_SWAP_IN_GAS: Gas = Gas(40_000_000_000_000);
 
@@ -45,18 +45,18 @@ const STORAGE_DEPOSIT_GAS: Gas = Gas(8_000_000_000_000);
 const FINISH_INIT_GAS: Gas = Gas(30_000_000_000_000);
 
 /// Gas to call mint/burn method on mcs token.
-const MINT_GAS: Gas = Gas(8_000_000_000_000);
-const BURN_GAS: Gas = Gas(8_000_000_000_000);
+const MINT_GAS: Gas = Gas(6_000_000_000_000);
+const BURN_GAS: Gas = Gas(6_000_000_000_000);
 
 /// Gas to call near_withdraw and near_deposit on wrap near contract
-const NEAR_WITHDRAW_GAS: Gas = Gas(5_000_000_000_000);
-const NEAR_DEPOSIT_GAS: Gas = Gas(6_000_000_000_000);
+const NEAR_WITHDRAW_GAS: Gas = Gas(6_000_000_000_000);
+const NEAR_DEPOSIT_GAS: Gas = Gas(7_000_000_000_000);
 
 /// Gas to call callback_process_proof_hash method.
 const CALLBACK_PROCESS_PROOF_HASH: Gas = Gas(60_000_000_000_000);
 
 /// Gas to call transfer_in_native_token method.
-const TRANSFER_IN_NATIVE_TOKEN_GAS: Gas = Gas(30_000_000_000_000);
+const TRANSFER_IN_NATIVE_TOKEN_GAS: Gas = Gas(60_000_000_000_000);
 
 /// Gas to call finish_transfer_in method.
 const FINISH_TRANSFER_IN_GAS: Gas = Gas(30_000_000_000_000);
@@ -65,7 +65,7 @@ const FINISH_TRANSFER_IN_GAS: Gas = Gas(30_000_000_000_000);
 const FINISH_TOKEN_OUT_GAS: Gas = Gas(7_000_000_000_000);
 
 /// Gas to call report_failure method.
-const REPORT_FAILURE_GAS: Gas = Gas(5_000_000_000_000);
+const REPORT_FAILURE_GAS: Gas = Gas(4_000_000_000_000);
 
 /// Gas to call verify_log_entry on prover.
 const VERIFY_LOG_ENTRY_GAS: Gas = Gas(100_000_000_000_000);
@@ -74,9 +74,9 @@ const VERIFY_LOG_ENTRY_GAS: Gas = Gas(100_000_000_000_000);
 const PROCESS_SWAP_OUT_GAS: Gas = Gas(240_000_000_000_000);
 
 /// Gas to call callback_process_native_swap method.
-const CALLBACK_PROCESS_NATIVE_SWAP_GAS: Gas = Gas(28_000_000_000_000);
+const CALLBACK_PROCESS_NATIVE_SWAP_GAS: Gas = Gas(32_000_000_000_000);
 
-const CALLBACK_TRANSFER_NEAR_GAS: Gas = Gas(8_000_000_000_000);
+const CALLBACK_TRANSFER_NEAR_GAS: Gas = Gas(6_000_000_000_000);
 
 const MIN_TRANSFER_OUT_AMOUNT: f64 = 0.001;
 const NEAR_DECIMAL: u8 = 24;
@@ -262,7 +262,9 @@ impl MAPOServiceV2 {
     pub fn verify_receipt_proof(&mut self, receipt_proof: ReceiptProof) -> PromiseOrValue<()> {
         let hash = receipt_proof.hash();
         if self.proof_hashes.contains(&hash) {
-            return PromiseOrValue::Value(());
+            return Promise::new(env::signer_account_id())
+                .transfer(env::attached_deposit())
+                .into();
         }
 
         let initial_storage = env::storage_usage();
@@ -555,20 +557,19 @@ impl MAPOServiceV2 {
 
     fn process_transfer_in(&mut self, event: &TransferOutEvent) -> Promise {
         let mut ret_deposit = env::attached_deposit();
-        if self.is_used_event(&event.order_id) {
-            let err_msg = "the transfer in event is already processed".to_string();
-            return self.revert_state(ret_deposit, None, err_msg);
-        }
+        assert!(
+            !self.is_used_event(&event.order_id),
+            "the transfer in event is already processed"
+        );
 
         let required_deposit = self.record_order_id(&event.order_id);
-        if ret_deposit < required_deposit {
-            let err_msg = format!(
-                "not enough deposit for record proof, exp: {}, cur: {}",
-                required_deposit, ret_deposit
-            );
-            self.remove_order_id(&event.order_id);
-            return self.revert_state(ret_deposit, None, err_msg);
-        }
+        assert!(
+            ret_deposit >= required_deposit,
+            "not enough deposit for record proof, exp: {}, cur: {}",
+            required_deposit,
+            ret_deposit
+        );
+        ret_deposit -= required_deposit;
 
         let to_chain_token = event.get_to_chain_token();
         let to = event.get_to_account();
@@ -580,7 +581,6 @@ impl MAPOServiceV2 {
             .as_str(),
         );
 
-        ret_deposit -= required_deposit;
         if self.is_native_token(&to_chain_token) {
             ext_wnear_token::ext(self.wrapped_token.clone())
                 .with_static_gas(NEAR_WITHDRAW_GAS)
@@ -593,13 +593,12 @@ impl MAPOServiceV2 {
                         .transfer_in_native_token(event),
                 )
         } else if self.mcs_tokens.get(&to_chain_token).is_some() {
-            if ret_deposit < self.mcs_storage_balance_min {
-                let err_msg = format!(
-                    "not enough deposit for mcs token mint, exp: {}, cur: {}",
-                    self.mcs_storage_balance_min, ret_deposit
-                );
-                return self.revert_state(ret_deposit, Some(event.order_id), err_msg);
-            }
+            assert!(
+                ret_deposit >= self.mcs_storage_balance_min,
+                "not enough deposit for mcs token mint, exp: {}, cur: {}",
+                self.mcs_storage_balance_min,
+                ret_deposit
+            );
             ret_deposit -= self.mcs_storage_balance_min;
 
             ext_mcs_token::ext(to_chain_token)
@@ -618,13 +617,13 @@ impl MAPOServiceV2 {
                 .fungible_tokens_storage_balance
                 .get(&to_chain_token)
                 .unwrap();
-            if ret_deposit < min_storage_balance {
-                let err_msg = format!(
-                    "not enough deposit for ft transfer, exp: {}, cur: {}",
-                    min_storage_balance, ret_deposit
-                );
-                return self.revert_state(ret_deposit, Some(event.order_id), err_msg);
-            }
+
+            assert!(
+                ret_deposit >= min_storage_balance,
+                "not enough deposit for ft transfer, exp: {}, cur: {}",
+                min_storage_balance,
+                ret_deposit
+            );
             ret_deposit -= min_storage_balance;
 
             ext_fungible_token::ext(to_chain_token.clone())
@@ -1310,17 +1309,5 @@ mod tests {
             "core2.testnet".to_string(),
             contract.core_total.first().unwrap().to_string()
         )
-    }
-
-    #[test]
-    fn test_storage_key() {
-        let key0: IntoStorageKey = StorageKey::ProofHashes;
-        let vec0 = key0.into_storage_key();
-
-        let key1: IntoStorageKey = b'a'.to_vec();
-        let vec1 = key1.into_storage_key();
-
-        println!("{}", vec0);
-        println!("{}", vec1)
     }
 }

@@ -33,6 +33,14 @@ async fn test_transfer_in_mcs_token() -> anyhow::Result<()> {
         dev_balance_0
     );
     let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
+    let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
@@ -90,6 +98,14 @@ async fn test_transfer_in_mcs_token_wrong_bridge() -> anyhow::Result<()> {
         dev_balance_0
     );
     let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
+    let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
@@ -131,6 +147,14 @@ async fn test_transfer_in_mcs_token_no_token() -> anyhow::Result<()> {
         dev_account.id(),
         dev_balance_0
     );
+    let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
     let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
@@ -185,6 +209,21 @@ async fn test_transfer_in_mcs_token_no_light_client() -> anyhow::Result<()> {
         dev_balance_0
     );
     let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await;
+    assert!(res.is_err(), "verify_receipt_proof should fail");
+    assert!(
+        res.err()
+            .unwrap()
+            .to_string()
+            .contains("verify proof failed"),
+        "should be cross contract call error"
+    );
+    let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
@@ -197,8 +236,8 @@ async fn test_transfer_in_mcs_token_no_light_client() -> anyhow::Result<()> {
         res.err()
             .unwrap()
             .to_string()
-            .contains("verify proof failed"),
-        "should be cross contract call error"
+            .contains("receipt proof has not been verified yet"),
+        "should be proof not verified error"
     );
     let dev_balance_1 = dev_account.view_account(&worker).await?.balance;
     println!(
@@ -224,6 +263,14 @@ async fn test_transfer_in_mcs_token_not_enough_deposit() -> anyhow::Result<()> {
     let proof: serde_json::Value = serde_json::from_reader(file).unwrap();
 
     let dev_account = worker.dev_create_account().await?;
+    let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
     let dev_balance_0 = dev_account.view_account(&worker).await?.balance;
     println!(
         "before transfer in: account {} balance: {}",
@@ -335,6 +382,14 @@ async fn test_transfer_in_mcs_token_replay() -> anyhow::Result<()> {
 
     let dev_account = worker.dev_create_account().await?;
     let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
+    let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
@@ -406,6 +461,15 @@ async fn test_transfer_in_mcs_token_invalid_address() -> anyhow::Result<()> {
     let dev_account = worker.dev_create_account().await?;
     proof["receipt"]["logs"][0]["data"] = json!("0x64e604787cbf194841e7b68d7cd28786f6c9a0a3ab9f8b0a0e87cb4387ab010700000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000014ec3e016916ba9f10762e33e03e8556409d096fb40000000000000000000000000000000000000000000000000000000000000000000000000000000000000014223e016916ba9f10762e33e03e8556409d096f220000000000000000000000000000000000000000000000000000000000000000000000000000000000000006010203040506000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000196d63735f746f6b656e5f302e6d63732e746573742e6e65617200000000000000");
     let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
+
+    let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
@@ -421,6 +485,15 @@ async fn test_transfer_in_mcs_token_invalid_address() -> anyhow::Result<()> {
         .contains("invalid to address"));
 
     proof["receipt"]["logs"][0]["data"] = json!("0x64e604787cbf194841e7b68d7cd28786f6c9a0a3ab9f8b0a0e87cb4387ab010700000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000014ec3e016916ba9f10762e33e03e8556409d096fb40000000000000000000000000000000000000000000000000000000000000000000000000000000000000014223e016916ba9f10762e33e03e8556409d096f22000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f70616e646172722e746573746e6574000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000070102030405060700000000000000000000000000000000000000000000000000");
+
+    let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
     let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
@@ -467,6 +540,14 @@ async fn test_transfer_in_ft_token() -> anyhow::Result<()> {
         dev_account.id(),
         dev_balance_0
     );
+    let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
     let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
@@ -532,6 +613,14 @@ async fn test_transfer_in_ft_token_no_token() -> anyhow::Result<()> {
         dev_account.id(),
         dev_balance_0
     );
+    let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
     let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
@@ -651,6 +740,14 @@ async fn test_transfer_in_ft_token_not_enough_deposit() -> anyhow::Result<()> {
     let proof: serde_json::Value = serde_json::from_reader(file).unwrap();
 
     let dev_account = worker.dev_create_account().await?;
+    let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
     let dev_balance_0 = dev_account.view_account(&worker).await?.balance;
     println!(
         "before transfer in: account {} balance: {}",
@@ -786,6 +883,14 @@ async fn test_transfer_in_ft_token_not_enough_token() -> anyhow::Result<()> {
         dev_account.id(),
         dev_balance_0
     );
+    let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
     let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
@@ -932,6 +1037,14 @@ async fn test_transfer_in_native_token() -> anyhow::Result<()> {
         dev_balance_0
     );
     let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
+    let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
@@ -996,6 +1109,14 @@ async fn test_transfer_in_native_token_not_enough_deposit() -> anyhow::Result<()
     let amount: u128 = 100;
 
     let dev_account = worker.dev_create_account().await?;
+    let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
     let res = mcs
         .as_account()
         .call(&worker, wnear.id(), "near_deposit")
@@ -1204,6 +1325,14 @@ async fn test_transfer_in_native_token_not_enough_wnear() -> anyhow::Result<()> 
         dev_balance_0
     );
     let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
+    let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
@@ -1355,6 +1484,14 @@ async fn test_transfer_in_native_token_no_to_account() -> anyhow::Result<()> {
         dev_account.id(),
         dev_balance_0
     );
+    let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
     let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
@@ -1513,6 +1650,14 @@ async fn test_transfer_in_native_token_replay() -> anyhow::Result<()> {
         dev_balance_0
     );
     let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
+    let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
         .gas(300_000_000_000_000)
@@ -1657,9 +1802,17 @@ async fn test_transfer_in_native_token_not_enough_gas() -> anyhow::Result<()> {
         dev_balance_0
     );
     let res = dev_account
+        .call(&worker, mcs.id(), "verify_receipt_proof")
+        .args_json(json!({ "receipt_proof": proof }))?
+        .gas(300_000_000_000_000)
+        .deposit(parse_near!("3 N"))
+        .transact()
+        .await?;
+    assert!(res.is_success(), "verify_receipt_proof should succeed");
+    let res = dev_account
         .call(&worker, mcs.id(), "transfer_in")
         .args_json(json!({"receipt_proof": proof, "index": 0}))?
-        .gas(140_000_000_000_000)
+        .gas(40_000_000_000_000)
         .deposit(parse_near!("4 N"))
         .transact()
         .await;
