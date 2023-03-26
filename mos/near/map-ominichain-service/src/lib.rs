@@ -16,8 +16,8 @@ use near_sdk::env::panic_str;
 use near_sdk::json_types::{Base64VecU8, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
-    assert_one_yocto, env, log, near_bindgen, AccountId, Balance, CryptoHash, Gas, PanicOnDefault,
-    Promise, PromiseOrValue, PromiseResult,
+    assert_one_yocto, env, log, near_bindgen, AccountId, Balance, BorshStorageKey, CryptoHash, Gas,
+    PanicOnDefault, Promise, PromiseOrValue, PromiseResult,
 };
 use prover::*;
 use std::collections::{HashMap, HashSet};
@@ -34,47 +34,49 @@ mod traits;
 const NO_DEPOSIT: Balance = 0;
 
 /// Gas to call ft_transfer on ext fungible contract
-const FT_TRANSFER_GAS: Gas = Gas(5_000_000_000_000);
+const FT_TRANSFER_GAS: Gas = Gas(6_000_000_000_000);
 /// Gas to call callback_post_swap_in on core contract
-const CALLBACK_POST_SWAP_IN_GAS: Gas = Gas(22_000_000_000_000);
+const CALLBACK_POST_SWAP_IN_GAS: Gas = Gas(40_000_000_000_000);
 
 /// Gas to call storage_deposit on ext fungible contract
-const STORAGE_DEPOSIT_GAS: Gas = Gas(5_000_000_000_000);
+const STORAGE_DEPOSIT_GAS: Gas = Gas(8_000_000_000_000);
 
 /// Gas to call finish_init on mcs contract
 const FINISH_INIT_GAS: Gas = Gas(30_000_000_000_000);
 
 /// Gas to call mint/burn method on mcs token.
-const MINT_GAS: Gas = Gas(5_000_000_000_000);
-const BURN_GAS: Gas = Gas(5_000_000_000_000);
+const MINT_GAS: Gas = Gas(6_000_000_000_000);
+const BURN_GAS: Gas = Gas(6_000_000_000_000);
 
 /// Gas to call near_withdraw and near_deposit on wrap near contract
-const NEAR_WITHDRAW_GAS: Gas = Gas(5_000_000_000_000);
+const NEAR_WITHDRAW_GAS: Gas = Gas(6_000_000_000_000);
 const NEAR_DEPOSIT_GAS: Gas = Gas(7_000_000_000_000);
 
-/// Gas to call finish_verify_proof method.
-const TRANSFER_IN_SINGLE_EVENT_GAS: Gas = Gas(60_000_000_000_000);
+/// Gas to call callback_process_proof_hash method.
+const CALLBACK_PROCESS_PROOF_HASH: Gas = Gas(60_000_000_000_000);
 
 /// Gas to call transfer_in_native_token method.
-const TRANSFER_IN_NATIVE_TOKEN_GAS: Gas = Gas(30_000_000_000_000);
+const TRANSFER_IN_NATIVE_TOKEN_GAS: Gas = Gas(60_000_000_000_000);
 
 /// Gas to call finish_transfer_in method.
 const FINISH_TRANSFER_IN_GAS: Gas = Gas(30_000_000_000_000);
 
 /// Gas to call finish_token_out method.
-const FINISH_TOKEN_OUT_GAS: Gas = Gas(5_000_000_000_000);
+const FINISH_TOKEN_OUT_GAS: Gas = Gas(7_000_000_000_000);
 
 /// Gas to call report_failure method.
-const REPORT_FAILURE_GAS: Gas = Gas(5_000_000_000_000);
+const REPORT_FAILURE_GAS: Gas = Gas(4_000_000_000_000);
 
 /// Gas to call verify_log_entry on prover.
-const VERIFY_LOG_ENTRY_GAS: Gas = Gas(80_000_000_000_000);
-/// Gas to call process_swap_in method.
-const PROCESS_SWAP_IN_GAS: Gas = Gas(205_000_000_000_000);
+const VERIFY_LOG_ENTRY_GAS: Gas = Gas(100_000_000_000_000);
+
 /// Gas to call process_swap_out method.
-const PROCESS_SWAP_OUT_GAS: Gas = Gas(250_000_000_000_000);
+const PROCESS_SWAP_OUT_GAS: Gas = Gas(240_000_000_000_000);
+
 /// Gas to call callback_process_native_swap method.
-const CALLBACK_PROCESS_NATIVE_SWAP_GAS: Gas = Gas(25_000_000_000_000);
+const CALLBACK_PROCESS_NATIVE_SWAP_GAS: Gas = Gas(32_000_000_000_000);
+
+const CALLBACK_TRANSFER_NEAR_GAS: Gas = Gas(6_000_000_000_000);
 
 const MIN_TRANSFER_OUT_AMOUNT: f64 = 0.001;
 const NEAR_DECIMAL: u8 = 24;
@@ -88,6 +90,20 @@ const PAUSE_DEPOSIT_OUT_NATIVE: Mask = 1 << 5;
 const PAUSE_SWAP_IN: Mask = 1 << 6;
 const PAUSE_SWAP_OUT_TOKEN: Mask = 1 << 7;
 const PAUSE_SWAP_OUT_NATIVE: Mask = 1 << 8;
+
+#[derive(BorshStorageKey, BorshSerialize)]
+pub(crate) enum StorageKey {
+    McsTokens,
+    FtTokens,
+    FtStorageBalance,
+    TokenDecimals,
+    ChainIdType,
+    UsedEvents,
+    ProofHashes,
+    RegisterTokens,
+    LostFound,
+    FungibleToken,
+}
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -110,6 +126,8 @@ pub struct MAPOServiceV2 {
     pub chain_id_type_map: UnorderedMap<u128, ChainType>,
     /// Hashes of the events that were already used.
     pub used_events: UnorderedSet<CryptoHash>,
+    /// Hashes of the verified proof.
+    pub proof_hashes: UnorderedSet<CryptoHash>,
     /// Account of the owner
     pub owner: AccountId,
     /// Balance required to register a new account in the MCSToken
@@ -156,7 +174,7 @@ impl MAPOServiceV2 {
         let map_bridge_address = validate_eth_address(map_bridge_address);
 
         let storage_balance =
-            near_contract_standards::fungible_token::FungibleToken::new(b"t".to_vec())
+            near_contract_standards::fungible_token::FungibleToken::new(StorageKey::FungibleToken)
                 .account_storage_usage as Balance
                 * env::storage_byte_cost();
 
@@ -216,13 +234,14 @@ impl MAPOServiceV2 {
         Self {
             map_client_account: map_light_client,
             map_bridge_address,
-            mcs_tokens: UnorderedMap::new(b"t".to_vec()),
-            fungible_tokens: UnorderedMap::new(b"f".to_vec()),
-            fungible_tokens_storage_balance: UnorderedMap::new(b"s".to_vec()),
-            token_decimals: UnorderedMap::new(b"d".to_vec()),
+            mcs_tokens: UnorderedMap::new(StorageKey::McsTokens),
+            fungible_tokens: UnorderedMap::new(StorageKey::FtTokens),
+            fungible_tokens_storage_balance: UnorderedMap::new(StorageKey::FtStorageBalance),
+            token_decimals: UnorderedMap::new(StorageKey::TokenDecimals),
             native_to_chains: Default::default(),
-            chain_id_type_map: UnorderedMap::new(b"c".to_vec()),
-            used_events: UnorderedSet::new(b"u".to_vec()),
+            chain_id_type_map: UnorderedMap::new(StorageKey::ChainIdType),
+            used_events: UnorderedSet::new(StorageKey::UsedEvents),
+            proof_hashes: UnorderedSet::new(StorageKey::ProofHashes),
             owner,
             mcs_storage_balance_min: storage_balance.into(),
             wrapped_token,
@@ -230,12 +249,79 @@ impl MAPOServiceV2 {
             map_chain_id: map_chain_id.into(),
             nonce: 0,
             paused: Mask::default(),
-            registered_tokens: UnorderedMap::new(b"r".to_vec()),
+            registered_tokens: UnorderedMap::new(StorageKey::RegisterTokens),
             ref_exchange,
             core_idle: butter_core.clone(),
             core_total: butter_core,
             amount_out: Default::default(),
-            lost_found: UnorderedMap::new(b"l".to_vec()),
+            lost_found: UnorderedMap::new(StorageKey::LostFound),
+        }
+    }
+
+    #[payable]
+    pub fn verify_receipt_proof(&mut self, receipt_proof: ReceiptProof) -> PromiseOrValue<()> {
+        let hash = receipt_proof.hash();
+        if self.proof_hashes.contains(&hash) {
+            return Promise::new(env::signer_account_id())
+                .transfer(env::attached_deposit())
+                .into();
+        }
+
+        let initial_storage = env::storage_usage();
+        self.proof_hashes.insert(&hash);
+        let current_storage = env::storage_usage();
+        self.proof_hashes.remove(&hash);
+
+        let required_deposit =
+            Balance::from(current_storage - initial_storage) * env::storage_byte_cost();
+
+        assert!(
+            env::attached_deposit() >= required_deposit,
+            "not enough deposit for recording proof hash"
+        );
+
+        ext_map_light_client::ext(self.map_client_account.clone())
+            .with_static_gas(VERIFY_LOG_ENTRY_GAS)
+            .verify_proof_data(receipt_proof)
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(CALLBACK_PROCESS_PROOF_HASH)
+                    .with_attached_deposit(env::attached_deposit())
+                    .callback_process_proof_hash(&hash, U128(required_deposit)),
+            )
+            .into()
+    }
+
+    #[payable]
+    #[private]
+    pub fn callback_process_proof_hash(
+        &mut self,
+        hash: &CryptoHash,
+        required_deposit: U128,
+    ) -> PromiseOrValue<()> {
+        assert_eq!(env::promise_results_count(), 1, "ERR_TOO_MANY_RESULTS");
+        match env::promise_result(0) {
+            PromiseResult::NotReady => env::abort(),
+            PromiseResult::Failed => self
+                .revert_state(
+                    env::attached_deposit(),
+                    None,
+                    "verify proof failed".to_string(),
+                )
+                .into(),
+            PromiseResult::Successful(_) => {
+                self.proof_hashes.insert(hash);
+                env::log_str(format!("Record proof hash:{}", hex::encode(hash)).as_str());
+
+                let ret_deposit = env::attached_deposit() - required_deposit.0;
+                if ret_deposit > 0 {
+                    Promise::new(env::signer_account_id())
+                        .transfer(ret_deposit)
+                        .into()
+                } else {
+                    PromiseOrValue::Value(())
+                }
+            }
         }
     }
 
@@ -247,6 +333,12 @@ impl MAPOServiceV2 {
 
         let logs = &receipt_proof.receipt.logs;
         assert!(index < logs.len(), "index exceeds event size");
+
+        let hash = receipt_proof.hash();
+        assert!(
+            self.proof_hashes.contains(&hash),
+            "receipt proof has not been verified yet"
+        );
 
         let (map_bridge_address, event) =
             TransferOutEvent::from_log_entry_data(logs.get(index).unwrap())
@@ -264,15 +356,7 @@ impl MAPOServiceV2 {
             serde_json::to_string(&event).unwrap()
         );
 
-        ext_map_light_client::ext(self.map_client_account.clone())
-            .with_static_gas(VERIFY_LOG_ENTRY_GAS)
-            .verify_proof_data(receipt_proof)
-            .then(
-                Self::ext(env::current_account_id())
-                    .with_static_gas(TRANSFER_IN_SINGLE_EVENT_GAS + FINISH_TRANSFER_IN_GAS)
-                    .with_attached_deposit(env::attached_deposit())
-                    .callback_process_transfer_in(&event),
-            )
+        self.process_transfer_in(&event)
     }
 
     #[payable]
@@ -281,6 +365,12 @@ impl MAPOServiceV2 {
 
         let logs = &receipt_proof.receipt.logs;
         assert!(index < logs.len(), "index exceeds event size");
+
+        let hash = receipt_proof.hash();
+        assert!(
+            self.proof_hashes.contains(&hash),
+            "receipt proof has not been verified yet"
+        );
 
         let (map_bridge_address, event) =
             SwapOutEvent::from_log_entry_data(logs.get(index).unwrap())
@@ -298,15 +388,11 @@ impl MAPOServiceV2 {
             serde_json::to_string(&event).unwrap()
         );
 
-        ext_map_light_client::ext(self.map_client_account.clone())
-            .with_static_gas(VERIFY_LOG_ENTRY_GAS)
-            .verify_proof_data(receipt_proof)
-            .then(
-                Self::ext(env::current_account_id())
-                    .with_static_gas(PROCESS_SWAP_IN_GAS)
-                    .with_attached_deposit(env::attached_deposit())
-                    .callback_process_swap_in(&event),
-            )
+        if let Some(transfer_out_event) = event.to_transfer_out_event() {
+            self.process_transfer_in(&transfer_out_event)
+        } else {
+            self.process_swap_in(&event)
+        }
     }
 
     #[payable]
@@ -451,7 +537,11 @@ impl MAPOServiceV2 {
             .with_static_gas(NEAR_WITHDRAW_GAS)
             .with_attached_deposit(1)
             .near_withdraw(refund_amount.into())
-            .then(Promise::new(env::signer_account_id()).transfer(refund_amount))
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(CALLBACK_TRANSFER_NEAR_GAS)
+                    .callback_transfer_near(env::signer_account_id(), U128(refund_amount)),
+            )
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(REPORT_FAILURE_GAS)
@@ -460,58 +550,26 @@ impl MAPOServiceV2 {
             .into()
     }
 
-    #[payable]
     #[private]
-    pub fn callback_process_transfer_in(&mut self, event: &TransferOutEvent) -> Promise {
-        assert_eq!(env::promise_results_count(), 1, "ERR_TOO_MANY_RESULTS");
-        match env::promise_result(0) {
-            PromiseResult::NotReady => env::abort(),
-            PromiseResult::Failed => self.revert_state(
-                env::attached_deposit(),
-                None,
-                "verify proof failed".to_string(),
-            ),
-            PromiseResult::Successful(_) => self.process_transfer_in(event),
-        }
-    }
-
-    #[payable]
-    #[private]
-    pub fn callback_process_swap_in(&mut self, event: &SwapOutEvent) -> Promise {
-        assert_eq!(env::promise_results_count(), 1, "ERR_TOO_MANY_RESULTS");
-        match env::promise_result(0) {
-            PromiseResult::NotReady => env::abort(),
-            PromiseResult::Failed => self.revert_state(
-                env::attached_deposit(),
-                None,
-                "verify proof failed".to_string(),
-            ),
-            PromiseResult::Successful(_) => {
-                if let Some(transfer_out_event) = event.to_transfer_out_event() {
-                    self.process_transfer_in(&transfer_out_event)
-                } else {
-                    self.process_swap_in(event)
-                }
-            }
-        }
+    pub fn callback_transfer_near(&self, account: AccountId, amount: U128) -> Promise {
+        Promise::new(account.clone()).transfer(Balance::from(amount))
     }
 
     fn process_transfer_in(&mut self, event: &TransferOutEvent) -> Promise {
         let mut ret_deposit = env::attached_deposit();
-        if self.is_used_event(&event.order_id) {
-            let err_msg = "the transfer in event is already processed".to_string();
-            return self.revert_state(ret_deposit, None, err_msg);
-        }
+        assert!(
+            !self.is_used_event(&event.order_id),
+            "the transfer in event is already processed"
+        );
 
         let required_deposit = self.record_order_id(&event.order_id);
-        if ret_deposit < required_deposit {
-            let err_msg = format!(
-                "not enough deposit for record proof, exp: {}, cur: {}",
-                required_deposit, ret_deposit
-            );
-            self.remove_order_id(&event.order_id);
-            return self.revert_state(ret_deposit, None, err_msg);
-        }
+        assert!(
+            ret_deposit >= required_deposit,
+            "not enough deposit for record proof, exp: {}, cur: {}",
+            required_deposit,
+            ret_deposit
+        );
+        ret_deposit -= required_deposit;
 
         let to_chain_token = event.get_to_chain_token();
         let to = event.get_to_account();
@@ -523,7 +581,6 @@ impl MAPOServiceV2 {
             .as_str(),
         );
 
-        ret_deposit -= required_deposit;
         if self.is_native_token(&to_chain_token) {
             ext_wnear_token::ext(self.wrapped_token.clone())
                 .with_static_gas(NEAR_WITHDRAW_GAS)
@@ -536,13 +593,12 @@ impl MAPOServiceV2 {
                         .transfer_in_native_token(event),
                 )
         } else if self.mcs_tokens.get(&to_chain_token).is_some() {
-            if ret_deposit < self.mcs_storage_balance_min {
-                let err_msg = format!(
-                    "not enough deposit for mcs token mint, exp: {}, cur: {}",
-                    self.mcs_storage_balance_min, ret_deposit
-                );
-                return self.revert_state(ret_deposit, Some(event.order_id), err_msg);
-            }
+            assert!(
+                ret_deposit >= self.mcs_storage_balance_min,
+                "not enough deposit for mcs token mint, exp: {}, cur: {}",
+                self.mcs_storage_balance_min,
+                ret_deposit
+            );
             ret_deposit -= self.mcs_storage_balance_min;
 
             ext_mcs_token::ext(to_chain_token)
@@ -561,13 +617,13 @@ impl MAPOServiceV2 {
                 .fungible_tokens_storage_balance
                 .get(&to_chain_token)
                 .unwrap();
-            if ret_deposit < min_storage_balance {
-                let err_msg = format!(
-                    "not enough deposit for ft transfer, exp: {}, cur: {}",
-                    min_storage_balance, ret_deposit
-                );
-                return self.revert_state(ret_deposit, Some(event.order_id), err_msg);
-            }
+
+            assert!(
+                ret_deposit >= min_storage_balance,
+                "not enough deposit for ft transfer, exp: {}, cur: {}",
+                min_storage_balance,
+                ret_deposit
+            );
             ret_deposit -= min_storage_balance;
 
             ext_fungible_token::ext(to_chain_token.clone())
@@ -598,27 +654,23 @@ impl MAPOServiceV2 {
     }
 
     fn process_swap_in(&mut self, event: &SwapOutEvent) -> Promise {
-        let mut ret_deposit = env::attached_deposit();
+        assert!(
+            !self.is_used_event(&event.order_id),
+            "the swap in event is already processed"
+        );
+
         let core_opt = self.core_idle.pop();
-        if core_opt.is_none() {
-            return self.revert_state(ret_deposit, None, "no idle core!".to_string());
-        }
+        assert!(core_opt.is_some(), "no idle core");
         let core = core_opt.unwrap();
 
-        if self.is_used_event(&event.order_id) {
-            let err_msg = "the swap in event is already processed".to_string();
-            return self.revert_state(ret_deposit, None, err_msg);
-        }
-
+        let mut ret_deposit = env::attached_deposit();
         let required_deposit = self.record_order_id(&event.order_id);
-        if ret_deposit < required_deposit {
-            let err_msg = format!(
-                "not enough deposit for record proof, exp: {}, cur: {}",
-                required_deposit, ret_deposit
-            );
-            self.remove_order_id(&event.order_id);
-            return self.revert_state(ret_deposit, None, err_msg);
-        }
+        assert!(
+            ret_deposit >= required_deposit,
+            "not enough deposit for record proof, exp: {}, cur: {}",
+            required_deposit,
+            ret_deposit
+        );
         ret_deposit -= required_deposit;
 
         let token_in = event.get_token_in();
@@ -626,17 +678,17 @@ impl MAPOServiceV2 {
         let target_account = event.get_to_account();
         let storage_balance_in = self.get_storage_deposit_balance(&token_in, true);
         let storage_balance_out = self.get_storage_deposit_balance(&token_out, false);
-        if ret_deposit < storage_balance_in + storage_balance_out {
-            let err_msg = format!(
-                "not enough deposit for storage deposit, exp: {}, cur: {}",
-                storage_balance_in + storage_balance_out,
-                ret_deposit
-            );
-            return self.revert_state(ret_deposit, Some(event.order_id), err_msg);
-        }
+
+        assert!(
+            ret_deposit >= storage_balance_in + storage_balance_out,
+            "not enough deposit for storage deposit, exp: {}, cur: {}",
+            storage_balance_in + storage_balance_out,
+            ret_deposit
+        );
+
         // make sure ret_deposit is enough for token in storage deposit
-        ret_deposit -= storage_balance_out;
         if storage_balance_out > 0 {
+            ret_deposit -= storage_balance_out;
             ext_fungible_token::ext(token_out.clone())
                 .with_static_gas(STORAGE_DEPOSIT_GAS)
                 .with_attached_deposit(storage_balance_out)
@@ -1075,7 +1127,7 @@ mod tests {
     use map_light_client::proof::Receipt;
     use map_light_client::G2;
     use near_sdk::json_types::U64;
-    use near_sdk::{env::sha256, test_utils::VMContextBuilder, testing_env};
+    use near_sdk::{env::sha256, test_utils::VMContextBuilder, testing_env, IntoStorageKey};
     use std::convert::TryInto;
     use uint::rustc_hex::ToHex;
 
@@ -1182,6 +1234,7 @@ mod tests {
             native_to_chains: Default::default(),
             chain_id_type_map: UnorderedMap::new(b"c".to_vec()),
             used_events: UnorderedSet::new(b"u".to_vec()),
+            proof_hashes: UnorderedSet::new(StorageKey::ProofHashes),
             owner: env::signer_account_id(),
             mcs_storage_balance_min: STORAGE_BALANCE,
             wrapped_token: wrap_token(),

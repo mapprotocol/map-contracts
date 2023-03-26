@@ -8,11 +8,14 @@ use near_sdk::{env, AccountId, Gas, PromiseResult};
 use std::collections::HashMap;
 
 const FT_TRANSFER_CALL_CORE_GAS: Gas = Gas(210_000_000_000_000);
-const CALL_CORE_SWAP_IN_DIRECTLY_GAS: Gas = Gas(150_000_000_000_000);
-const CALL_CORE_SWAP_OUT_DIRECTLY_GAS: Gas = Gas(170_000_000_000_000);
+const CALL_CORE_SWAP_IN_DIRECTLY_GAS: Gas = Gas(180_000_000_000_000);
+const CALL_CORE_SWAP_OUT_DIRECTLY_GAS: Gas = Gas(175_000_000_000_000);
 /// Gas to call callback_swap_out_token method.
 const CALLBACK_SWAP_OUT_TOKEN_GAS: Gas =
-    Gas(10_000_000_000_000 + BURN_GAS.0 + FINISH_TOKEN_OUT_GAS.0);
+    Gas(15_000_000_000_000 + BURN_GAS.0 + FINISH_TOKEN_OUT_GAS.0);
+
+const CALLBACK_DO_SWAP_GAS: Gas =
+    Gas(20_000_000_000_000 + CALL_CORE_SWAP_IN_DIRECTLY_GAS.0 + CALLBACK_POST_SWAP_IN_GAS.0);
 
 const CALLBACK_ADD_BUTTER_CORE_GAS: Gas = Gas(5_000_000_000_000);
 
@@ -291,6 +294,58 @@ impl MAPOServiceV2 {
 
     #[payable]
     #[private]
+    pub fn callback_do_swap(
+        &mut self,
+        core: AccountId,
+        token_in: AccountId,
+        target_account: AccountId,
+        amount: U128,
+        msg: CoreSwapMessage,
+        order_id: CryptoHash,
+        token_in_storage_balance: Balance,
+    ) -> Promise {
+        assert_eq!(
+            1,
+            env::promise_results_count(),
+            "promise has too many results"
+        );
+
+        let ret_deposit = env::attached_deposit();
+        match env::promise_result(0) {
+            PromiseResult::NotReady => env::abort(),
+            PromiseResult::Successful(x) => {
+                ext_butter_core::ext(core.clone())
+                    .with_static_gas(CALL_CORE_SWAP_IN_DIRECTLY_GAS)
+                    .swap(amount, msg.clone())
+                    .then(
+                        Self::ext(env::current_account_id())
+                            .with_static_gas(CALLBACK_POST_SWAP_IN_GAS)
+                            .with_attached_deposit(ret_deposit)
+                            .callback_post_swap_in(
+                                core,
+                                token_in,
+                                msg.target_token.unwrap(),
+                                target_account,
+                                amount,
+                                // ret_deposit,
+                                order_id,
+                                token_in_storage_balance,
+                            ),
+                    )
+            }
+            PromiseResult::Failed => {
+                let err_msg = format!(
+                    "[FAILURE] mint or transfer token to core failed  {:?}",
+                    token_in
+                );
+                self.core_idle.push(core);
+                self.revert_state(ret_deposit, Some(order_id), err_msg)
+            }
+        }
+    }
+
+    #[payable]
+    #[private]
     pub fn callback_post_swap_in(
         &mut self,
         core: AccountId,
@@ -362,7 +417,6 @@ impl MAPOServiceV2 {
             }
             PromiseResult::Failed => {
                 let err_msg = format!("[SWAP FAILURE] call core to do swap in failed, maybe mos doesn't have enough token {:?}", token_in);
-                self.core_idle.push(core);
                 self.revert_state(ret_deposit, Some(order_id), err_msg)
             }
         }
@@ -445,20 +499,15 @@ impl MAPOServiceV2 {
                 .ft_transfer(core.clone(), amount, None)
         }
         .then(
-            ext_butter_core::ext(core.clone())
-                .with_static_gas(CALL_CORE_SWAP_IN_DIRECTLY_GAS)
-                .swap(amount, msg.clone()),
-        )
-        .then(
             Self::ext(env::current_account_id())
-                .with_static_gas(CALLBACK_POST_SWAP_IN_GAS)
+                .with_static_gas(CALLBACK_DO_SWAP_GAS)
                 .with_attached_deposit(ret_deposit)
-                .callback_post_swap_in(
+                .callback_do_swap(
                     core,
                     token_in,
-                    msg.target_token.unwrap(),
                     target_account,
                     amount,
+                    msg,
                     // ret_deposit,
                     order_id,
                     token_in_storage_balance,
