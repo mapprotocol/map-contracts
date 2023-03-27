@@ -18,7 +18,8 @@ let headers = [
         "mixHash": "0x1662c0d5bbab140e0cfac01de52588dac7a889eb7ddc61ed0294cc33fd5b5c1f",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xd),
-        "hash": "0xeec6595f0a7c503ec7bef730e03cefaaa97b3aeb21159a79abc3987e2c8bd1e3"
+        "hash": "0xeec6595f0a7c503ec7bef730e03cefaaa97b3aeb21159a79abc3987e2c8bd1e3",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0xeec6595f0a7c503ec7bef730e03cefaaa97b3aeb21159a79abc3987e2c8bd1e3",
@@ -37,7 +38,8 @@ let headers = [
         "mixHash": "0xa0a92e8ae41ffb9ae936f9da8f8d649896403b1d8d73848d5b0be38f50f8a364",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xc),
-        "hash": "0xdc5ea2f0660e1ed0906f98e97e43b9247715313320e0b1dc202b6fc84335cf49"
+        "hash": "0xdc5ea2f0660e1ed0906f98e97e43b9247715313320e0b1dc202b6fc84335cf49",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0xdc5ea2f0660e1ed0906f98e97e43b9247715313320e0b1dc202b6fc84335cf49",
@@ -56,7 +58,8 @@ let headers = [
         "mixHash": "0x75d0797913f7b34112ca5b89d1bd55ed0dfee671a1e5aa4edd92ed70f26085d8",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xc),
-        "hash": "0x070c1aaf224b12f14ff4c23dabf3c0befda3c07ad825285c6a6559dbdd435a65"
+        "hash": "0x070c1aaf224b12f14ff4c23dabf3c0befda3c07ad825285c6a6559dbdd435a65",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x070c1aaf224b12f14ff4c23dabf3c0befda3c07ad825285c6a6559dbdd435a65",
@@ -75,7 +78,8 @@ let headers = [
         "mixHash": "0xef89d12f2a0a3cfb96f96d7e6ce88f7f4991df8a31d90eb5ba69c301a69992d0",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xc),
-        "hash": "0xf9cf8c658e0c8e8102faa14f987021f01c271cb3a3891c19781515b525c079b0"
+        "hash": "0xf9cf8c658e0c8e8102faa14f987021f01c271cb3a3891c19781515b525c079b0",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0xf9cf8c658e0c8e8102faa14f987021f01c271cb3a3891c19781515b525c079b0",
@@ -94,7 +98,8 @@ let headers = [
         "mixHash": "0xd30fe0480c569744a5d96ceb7a94fe17a7df3b014b3656f9483c87f99ba07765",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xd),
-        "hash": "0xf8539f71a94dd889e1836c63b86bbfd223fab2f14381ea6badab55b51b4adeac"
+        "hash": "0xf8539f71a94dd889e1836c63b86bbfd223fab2f14381ea6badab55b51b4adeac",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0xf8539f71a94dd889e1836c63b86bbfd223fab2f14381ea6badab55b51b4adeac",
@@ -113,7 +118,8 @@ let headers = [
         "mixHash": "0xbb728868124ecded163b4192c15b5d329cab1a35ed992be5f1d26f08ef0e08c5",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xd),
-        "hash": "0x891b7dccd71970f955f01543b7db773bc70a5575004c91ef67fdc4e74b882305"
+        "hash": "0x891b7dccd71970f955f01543b7db773bc70a5575004c91ef67fdc4e74b882305",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x891b7dccd71970f955f01543b7db773bc70a5575004c91ef67fdc4e74b882305",
@@ -132,7 +138,8 @@ let headers = [
         "mixHash": "0x39aaa54d345ea3a6cf7f1cfa357eed8a64869dd2a56981965a0689ceaea63f9b",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xd),
-        "hash": "0x07594d48095460ced08b9b38caec6525def90ed328162a084c0bd01e4f59bebf"
+        "hash": "0x07594d48095460ced08b9b38caec6525def90ed328162a084c0bd01e4f59bebf",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x07594d48095460ced08b9b38caec6525def90ed328162a084c0bd01e4f59bebf",
@@ -151,7 +158,8 @@ let headers = [
         "mixHash": "0x2ff4ec7b8db393d64b96a36d28764bc547f896d97aee6dd2bfb8f818e6313e93",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xe),
-        "hash": "0x501992cf7ebe77c5c963650548d8fd2a62baaafad245d5339ec08fc2904530d9"
+        "hash": "0x501992cf7ebe77c5c963650548d8fd2a62baaafad245d5339ec08fc2904530d9",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x501992cf7ebe77c5c963650548d8fd2a62baaafad245d5339ec08fc2904530d9",
@@ -170,7 +178,8 @@ let headers = [
         "mixHash": "0x985f4928512886bf1d82b67318def0a0f4fb577dbb5cb0c8ffa602193edd6311",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xe),
-        "hash": "0xc6295378a28c08d23a639b960efb2898bc7e765ee89c980958ac25941de0e286"
+        "hash": "0xc6295378a28c08d23a639b960efb2898bc7e765ee89c980958ac25941de0e286",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0xc6295378a28c08d23a639b960efb2898bc7e765ee89c980958ac25941de0e286",
@@ -189,7 +198,8 @@ let headers = [
         "mixHash": "0x923ae7dd5165c5c19ca489477948516535528d256c2240c57320b2b693ca489b",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xd),
-        "hash": "0x6511a56bcfed249c8e2d5834d44186f14032154c725eb0ae6b17e9d389af00f5"
+        "hash": "0x6511a56bcfed249c8e2d5834d44186f14032154c725eb0ae6b17e9d389af00f5",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x6511a56bcfed249c8e2d5834d44186f14032154c725eb0ae6b17e9d389af00f5",
@@ -208,7 +218,8 @@ let headers = [
         "mixHash": "0xc93623bbae775df1f5b9d46645a82b5d74dbf7ac16c14093203209b29a851f20",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xe),
-        "hash": "0xd9517961248634da8ba9e340d115f6fe09151832fbcb878f524543c29dc9f8ec"
+        "hash": "0xd9517961248634da8ba9e340d115f6fe09151832fbcb878f524543c29dc9f8ec",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0xd9517961248634da8ba9e340d115f6fe09151832fbcb878f524543c29dc9f8ec",
@@ -227,7 +238,8 @@ let headers = [
         "mixHash": "0x0903f6ab92c30b7811336985f0f7f4c3baaf8a9d87516d75d8fe819a8707a5c7",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xd),
-        "hash": "0x4c2c816c96af8ba03721ad08e7ed20b7a2def7555f3568c47796c1a6e2c53ea8"
+        "hash": "0x4c2c816c96af8ba03721ad08e7ed20b7a2def7555f3568c47796c1a6e2c53ea8",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x4c2c816c96af8ba03721ad08e7ed20b7a2def7555f3568c47796c1a6e2c53ea8",
@@ -246,7 +258,8 @@ let headers = [
         "mixHash": "0x5af5078af39baafbe6c47b68eeb7b5e66d06e81ef2591d8c889c38f2fd23ccfb",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xd),
-        "hash": "0x72fdbbc90a8ba6bb5d76b53c9f7da49c11e880d766b3e507ea2b10bd7c60160d"
+        "hash": "0x72fdbbc90a8ba6bb5d76b53c9f7da49c11e880d766b3e507ea2b10bd7c60160d",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x72fdbbc90a8ba6bb5d76b53c9f7da49c11e880d766b3e507ea2b10bd7c60160d",
@@ -265,7 +278,8 @@ let headers = [
         "mixHash": "0xf7a7de13f51d5ef4a31dda7ae5bf7e71ea786092e513ca75f307576ae254e240",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xc),
-        "hash": "0x8ba63c8e641f1cf4a099725fbc30192b76d4828b9e83bbdbe987583db348340b"
+        "hash": "0x8ba63c8e641f1cf4a099725fbc30192b76d4828b9e83bbdbe987583db348340b",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x8ba63c8e641f1cf4a099725fbc30192b76d4828b9e83bbdbe987583db348340b",
@@ -284,7 +298,8 @@ let headers = [
         "mixHash": "0x24fdc1093a3a7b846c618cc0ac29b911144c8c5f001ee8ddaeaa2302a0464177",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xb),
-        "hash": "0x8a1e0269245d6f6ab7a24e194be8f79238b8ae04fd7d3fe680321ae220198060"
+        "hash": "0x8a1e0269245d6f6ab7a24e194be8f79238b8ae04fd7d3fe680321ae220198060",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x8a1e0269245d6f6ab7a24e194be8f79238b8ae04fd7d3fe680321ae220198060",
@@ -303,7 +318,8 @@ let headers = [
         "mixHash": "0x995cea22db0e60a57189ad1dd099ea89cfcf3090a33079a376440b71397a26fe",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xb),
-        "hash": "0x2daa623a6839ca3121ea708e3daef79f99288ceb6fb8760ff236d2a838011746"
+        "hash": "0x2daa623a6839ca3121ea708e3daef79f99288ceb6fb8760ff236d2a838011746",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x2daa623a6839ca3121ea708e3daef79f99288ceb6fb8760ff236d2a838011746",
@@ -322,7 +338,8 @@ let headers = [
         "mixHash": "0x9bad9b14ca32d4429ac89004ccaec283ae89a6a6f432d90c492966420e5a6f42",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xa),
-        "hash": "0xeb40b43adeceefa7ad0c1386835a4f97ad5d8fa30645fb7307a770dd67f300d8"
+        "hash": "0xeb40b43adeceefa7ad0c1386835a4f97ad5d8fa30645fb7307a770dd67f300d8",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0xeb40b43adeceefa7ad0c1386835a4f97ad5d8fa30645fb7307a770dd67f300d8",
@@ -341,7 +358,8 @@ let headers = [
         "mixHash": "0x97e2ecf961134496557118d9d6397d7bd2a01046af49a2b098a2fae4b1b49606",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xa),
-        "hash": "0x6a09b86a4cec9f53c674f25b756099c385fa92d54ba2446212b3518a12116aa6"
+        "hash": "0x6a09b86a4cec9f53c674f25b756099c385fa92d54ba2446212b3518a12116aa6",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x6a09b86a4cec9f53c674f25b756099c385fa92d54ba2446212b3518a12116aa6",
@@ -360,7 +378,8 @@ let headers = [
         "mixHash": "0xba81fb69707b2005244fdab89b4dec42d1cba31f2ac8853b848fc542bbd9c800",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0x9),
-        "hash": "0x7d7c629c1d5df7bd03b97a0c2db70acf6c42d309d945c3a58357d572c5fa24df"
+        "hash": "0x7d7c629c1d5df7bd03b97a0c2db70acf6c42d309d945c3a58357d572c5fa24df",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     {
         "parentHash": "0x7d7c629c1d5df7bd03b97a0c2db70acf6c42d309d945c3a58357d572c5fa24df",
@@ -379,7 +398,8 @@ let headers = [
         "mixHash": "0x59d5cff5700f86ecb3054f27d04551eb28b9cb49680f7c3063b976d868ff29eb",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0x9),
-        "hash": "0x36b10f4ade083c177769b3772362201347e972aebe5ab6108aa28eff43e85940"
+        "hash": "0x36b10f4ade083c177769b3772362201347e972aebe5ab6108aa28eff43e85940",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     }
 ]
 
@@ -401,7 +421,8 @@ let receiptProof = {
         "mixHash": "0xc93623bbae775df1f5b9d46645a82b5d74dbf7ac16c14093203209b29a851f20",
         "nonce": "0x0000000000000000",
         "baseFeePerGas": BigNumber.from(0xe),
-        "hash": "0xd9517961248634da8ba9e340d115f6fe09151832fbcb878f524543c29dc9f8ec"
+        "hash": "0xd9517961248634da8ba9e340d115f6fe09151832fbcb878f524543c29dc9f8ec",
+        "withdrawalsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
     },
     txReceipt: {
         receiptType: BigNumber.from(2),

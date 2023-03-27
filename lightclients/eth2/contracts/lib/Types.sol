@@ -12,12 +12,12 @@ library Types {
     }
 
     struct BlockHeader {
-        bytes parentHash;
-        bytes sha3Uncles;
+        bytes32 parentHash;
+        bytes32 sha3Uncles;
         address miner;
-        bytes stateRoot;
-        bytes transactionsRoot;
-        bytes receiptsRoot;
+        bytes32 stateRoot;
+        bytes32 transactionsRoot;
+        bytes32 receiptsRoot;
         bytes logsBloom;
         uint256 difficulty;
         uint256 number;
@@ -25,9 +25,10 @@ library Types {
         uint256 gasUsed;
         uint256 timestamp;
         bytes extraData;  // 96
-        bytes mixHash;
+        bytes32 mixHash;
         bytes nonce;     // 8
         uint256 baseFeePerGas;
+        bytes32 withdrawalsRoot;
     }
 
     struct TxReceipt {
@@ -61,27 +62,33 @@ library Types {
         bytes syncCommitteeSignature;
     }
 
+    struct Execution {
+        bytes32 parentHash;
+        address feeRecipient;
+        bytes32 stateRoot;
+        bytes32 receiptsRoot;
+        bytes logsBloom;
+        bytes32 prevRandao;
+        uint256 blockNumber;
+        uint256 gasLimit;
+        uint256 gasUsed;
+        uint256 timestamp;
+        bytes extraData;  // 96
+        uint256 baseFeePerGas;
+        bytes32 blockHash;
+        bytes32 transactionsRoot;
+        bytes32 withdrawalsRoot;
+    }
+
     struct LightClientUpdate {
         BeaconBlockHeader attestedHeader;
         SyncCommittee nextSyncCommittee;
         bytes32[] nextSyncCommitteeBranch;
         BeaconBlockHeader finalizedHeader;
         bytes32[] finalityBranch;
-        BlockHeader finalizedExeHeader;
-        bytes32[] exeFinalityBranch;
+        Execution finalizedExecution;
+        bytes32[] executionBranch;
         SyncAggregate syncAggregate;
         uint64 signatureSlot;
-    }
-
-    struct LightClientState {
-        BeaconBlockHeader finalizedHeader;
-        SyncCommittee currentSyncCommittee;
-        SyncCommittee nextSyncCommittee;
-        uint64 chainID;
-    }
-
-    struct LightClientVerify {
-        LightClientUpdate update;
-        LightClientState state;
     }
 }

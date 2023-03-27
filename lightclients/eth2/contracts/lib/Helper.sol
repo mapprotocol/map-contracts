@@ -9,12 +9,8 @@ library Helper {
     uint256 public constant SLOTS_PER_EPOCH = 32;
     uint256 public constant EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 256;
 
-    function compute_epoch_at_slot(uint256 _slot) internal pure returns (uint256) {
-        return _slot / SLOTS_PER_EPOCH;
-    }
-
     function compute_sync_committee_period(uint256 _slot) internal pure returns (uint256){
-        return compute_epoch_at_slot(_slot) / EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+        return _slot / SLOTS_PER_EPOCH / EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
     }
 
     function getBlockHash(Types.BlockHeader memory _header)
@@ -22,13 +18,17 @@ library Helper {
     pure
     returns (bytes32)
     {
-        bytes[] memory list = new bytes[](16);
-        list[0] = RLPEncode.encodeBytes(_header.parentHash);
-        list[1] = RLPEncode.encodeBytes(_header.sha3Uncles);
+        uint256 len = 16;
+        if (_header.withdrawalsRoot != bytes32(0)) {
+            len = 17;
+        }
+        bytes[] memory list = new bytes[](len);
+        list[0] = RLPEncode.encodeBytes(abi.encodePacked(_header.parentHash));
+        list[1] = RLPEncode.encodeBytes(abi.encodePacked(_header.sha3Uncles));
         list[2] = RLPEncode.encodeAddress(_header.miner);
-        list[3] = RLPEncode.encodeBytes(_header.stateRoot);
-        list[4] = RLPEncode.encodeBytes(_header.transactionsRoot);
-        list[5] = RLPEncode.encodeBytes(_header.receiptsRoot);
+        list[3] = RLPEncode.encodeBytes(abi.encodePacked(_header.stateRoot));
+        list[4] = RLPEncode.encodeBytes(abi.encodePacked(_header.transactionsRoot));
+        list[5] = RLPEncode.encodeBytes(abi.encodePacked(_header.receiptsRoot));
         list[6] = RLPEncode.encodeBytes(_header.logsBloom);
         list[7] = RLPEncode.encodeUint(_header.difficulty);
         list[8] = RLPEncode.encodeUint(_header.number);
@@ -36,9 +36,12 @@ library Helper {
         list[10] = RLPEncode.encodeUint(_header.gasUsed);
         list[11] = RLPEncode.encodeUint(_header.timestamp);
         list[12] = RLPEncode.encodeBytes(_header.extraData);
-        list[13] = RLPEncode.encodeBytes(_header.mixHash);
+        list[13] = RLPEncode.encodeBytes(abi.encodePacked(_header.mixHash));
         list[14] = RLPEncode.encodeBytes(_header.nonce);
         list[15] = RLPEncode.encodeUint(_header.baseFeePerGas);
+        if (_header.withdrawalsRoot != bytes32(0)) {
+            list[16] = RLPEncode.encodeBytes(abi.encodePacked(_header.withdrawalsRoot));
+        }
         return keccak256(RLPEncode.encodeList(list));
     }
 
@@ -65,28 +68,12 @@ library Helper {
             }
             loglist[1] = RLPEncode.encodeList(loglist1);
             loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
-            bytes memory logBytes = RLPEncode.encodeList(loglist);
-            listLog[j] = logBytes;
+            listLog[j] = RLPEncode.encodeList(loglist);
         }
         list[3] = RLPEncode.encodeList(listLog);
-        if (_txReceipt.receiptType == 0) {
-            output = RLPEncode.encodeList(list);
-        } else {
-            bytes memory tempType = abi.encode(_txReceipt.receiptType);
-            bytes1 tip = tempType[31];
-            bytes memory temp = RLPEncode.encodeList(list);
-            output = abi.encodePacked(tip, temp);
-        }
-    }
-
-    function bytesToBytes32(bytes memory _b)
-    internal
-    pure
-    returns (bytes32 part) {
-        require(_b.length > 31, "invalid bytes length");
-
-        assembly {
-            part := mload(add(_b, 32))
+        output = RLPEncode.encodeList(list);
+        if (_txReceipt.receiptType != 0) {
+            output = abi.encodePacked(uint8(_txReceipt.receiptType), output);
         }
     }
 
