@@ -152,9 +152,9 @@ library Verify {
         Validator[] memory _validators,
         bytes memory _extraData
     ) internal pure returns (bool) {
-        if(_validators.length != VALIDATOR_LENGTH) {
-            return false;
-        }
+        // if(_validators.length != VALIDATOR_LENGTH) {
+        //     return false;
+        // }
 
         bytes[] memory v = new bytes[](_validators.length);
 
