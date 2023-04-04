@@ -59,7 +59,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
 
         mptVerify = _mptVerify;
 
-        _transferOwnership(msg.sender);
+        _transferOwnership(tx.origin);
     }
 
 
@@ -583,7 +583,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     onlyOwner
     override {}
 
-    function getUUPSAdmin() external view returns (address){
+    function getAdmin() external view returns (address){
         return _getAdmin();
     }
 
