@@ -59,16 +59,6 @@ module.exports = {
       chainId : 80001,
       accounts: accounts
     },
-    Heco: {
-      url: `https://http-mainnet-node.huobichain.com`,
-      chainId : 128,
-      accounts: accounts
-    },
-    HecoTest: {
-      url: `https://http-testnet.hecochain.com`,
-      chainId : 256,
-      accounts: accounts
-    },
     Bsc: {
       url: `https://bsc-dataseed1.binance.org/`,
       chainId : 56,
@@ -98,6 +88,36 @@ module.exports = {
     Goerli: {
       url: `https://goerli.infura.io/v3/` + INFURA_KEY,
       chainId : 5,
+      accounts: accounts
+    },
+    Arbitrum: {
+      url: `https://1rpc.io/arb`,
+      chainId : 42161,
+      accounts: accounts
+    },
+    Op: {
+      url: `https://1rpc.io/op`,
+      chainId : 10,
+      accounts: accounts
+    },
+    Avax: {
+      url: `https://rpc.ankr.com/avalanche`,
+      chainId : 43114,
+      accounts: accounts
+    },
+    Fantom: {
+      url: `https://1rpc.io/ftm`,
+      chainId : 250,
+      accounts: accounts
+    },
+    Gnosis: {
+      url: `https://rpc.ankr.com/gnosis`,
+      chainId : 100,
+      accounts: accounts
+    },
+    Aurora: {
+      url: `https://mainnet.aurora.dev`,
+      chainId : 1313161554,
       accounts: accounts
     }
   },

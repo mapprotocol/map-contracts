@@ -7,6 +7,10 @@ pragma solidity 0.8.7;
 ///                          - BNB Smart Chain (56), BNB Smart Chain Testnet (97)
 ///                          - Polygon (137), Mumbai Testnet (80001)
 ///                          - MAPO Relay Chain (22776), Makalu Testnet (212)
+///                          - Klaytn (8217), Klaytn Testnet (1001)
+///                          - Arbitrum (42161), Optimism (10)
+///                          - Avalanche (43114), Fantom (250)
+///                          - Gnosis Chain (100), Aurora (1313161554)
 /// @author MAP Protocol (https://github.com/mapprotocol/map-contracts/blob/main/protocol/contracts/interface/IDeployFactory.sol)
 /// @author Import CREATE3 library from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/CREATE3.sol)
 interface IDeployFactory {
