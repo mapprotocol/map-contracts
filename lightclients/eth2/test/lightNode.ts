@@ -5,10 +5,19 @@ import {ethers} from "hardhat";
 import config from "../hardhat.config";
 import {delay} from "../utils/Util";
 
+let chainId = 5; //test data from eth testnet
+
 let bootstrap = require("../data/goerli/bootstrap.js");
 let periodUpdate = require("../data/goerli/period_update.js");
 let exedata = require("../data/goerli/exe_headers.js");
-let chainId = 5; //test data from eth testnet
+
+let fork = process.env.FORK != undefined ? JSON.parse(process.env.FORK) : false;
+if (fork) {
+    bootstrap = require("../data/goerli/shanghai_fork/bootstrap.js");
+    periodUpdate = require("../data/goerli/shanghai_fork/period_update.js");
+    exedata = require("../data/goerli/shanghai_fork/exe_headers.js");
+    console.log("use shanghai fork test data")
+}
 
 // let bootstrap = require("../data/mainnet/bootstrap.js");
 // let periodUpdate = require("../data/mainnet/period_update.js");
@@ -284,10 +293,10 @@ describe("LightNode", function () {
                 bootstrap.finalizedExeHeaderNumber.toNumber() + 1
             );
             expect(await lightNode.exeHeaderEndNumber()).to.eq(
-                periodUpdate.update.finalizedExeHeader.number - 1
+                periodUpdate.update.finalizedExecution.blockNumber - 1
             );
             expect(await lightNode.exeHeaderEndHash()).to.eq(
-                periodUpdate.update.finalizedExeHeader.parentHash
+                periodUpdate.update.finalizedExecution.parentHash
             );
         });
 
@@ -472,10 +481,10 @@ describe("LightNode Test on MAP", function () {
                 bootstrap.finalizedExeHeaderNumber.toNumber() + 1
             );
             expect(await proxy.exeHeaderEndNumber()).to.eq(
-                periodUpdate.update.finalizedExeHeader.number - 1
+                periodUpdate.update.finalizedExecution.blockNumber - 1
             );
             expect(await proxy.exeHeaderEndHash()).to.eq(
-                periodUpdate.update.finalizedExeHeader.parentHash
+                periodUpdate.update.finalizedExecution.parentHash
             );
         });
     });

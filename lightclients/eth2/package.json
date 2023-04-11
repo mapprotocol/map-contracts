@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "description": "eth2 light node in the solidity implementation",
   "dependencies": {
-    "@lodestar/api": "^1.2.1",
-    "@lodestar/config": "^1.2.1",
-    "@lodestar/types": "^1.2.1",
+    "@lodestar/api": "^1.7.0",
+    "@lodestar/config": "^1.7.0",
+    "@lodestar/types": "^1.7.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.2",
     "@openzeppelin/contracts": "^4.6.0",
     "dotenv": "^16.0.0",

@@ -21,7 +21,7 @@ const config: HardhatUserConfig = {
     networks: {
         local: {
             chainId: 214,
-            url: "http://localhost:7445",
+            url: "http://127.0.0.1:7445",
             accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
         },
         hardhat: {
@@ -29,7 +29,7 @@ const config: HardhatUserConfig = {
             chainId: 43112,
         },
         dev: {
-            chainId: 212,
+            chainId: 213,
             url: "http://3.0.19.66:7445",
             accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
         },

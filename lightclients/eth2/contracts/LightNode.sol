@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interface/ILightNode.sol";
 import "./interface/IMPTVerify.sol";
 import "./lib/RLPReader.sol";
-import "./lib/RLPEncode.sol";
 import "./lib/Helper.sol";
 import "./lib/Types.sol";
 
@@ -17,12 +16,10 @@ import "./lib/Types.sol";
 
 contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     using RLPReader for bytes;
-    using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
-    using RLPReader for RLPReader.Iterator;
 
     uint256 public constant FINALITY_PROOF_SIZE = 6;
-    uint256 public constant EXECUTION_PROOF_SIZE = 8;
+    uint256 public constant EXECUTION_PROOF_SIZE = 4;
     uint256 public constant NEXT_SYNC_COMMITTEE_PROOF_SIZE = 5;
     uint256 public constant BLS_PUBKEY_LENGTH = 48;
     uint256 public constant MAX_BLOCK_SAVED = 32 * 256 * 30;
@@ -135,14 +132,21 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         uint256 updatePeriod = Helper.compute_sync_committee_period(update.finalizedHeader.slot);
         require(finalizedPeriod == updatePeriod || finalizedPeriod + 1 == updatePeriod, "unexpected update period");
         require(update.finalityBranch.length == FINALITY_PROOF_SIZE, "invalid finality branch length");
-        require(update.exeFinalityBranch.length == EXECUTION_PROOF_SIZE, "invalid execution finality branch length");
+        require(update.executionBranch.length == EXECUTION_PROOF_SIZE, "invalid execution branch length");
 
         if (finalizedPeriod + 1 == updatePeriod) {
             require(update.nextSyncCommitteeBranch.length == NEXT_SYNC_COMMITTEE_PROOF_SIZE, "invalid next sync committee branch length");
         }
 
         if (verifyUpdate) {
-            bytes memory encode = encodeUpdateAndState(update);
+            bytes memory encode = abi.encode(
+                update,
+                finalizedBeaconHeader,
+                syncCommittees[curSyncCommitteeIndex],
+                syncCommittees[1 - curSyncCommitteeIndex],
+                chainId
+            );
+
             uint256 inputLength = encode.length;
             bytes memory result = new bytes(0);
             bool success = false;
@@ -157,11 +161,11 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             curSyncCommitteeIndex = 1 - curSyncCommitteeIndex;
         }
 
-        finalizedExeHeaders[update.finalizedExeHeader.number] = Helper.getBlockHash(update.finalizedExeHeader);
+        finalizedExeHeaders[update.finalizedExecution.blockNumber] = update.finalizedExecution.blockHash;
         exeHeaderStartNumber = finalizedExeHeaderNumber + 1;
-        exeHeaderEndNumber = update.finalizedExeHeader.number - 1;
-        exeHeaderEndHash = Helper.bytesToBytes32(update.finalizedExeHeader.parentHash);
-        finalizedExeHeaderNumber = update.finalizedExeHeader.number;
+        exeHeaderEndNumber = update.finalizedExecution.blockNumber - 1;
+        exeHeaderEndHash = update.finalizedExecution.parentHash;
+        finalizedExeHeaderNumber = update.finalizedExecution.blockNumber;
         finalizedBeaconHeader = update.finalizedHeader;
 
         emit UpdateLightClient(msg.sender, finalizedBeaconHeader.slot, finalizedExeHeaderNumber);
@@ -183,7 +187,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
             finalizedExeHeaders[exeHeaderEndNumber] = exeHeaderEndHash;
             exeHeaderEndNumber--;
-            exeHeaderEndHash = Helper.bytesToBytes32(header.parentHash);
+            exeHeaderEndHash = header.parentHash;
         }
 
         uint256 savedHeaders = finalizedExeHeaderNumber - exeHeaderEndNumber + exeHeaderStartNumber - startExeHeaderNumber;
@@ -226,7 +230,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         // verify proof
         bytes memory bytesReceipt = Helper.encodeReceipt(proof.txReceipt);
         success = IMPTVerify(mptVerify).verifyTrieProof(
-            bytes32(proof.header.receiptsRoot),
+            bytes32(header.receiptsRoot),
             proof.keyIndex,
             proof.proof,
             bytesReceipt
@@ -242,7 +246,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
-    function clientState() external view override returns(bytes memory) {
+    function clientState() external view override returns (bytes memory) {
         return abi.encode(exeHeaderStartNumber, exeHeaderEndNumber);
     }
 
@@ -279,25 +283,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     function getUpdateBytes(Types.LightClientUpdate memory _update) public pure returns (bytes memory){
         return abi.encode(_update);
     }
-
-
-
-    function encodeUpdateAndState(Types.LightClientUpdate memory update)
-    internal
-    view
-    returns (bytes memory)
-    {
-        Types.LightClientState memory state = Types.LightClientState(
-            finalizedBeaconHeader,
-            syncCommittees[curSyncCommitteeIndex],
-            syncCommittees[1 - curSyncCommitteeIndex],
-            chainId
-        );
-        Types.LightClientVerify memory verify = Types.LightClientVerify(update, state);
-
-        return abi.encode(verify);
-    }
-
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
