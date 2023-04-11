@@ -8,6 +8,7 @@ import "./interface/ILightNode.sol";
 import "./bls/BlsCode.sol";
 import "./bls/BGLS.sol";
 import "./interface/IVerifyTool.sol";
+import "hardhat/console.sol";
 
 contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
@@ -15,7 +16,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     uint256 public epochSize;
     uint256 public headerHeight;
     address[] public validatorAddress;
-    validator[20] public validators;
+    validator[] public validators;
     IVerifyTool public verifyTool;
     BlsCode blsCode;
     address private _pendingAdmin;
@@ -28,6 +29,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         uint256 epoch;
     }
 
+    validator verifier;
     event mapInitializeValidators(uint256 _threshold, G1[] _pairKeys, uint[] _weights, uint256 epoch);
     event MapUpdateValidators(G1[] _pairKeysAdd, uint[] _weights, uint256 epoch, bytes bits);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
@@ -54,12 +56,15 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     override
     initializer {
         require(_epoch > 0, "Error initializing epco");
-        _changeAdmin(msg.sender);
-        maxValidators = 20;
+        _changeAdmin(tx.origin);
+        maxValidators = 1728000 / _epochSize;
         headerHeight = (_epoch - 1) * _epochSize;
         startHeight = headerHeight;
         epochSize = _epochSize;
         validatorAddress = _validatorAddress;
+        for(uint256 i = 0; i < maxValidators ; i ++){
+            validators.push(verifier);
+        }
         setStateInternal(_threshold, _pairKeys, _weights, _epoch);
         verifyTool = IVerifyTool(_verifyTool);
         blsCode = new BlsCode();
@@ -77,7 +82,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     public
     view
     returns (G1[] memory){
-        require(id < 20, "validator id error");
         return validators[id].pairKeys;
     }
 
@@ -169,7 +173,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
 
     function verifiableHeaderRange() public view override returns (uint256, uint256){
-        uint start = headerHeight - (maxValidators * epochSize);
+        uint start;
+        if(headerHeight > maxValidators * epochSize){
+            start = headerHeight - (maxValidators * epochSize);
+        }
+
         if (startHeight > 0 && startHeight > start) {
             start = startHeight;
         }
