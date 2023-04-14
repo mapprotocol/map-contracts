@@ -1,14 +1,6 @@
 const { LIGHTNODE_SALT,DEPLOY_FACTORY} = process.env;
 
 
-task("lightProxy",
-    "deploy LightNode proxy and init",
-    require("./lightProxy")
-)
-    .addParam("height", "init height")
-    .addParam("rpc", "main or test")
-
-
 task("lightFactoryDeploy",
     "deploy LightNode proxy and init",
     require("./lightFactoryDeploy")
