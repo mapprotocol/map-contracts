@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.7;
+pragma solidity ^0.8.0;
 
 /// @notice DeployFactory address: 0x6258e4d2950757A749a4d4683A7342261ce12471
 ///          Support chains: - Ethereum (1), Goerli Testnet (5)
 ///                          - BNB Smart Chain (56), BNB Smart Chain Testnet (97)
 ///                          - Polygon (137), Mumbai Testnet (80001)
-///                          - MAPO Relay Chain (22776), Makalu Testnet (212)
+///                          - MAP Relay Chain (22776), Makalu Testnet (212)
 ///                          - Klaytn (8217), Klaytn Testnet (1001)
 ///                          - Arbitrum (42161), Optimism (10)
 ///                          - Avalanche (43114), Fantom (250)

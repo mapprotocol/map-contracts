@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.7;
+pragma solidity ^0.8.0;
 
 interface ILightNode {
     function verifyProofData(bytes memory _receiptProof) external view returns (bool success, string memory message, bytes memory logs);

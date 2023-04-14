@@ -1,20 +1,25 @@
 {
-  "name": "protocol-contract",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "@mapprotocol/protocol",
+  "version": "0.1.0",
+  "description": "MAP Protocol management and utils contracts",
+  "files": [
+    "artifacts",
+    "deployments",
+    "contracts"
+  ],
   "scripts": {
-    "map:deploy:MaintainerManager": "npx hardhat deploy --tags MaintainerManager --network Map",
-    "map:deploy:MaintainerManagerUp": "npx hardhat deploy --tags MaintainerManagerUp --network Map",
-    "map:deploy:MaintainerManagerSet": "npx hardhat deploy --tags MaintainerManagerSet --network Map",
-    "map:deploy:LightClientManager": "npx hardhat deploy --tags LightClientManager --network Map",
-    "map:deploy:LightClientManagerSet": "npx hardhat deploy --tags LightClientManagerSet --network Map"
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/mapprotocol/map-contracts.git"
   },
-  "author": "",
+  "author": {
+    "email": "developers@maplabs.io",
+    "name": "MAP Protocol",
+    "url": "https://mapprotocol.io"
+  },
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/mapprotocol/map-contracts/issues"

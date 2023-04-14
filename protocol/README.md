@@ -1,17 +1,37 @@
-# Map chain protocol
+# MAP Protocol management contracts
 
 ## Introduction
-`LightClientManager` is a contract on Map chain used to manage contract addresses and calls on other chains.
 
-`MaintainerManager` is a contract on Mapchain for managing all Maintainer pledges, reward distribution, and binding work accounts
 
-`MaintainerManagerUp` is the contract for MaintainerManager upgrade
+### Deploy Factory
 
-## Configuration file description
+The factory contract helps to deploy to deterministic addresses without an init code factor.
+Every developer can use contract `0x6258e4d2950757A749a4d4683A7342261ce12471` to deploy deterministic addresses contract.
+Now support chains: 
+- Ethereum (1), Goerli Testnet (5)
+- BNB Smart Chain (56), BNB Smart Chain Testnet (97)
+- Polygon (137), Mumbai Testnet (80001)
+- MAP Relay Chain (22776), Makalu Testnet (212)
+- Klaytn (8217), Klaytn Testnet (1001)
+- Arbitrum (42161)
+- Optimism (10)
+- Avalanche (43114)
+- Fantom (250)
+- Gnosis Chain (100)
+- Aurora (1313161554)
 
-`PRIVATE_KEY` User-deployed private key
+### Light client manager
+The contract deployed on the MAP Relay Chain is responsible for managing light clients, it helps:
+- Register light client
+- Verify cross chain proof
+- Get light client verification range
 
-`INFURA_KEY` User-deployed infura key
+### Maintainer manager
+The contract deployed on the MAP Relay Chain is responsible for managing maintainers, it helps:
+- staking
+- reward distribution
+- work address binding.
+
 
 ## Compile
 
@@ -21,9 +41,9 @@ Build using the following commands:
 git clone https://github.com/mapprotocol/map-contracts.git
 cd protocol
 npm install
+npx hardhat compile
 ```
 
-Edit the .env-example.txt file and save it as .env
 
 ## Test
 
@@ -34,36 +54,33 @@ npx hardhat test
 ## Deploy
 
 ```shell
-npx hardhat deploy --tags MaintainerManager --network Map
+npx hardhat deploy --tags MaintainerManager --network <network>
 
-npx hardhat deploy --tags LightClientManager --network Map
+npx hardhat deploy --tags LightClientManager --network <network>
 ```
 
 ## Upgrade
 
 ```shell
-npx hardhat deploy --tags MaintainerManagerUp --network Map
+npx hardhat deploy --tags MaintainerManagerUp --network <network>
 ```
 
 
-## Parameter setting
+## Useage
 
-### LightClientManager contract
-
-#### Add a chain of LightNode contracts
+### Register a light client
 
 cmd
 ```shell
-npx hardhat LightClientRegister --chain <chain id for light client> --contract <contract for light client>  --network <network>
+npx hardhat clientRegister --chain <chain id for light client> --contract <contract for light client>  --network <network>
 ```
+
 example
 ```shell
   npx hardhat LightClientRegister --chain 1 --contract "0x366db0D543b709434Cb91113270521e50fC2fe49" --network Map
 ```
 
-### MaintainerManager contract
-
-#### Add or remove a Maintainer
+### Add or remove a maintainer
 
 cmd
 ```shell
