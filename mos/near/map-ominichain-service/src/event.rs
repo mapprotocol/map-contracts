@@ -571,6 +571,14 @@ impl Transferable for SwapOutEvent {
                     split[1]
                 );
 
+                if i == 0 {
+                    assert_eq!(
+                        split[0].as_bytes(),
+                        self.token.as_slice(),
+                        "bridge in token should be equal to the first token in"
+                    );
+                }
+
                 if i == self.raw_swap_data.swap_param.len() - 1 {
                     assert_eq!(
                         split[1].as_bytes(),
@@ -579,6 +587,12 @@ impl Transferable for SwapOutEvent {
                     );
                 }
             }
+        } else {
+            assert_eq!(
+                self.token.as_slice(),
+                self.raw_swap_data.target_token.as_slice(),
+                "bridge in token should be equal to target token"
+            );
         }
     }
 
