@@ -2,21 +2,26 @@
 
 pragma solidity ^0.8.0;
 
-import "../interface/IEvent.sol";
 import "./RLPReader.sol";
 import "../utils/Utils.sol";
 
-library EvmDecoder {
+library LogDecoder {
 
     using RLPReader for bytes;
     using RLPReader for RLPReader.RLPItem;
 
-    function decodeTxLogs(bytes memory logsHash)
+    struct txLog {
+        address addr;
+        bytes[] topics;
+        bytes data;
+    }
+
+    function decodeTxLogs(bytes memory logs)
     internal
     pure
-    returns (IEvent.txLog[] memory _txLogs) {
-        RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
-        _txLogs = new IEvent.txLog[](ls.length);
+    returns (txLog[] memory _txLogs) {
+        RLPReader.RLPItem[] memory ls = logs.toRlpItem().toList();
+        _txLogs = new txLog[](ls.length);
         for (uint256 i = 0; i < ls.length; i++) {
             RLPReader.RLPItem[] memory item = ls[i].toList();
 
@@ -27,7 +32,7 @@ library EvmDecoder {
             for (uint256 j = 0; j < firstItemList.length; j++) {
                 topic[j] = firstItemList[j].toBytes();
             }
-            _txLogs[i] = IEvent.txLog({
+            _txLogs[i] = txLog({
             addr : item[0].toAddress(),
             topics : topic,
             data : item[2].toBytes()
