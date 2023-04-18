@@ -1,9 +1,9 @@
 {
   "name": "@mapprotocol/protocol",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MAP Protocol management and utils contracts",
   "files": [
-    "artifacts",
+    "artifacts/contracts/*.sol/*.json",
     "deployments",
     "contracts"
   ],
