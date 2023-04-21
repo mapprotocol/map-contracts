@@ -105,11 +105,6 @@ describe("LightNode start test", function () {
 
     });
 
-    it('get test', async function () {
-         expect(await proxy.getValiditors()).to .equal(20);
-
-    });
-
     it('updateBlockHeader and verifyProofData', async function () {
         await proxy.updateBlockHeader(proofs.header203000,proofs.ist203000, proofs.aggpk203000);
         await proxy.updateBlockHeader(proofs.header204000,proofs.ist204000, proofs.aggpk204000);

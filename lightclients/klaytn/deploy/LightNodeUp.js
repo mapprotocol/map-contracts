@@ -1,3 +1,4 @@
+const { LIGHTNODE_SALT,DEPLOY_FACTORY} = process.env;
 
 module.exports = async function ({ethers, deployments}) {
     const {deploy} = deployments
@@ -22,13 +23,24 @@ module.exports = async function ({ethers, deployments}) {
     let lightNode = await ethers.getContract('LightNode');
 
     console.log(lightNode.address)
-    let proxy =  await deployments.get("LightNodeProxy")
 
-    let lightNodeProxy = await ethers.getContractAt("LightNode",proxy.address);
+    console.log("LightNode salt:", LIGHTNODE_SALT);
 
-    await (await  lightNodeProxy.upgradeTo(lightNode.address)).wait();
+    let factory = await ethers.getContractAt("IDeployFactory",DEPLOY_FACTORY)
 
-    console.log("LightNodeUp success")
+    console.log("deploy factory address:",factory.address)
+
+    let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(LIGHTNODE_SALT));
+
+    let lightAddress = await factory.getAddress(hash);
+
+    let lightProxy = await ethers.getContractAt('LightNode',lightAddress);
+
+    console.log("LightNodeProxy proxy address:", lightAddress);
+
+    await (await lightProxy.upgradeTo(lightNode.address)).wait();
+
+    console.log("LightNode up success");
 }
 
 module.exports.tags = ['LightNodeUp']

@@ -16,6 +16,10 @@ PRIVATE_KEY User-deployed private key
 
 INFURA_KEY User-deployed infura key
 
+LIGHTNODE_SALT User-deployed lightnode salt
+
+DEPLOY_FACTORY Factory-contract address
+
 
 ## Instruction
 LightNode : A contract used to verify klaytn transactions in the mapo chain
@@ -62,7 +66,7 @@ npx hardhat deploy --tags LightNode --network <network>
 Later we deploy the upgrade contract and initialize the contract，run the following command
 
 ````
-npx hardhat lightProxy --height <init height> --rpc <"main or test" rpc> --network  <network>
+npx hardhat lightFactoryDeploy --height <init height> --mpt <MPT contract address> --network  <network>
 
 ````
 
