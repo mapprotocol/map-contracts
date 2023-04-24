@@ -58,16 +58,6 @@ module.exports = {
       chainId : 80001,
       accounts: accounts
     },
-    Heco: {
-      url: `https://http-mainnet-node.huobichain.com`,
-      chainId : 128,
-      accounts: accounts
-    },
-    HecoTest: {
-      url: `https://http-testnet.hecochain.com`,
-      chainId : 256,
-      accounts: accounts
-    },
     Bsc: {
       url: `https://bsc-dataseed1.binance.org/`,
       chainId : 56,

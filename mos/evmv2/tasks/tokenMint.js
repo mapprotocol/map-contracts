@@ -10,7 +10,13 @@ module.exports = async (taskArgs,hre) => {
 
     console.log("Mintable Token address:",token.address);
 
-    await token.mint(deployer.address, taskArgs.amount)
+    if (taskArgs.mint) {
+        await token.mint(deployer.address, taskArgs.amount)
+        console.log(`Mint '${taskArgs.token}' Token ${taskArgs.amount} `);
+    } else {
+        await token.burn(taskArgs.amount)
+        console.log(`Burn '${taskArgs.token}' Token ${taskArgs.amount} `);
+    }
 
-    console.log(`Mint '${taskArgs.token}' Token ${taskArgs.amount} `);
+
 }

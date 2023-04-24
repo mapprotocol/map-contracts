@@ -48,11 +48,12 @@ task("tokenGrant",
     .addOptionalParam("minter", "minter address, default mos", "mos", types.string)
 
 task("tokenMint",
-    "mint token",
+    "mint or burn token",
     require("./tokenMint")
 )
     .addParam("token", "token address")
     .addParam("amount", "mint amount")
+    .addOptionalParam("mint", "mint or burn, default true", true, types.boolean)
 
 task("mosSetRelay",
     "Initialize MapCrossChainServiceRelay address for MapCrossChainService",
