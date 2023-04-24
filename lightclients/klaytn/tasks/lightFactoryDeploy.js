@@ -30,7 +30,7 @@ module.exports = async (taskArgs,hre) => {
     })
 
     let lightNode = await ethers.getContract('LightNode');
-    console.log(lightNode.address)
+    console.log('light node implementation address:', lightNode.address);
 
     let height = Math.trunc(taskArgs.height/3600)*3600;
 

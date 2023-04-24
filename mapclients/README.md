@@ -1,2 +1,2 @@
-# Mapo relay chain light client contracts
+# MAP Relay Chain light client
 
