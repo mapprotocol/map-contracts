@@ -522,7 +522,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
             }
             miners[i] = committee;
         }
-        return checkedCommittee * 3 > v.validators.length * 2;
+        return checkedCommittee > (v.validators.length / 3 - 1) * 2;
     }
 
 

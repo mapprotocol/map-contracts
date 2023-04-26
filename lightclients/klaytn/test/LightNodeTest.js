@@ -17,6 +17,7 @@ describe("LightNode start test", function () {
     beforeEach(async function () {
         [owner, adminChange] = await ethers.getSigners();
         caver = new Caver("https://public-node-api.klaytnapi.com/v1/baobab");
+        //caver = new Caver("https://public-node-api.klaytnapi.com/v1/cypress");
     });
 
     it("deploy LightNode",async function () {
@@ -175,7 +176,7 @@ describe("LightNode start test", function () {
 
         expect(admin).to.equal(adminChange.address);
 
-        let uupsAdmin = await LightNodeProxy.getUUPSAdmin();
+        let uupsAdmin = await LightNodeProxy.getAdmin();
 
         expect(uupsAdmin).to.equal(adminChange.address);
 
