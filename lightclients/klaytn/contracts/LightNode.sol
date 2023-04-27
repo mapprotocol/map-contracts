@@ -503,6 +503,26 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     }
 
 
+
+    /**
+     * @dev Calculate the number of faulty nodes.
+     * https://github.com/klaytn/klaytn/blob/841a8ad3b45e92f4ea378c1ee1f06cdb963afbac/consensus/istanbul/validator/default.go#L370
+     *
+     */
+    function _getFaultyNodeNumber(uint256 _n) internal pure returns(uint256){
+        if(_n % 3 == 0){
+            return _n / 3 - 1;
+        }else{
+            return _n / 3;
+        }
+    }
+
+
+    /**
+     * @dev Check whether the CommitSeal is adequate.
+     * https://github.com/klaytn/klaytn/blob/841a8ad3b45e92f4ea378c1ee1f06cdb963afbac/consensus/istanbul/backend/engine.go#L359
+     *
+     */
     function _checkCommitSeal(
         Validator memory v,
         bytes memory committedMsg,
@@ -522,7 +542,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
             }
             miners[i] = committee;
         }
-        return checkedCommittee > (v.validators.length / 3 - 1) * 2;
+        return checkedCommittee > (_getFaultyNodeNumber(v.validators.length)) * 2;
     }
 
 
