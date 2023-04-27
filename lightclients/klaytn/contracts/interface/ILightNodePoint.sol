@@ -55,7 +55,7 @@ interface ILightNodePoint {
     struct ExtraData {
         address[] validators;
         bytes seal;
-        bytes [] committedSeal;
+        bytes[] committedSeal;
     }
 
     struct ReceiptProof {
