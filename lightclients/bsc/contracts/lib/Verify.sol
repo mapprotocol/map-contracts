@@ -22,6 +22,14 @@ library Verify {
 
     uint256 internal constant MIN_GAS_LIMIT = 5000;
 
+    uint256 internal constant BLS_PUBLICKEY_LENGTH = 48;
+
+    uint256 internal constant TESTNET_LU_BAN_FORK_BLOCK = 29295050;
+
+    uint256 internal constant MAINNET_LU_BAN_FORK_BLOCK = 0;
+
+    uint256 internal constant MAINNET_CHAIN_ID = 56;
+
     bytes32 constant SHA3_UNCLES =
         0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
 
@@ -263,7 +271,21 @@ library Verify {
         signature = _memoryToBytes(ptr, EXTRASEAL);
     }
 
-    function _getValidators(
+
+   function _getValidators(
+        uint256 _chainId,
+        uint256 _blockNum,
+        bytes memory _extraData
+    ) internal pure returns (bytes memory) {
+
+        if(_isAfterLuBanFork(_chainId,_blockNum)){
+            return   _getValidatorsAfterLuBanFork(_extraData);
+        } else {
+            return   _getValidatorsBeforeLuBanFork(_extraData);
+        }
+    }
+
+    function _getValidatorsBeforeLuBanFork(
         bytes memory _extraData
     ) internal pure returns (bytes memory) {
 
@@ -278,6 +300,62 @@ library Verify {
         ptr += 64;
         //extraData never less than 97
         return _memoryToBytes(ptr, _extraData.length - (EXTRA_VANITY + EXTRASEAL));
+    }
+
+
+    // getValidatorBytesFromHeader returns the validators bytes extracted from the header's extra field if exists.
+    // The validators bytes would be contained only in the epoch block's header, and its each validator bytes length is fixed.
+    // On luban fork, we introduce vote attestation into the header's extra field, so extra format is different from before.
+    // Before luban fork: |---Extra Vanity---|---Validators Bytes (or Empty)---|---Extra Seal---|
+    // After luban fork:  |---Extra Vanity---|---Validators Number and Validators Bytes (or Empty)---|---Vote Attestation (or Empty)---|---Extra Seal---|
+    function _getValidatorsAfterLuBanFork(
+        bytes memory _extraData
+    ) internal pure returns (bytes memory res) {
+        // 1 byte for validators num 
+        uint256 prefix = EXTRA_VANITY + EXTRASEAL + 1;
+
+        uint256 keyLenght = ADDRESS_LENGTH + BLS_PUBLICKEY_LENGTH;
+
+        require(_extraData.length > prefix,"_extraData length too short");
+
+        uint256 num;
+        uint256 point;
+        assembly {
+            //skip 32 byte data length + 32 byte EXTRA_VANITY
+            point := add(_extraData,64)
+            // 1 byte for validators num 
+            num := shr(248,mload(point))
+        }
+
+        require(_extraData.length >= (prefix + keyLenght * num),"_extraData length mismatch");
+
+        assembly {
+            // 0x40 is the address of free memory pointer.
+            res := mload(0x40)
+            let length := mul(ADDRESS_LENGTH,num)
+            //skip 32 byte data length
+            let start := add(res,32)
+            // res end point
+            let end := add(start,length) 
+            mstore(0x40, end)
+            //store length for first 32 bytes
+            mstore(res, length)
+            //skip 1 byte for validators num 
+            point := add(point,1)
+            for { let i := 0 } lt(i,num) { i := add(i,1) } {
+               // address lenth is 20 bytes Discard others 12 bytes
+               let a := and(mload(add(point,mul(i,keyLenght))),0xffffffffffffffffffffffffffffffffffffffff000000000000000000000000)  
+               mstore(add(start,mul(i,ADDRESS_LENGTH)),a)
+            }
+        }
+    }
+
+    function _isAfterLuBanFork(uint256 _chainId,uint256 _blockNum) internal pure returns(bool){
+         if(_chainId == MAINNET_CHAIN_ID) {
+            return MAINNET_LU_BAN_FORK_BLOCK > 0 && _blockNum > MAINNET_LU_BAN_FORK_BLOCK;
+         } else {
+            return _blockNum > TESTNET_LU_BAN_FORK_BLOCK;
+         }
     }
 
     function _containsValidator(
