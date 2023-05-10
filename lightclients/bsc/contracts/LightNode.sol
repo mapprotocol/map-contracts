@@ -97,7 +97,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         require(result, message);
 
-        validators[_lastSyncedBlock] = Verify._getValidators(_blockHeaders[0].extraData);
+        validators[_lastSyncedBlock] = Verify._getValidators(chainId,_blockHeaders[0].number,_blockHeaders[0].extraData);
 
         _removeExcessEpochValidators();
 
@@ -163,7 +163,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         for (uint256 i = 0; i < 2; i++) {  
             require( _headers[i].number % EPOCH_NUM == 0,"invalid init block number");
             require( _headers[i].extraData.length >= minEpochBlockExtraDataLen,"invalid init block");
-            validators[_headers[i].number] = Verify._getValidators(_headers[i].extraData);
+            validators[_headers[i].number] = Verify._getValidators(chainId,_headers[i].number,_headers[i].extraData);
         }
 
         minValidBlocknum = _headers[1].number;
