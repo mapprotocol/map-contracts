@@ -48,7 +48,7 @@ interface ILightNodePoint {
     struct Vote {
         address validator;
         bytes key;
-        bytes value;
+        address value;
     }
 
 
