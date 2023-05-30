@@ -26,7 +26,7 @@ library Verify {
 
     uint256 internal constant TESTNET_LU_BAN_FORK_BLOCK = 29295050;
 
-    uint256 internal constant MAINNET_LU_BAN_FORK_BLOCK = 0;
+    uint256 internal constant MAINNET_LU_BAN_FORK_BLOCK = 29020050;
 
     uint256 internal constant MAINNET_CHAIN_ID = 56;
 
