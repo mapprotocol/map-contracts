@@ -11,6 +11,12 @@ pragma solidity ^0.8.0;
 ///                          - Arbitrum (42161), Optimism (10)
 ///                          - Avalanche (43114), Fantom (250)
 ///                          - Gnosis Chain (100), Aurora (1313161554)
+///                          - Celo (42220), Harmony (1666600000)
+///                          - zkSync (324), Polygon zkEvm (1101), Boba (288), Metis (1088)
+///                          - Cronos (25), Kava (2222), Evmos (9001)
+///                          - Moonbeam (1284), Moonriver (1285), Astar (592)
+///                          - Conflux (1030), Oasis (42262), Velas (106)
+///                          - Telos (40), Syscoin (57), Ethw (10001)
 /// @author MAP Protocol (https://github.com/mapprotocol/map-contracts/blob/main/protocol/contracts/interface/IDeployFactory.sol)
 /// @author Import CREATE3 library from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/CREATE3.sol)
 interface IDeployFactory {
