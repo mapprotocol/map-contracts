@@ -205,7 +205,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 }
             }
 
-            preBlockHash = Verify._getBlockHash(_blockHeaders[i]);
+            preBlockHash = Verify._getBlockHash(_blockHeaders[i],chainId);
 
             preBlockTime = _blockHeaders[i].timestamp;
 
