@@ -26,7 +26,11 @@ library Verify {
 
     uint256 internal constant TESTNET_LU_BAN_FORK_BLOCK = 29295050;
 
+    uint256 internal constant TESTNET_LONDON_FORK_BLOCK = 31103030;
+
     uint256 internal constant MAINNET_LU_BAN_FORK_BLOCK = 29020050;
+
+    uint256 internal constant MAINNET_LONDON_FORK_BLOCK = 0;
 
     uint256 internal constant MAINNET_CHAIN_ID = 56;
 
@@ -54,6 +58,7 @@ library Verify {
         bytes extraData;
         bytes mixHash;
         bytes nonce;
+        uint256 baseFeePerGas;
     }
 
     struct ReceiptProof {
@@ -81,7 +86,7 @@ library Verify {
         uint256 _chainId
     ) internal pure returns (bool) {
         (bytes memory signature, bytes memory extraData) = _splitExtra( _header.extraData);
-        bytes32 hash = keccak256(_encodeSigHeader(_header, extraData, _chainId));
+        bytes32 hash = _getSealHash(_header, extraData, _chainId);
 
         bytes32 r;
         bytes32 s;
@@ -156,53 +161,54 @@ library Verify {
         return true;
     }
 
-    function _encodeSigHeader(
+    function _getSealHash(
         BlockHeader memory _header,
         bytes memory _extraData,
         uint256 _chainId
-    ) internal pure returns (bytes memory output) {
+    ) internal pure returns (bytes32) {
         bytes[] memory list = new bytes[](16);
         list[0] = RLPEncode.encodeUint(_chainId);
-        list[1] = RLPEncode.encodeBytes(_header.parentHash);
-        list[2] = RLPEncode.encodeBytes(_header.sha3Uncles);
-        list[3] = RLPEncode.encodeAddress(_header.miner);
-        list[4] = RLPEncode.encodeBytes(_header.stateRoot);
-        list[5] = RLPEncode.encodeBytes(_header.transactionsRoot);
-        list[6] = RLPEncode.encodeBytes(_header.receiptsRoot);
-        list[7] = RLPEncode.encodeBytes(_header.logsBloom);
-        list[8] = RLPEncode.encodeUint(_header.difficulty);
-        list[9] = RLPEncode.encodeUint(_header.number);
-        list[10] = RLPEncode.encodeUint(_header.gasLimit);
-        list[11] = RLPEncode.encodeUint(_header.gasUsed);
-        list[12] = RLPEncode.encodeUint(_header.timestamp);
-        list[13] = RLPEncode.encodeBytes(_extraData);
-        list[14] = RLPEncode.encodeBytes(_header.mixHash);
-        list[15] = RLPEncode.encodeBytes(_header.nonce);
-        output = RLPEncode.encodeList(list);
+        _headerToList(_header,_extraData,list,1);
+        return keccak256(RLPEncode.encodeList(list));
     }
 
-    function _getBlockHash(BlockHeader memory _header)
+    function _getBlockHash(BlockHeader memory _header,uint256 _chainId)
+    internal
+    pure
+    returns (bytes32)
+    {    
+       bytes[] memory list;
+       if(_isAfterLondonFork(_chainId,_header.number)) {
+          list = new bytes[](16);
+          _headerToList(_header,_header.extraData,list,0);
+          list[15] = RLPEncode.encodeUint(_header.baseFeePerGas);
+       } else {
+          list = new bytes[](15);
+          _headerToList(_header,_header.extraData,list,0);
+       }
+        return keccak256(RLPEncode.encodeList(list));
+    }
+
+    function _headerToList(BlockHeader memory _header,bytes memory _extraData,bytes[] memory _list,uint256 _start)
         internal
         pure
-        returns (bytes32)
     {
-        bytes[] memory list = new bytes[](15);
-        list[0] = RLPEncode.encodeBytes(_header.parentHash);
-        list[1] = RLPEncode.encodeBytes(_header.sha3Uncles);
-        list[2] = RLPEncode.encodeAddress(_header.miner);
-        list[3] = RLPEncode.encodeBytes(_header.stateRoot);
-        list[4] = RLPEncode.encodeBytes(_header.transactionsRoot);
-        list[5] = RLPEncode.encodeBytes(_header.receiptsRoot);
-        list[6] = RLPEncode.encodeBytes(_header.logsBloom);
-        list[7] = RLPEncode.encodeUint(_header.difficulty);
-        list[8] = RLPEncode.encodeUint(_header.number);
-        list[9] = RLPEncode.encodeUint(_header.gasLimit);
-        list[10] = RLPEncode.encodeUint(_header.gasUsed);
-        list[11] = RLPEncode.encodeUint(_header.timestamp);
-        list[12] = RLPEncode.encodeBytes(_header.extraData);
-        list[13] = RLPEncode.encodeBytes(_header.mixHash);
-        list[14] = RLPEncode.encodeBytes(_header.nonce);
-        return keccak256(RLPEncode.encodeList(list));
+        _list[_start] = RLPEncode.encodeBytes(_header.parentHash);
+        _list[++_start] = RLPEncode.encodeBytes(_header.sha3Uncles);
+        _list[++_start] = RLPEncode.encodeAddress(_header.miner);
+        _list[++_start] = RLPEncode.encodeBytes(_header.stateRoot);
+        _list[++_start] = RLPEncode.encodeBytes(_header.transactionsRoot);
+        _list[++_start] = RLPEncode.encodeBytes(_header.receiptsRoot);
+        _list[++_start] = RLPEncode.encodeBytes(_header.logsBloom);
+        _list[++_start] = RLPEncode.encodeUint(_header.difficulty);
+        _list[++_start] = RLPEncode.encodeUint(_header.number);
+        _list[++_start] = RLPEncode.encodeUint(_header.gasLimit);
+        _list[++_start] = RLPEncode.encodeUint(_header.gasUsed);
+        _list[++_start] = RLPEncode.encodeUint(_header.timestamp);
+        _list[++_start] = RLPEncode.encodeBytes(_extraData);
+        _list[++_start] = RLPEncode.encodeBytes(_header.mixHash);
+        _list[++_start] = RLPEncode.encodeBytes(_header.nonce);
+       
     }
 
     function _validateProof(
@@ -355,6 +361,14 @@ library Verify {
             return MAINNET_LU_BAN_FORK_BLOCK > 0 && _blockNum > MAINNET_LU_BAN_FORK_BLOCK;
          } else {
             return _blockNum > TESTNET_LU_BAN_FORK_BLOCK;
+         }
+    }
+
+    function _isAfterLondonFork(uint256 _chainId,uint256 _blockNum) internal pure returns(bool){
+         if(_chainId == MAINNET_CHAIN_ID) {
+            return MAINNET_LONDON_FORK_BLOCK > 0 && _blockNum >= MAINNET_LONDON_FORK_BLOCK;
+         } else {
+            return _blockNum >= TESTNET_LONDON_FORK_BLOCK;
          }
     }
 
