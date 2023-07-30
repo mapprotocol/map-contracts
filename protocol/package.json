@@ -1,6 +1,6 @@
 {
   "name": "@mapprotocol/protocol",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "MAP Protocol management and utils contracts",
   "files": [
     "artifacts/contracts/*.sol/*.json",
@@ -27,7 +27,6 @@
   },
   "homepage": "https://github.com/mapprotocol/map-contracts#readme.md",
   "dependencies": {
-    "@nomiclabs/hardhat-etherscan": "^2.1.8",
     "@openzeppelin/contracts": "^4.5.0",
     "@openzeppelin/contracts-upgradeable": "^4.6.0",
     "aws-sdk": "^2.1137.0",
@@ -42,11 +41,15 @@
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
+    "@nomiclabs/hardhat-etherscan": "^3.1.2",
+    "zksync-web3": "^0.14.3",
+    "@matterlabs/hardhat-zksync-deploy": "^0.6.3",
+    "@matterlabs/hardhat-zksync-solc": "^0.3.17",
+    "@matterlabs/hardhat-zksync-verify": "^0.1.6",
     "@nomiclabs/hardhat-solhint": "^2.0.0",
     "@types/chai": "^4.2.15",
     "@types/mocha": "^8.2.1",
     "@types/node": "^14.14.31",
-    "@uniswap/v2-core": "^1.0.1",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
     "concurrently": "^6.0.0",
