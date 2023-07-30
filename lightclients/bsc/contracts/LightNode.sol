@@ -33,6 +33,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         address indexed previousPending,
         address indexed newPending
     );
+    event SetMptVerify(address newMptVerify);
+    
     event AdminTransferred(address indexed previous, address indexed newAdmin);
 
     struct ProofData {
@@ -78,6 +80,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
 
         return true;
+    }
+
+    function setMptVerify(address _newMptVerify) external onlyOwner {
+        require(_newMptVerify.code.length > 0,"_newMptVerify must contract address");
+        mptVerify = _newMptVerify;
+        emit SetMptVerify(_newMptVerify);
     }
 
     function updateBlockHeader(
