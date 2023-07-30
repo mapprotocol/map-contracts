@@ -131,11 +131,6 @@ module.exports = {
       chainId : 1666600000,
       accounts: accounts
     },
-    zkSync: {
-      url: `https://mainnet.era.zksync.io`,
-      chainId : 324,
-      accounts: accounts
-    },
     zkEvm: {
       url: `https://zkevm-rpc.com`,
       chainId : 1101,
@@ -149,6 +144,12 @@ module.exports = {
     Metis: {
       url: `https://andromeda.metis.io/?owner=1088`,
       chainId : 1088,
+      accounts: accounts
+    },
+
+    Okt: {
+      url: `https://exchainrpc.okex.org/`,
+      chainId : 66,
       accounts: accounts
     },
 
@@ -213,6 +214,11 @@ module.exports = {
       chainId : 10001,
       accounts: accounts
     },
+    Fuse: {
+      url: `https://rpc.fuse.io/`,
+      chainId : 122,
+      accounts: accounts
+    },
   },
   solidity: {
     compilers: [
@@ -246,4 +252,4 @@ module.exports = {
   etherscan: {
     apiKey: process.env.BSC_SCAN_KEY,
   },
-}
+};

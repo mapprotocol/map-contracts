@@ -1,10 +1,12 @@
+// SPDX-License-Identifier: MIT
+
 /*
  * @title MerklePatriciaVerifier
  * @author Sam Mayo (sammayo888@gmail.com)
  *
  * @dev Library for verifing merkle patricia proofs.
  */
-// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
 import {RLPReader} from "./RLPReader.sol";
