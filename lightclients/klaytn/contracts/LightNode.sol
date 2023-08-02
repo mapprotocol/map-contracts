@@ -151,6 +151,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
             });
             validators[validatorIdx] = v;
             headerHeight = bh.number;
+            emit UpdateBlockHeader(tx.origin, _headers[i].number);
         }
     }
 
