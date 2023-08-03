@@ -15,4 +15,6 @@ interface ILightClientManager {
     function headerHeight(uint256 _chainId) external view returns (uint256);
 
     function verifiableHeaderRange(uint256 _chainId) external view returns (uint256, uint256);
+
+    function finalizedState(uint256 _chainId,bytes memory _data) external view returns(bytes memory);
 }

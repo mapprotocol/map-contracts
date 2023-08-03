@@ -73,6 +73,13 @@ contract LightClientManager is ILightClientManager, Initializable,UUPSUpgradeabl
         return(min,max);
     }
 
+
+    function finalizedState(uint256 _chainId,bytes memory _data) external view override returns(bytes memory){
+        require(lightClientContract[_chainId] != address(0), "not register");
+        ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
+        return lightNode.finalizedState(_data);
+    }
+
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
         require(msg.sender == _getAdmin(), "LightClientManager: only Admin can upgrade");
