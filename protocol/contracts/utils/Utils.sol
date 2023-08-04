@@ -128,7 +128,7 @@ library Utils {
         return _addr.length == 20;
     }
 
-    function isValidAddress(bytes memory _addr, uint chainType) internal view returns (bool){
+    function isValidAddress(bytes memory _addr, uint chainType) internal pure returns (bool){
         if (chainType == 1) return isValidEvmAddress(_addr);
         if (chainType == 2) return isValidNearAddress(_addr);
         return false;
