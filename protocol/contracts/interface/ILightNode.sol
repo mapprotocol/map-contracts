@@ -15,8 +15,6 @@ interface ILightNode {
     // Get client state
     function clientState() external view returns(bytes memory);
 
-    function finalizedState(bytes memory _data) external view returns(bytes memory);
-
     function headerHeight() external view returns (uint256 height);
 
     function verifiableHeaderRange() external view returns (uint256, uint256);
