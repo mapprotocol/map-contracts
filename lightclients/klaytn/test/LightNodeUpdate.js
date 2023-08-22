@@ -10,6 +10,7 @@ describe("LightNode start test", function () {
     let lightNodeContractAddress;
     let lightProxyClient;
     let LightNodeProxy;
+    let verifyTool;
     let owner;
     let adminChange;
     let caver;
@@ -45,13 +46,12 @@ describe("LightNode start test", function () {
         let block = await caver.rpc.klay.getBlockByNumber(height);
 
 
-        let result = await lightNodeContract.decodeHeaderExtraData(block.extraData);
+        verifyTool = await (await ethers.getContractFactory("VerifyTool")).deploy();
 
-        let mtp = await (await ethers.getContractFactory("MPTVerify")).deploy();
-
+        let result = await verifyTool.decodeHeaderExtraData(block.extraData);
 
         let data = lightNodeContract.interface.encodeFunctionData("initialize",
-            [result.extData.validators,block.number,mtp.address]);
+            [result.extData.validators,block.number,verifyTool.address]);
 
         console.log("validators",result.extData.validators)
 
@@ -120,7 +120,7 @@ describe("LightNode start test", function () {
     });
 
     it('lightnode Update', async function () {
-        let LightClientUp = await ethers.getContractFactory("LightNodeUP");
+        let LightClientUp = await ethers.getContractFactory("LightNode");
 
         let lightClientUp = await LightClientUp.deploy();
 

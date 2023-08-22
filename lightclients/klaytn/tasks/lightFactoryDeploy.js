@@ -14,6 +14,7 @@ module.exports = async (taskArgs,hre) => {
 
     let deployChainId = hre.network.config.chainId
 
+   // let rpc = mainRpcUrl;
     let rpc = testRpcUrl;
     if (deployChainId === 22776){
         console.log("deploy id :",deployChainId );
@@ -32,17 +33,19 @@ module.exports = async (taskArgs,hre) => {
     let lightNode = await ethers.getContract('LightNode');
     console.log('light node implementation address:', lightNode.address);
 
+    let verifyTool = await ethers.getContractAt("VerifyTool",taskArgs.tool)
+
     let height = Math.trunc(taskArgs.height/3600)*3600;
 
     console.log("init height:",height);
 
     let block = await caver.rpc.klay.getBlockByNumber(height);
 
-    let result = await lightNode.decodeHeaderExtraData(block.extraData);
+    let result = await verifyTool.decodeHeaderExtraData(block.extraData);
 
     let data = lightNode.interface.encodeFunctionData(
         "initialize",
-        [result.extData.validators,block.number,taskArgs.mpt]
+        [result.extData.validators,block.number,taskArgs.tool]
     );
 
     console.log("validators",result.extData.validators)

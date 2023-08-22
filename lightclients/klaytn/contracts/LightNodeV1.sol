@@ -12,7 +12,7 @@ import "./lib/RLPEncode.sol";
 import "./interface/ILightNode.sol";
 import "./interface/IMPTVerify.sol";
 
-contract LightNodeUP is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
+contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
@@ -36,12 +36,6 @@ contract LightNodeUP is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         uint256 headerHeight;
     }
 
-    bytes32 constant ADD_VALIDATOR = 0x22206f4a2ac5feb779f2fe7e2130ba563547dd3de6a4160bfcf3bd9cc64c82ee;
-    bytes32 constant REMOVE_VALIDATOR = 0x3e9698b37f61d5135393cc4891dd22b1a42d2d350e5d561bcd6967bf75589818;
-
-    mapping(uint256 => Validator) public extendValidator;
-    mapping(uint256 => uint256) public extendList;
-    uint256 public tempBlockHeight;
 
     function initialize(
         address[] memory _validators,
@@ -97,7 +91,7 @@ contract LightNodeUP is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
             BlockHeader memory header = proof.header;
             (success, ) = checkBlockHeader(header,true);
             if(!success){
-                message = "DeriveShaConcat header verify failed";
+                message = "DeriveShaOriginal header verify failed";
                 return(success,message,logs);
             }
             success = _checkReceiptsConcat(proof.receipts, (bytes32)(header.receiptsRoot));
@@ -140,115 +134,25 @@ contract LightNodeUP is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         BlockHeader[] memory _headers = abi.decode(
             _blockHeaders, (BlockHeader[]));
 
-        require(_headers[0].number > headerHeight, "height error");
-        if(_headers[0].number % CHANGE_VALIDATORS_SIZE > 0) {
+        require(_headers[0].number > headerHeight,
+            "height error");
 
-            updateBlockHeaderChange(_headers);
-        }else{
+        for (uint256 i = 0; i < _headers.length; i++) {
+            require(_headers[i].number == headerHeight + CHANGE_VALIDATORS_SIZE,
+                "height error");
+            BlockHeader memory bh = _headers[i];
+            (bool success, ExtraData memory data) = checkBlockHeader(bh, false);
+            require(success, "header verify fail");
 
-            for (uint256 i = 0; i < _headers.length; i++) {
-                require(_headers[i].number == headerHeight + CHANGE_VALIDATORS_SIZE, "height epoch error");
-                BlockHeader memory bh = _headers[i];
-                (bool success, ExtraData memory data) = checkBlockHeader(bh, false);
-                require(success, "header verify fail");
-
-                validatorIdx = _getValidatorIndex(bh.number);
-                Validator memory tempValidators = validators[validatorIdx];
-
-                while(extendList[tempValidators.headerHeight] > 0){
-                    uint256 tempHeight = getRemoveExtendHeight(tempValidators.headerHeight);
-                    uint256 trueHeight = getTrueHeight(tempValidators.headerHeight,tempHeight);
-                    delete extendValidator[tempHeight];
-                    delete extendList[trueHeight];
-                }
-                Validator memory v = Validator({
-                validators : data.validators,
-                headerHeight : bh.number
-                });
-                validators[validatorIdx] = v;
-                headerHeight = bh.number;
-            }
+            validatorIdx = _getValidatorIndex(bh.number);
+            Validator memory v = Validator({
+            validators : data.validators,
+            headerHeight : bh.number
+            });
+            validators[validatorIdx] = v;
+            headerHeight = bh.number;
+            emit UpdateBlockHeader(tx.origin, _headers[i].number);
         }
-
-    }
-
-    function updateBlockHeaderChange(BlockHeader[] memory _blockHeaders)
-    public
-    {
-        BlockHeader memory header0 = _blockHeaders[0];
-        BlockHeader memory header1 = _blockHeaders[1];
-        require(header0.voteData.length > 0,"The extension update is not satisfied");
-        require(header0.number + 1 == header1.number, "Synchronous height error");
-
-        (bool success, ExtraData memory header1Extra) = checkBlockHeader(header1, true);
-        (bool hearderTag0, ExtraData memory header0Extra) = checkBlockHeader(header0, true);
-        require(success, "header change verify fail");
-
-        Vote memory vote = decodeVote(_blockHeaders[0].voteData);
-        bool success0;
-        bool success1;
-        if(keccak256(vote.key) == ADD_VALIDATOR){
-            success0  = _checkCommittedAddress(header0Extra.validators,vote.value);
-            success1  = _checkCommittedAddress(header1Extra.validators,vote.value);
-            require(!success0 && success1,"ADD_VALIDATOR error");
-        }else if (keccak256(vote.key) == REMOVE_VALIDATOR){
-            success0  = _checkCommittedAddress(header0Extra.validators,vote.value);
-            success1  = _checkCommittedAddress(header1Extra.validators,vote.value);
-            require(success0 && !success1 ,"REMOVE_VALIDATOR error");
-        }
-
-        Validator memory v = Validator({
-        validators : header1Extra.validators,
-        headerHeight : header1.number
-        });
-        extendValidator[header1.number] = v;
-        startHeight = getBlockHeightList(header1.number,true);
-        extendList[startHeight] = header1.number;
-        tempBlockHeight = header1.number;
-    }
-
-    function getBlockHeightList(uint256 _height,bool _tag) public view returns(uint256 truetHeight){
-        uint256 opochBlockHeight = (_height / CHANGE_VALIDATORS_SIZE) * CHANGE_VALIDATORS_SIZE;
-        if(extendList[opochBlockHeight] > 0){
-            if(!_tag) {
-                _height = _height + CHANGE_VALIDATORS_SIZE;
-            }
-            if(_height >= tempBlockHeight){
-                truetHeight = tempBlockHeight;
-            }else{
-                truetHeight = getTrueHeight(opochBlockHeight,_height);
-            }
-        }else{
-            truetHeight = opochBlockHeight;
-        }
-    }
-
-    function getTrueHeight(uint256 _height,uint256 _verifyHeight) public view returns(uint256){
-        if(extendList[_height] >= _verifyHeight){
-            return _height;
-        }else {
-           return getTrueHeight(extendList[_height],_verifyHeight);
-        }
-    }
-
-    function getRemoveExtendHeight(uint256 _height) public view returns(uint256){
-        if(extendList[_height] == 0){
-            return _height;
-        }else{
-            return getRemoveExtendHeight(extendList[_height]);
-        }
-    }
-
-    function decodeVote(bytes memory _votes) public view returns(Vote memory votes){
-        RLPReader.RLPItem[] memory ls = _votes.toRlpItem().toList();
-
-        bytes memory _seal = ls[1].toBytes();
-
-        return ( Vote({
-        validator : ls[0].toAddress(),
-        key : ls[1].toBytes(),
-        value : ls[2].toAddress()
-        }));
     }
 
     function verifiableHeaderRange()
@@ -350,12 +254,11 @@ contract LightNodeUP is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
             num = header.number - CHANGE_VALIDATORS_SIZE;
         }
 
-        Validator memory v = _getCanVerifyValidator(num,tag);
+        Validator memory v = _getCanVerifyValidator(num);
 
         require(v.headerHeight > 0, "validator load fail");
 
-        require(v.headerHeight + CHANGE_VALIDATORS_SIZE >= header.number, "check block height error");
-
+        require(v.headerHeight + CHANGE_VALIDATORS_SIZE >= header.number, "height error");
 
         success = _checkCommittedAddress(v.validators, signer);
 
@@ -560,26 +463,14 @@ contract LightNodeUP is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
     }
 
 
-    function _getCanVerifyValidator(uint256 _height,bool _tag)
-    public
+    function _getCanVerifyValidator(uint256 height)
+    internal
     view
     returns (Validator memory v)
     {
-        uint256 opochBlockHeight = ((_height / CHANGE_VALIDATORS_SIZE)) * CHANGE_VALIDATORS_SIZE;
-        if(extendList[opochBlockHeight] > 0){
-            uint256 verifyHeight = getBlockHeightList(_height,_tag);
-            if(opochBlockHeight == verifyHeight){
-                uint256 idx = _getValidatorIndex(_height);
-                v = validators[idx];
-                return v;
-            }else {
-                return extendValidator[verifyHeight];
-            }
-        }else{
-            uint256 idx = _getValidatorIndex(_height);
-            v = validators[idx];
-            return v;
-        }
+        uint256 idx = _getValidatorIndex(height);
+        v = validators[idx];
+        return v;
     }
 
 
