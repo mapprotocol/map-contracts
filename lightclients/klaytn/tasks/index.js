@@ -6,6 +6,6 @@ task("lightFactoryDeploy",
     require("./lightFactoryDeploy")
 )
     .addParam("height", "init height")
-    .addParam("mpt", "MPT verify address")
+    .addParam("tool", " verify tool address")
     .addOptionalParam("salt", "deploy contract salt",LIGHTNODE_SALT , types.string)
     .addOptionalParam("factory", "mos contract address",DEPLOY_FACTORY , types.string)

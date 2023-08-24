@@ -4,32 +4,35 @@ pragma solidity 0.8.12;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
-import "./lib/MPT.sol";
 import "./lib/RLPReader.sol";
-import "./lib/RLPEncode.sol";
+import "./interface/IVerifyTool.sol";
 import "./interface/ILightNode.sol";
-import "./interface/IMPTVerify.sol";
+import "hardhat/console.sol";
 
 contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
-    using MPT for MPT.MerkleProof;
 
     uint8   constant MSG_COMMIT = 2;
     uint256 constant MAX_VALIDATORS_SIZE = 2160;
     uint256 constant CHANGE_VALIDATORS_SIZE = 3600;
     uint256 constant RLP_INDEX = 3;
-    uint256 constant EXTRA_VANITY = 32;
+    bytes32 constant ADD_VALIDATOR = 0x9faa13f6fa6f531607d2fc3a8956aa591b138a5e2690cba6cd54f56e7b2324c8;
+    bytes32 constant REMOVE_VALIDATOR = 0x3e9698b37f61d5135393cc4891dd22b1a42d2d350e5d561bcd6967bf75589818;
 
-    address public mptVerify;
     uint256 public headerHeight;
     uint256 public validatorIdx;
     uint256 public startHeight;
+    uint256 public tempBlockHeight;
+    IVerifyTool public verifyTool;
+    mapping(uint256 => Validator) public extendValidator;
+    mapping(uint256 => uint256) public extendList;
     Validator[MAX_VALIDATORS_SIZE] public validators;
+
+    uint256 public committeeSize;
 
     struct Validator {
         address[] validators;
@@ -40,12 +43,12 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     function initialize(
         address[] memory _validators,
         uint256 _headerHeight,
-        address _mptVerify
+        address _verifyTool
     )
     external
     override
     initializer
-    checkAddress(_mptVerify)
+    checkAddress(_verifyTool)
     checkMultipleAddress(_validators)
     {
         Validator memory _validator = Validator({
@@ -56,8 +59,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         validatorIdx = _getValidatorIndex(headerHeight);
         validators[validatorIdx] = _validator;
         startHeight = _headerHeight;
-
-        mptVerify = _mptVerify;
+        verifyTool = IVerifyTool(_verifyTool);
+        committeeSize = 31;
 
         _transferOwnership(tx.origin);
     }
@@ -91,10 +94,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
             BlockHeader memory header = proof.header;
             (success, ) = checkBlockHeader(header,true);
             if(!success){
-                message = "DeriveShaOriginal header verify failed";
+                message = "DeriveShaConcat header verify failed";
                 return(success,message,logs);
             }
-            success = _checkReceiptsConcat(proof.receipts, (bytes32)(header.receiptsRoot));
+            success = verifyTool.checkReceiptsConcat(proof.receipts, (bytes32)(header.receiptsRoot));
             if (success) {
                 bytes memory bytesReceipt = proof.receipts[proof.logIndex];
                 RLPReader.RLPItem memory logsItem = bytesReceipt.toRlpItem().safeGetItemByIndex(RLP_INDEX);
@@ -112,7 +115,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
                 message = "DeriveShaOriginal header verify failed";
                 return(success,message,logs);
             }
-            (success,logs) = _checkReceiptsOriginal(proof);
+            (success,logs) = verifyTool.checkReceiptsOriginal(proof);
             if (success) {
                 message = "DeriveShaOriginal mpt verify success";
                 return(success,message,logs);
@@ -134,25 +137,37 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         BlockHeader[] memory _headers = abi.decode(
             _blockHeaders, (BlockHeader[]));
 
-        require(_headers[0].number > headerHeight,
-            "height error");
+        require(_headers[0].number > headerHeight, "height error");
+        if(_headers[0].number % CHANGE_VALIDATORS_SIZE > 0) {
 
-        for (uint256 i = 0; i < _headers.length; i++) {
-            require(_headers[i].number == headerHeight + CHANGE_VALIDATORS_SIZE,
-                "height error");
-            BlockHeader memory bh = _headers[i];
-            (bool success, ExtraData memory data) = checkBlockHeader(bh, false);
-            require(success, "header verify fail");
+            _updateBlockHeaderChange(_headers);
+        }else{
 
-            validatorIdx = _getValidatorIndex(bh.number);
-            Validator memory v = Validator({
-            validators : data.validators,
-            headerHeight : bh.number
-            });
-            validators[validatorIdx] = v;
-            headerHeight = bh.number;
-            emit UpdateBlockHeader(tx.origin, _headers[i].number);
+            for (uint256 i = 0; i < _headers.length; i++) {
+                require(_headers[i].number == headerHeight + CHANGE_VALIDATORS_SIZE, "height epoch error");
+                BlockHeader memory bh = _headers[i];
+                (bool success, ExtraData memory data) = checkBlockHeader(bh, false);
+                require(success, "header verify fail");
+
+                validatorIdx = _getValidatorIndex(bh.number);
+                Validator memory tempValidators = validators[validatorIdx];
+
+                while(extendList[tempValidators.headerHeight] > 0){
+                    uint256 tempHeight = _getRemoveExtendHeight(tempValidators.headerHeight);
+                    uint256 trueHeight = _getTrueHeight(tempValidators.headerHeight,tempHeight);
+                    delete extendValidator[tempHeight];
+                    delete extendList[trueHeight];
+                }
+                Validator memory v = Validator({
+                validators : data.validators,
+                headerHeight : bh.number
+                });
+                validators[validatorIdx] = v;
+                headerHeight = bh.number;
+                emit UpdateBlockHeader(msg.sender,headerHeight);
+            }
         }
+
     }
 
     function verifiableHeaderRange()
@@ -184,133 +199,132 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         return abi.encode(_blockHeaders);
     }
 
-    function getHeadersArray(bytes memory _blockHeaders)
-    external
-    pure
-    returns (BlockHeader[] memory)
-    {
-        BlockHeader[] memory _headers = abi.decode(
-            _blockHeaders, (BlockHeader[]));
-        return _headers;
+    function setCommitteeSize(uint256 _committeeSize) external onlyOwner {
+        require(_committeeSize > 0,"Committee size error");
+        committeeSize = _committeeSize;
+
     }
 
-    function decodeVerifyProofData(bytes memory _receiptProof)
-    external
-    pure
-    returns (ReceiptProof memory proof){
-        proof = abi.decode(_receiptProof, (ReceiptProof));
-    }
-
-    function _checkReceiptsConcat(bytes[] memory _receipts, bytes32 _receiptsHash)
+    function _updateBlockHeaderChange(BlockHeader[] memory _blockHeaders)
     internal
-    pure
-    returns (bool){
-        bytes memory receiptsAll;
-        for (uint i = 0; i < _receipts.length; i++) {
-            receiptsAll = bytes.concat(receiptsAll, _receipts[i]);
+    {
+        BlockHeader memory header0 = _blockHeaders[0];
+        BlockHeader memory header1 = _blockHeaders[1];
+        require(header0.voteData.length > 0,"The extension update is not satisfied");
+        require(header0.number + 1 == header1.number, "Synchronous height error");
+        require(header0.number >= tempBlockHeight ,"updata height error");
+
+        (bool success, ExtraData memory header1Extra) = checkBlockHeader(header1, true);
+        (bool hearderTag0,) = checkBlockHeader(header0, true);
+        require(success && hearderTag0, "header change verify fail");
+
+        Vote memory vote = verifyTool.decodeVote(_blockHeaders[0].voteData);
+        require( vote.value.length % 20 == 0,"address error");
+        address[] memory newValidator = verifyTool.bytesToAddressArray(vote.value);
+        bool success1;
+        if(keccak256(vote.key) == ADD_VALIDATOR){
+            for(uint256 i = 0; i < newValidator.length; i++){
+                success1  = _checkCommittedAddress(header1Extra.validators,newValidator[i]);
+                require(success1,"ADD_VALIDATOR error");
+            }
+        }else if (keccak256(vote.key) == REMOVE_VALIDATOR){
+            for(uint256 i = 0; i < newValidator.length; i++){
+                success1  = _checkCommittedAddress(header1Extra.validators,newValidator[i]);
+                require(!success1 ,"REMOVE_VALIDATOR error");
+            }
+        }else{
+            require(false,"Not the expected instruction");
         }
-        return keccak256(receiptsAll) == _receiptsHash;
+
+        Validator memory v = Validator({
+        validators : header1Extra.validators,
+        headerHeight : header1.number
+        });
+        extendValidator[header1.number] = v;
+        startHeight = _getBlockHeightList(header1.number,true);
+        extendList[startHeight] = header1.number;
+        tempBlockHeight = header1.number;
+        emit UpdateBlockHeader(msg.sender,tempBlockHeight);
     }
 
-    function _checkReceiptsOriginal(ReceiptProofOriginal memory _proof)
+    function _getBlockHeightList(uint256 _height,bool _tag)
     internal
     view
-    returns (bool success,bytes memory logs){
-
-        bytes memory bytesReceipt = _encodeReceipt(_proof.txReceipt);
-
-         success = IMPTVerify(mptVerify).verifyTrieProof(
-            bytes32(_proof.header.receiptsRoot),
-            _proof.keyIndex,
-            _proof.proof,
-            bytesReceipt
-         );
-        uint256 rlpIndex = 3;
-        logs = bytesReceipt.toRlpItem().toList()[rlpIndex].toRlpBytes();
-
-        return (success,logs);
+    returns(uint256 truetHeight)
+    {
+        uint256 opochBlockHeight = (_height / CHANGE_VALIDATORS_SIZE) * CHANGE_VALIDATORS_SIZE;
+        if(extendList[opochBlockHeight] > 0){
+            if(!_tag) {
+                _height = _height + CHANGE_VALIDATORS_SIZE;
+            }
+            if(_height >= tempBlockHeight){
+                truetHeight = tempBlockHeight;
+            }else{
+                truetHeight = _getTrueHeight(opochBlockHeight,_height);
+            }
+        }else{
+            truetHeight = opochBlockHeight;
+        }
     }
 
+    function _getTrueHeight(uint256 _height,uint256 _verifyHeight)
+    internal
+    view
+    returns(uint256){
+        if(extendList[_height] >= _verifyHeight){
+            return _height;
+        }else {
+           return _getTrueHeight(extendList[_height],_verifyHeight);
+        }
+    }
 
-    function checkBlockHeader(BlockHeader memory header,bool tag)
+    function _getRemoveExtendHeight(uint256 _height)
+    internal
+    view
+    returns(uint256){
+        if(extendList[_height] == 0){
+            return _height;
+        }else{
+            return _getRemoveExtendHeight(extendList[_height]);
+        }
+    }
+
+    function checkBlockHeader(BlockHeader memory _header,bool _tag)
     internal
     view
     returns (bool, ExtraData memory)
     {
 
-        bool success = _checkHeaderParam(header);
+        bool success = verifyTool.checkHeaderParam(_header);
 
         require(success, "header param error");
 
-        (bytes memory extHead, ExtraData memory ext) = decodeHeaderExtraData(header.extraData);
-        (bytes memory extraNoSeal, bytes memory seal) = _getRemoveSealExtraData(ext, extHead, false);
-        bytes32 signerHash = _getBlockNewHash(header, extraNoSeal);
+        (bytes memory extHead, ExtraData memory ext) = verifyTool.decodeHeaderExtraData(_header.extraData);
+        (bytes memory extraNoSeal, bytes memory seal) = verifyTool.getRemoveSealExtraData(ext, extHead, false);
+        (bytes memory extra,) = verifyTool.getRemoveSealExtraData(ext, extHead, true);
+        (bytes32 hash,bytes32 signerHash) = verifyTool.getBlockNewHash(_header, extra,extraNoSeal);
 
-        address signer = _recoverSigner(seal, keccak256(abi.encodePacked(signerHash)));
+        address signer = verifyTool.recoverSigner(seal, keccak256(abi.encodePacked(signerHash)));
 
-        uint num = header.number;
+        uint num = _header.number;
 
-        if(!tag){
-            num = header.number - CHANGE_VALIDATORS_SIZE;
+        if(!_tag){
+            num = _header.number - CHANGE_VALIDATORS_SIZE;
         }
 
-        Validator memory v = _getCanVerifyValidator(num);
+        Validator memory v = _getCanVerifyValidator(num,_tag);
 
         require(v.headerHeight > 0, "validator load fail");
 
-        require(v.headerHeight + CHANGE_VALIDATORS_SIZE >= header.number, "height error");
+        require(v.headerHeight + CHANGE_VALIDATORS_SIZE >= _header.number, "check block height error");
 
         success = _checkCommittedAddress(v.validators, signer);
 
         require(success, "signer fail");
 
-        (bytes memory extra,) = _getRemoveSealExtraData(ext, extHead, true);
-
-        bytes32 hash = _getBlockNewHash(header, extra);
-
         bytes memory committedMsg = abi.encodePacked(hash, MSG_COMMIT);
 
         return (_checkCommitSeal(v, committedMsg, ext.committedSeal), ext);
-    }
-
-    function decodeHeaderExtraData(bytes memory _extBytes)
-    public
-    pure
-    returns (
-        bytes memory extTop,
-        ExtraData memory extData)
-    {
-        (bytes memory extraHead,bytes memory istBytes) = _splitExtra(_extBytes);
-
-        RLPReader.RLPItem[] memory ls = istBytes.toRlpItem().toList();
-        RLPReader.RLPItem[] memory itemValidators = ls[0].toList();
-        RLPReader.RLPItem[] memory itemCommittedSeal = ls[2].toList();
-
-        bytes memory _seal = ls[1].toBytes();
-        address[] memory _validators = new address[](itemValidators.length);
-        for (uint256 i = 0; i < itemValidators.length; i++) {
-            _validators[i] = itemValidators[i].toAddress();
-        }
-        bytes[] memory _committedSeal = new bytes[](itemCommittedSeal.length);
-        for (uint256 i = 0; i < itemCommittedSeal.length; i++) {
-            _committedSeal[i] = itemCommittedSeal[i].toBytes();
-        }
-
-        return (extraHead, ExtraData({
-        validators : _validators,
-        seal : _seal,
-        committedSeal : _committedSeal
-        }));
-    }
-
-    function _checkHeaderParam(BlockHeader memory header)
-    internal
-    view
-    returns (bool)
-    {
-        if (header.timestamp + 60 > block.timestamp) {return false;}
-        if (header.blockScore == 0) {return false;}
-        return true;
     }
 
 
@@ -364,113 +378,26 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     }
 
 
-    function _splitExtra(bytes memory _extra)
-    internal
-    pure
-    returns (
-        bytes memory extraHead,
-        bytes memory extraEnd)
-    {
-        require(_extra.length >= 32, "Invalid extra result type");
-        extraEnd = new bytes(_extra.length - EXTRA_VANITY);
-        extraHead = new bytes(EXTRA_VANITY);
-        for (uint256 i = 0; i < _extra.length; i++) {
-            if (i < EXTRA_VANITY) {
-                extraHead[i] = _extra[i];
-            } else {
-                extraEnd[i - EXTRA_VANITY] = _extra[i];
-            }
-        }
-        return (extraHead, extraEnd);
-    }
-
-    function _getRemoveSealExtraData(
-        ExtraData memory _ext,
-        bytes memory _extHead,
-        bool _keepSeal)
-    internal
-    pure
-    returns (
-        bytes memory,
-        bytes memory)
-    {
-        bytes[] memory listExt = new bytes[](3);
-        bytes[] memory listValidators = new bytes[](_ext.validators.length);
-
-        for (uint i = 0; i < _ext.validators.length; i ++) {
-            listValidators[i] = RLPEncode.encodeAddress(_ext.validators[i]);
-        }
-        listExt[0] = RLPEncode.encodeList(listValidators);
-        if (!_keepSeal) {
-            listExt[1] = RLPEncode.encodeBytes("");
-        } else {
-            listExt[1] = RLPEncode.encodeBytes(_ext.seal);
-        }
-        listExt[2] = RLPEncode.encodeList(new bytes[](0));
-
-        bytes memory output = RLPEncode.encodeList(listExt);
-        _extHead[31] = 0;
-        return (abi.encodePacked(_extHead, output), _ext.seal);
-    }
-
-    function _splitSignature(bytes memory _sig)
-    internal
-    pure
-    returns (bytes32 r, bytes32 s, uint8 v)
-    {
-        require(_sig.length == 65, "invalid signature length");
-        assembly {
-            r := mload(add(_sig, 32))
-            s := mload(add(_sig, 64))
-            v := byte(0, mload(add(_sig, 96)))
-        }
-    }
-
-    function _recoverSigner(bytes memory seal, bytes32 hash)
-    internal
-    pure
-    returns (address)
-    {
-        (bytes32 r, bytes32 s, uint8 v) = _splitSignature(seal);
-        if (v <= 1) {
-            v = v + 27;
-        }
-        return ECDSA.recover(hash, v, r, s);
-    }
-
-    function _getBlockNewHash(BlockHeader memory header, bytes memory extraData)
-    internal
-    pure
-    returns (bytes32)
-    {
-        bytes[] memory list = new bytes[](15);
-        list[0] = RLPEncode.encodeBytes(header.parentHash);
-        list[1] = RLPEncode.encodeAddress(header.reward);
-        list[2] = RLPEncode.encodeBytes(header.stateRoot);
-        list[3] = RLPEncode.encodeBytes(header.transactionsRoot);
-        list[4] = RLPEncode.encodeBytes(header.receiptsRoot);
-        list[5] = RLPEncode.encodeBytes(header.logsBloom);
-        list[6] = RLPEncode.encodeUint(header.blockScore);
-        list[7] = RLPEncode.encodeUint(header.number);
-        list[8] = RLPEncode.encodeUint(header.gasUsed);
-        list[9] = RLPEncode.encodeUint(header.timestamp);
-        list[10] = RLPEncode.encodeUint(header.timestampFoS);
-        list[11] = RLPEncode.encodeBytes(extraData);
-        list[12] = RLPEncode.encodeBytes(header.governanceData);
-        list[13] = RLPEncode.encodeBytes(header.voteData);
-        list[14] = RLPEncode.encodeUint(header.baseFee);
-        return keccak256(RLPEncode.encodeList(list));
-    }
-
-
-    function _getCanVerifyValidator(uint256 height)
-    internal
+    function _getCanVerifyValidator(uint256 _height,bool _tag)
+    public
     view
     returns (Validator memory v)
     {
-        uint256 idx = _getValidatorIndex(height);
-        v = validators[idx];
-        return v;
+        uint256 opochBlockHeight = ((_height / CHANGE_VALIDATORS_SIZE)) * CHANGE_VALIDATORS_SIZE;
+        if(extendList[opochBlockHeight] > 0){
+            uint256 verifyHeight = _getBlockHeightList(_height,_tag);
+            if(opochBlockHeight == verifyHeight){
+                uint256 idx = _getValidatorIndex(_height);
+                v = validators[idx];
+                return v;
+            }else {
+                return extendValidator[verifyHeight];
+            }
+        }else{
+            uint256 idx = _getValidatorIndex(_height);
+            v = validators[idx];
+            return v;
+        }
     }
 
 
@@ -487,34 +414,19 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         return false;
     }
 
-    function _isRepeat(
-        address[] memory _miners,
-        address _miner,
-        uint256 _limit)
-    internal
-    pure
-    returns (bool) {
-        for (uint256 i = 0; i < _limit; i++) {
-            if (_miners[i] == _miner) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-
-
     /**
      * @dev Calculate the number of faulty nodes.
      * https://github.com/klaytn/klaytn/blob/841a8ad3b45e92f4ea378c1ee1f06cdb963afbac/consensus/istanbul/validator/default.go#L370
      *
      */
-    function _getFaultyNodeNumber(uint256 _n) internal pure returns(uint256){
+    function _getFaultyNodeNumber(uint256 _n) internal view returns(uint256 f){
+        if(_n > committeeSize){
+            _n = committeeSize;
+        }
         if(_n % 3 == 0){
-            return _n / 3 - 1;
+            f = _n / 3 - 1;
         }else{
-            return _n / 3;
+            f = _n / 3;
         }
     }
 
@@ -525,75 +437,35 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
      *
      */
     function _checkCommitSeal(
-        Validator memory v,
-        bytes memory committedMsg,
-        bytes[] memory committedSeal)
+        Validator memory _v,
+        bytes memory _committedMsg,
+        bytes[] memory _committedSeal)
     internal
-    pure
+    view
     returns (bool)
     {
-        bytes32 msgHash = keccak256(committedMsg);
-        address[] memory miners = new address[](v.validators.length);
+        bytes32 msgHash = keccak256(_committedMsg);
+        address[] memory miners = new address[](_v.validators.length);
 
         uint checkedCommittee = 0;
-        for (uint i = 0; i < committedSeal.length; i++) {
-            address committee = _recoverSigner(committedSeal[i], msgHash);
-            if (_checkCommittedAddress(v.validators,committee) && !_isRepeat(miners,committee,i)) {
+        for (uint i = 0; i < _committedSeal.length; i++) {
+            address committee = verifyTool.recoverSigner(_committedSeal[i], msgHash);
+            if (_checkCommittedAddress(_v.validators,committee) && !(verifyTool.isRepeat(miners,committee,i))) {
                 checkedCommittee++;
             }
             miners[i] = committee;
         }
-        return checkedCommittee > (_getFaultyNodeNumber(v.validators.length)) * 2;
+        return checkedCommittee > (_getFaultyNodeNumber(_v.validators.length)) * 2;
     }
 
 
-    function _getBytesSlice(bytes memory b, uint256 start, uint256 length)
+    function _transferOwnership(address _newOwner)
     internal
-    pure
-    returns (bytes memory)
+    virtual
+    override
     {
-        bytes memory out = new bytes(length);
-
-        for (uint256 i = 0; i < length; i++) {
-            out[i] = b[start + i];
-        }
-
-        return out;
-    }
-
-    function _encodeReceipt(TxReceipt memory _txReceipt)
-    internal
-    pure
-    returns (bytes memory output)
-    {
-        bytes[] memory list = new bytes[](4);
-        list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
-        list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
-        list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
-        bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
-        bytes[] memory loglist = new bytes[](3);
-        for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
-            loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[](
-                _txReceipt.logs[j].topics.length
-            );
-            for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(
-                    _txReceipt.logs[j].topics[i]
-                );
-            }
-            loglist[1] = RLPEncode.encodeList(loglist1);
-            loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
-            bytes memory logBytes = RLPEncode.encodeList(loglist);
-            listLog[j] = logBytes;
-        }
-        list[3] = RLPEncode.encodeList(listLog);
-        output = RLPEncode.encodeList(list);
-    }
-
-    function _transferOwnership(address newOwner) internal virtual override {
-        super._transferOwnership(newOwner);
-        _changeAdmin(newOwner);
+        super._transferOwnership(_newOwner);
+        _changeAdmin(_newOwner);
     }
 
 

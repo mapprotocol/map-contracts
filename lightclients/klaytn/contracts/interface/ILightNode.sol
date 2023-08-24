@@ -20,7 +20,7 @@ interface ILightNode is ILightNodePoint{
     function initialize(
         address[]  memory _validators,
         uint256 _headerHeight,
-        address _mptVerify
+        address _verifyTool
     ) external;
 
     function verifiableHeaderRange() external view returns (uint256, uint256);
