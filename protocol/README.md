@@ -7,6 +7,9 @@
 
 The factory contract helps to deploy to deterministic addresses without an init code factor.
 Every developer can use contract `0x6258e4d2950757A749a4d4683A7342261ce12471` to deploy deterministic addresses contract.
+
+Read [this](./create3/README.md) to get more information.
+
 Now support chains: 
 - Ethereum (1), Goerli Testnet (5)
 - BNB Smart Chain (56), BNB Smart Chain Testnet (97)
@@ -19,6 +22,12 @@ Now support chains:
 - Fantom (250)
 - Gnosis Chain (100)
 - Aurora (1313161554)
+- Celo (42220)
+- Harmony (1666600000)
+- Polygon zkEVM (1101)
+- Boba (288)
+- Metis (1088)
+
 
 ### Light client manager
 The contract deployed on the MAP Relay Chain is responsible for managing light clients, it helps:

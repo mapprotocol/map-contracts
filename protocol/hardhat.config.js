@@ -146,6 +146,26 @@ module.exports = {
       chainId : 1088,
       accounts: accounts
     },
+    Linea: {
+      url: `https://rpc.linea.build`,
+      chainId : 59144,
+      accounts: accounts
+    },
+    Scroll: {
+      url: `https://rpc.scroll.io`,
+      chainId : 534352,
+      accounts: accounts
+    },
+    Mantle: {
+      url: `https://rpc.mantle.xyz`,
+      chainId : 5000,
+      accounts: accounts
+    },
+    Base: {
+      url: `https://base-mainnet.public.blastapi.io`,
+      chainId : 8453,
+      accounts: accounts
+    },
 
     Okt: {
       url: `https://exchainrpc.okex.org/`,
@@ -166,6 +186,12 @@ module.exports = {
     Evmos: {
       url: `https://evmos-evm.publicnode.com`,
       chainId : 9001,
+      accounts: accounts
+    },
+
+    Filecoin: {
+      url: `https://rpc.ankr.com/filecoin`,
+      chainId : 314,
       accounts: accounts
     },
 

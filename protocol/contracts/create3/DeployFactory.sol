@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import "./interface/IDeployFactory.sol";
-import "./utils/CREATE3.sol";
+import "../interface/IDeployFactory.sol";
+import "./CREATE3.sol";
 
 contract DeployFactory is IDeployFactory {
 
