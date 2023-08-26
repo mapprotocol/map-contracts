@@ -90,6 +90,11 @@ module.exports = {
       chainId : 5,
       accounts: accounts
     },
+    ArbitrumGoerli: {
+      url: `https://arbitrum-goerli.infura.io/v3/` + INFURA_KEY,
+      chainId : 421613,
+      accounts: accounts
+    },
     Arbitrum: {
       url: `https://1rpc.io/arb`,
       chainId : 42161,
@@ -245,6 +250,16 @@ module.exports = {
       chainId : 122,
       accounts: accounts
     },
+    Kcc: {
+      url: `https://rpc-mainnet.kcc.network/`,
+      chainId : 321,
+      accounts: accounts
+    },
+    Thunder: {
+      url: `https://mainnet-rpc.thundercore.com`,
+      chainId : 108,
+      accounts: accounts
+    }
   },
   solidity: {
     compilers: [

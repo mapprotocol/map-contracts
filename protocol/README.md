@@ -8,26 +8,24 @@
 The factory contract helps to deploy to deterministic addresses without an init code factor.
 Every developer can use contract `0x6258e4d2950757A749a4d4683A7342261ce12471` to deploy deterministic addresses contract.
 
-Read [this](./create3/README.md) to get more information.
+Read [this](create3/README.md) to get more information.
 
-Now support chains: 
-- Ethereum (1), Goerli Testnet (5)
-- BNB Smart Chain (56), BNB Smart Chain Testnet (97)
-- Polygon (137), Mumbai Testnet (80001)
-- MAP Relay Chain (22776), Makalu Testnet (212)
-- Klaytn (8217), Klaytn Testnet (1001)
-- Arbitrum (42161)
-- Optimism (10)
-- Avalanche (43114)
-- Fantom (250)
-- Gnosis Chain (100)
-- Aurora (1313161554)
-- Celo (42220)
-- Harmony (1666600000)
-- Polygon zkEVM (1101)
-- Boba (288)
-- Metis (1088)
+### MPT verifier
+The contract deployed on the MAP Relay Chain is responsible for MPT proof verify.
 
+MAPO mainnet address: `0x4b1EE84A72b44B78346e069D1c66509940827E22`
+Makalu testnet address: `0x4b1EE84A72b44B78346e069D1c66509940827E22`
+
+```solidity
+interface IMPTVerify {
+    function verifyTrieProof(
+        bytes32 _root,
+        bytes memory _key,
+        bytes[] memory _proof,
+        bytes memory _node
+    ) external pure returns (bool);
+}
+```
 
 ### Light client manager
 The contract deployed on the MAP Relay Chain is responsible for managing light clients, it helps:
