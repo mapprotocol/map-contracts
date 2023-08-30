@@ -3,18 +3,15 @@
 pragma solidity 0.8.12;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "./lib/RLPReader.sol";
-import "./lib/RLPEncode.sol";
-import "./lib/MPT.sol";
-import "./interface/ILightNodePoint.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
+import "./interface/IVerifyTool.sol";
 
-contract VerifyTool is ILightNodePoint {
+contract VerifyTool is IVerifyTool {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
-    using MPT for MPT.MerkleProof;
-
 
     uint256 constant EXTRA_VANITY = 32;
 
@@ -42,10 +39,10 @@ contract VerifyTool is ILightNodePoint {
     external
     pure
     returns
-    (Vote memory votes)
+    (IKlaytn.Vote memory votes)
     {
         RLPReader.RLPItem[] memory ls = _votes.toRlpItem().toList();
-        return ( Vote({
+        return ( IKlaytn.Vote({
         validator : ls[0].toAddress(),
         key : ls[1].toBytes(),
         value : ls[2].toBytes()
@@ -55,7 +52,7 @@ contract VerifyTool is ILightNodePoint {
     function decodeHeaderExtraData(bytes memory _extBytes)
     external
     pure
-    returns (bytes memory extTop, ExtraData memory extData)
+    returns (bytes memory extTop, IKlaytn.ExtraData memory extData)
     {
         (bytes memory extraHead,bytes memory istBytes) = _splitExtra(_extBytes);
 
@@ -73,10 +70,10 @@ contract VerifyTool is ILightNodePoint {
             _committedSeal[i] = itemCommittedSeal[i].toBytes();
         }
 
-        return (extraHead, ExtraData({
-        validators : _validators,
-        seal : _seal,
-        committedSeal : _committedSeal
+        return (extraHead, IKlaytn.ExtraData({
+            validators : _validators,
+            seal : _seal,
+            committedSeal : _committedSeal
         }));
     }
 
@@ -98,7 +95,7 @@ contract VerifyTool is ILightNodePoint {
 
 
     function getBlockNewHash(
-        BlockHeader memory _header,
+        IKlaytn.BlockHeader memory _header,
         bytes memory _extraData,
         bytes memory _removeSealExtra)
     external
@@ -128,7 +125,7 @@ contract VerifyTool is ILightNodePoint {
 
 
     function getRemoveSealExtraData(
-        ExtraData memory _ext,
+        IKlaytn.ExtraData memory _ext,
         bytes memory _extHead,
         bool _keepSeal)
     external
@@ -156,7 +153,7 @@ contract VerifyTool is ILightNodePoint {
 
 
 
-    function checkHeaderParam(BlockHeader memory _header)
+    function checkHeaderParam(IKlaytn.BlockHeader memory _header)
     external
     view
     returns (bool)
@@ -199,30 +196,6 @@ contract VerifyTool is ILightNodePoint {
     }
 
 
-    function checkReceiptsOriginal(ReceiptProofOriginal memory _proof)
-    external
-    pure
-    returns (bool success,bytes memory logs)
-    {
-
-        bytes memory bytesReceipt = _encodeReceipt(_proof.txReceipt);
-
-        MPT.MerkleProof memory mp = MPT.MerkleProof({
-        expectedRoot: bytes32(_proof.header.receiptsRoot),
-        key: _proof.keyIndex,
-        proof: _proof.proof,
-        keyIndex: 0,
-        proofIndex: 0,
-        expectedValue: bytesReceipt
-        });
-
-        success = MPT.verifyTrieProof(mp);
-        uint256 rlpIndex = 3;
-        logs = bytesReceipt.toRlpItem().toList()[rlpIndex].toRlpBytes();
-
-        return (success,logs);
-    }
-
     function _splitExtra(bytes memory _extra)
     internal
     pure
@@ -240,6 +213,7 @@ contract VerifyTool is ILightNodePoint {
                 extraEnd[i - EXTRA_VANITY] = _extra[i];
             }
         }
+
         return (extraHead, extraEnd);
     }
 
@@ -256,7 +230,7 @@ contract VerifyTool is ILightNodePoint {
         }
     }
 
-    function _encodeReceipt(TxReceipt memory _txReceipt)
+    function _encodeReceipt(IKlaytn.TxReceipt memory _txReceipt)
     internal
     pure
     returns (bytes memory output)

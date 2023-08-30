@@ -22,7 +22,7 @@ DEPLOY_FACTORY Factory-contract address
 
 
 ## Instruction
-LightNode : A contract used to verify klaytn transactions in the mapo chain
+LightNode : A contract used to verify klaytn transactions in the map relay chain
 
 LightNodeProxy is the contract for LightNode upgrade
 

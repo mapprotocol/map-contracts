@@ -6,18 +6,21 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
-import "./lib/MPT.sol";
-import "./lib/RLPReader.sol";
-import "./lib/RLPEncode.sol";
-import "./interface/ILightNode.sol";
+
+import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
+import "@mapprotocol/protocol/contracts/lib/MPT.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
+
 import "./interface/IMPTVerify.sol";
+
+import "./interface/IKlaytn.sol";
 
 contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
-    using MPT for MPT.MerkleProof;
 
     uint8   constant MSG_COMMIT = 2;
     uint256 constant MAX_VALIDATORS_SIZE = 2160;
@@ -43,7 +46,6 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         address _mptVerify
     )
     external
-    override
     initializer
     checkAddress(_mptVerify)
     checkMultipleAddress(_validators)
@@ -84,46 +86,46 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         string memory message,
         bytes memory logs)
     {
-        ReceiptProof memory receiptProof = abi.decode(_receiptProof, (ReceiptProof));
+        IKlaytn.ReceiptProof memory receiptProof = abi.decode(_receiptProof, (IKlaytn.ReceiptProof));
 
-        if (receiptProof.deriveSha == DeriveShaOriginal.DeriveShaConcat){
-            ReceiptProofConcat memory proof = abi.decode(receiptProof.proof,(ReceiptProofConcat));
-            BlockHeader memory header = proof.header;
+        if (receiptProof.deriveSha == IKlaytn.DeriveShaOriginal.DeriveShaConcat) {
+            IKlaytn.ReceiptProofConcat memory proof = abi.decode(receiptProof.proof, (IKlaytn.ReceiptProofConcat));
+            IKlaytn.BlockHeader memory header = proof.header;
             (success, ) = checkBlockHeader(header,true);
-            if(!success){
+            if (!success) {
                 message = "DeriveShaOriginal header verify failed";
-                return(success,message,logs);
+                return(success, message, logs);
             }
             success = _checkReceiptsConcat(proof.receipts, (bytes32)(header.receiptsRoot));
             if (success) {
                 bytes memory bytesReceipt = proof.receipts[proof.logIndex];
-                RLPReader.RLPItem memory logsItem = bytesReceipt.toRlpItem().safeGetItemByIndex(RLP_INDEX);
+                RLPReader.RLPItem memory logsItem = bytesReceipt.toRlpItem().toList()[RLP_INDEX];
                 logs = RLPReader.toRlpBytes(logsItem);
                 message = "DeriveShaConcat mpt verify success";
-                return(success,message,logs);
-            }else{
+                return(success, message, logs);
+            } else {
                 message = "DeriveShaConcat mpt verify failed";
-                return(success,message,logs);
+                return(success, message, logs);
             }
-        } else if (receiptProof.deriveSha == DeriveShaOriginal.DeriveShaOriginal) {
-            ReceiptProofOriginal memory proof = abi.decode(receiptProof.proof,(ReceiptProofOriginal));
+        } else if (receiptProof.deriveSha == IKlaytn.DeriveShaOriginal.DeriveShaOriginal) {
+            IKlaytn.ReceiptProofOriginal memory proof = abi.decode(receiptProof.proof, (IKlaytn.ReceiptProofOriginal));
             (success, ) = checkBlockHeader(proof.header,true);
-            if(!success){
+            if (!success) {
                 message = "DeriveShaOriginal header verify failed";
-                return(success,message,logs);
+                return(success, message, logs);
             }
             (success,logs) = _checkReceiptsOriginal(proof);
             if (success) {
                 message = "DeriveShaOriginal mpt verify success";
-                return(success,message,logs);
-            }else{
+                return(success, message, logs);
+            } else {
                 message = "DeriveShaOriginal mpt verify failed";
-                return(success,message,logs);
+                return(success, message, logs);
             }
-        }else{
+        } else {
             message = "mpt verify failed";
             success = false;
-            return(success,message,logs);
+            return(success, message, logs);
         }
     }
 
@@ -131,8 +133,8 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
     external
     override
     {
-        BlockHeader[] memory _headers = abi.decode(
-            _blockHeaders, (BlockHeader[]));
+        IKlaytn.BlockHeader[] memory _headers = abi.decode(
+            _blockHeaders, (IKlaytn.BlockHeader[]));
 
         require(_headers[0].number > headerHeight,
             "height error");
@@ -140,8 +142,8 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         for (uint256 i = 0; i < _headers.length; i++) {
             require(_headers[i].number == headerHeight + CHANGE_VALIDATORS_SIZE,
                 "height error");
-            BlockHeader memory bh = _headers[i];
-            (bool success, ExtraData memory data) = checkBlockHeader(bh, false);
+            IKlaytn.BlockHeader memory bh = _headers[i];
+            (bool success, IKlaytn.ExtraData memory data) = checkBlockHeader(bh, false);
             require(success, "header verify fail");
 
             validatorIdx = _getValidatorIndex(bh.number);
@@ -163,20 +165,31 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         return (_getStartValidatorHeight(), _getEndValidatorHeight());
     }
 
+    function updateLightClient(bytes memory _data) external override {
+    }
 
-    function getBytes(ReceiptProofOriginal memory _proof)
+    function clientState() external override view returns(bytes memory) {
+        return bytes("");
+    }
+
+    function finalizedState(bytes memory _data) external override view returns(bytes memory) {
+        return bytes("");
+    }
+
+
+    function getBytes(IKlaytn.ReceiptProofOriginal memory _proof)
     external
     pure
     returns (bytes memory)
     {
         bytes memory proof = abi.encode(_proof);
 
-        ReceiptProof memory receiptProof = ReceiptProof(proof,DeriveShaOriginal.DeriveShaOriginal);
+        IKlaytn.ReceiptProof memory receiptProof = IKlaytn.ReceiptProof(proof, IKlaytn.DeriveShaOriginal.DeriveShaOriginal);
 
         return abi.encode(receiptProof);
     }
 
-    function getHeadersBytes(BlockHeader[] memory _blockHeaders)
+    function getHeadersBytes(IKlaytn.BlockHeader[] memory _blockHeaders)
     external
     pure
     returns (bytes memory)
@@ -187,18 +200,18 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
     function getHeadersArray(bytes memory _blockHeaders)
     external
     pure
-    returns (BlockHeader[] memory)
+    returns (IKlaytn.BlockHeader[] memory)
     {
-        BlockHeader[] memory _headers = abi.decode(
-            _blockHeaders, (BlockHeader[]));
+        IKlaytn.BlockHeader[] memory _headers = abi.decode(
+            _blockHeaders, (IKlaytn.BlockHeader[]));
         return _headers;
     }
 
     function decodeVerifyProofData(bytes memory _receiptProof)
     external
     pure
-    returns (ReceiptProof memory proof){
-        proof = abi.decode(_receiptProof, (ReceiptProof));
+    returns (IKlaytn.ReceiptProof memory proof){
+        proof = abi.decode(_receiptProof, (IKlaytn.ReceiptProof));
     }
 
     function _checkReceiptsConcat(bytes[] memory _receipts, bytes32 _receiptsHash)
@@ -212,37 +225,37 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         return keccak256(receiptsAll) == _receiptsHash;
     }
 
-    function _checkReceiptsOriginal(ReceiptProofOriginal memory _proof)
+    function _checkReceiptsOriginal(IKlaytn.ReceiptProofOriginal memory _proof)
     internal
     view
     returns (bool success,bytes memory logs){
 
-        bytes memory bytesReceipt = _encodeReceipt(_proof.txReceipt);
+        //bytes memory bytesReceipt = _encodeReceipt(_proof.txReceipt);
 
         success = IMPTVerify(mptVerify).verifyTrieProof(
             bytes32(_proof.header.receiptsRoot),
             _proof.keyIndex,
             _proof.proof,
-            bytesReceipt
+            _proof.txReceipt
         );
         uint256 rlpIndex = 3;
-        logs = bytesReceipt.toRlpItem().toList()[rlpIndex].toRlpBytes();
+        logs = _proof.txReceipt.toRlpItem().toList()[rlpIndex].toRlpBytes();
 
         return (success,logs);
     }
 
 
-    function checkBlockHeader(BlockHeader memory header,bool tag)
+    function checkBlockHeader(IKlaytn.BlockHeader memory header,bool tag)
     internal
     view
-    returns (bool, ExtraData memory)
+    returns (bool, IKlaytn.ExtraData memory)
     {
 
         bool success = _checkHeaderParam(header);
 
         require(success, "header param error");
 
-        (bytes memory extHead, ExtraData memory ext) = decodeHeaderExtraData(header.extraData);
+        (bytes memory extHead, IKlaytn.ExtraData memory ext) = decodeHeaderExtraData(header.extraData);
         (bytes memory extraNoSeal, bytes memory seal) = _getRemoveSealExtraData(ext, extHead, false);
         bytes32 signerHash = _getBlockNewHash(header, extraNoSeal);
 
@@ -278,7 +291,7 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
     pure
     returns (
         bytes memory extTop,
-        ExtraData memory extData)
+        IKlaytn.ExtraData memory extData)
     {
         (bytes memory extraHead,bytes memory istBytes) = _splitExtra(_extBytes);
 
@@ -296,14 +309,14 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
             _committedSeal[i] = itemCommittedSeal[i].toBytes();
         }
 
-        return (extraHead, ExtraData({
+        return (extraHead, IKlaytn.ExtraData({
         validators : _validators,
         seal : _seal,
         committedSeal : _committedSeal
         }));
     }
 
-    function _checkHeaderParam(BlockHeader memory header)
+    function _checkHeaderParam(IKlaytn.BlockHeader memory header)
     internal
     view
     returns (bool)
@@ -385,7 +398,7 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
     }
 
     function _getRemoveSealExtraData(
-        ExtraData memory _ext,
+        IKlaytn.ExtraData memory _ext,
         bytes memory _extHead,
         bool _keepSeal)
     internal
@@ -438,7 +451,7 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         return ECDSA.recover(hash, v, r, s);
     }
 
-    function _getBlockNewHash(BlockHeader memory header, bytes memory extraData)
+    function _getBlockNewHash(IKlaytn.BlockHeader memory header, bytes memory extraData)
     internal
     pure
     returns (bytes32)
@@ -561,7 +574,7 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         return out;
     }
 
-    function _encodeReceipt(TxReceipt memory _txReceipt)
+    function _encodeReceipt(IKlaytn.TxReceipt memory _txReceipt)
     internal
     pure
     returns (bytes memory output)

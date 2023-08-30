@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.12;
-import "./ILightNodePoint.sol";
 
-interface IVerifyTool is ILightNodePoint {
+import "./IKlaytn.sol";
+
+interface IVerifyTool {
 
     function bytesToAddressArray(bytes memory data)
     external
@@ -13,34 +14,29 @@ interface IVerifyTool is ILightNodePoint {
     function decodeVote(bytes memory _votes)
     external
     pure
-    returns(Vote memory votes);
+    returns(IKlaytn.Vote memory votes);
 
     function decodeHeaderExtraData(bytes memory _extBytes)
     external
     pure
-    returns (bytes memory extTop,ExtraData memory extData);
+    returns (bytes memory extTop, IKlaytn.ExtraData memory extData);
 
     function checkReceiptsConcat(bytes[] memory _receipts, bytes32 _receiptsHash)
     external
     pure
     returns (bool);
 
-    function checkReceiptsOriginal(ReceiptProofOriginal memory _proof)
-    external
-    view
-    returns (bool success,bytes memory logs);
-
-    function getBlockNewHash(BlockHeader memory header, bytes memory extraData,bytes memory _removeSealExtra)
+    function getBlockNewHash(IKlaytn.BlockHeader memory header, bytes memory extraData,bytes memory _removeSealExtra)
     external
     pure
     returns (bytes32 headerBytes,bytes32 removeSealHeaderBytes);
 
-    function getRemoveSealExtraData(ExtraData memory _ext, bytes memory _extHead, bool _keepSeal)
+    function getRemoveSealExtraData(IKlaytn.ExtraData memory _ext, bytes memory _extHead, bool _keepSeal)
     external
     pure
     returns (bytes memory, bytes memory);
 
-    function checkHeaderParam(BlockHeader memory header)
+    function checkHeaderParam(IKlaytn.BlockHeader memory header)
     external
     view
     returns (bool);

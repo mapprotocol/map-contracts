@@ -11,7 +11,6 @@ module.exports = async function ({ethers, deployments}) {
         await deployer.getAddress()
     );
 
-
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
     await deploy('LightNode', {

@@ -1,4 +1,4 @@
-const { LIGHTNODE_SALT,DEPLOY_FACTORY} = process.env;
+const { LIGHTNODE_SALT, DEPLOY_FACTORY, MPT_VERIFIER} = process.env;
 
 
 task("lightFactoryDeploy",
@@ -7,5 +7,6 @@ task("lightFactoryDeploy",
 )
     .addParam("height", "init height")
     .addParam("tool", " verify tool address")
-    .addOptionalParam("salt", "deploy contract salt",LIGHTNODE_SALT , types.string)
-    .addOptionalParam("factory", "mos contract address",DEPLOY_FACTORY , types.string)
+    .addOptionalParam("mpt", "mpt verifier contract address", MPT_VERIFIER , types.string)
+    .addOptionalParam("salt", "deploy contract salt", LIGHTNODE_SALT , types.string)
+    .addOptionalParam("factory", "mos contract address", DEPLOY_FACTORY , types.string)

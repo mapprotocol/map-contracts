@@ -17,7 +17,7 @@ module.exports = async (taskArgs,hre) => {
    // let rpc = mainRpcUrl;
     let rpc = testRpcUrl;
     if (deployChainId === 22776){
-        console.log("deploy id :",deployChainId );
+        console.log("deploy id :", deployChainId );
         rpc = mainRpcUrl;
     }
 
@@ -45,7 +45,7 @@ module.exports = async (taskArgs,hre) => {
 
     let data = lightNode.interface.encodeFunctionData(
         "initialize",
-        [result.extData.validators,block.number,taskArgs.tool]
+        [result.extData.validators, block.number, taskArgs.tool, taskArgs.mpt]
     );
 
     console.log("validators",result.extData.validators)
@@ -54,7 +54,7 @@ module.exports = async (taskArgs,hre) => {
 
     let initData = await ethers.utils.defaultAbiCoder.encode(
         ["address","bytes"],
-        [lightNode.address,data]
+        [lightNode.address, data]
     )
 
     let deployData = lightProxy.bytecode + initData.substring(2);
@@ -63,9 +63,9 @@ module.exports = async (taskArgs,hre) => {
 
     let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(taskArgs.salt));
 
-    let factory = await ethers.getContractAt("IDeployFactory",taskArgs.factory)
+    let factory = await ethers.getContractAt("IDeployFactory", taskArgs.factory)
 
-    console.log("deploy factory address:",factory.address)
+    console.log("deploy factory address:", factory.address)
 
     await (await factory.connect(deployer).deploy(hash,deployData,0)).wait();
 

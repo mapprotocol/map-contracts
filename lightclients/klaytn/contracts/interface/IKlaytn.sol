@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.12;
 
-interface ILightNodePoint {
+interface IKlaytn {
 
-    enum DeriveShaOriginal{
+    enum DeriveShaOriginal {
         DeriveShaOriginal,
         DeriveShaSimple,
         DeriveShaConcat
@@ -66,7 +66,7 @@ interface ILightNodePoint {
     struct ReceiptProofOriginal {
         BlockHeader header;
         bytes[] proof;
-        TxReceipt txReceipt;
+        bytes txReceipt;
         bytes keyIndex;
     }
 
