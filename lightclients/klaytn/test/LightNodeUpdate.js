@@ -11,6 +11,7 @@ describe("LightNode start test", function () {
     let lightProxyClient;
     let LightNodeProxy;
     let verifyTool;
+    let mpt;
     let owner;
     let adminChange;
     let caver;
@@ -48,10 +49,12 @@ describe("LightNode start test", function () {
 
         verifyTool = await (await ethers.getContractFactory("VerifyTool")).deploy();
 
+        mpt = await (await ethers.getContractFactory("MPTVerify")).deploy();
+
         let result = await verifyTool.decodeHeaderExtraData(block.extraData);
 
         let data = lightNodeContract.interface.encodeFunctionData("initialize",
-            [result.extData.validators,block.number,verifyTool.address]);
+            [result.extData.validators,block.number,verifyTool.address,mpt.address]);
 
         console.log("validators",result.extData.validators)
 

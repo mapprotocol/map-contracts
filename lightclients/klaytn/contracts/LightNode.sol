@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
-
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 
 import "./interface/IVerifyTool.sol";
@@ -20,6 +19,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     using RLPReader for RLPReader.Iterator;
 
     uint8   constant MSG_COMMIT = 2;
+    uint256 constant ADDRESS_LENGTH = 20;
     uint256 constant MAX_VALIDATORS_SIZE = 2160;
     uint256 constant CHANGE_VALIDATORS_SIZE = 3600;
     uint256 constant RLP_INDEX = 3;
@@ -27,13 +27,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     bytes32 constant REMOVE_VALIDATOR = 0x3e9698b37f61d5135393cc4891dd22b1a42d2d350e5d561bcd6967bf75589818;
 
     uint256 public headerHeight;     // last epoch start height
-    uint256 public validatorIdx;
-    uint256 public startHeight;
     uint256 public tempBlockHeight;   // last validator set start height
     IVerifyTool public verifyTool;
     IMPTVerify public mptVerifier;
-    mapping(uint256 => Validator) public extendValidator;
-    mapping(uint256 => uint256) public extendList;
+    mapping(uint256 => Validator) public extendValidator;   // extended Validators stored
+    mapping(uint256 => uint256) public extendList;          // last height stored
     Validator[MAX_VALIDATORS_SIZE] public validators;
 
     uint256 public committeeSize;
@@ -61,9 +59,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         headerHeight : _headerHeight
         });
         headerHeight = _headerHeight;
-        validatorIdx = _getValidatorIndex(headerHeight);
+        uint256 validatorIdx = _getValidatorIndex(headerHeight);
         validators[validatorIdx] = _validator;
-        startHeight = _headerHeight;
         verifyTool = IVerifyTool(_verifyTool);
         mptVerifier = IMPTVerify(_mptVerifier);
         committeeSize = 31;
@@ -73,13 +70,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
 
 
     modifier checkAddress(address _address){
-        require(_address != address(0), "address is zero");
+        require(_address != address(0), "Address is zero");
         _;
     }
 
     modifier checkMultipleAddress(address[] memory _addressArray){
         for (uint i = 0; i < _addressArray.length; i++) {
-            require(_addressArray[i] != address(0), "address have zero");
+            require(_addressArray[i] != address(0), "Address have zero");
         }
         _;
     }
@@ -136,7 +133,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
                 return(false, message, logs);
             }
         } else {
-            message = "mpt verify failed";
+            message = "Klaytn verify failed";
             return(false, message, logs);
         }
     }
@@ -148,17 +145,17 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         IKlaytn.BlockHeader[] memory _headers = abi.decode(
             _blockHeaders, (IKlaytn.BlockHeader[]));
 
-        require(_headers[0].number > headerHeight, "height error");
+        require(_headers[0].number > headerHeight, "Height error");
         if (_headers[0].number % CHANGE_VALIDATORS_SIZE > 0) {
             _updateBlockHeaderChange(_headers);
         } else {
             for (uint256 i = 0; i < _headers.length; i++) {
-                require(_headers[i].number == headerHeight + CHANGE_VALIDATORS_SIZE, "height epoch error");
+                require(_headers[i].number == headerHeight + CHANGE_VALIDATORS_SIZE, "Height epoch error");
                 IKlaytn.BlockHeader memory bh = _headers[i];
                 (bool success, IKlaytn.ExtraData memory data) = checkBlockHeader(bh, false);
-                require(success, "header verify fail");
+                require(success, "Header verify fail");
 
-                validatorIdx = _getValidatorIndex(bh.number);
+                uint256 validatorIdx = _getValidatorIndex(bh.number);
                 Validator memory tempValidators = validators[validatorIdx];
 
                 while(extendList[tempValidators.headerHeight] > 0){
@@ -232,17 +229,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         IKlaytn.BlockHeader memory header1 = _blockHeaders[1];
         require(header0.voteData.length > 0,"The extension update is not satisfied");
         require(header0.number + 1 == header1.number, "Synchronous height error");
-
-        require(header0.number >= tempBlockHeight, "update height error");
+        require(header0.number >= tempBlockHeight, "Update height error");
 
         //TODO: check parent hash
 
         (bool success, IKlaytn.ExtraData memory header1Extra) = checkBlockHeader(header1, true);
         (bool headerTag0,) = checkBlockHeader(header0, true);
-        require(success && headerTag0, "header change verify fail");
+        require(success && headerTag0, "Header change verify fail");
 
         IKlaytn.Vote memory vote = verifyTool.decodeVote(_blockHeaders[0].voteData);
-        require( vote.value.length % 20 == 0, "address error");
+        require( vote.value.length % ADDRESS_LENGTH == 0, "Address error");
         address[] memory newValidators = verifyTool.bytesToAddressArray(vote.value);
         bool success1;
         if (keccak256(vote.key) == ADD_VALIDATOR) {
@@ -264,12 +260,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         headerHeight : header1.number
         });
         extendValidator[header1.number] = v;
-        startHeight = _getBlockHeightList(header1.number,true);
+        uint256 startHeight = _getBlockHeightList(header1.number,true);
         extendList[startHeight] = header1.number;
         tempBlockHeight = header1.number;
         emit UpdateBlockHeader(msg.sender,tempBlockHeight);
     }
 
+    /**
+     * @dev Gets a height as the key to store the next height change
+     *
+     */
     function _getBlockHeightList(uint256 _height,bool _tag)
     internal
     view
@@ -290,6 +290,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         }
     }
 
+    /**
+     * @dev Gets the height of the correct extendList
+     *
+     */
     function _getTrueHeight(uint256 _height,uint256 _verifyHeight)
     internal
     view
@@ -301,6 +305,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         }
     }
 
+    /**
+     * @dev Gets the height of the extendValidator to remove
+     *
+     */
     function _getRemoveExtendHeight(uint256 _height)
     internal
     view
@@ -320,7 +328,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
 
         bool success = verifyTool.checkHeaderParam(_header);
 
-        require(success, "header param error");
+        require(success, "Header param error");
 
         (bytes memory extHead, IKlaytn.ExtraData memory ext) = verifyTool.decodeHeaderExtraData(_header.extraData);
         (bytes memory extraNoSeal, bytes memory seal) = verifyTool.getRemoveSealExtraData(ext, extHead, false);
@@ -337,13 +345,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
 
         Validator memory v = _getCanVerifyValidator(num, _tag);
 
-        require(v.headerHeight > 0, "validator load fail");
+        require(v.headerHeight > 0, "Validator load fail");
 
-        require(v.headerHeight + CHANGE_VALIDATORS_SIZE >= _header.number, "check block height error");
+        require(v.headerHeight + CHANGE_VALIDATORS_SIZE >= _header.number, "Check block height error");
 
         success = _checkCommittedAddress(v.validators, signer);
 
-        require(success, "signer fail");
+        require(success, "Signer fail");
 
         bytes memory committedMsg = abi.encodePacked(hash, MSG_COMMIT);
 
@@ -356,8 +364,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     view
     returns (uint256)
     {
-        Validator memory v = validators[validatorIdx];
-        return (v.headerHeight / CHANGE_VALIDATORS_SIZE + 1) * CHANGE_VALIDATORS_SIZE;
+        return (headerHeight / CHANGE_VALIDATORS_SIZE + 1) * CHANGE_VALIDATORS_SIZE;
     }
 
     function _getStartValidatorHeight()
@@ -365,8 +372,9 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     view
     returns (uint256)
     {
-        uint idx = validatorIdx;
-        uint start = validators[idx].headerHeight;
+
+        uint idx = _getValidatorIndex(headerHeight);
+        uint start = headerHeight;
         for (uint i = 0; i < MAX_VALIDATORS_SIZE; i++) {
             if (idx == 0) {
                 idx = MAX_VALIDATORS_SIZE - 1;
@@ -391,15 +399,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     {
         return (_startHeight / CHANGE_VALIDATORS_SIZE) % MAX_VALIDATORS_SIZE;
     }
-
-
-    function _getNextValidatorIndex() internal view returns (uint){
-        if (validatorIdx == MAX_VALIDATORS_SIZE - 1) {
-            return 0;
-        }
-        return validatorIdx + 1;
-    }
-
 
     function _getCanVerifyValidator(uint256 _height,bool _tag)
     public
