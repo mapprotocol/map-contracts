@@ -8,11 +8,10 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
-import "@mapprotocol/protocol/contracts/lib/MPT.sol";
+import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
 
-import "./interface/IMPTVerify.sol";
 
 import "./interface/IKlaytn.sol";
 

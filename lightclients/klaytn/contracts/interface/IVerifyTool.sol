@@ -16,25 +16,17 @@ interface IVerifyTool {
     pure
     returns(IKlaytn.Vote memory votes);
 
-    function decodeHeaderExtraData(bytes memory _extBytes)
-    external
-    pure
-    returns (bytes memory extTop, IKlaytn.ExtraData memory extData);
 
     function checkReceiptsConcat(bytes[] memory _receipts, bytes32 _receiptsHash)
     external
     pure
     returns (bool);
 
-    function getBlockNewHash(IKlaytn.BlockHeader memory header, bytes memory extraData,bytes memory _removeSealExtra)
+    function getBlockNewHash(IKlaytn.BlockHeader memory header)
     external
     pure
-    returns (bytes32 headerBytes,bytes32 removeSealHeaderBytes);
+    returns (bytes32 blockHash, bytes32 removeSealHash, IKlaytn.ExtraData memory ext);
 
-    function getRemoveSealExtraData(IKlaytn.ExtraData memory _ext, bytes memory _extHead, bool _keepSeal)
-    external
-    pure
-    returns (bytes memory, bytes memory);
 
     function checkHeaderParam(IKlaytn.BlockHeader memory header)
     external

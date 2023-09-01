@@ -5,7 +5,7 @@ pragma solidity 0.8.12;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
-import "./interface/IVerifyTool.sol";
+import "../interface/IVerifyTool.sol";
 
 contract VerifyTool is IVerifyTool {
     using RLPReader for bytes;
@@ -13,7 +13,7 @@ contract VerifyTool is IVerifyTool {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
 
-    uint256 constant EXTRA_VANITY = 32;
+    uint256 constant EXTRA_VANITY = 32;   // Fixed number of extra-data bytes reserved for validator vanity
 
     function bytesToAddressArray(bytes memory _data)
     external
@@ -49,18 +49,19 @@ contract VerifyTool is IVerifyTool {
         }));
     }
 
+
     function decodeHeaderExtraData(bytes memory _extBytes)
-    external
+    internal
     pure
-    returns (bytes memory extTop, IKlaytn.ExtraData memory extData)
+    returns (IKlaytn.ExtraData memory ext, bytes memory extWithoutCommitteeSeal, bytes memory extWithoutCommitteeSealAndSeal)
     {
-        (bytes memory extraHead,bytes memory istBytes) = _splitExtra(_extBytes);
+        (bytes memory extraHead, bytes memory istBytes) = _splitExtra(_extBytes);
 
         RLPReader.RLPItem[] memory ls = istBytes.toRlpItem().toList();
         RLPReader.RLPItem[] memory itemValidators = ls[0].toList();
+        bytes memory _seal = ls[1].toBytes();
         RLPReader.RLPItem[] memory itemCommittedSeal = ls[2].toList();
 
-        bytes memory _seal = ls[1].toBytes();
         address[] memory _validators = new address[](itemValidators.length);
         for (uint256 i = 0; i < itemValidators.length; i++) {
             _validators[i] = itemValidators[i].toAddress();
@@ -70,11 +71,27 @@ contract VerifyTool is IVerifyTool {
             _committedSeal[i] = itemCommittedSeal[i].toBytes();
         }
 
-        return (extraHead, IKlaytn.ExtraData({
+        ext = IKlaytn.ExtraData({
             validators : _validators,
             seal : _seal,
             committedSeal : _committedSeal
-        }));
+        });
+
+        bytes[] memory listExt = new bytes[](3);
+        listExt[0] = ls[0].toBytes();
+        listExt[1] = _seal;
+        listExt[2] = RLPEncode.encodeList(new bytes[](0));
+
+        bytes memory output = RLPEncode.encodeList(listExt);
+
+        extraHead[EXTRA_VANITY - 1] = 0;   // set round
+
+        extWithoutCommitteeSeal = abi.encodePacked(extraHead, output);
+
+        listExt[1] = RLPEncode.encodeBytes("");
+        output = RLPEncode.encodeList(listExt);
+
+        extWithoutCommitteeSealAndSeal = abi.encodePacked(extraHead, output);
     }
 
 
@@ -94,14 +111,16 @@ contract VerifyTool is IVerifyTool {
 
 
 
-    function getBlockNewHash(
-        IKlaytn.BlockHeader memory _header,
-        bytes memory _extraData,
-        bytes memory _removeSealExtra)
+    function getBlockNewHash(IKlaytn.BlockHeader memory _header)
     external
     pure
-    returns (bytes32 headerBytes,bytes32 removeSealHeaderBytes)
+    returns (bytes32 blockHash, bytes32 removeSealHash, IKlaytn.ExtraData memory ext)
     {
+        bytes memory extWithoutCommitteeSeal;
+        bytes memory extWithoutCommitteeSealAndSeal;
+
+        (ext, extWithoutCommitteeSeal, extWithoutCommitteeSealAndSeal) = decodeHeaderExtraData(_header.extraData);
+
         bytes[] memory list = new bytes[](15);
         list[0] = RLPEncode.encodeBytes(_header.parentHash);
         list[1] = RLPEncode.encodeAddress(_header.reward);
@@ -114,43 +133,15 @@ contract VerifyTool is IVerifyTool {
         list[8] = RLPEncode.encodeUint(_header.gasUsed);
         list[9] = RLPEncode.encodeUint(_header.timestamp);
         list[10] = RLPEncode.encodeUint(_header.timestampFoS);
-        list[11] = RLPEncode.encodeBytes(_extraData);
+        list[11] = RLPEncode.encodeBytes(extWithoutCommitteeSeal);
         list[12] = RLPEncode.encodeBytes(_header.governanceData);
         list[13] = RLPEncode.encodeBytes(_header.voteData);
         list[14] = RLPEncode.encodeUint(_header.baseFee);
-        headerBytes = keccak256(RLPEncode.encodeList(list));
-        list[11] = RLPEncode.encodeBytes(_removeSealExtra);
-        removeSealHeaderBytes = keccak256(RLPEncode.encodeList(list));
+        blockHash = keccak256(RLPEncode.encodeList(list));
+
+        list[11] = RLPEncode.encodeBytes(extWithoutCommitteeSealAndSeal);
+        removeSealHash = keccak256(RLPEncode.encodeList(list));
     }
-
-
-    function getRemoveSealExtraData(
-        IKlaytn.ExtraData memory _ext,
-        bytes memory _extHead,
-        bool _keepSeal)
-    external
-    pure
-    returns (bytes memory, bytes memory)
-    {
-        bytes[] memory listExt = new bytes[](3);
-        bytes[] memory listValidators = new bytes[](_ext.validators.length);
-
-        for (uint i = 0; i < _ext.validators.length; i ++) {
-            listValidators[i] = RLPEncode.encodeAddress(_ext.validators[i]);
-        }
-        listExt[0] = RLPEncode.encodeList(listValidators);
-        if (!_keepSeal) {
-            listExt[1] = RLPEncode.encodeBytes("");
-        } else {
-            listExt[1] = RLPEncode.encodeBytes(_ext.seal);
-        }
-        listExt[2] = RLPEncode.encodeList(new bytes[](0));
-
-        bytes memory output = RLPEncode.encodeList(listExt);
-        _extHead[31] = 0;
-        return (abi.encodePacked(_extHead, output), _ext.seal);
-    }
-
 
 
     function checkHeaderParam(IKlaytn.BlockHeader memory _header)
@@ -203,9 +194,11 @@ contract VerifyTool is IVerifyTool {
         bytes memory extraHead,
         bytes memory extraEnd)
     {
-        require(_extra.length >= 32, "Invalid extra result type");
+        require(_extra.length >= EXTRA_VANITY, "Invalid extra result type");
         extraEnd = new bytes(_extra.length - EXTRA_VANITY);
         extraHead = new bytes(EXTRA_VANITY);
+
+        // TODO: optimize
         for (uint256 i = 0; i < _extra.length; i++) {
             if (i < EXTRA_VANITY) {
                 extraHead[i] = _extra[i];
@@ -229,36 +222,5 @@ contract VerifyTool is IVerifyTool {
             v := byte(0, mload(add(_sig, 96)))
         }
     }
-
-    function _encodeReceipt(IKlaytn.TxReceipt memory _txReceipt)
-    internal
-    pure
-    returns (bytes memory output)
-    {
-        bytes[] memory list = new bytes[](4);
-        list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
-        list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
-        list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
-        bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
-        bytes[] memory loglist = new bytes[](3);
-        for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
-            loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[](
-                _txReceipt.logs[j].topics.length
-            );
-            for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(
-                    _txReceipt.logs[j].topics[i]
-                );
-            }
-            loglist[1] = RLPEncode.encodeList(loglist1);
-            loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
-            bytes memory logBytes = RLPEncode.encodeList(loglist);
-            listLog[j] = logBytes;
-        }
-        list[3] = RLPEncode.encodeList(listLog);
-        output = RLPEncode.encodeList(list);
-    }
-
 
 }
