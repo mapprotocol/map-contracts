@@ -10,6 +10,7 @@ describe("LightNode start test", function () {
     let lightNodeContractAddress;
     let LightNodeProxy;
     let verifyTool;
+    let mpt;
     let owner;
     let adminChange;
     let caver;
@@ -42,10 +43,12 @@ describe("LightNode start test", function () {
 
         verifyTool = await (await ethers.getContractFactory("VerifyTool")).deploy();
 
+        mpt = await (await ethers.getContractFactory("MPTVerify")).deploy();
+
         let result = await verifyTool.decodeHeaderExtraData(block.extraData);
 
         let data = lightNodeContract.interface.encodeFunctionData("initialize",
-            [result.extData.validators,block.number,verifyTool.address]);
+            [result.extData.validators,block.number,verifyTool.address,mpt.address]);
 
         console.log("validators",result.extData.validators)
 
@@ -77,7 +80,7 @@ describe("LightNode start test", function () {
 
 
     it("lightNode verify Header",async function (){
-        //console.log(await LightNodeProxy.change(headers.verifyProof));
+
         let result = await LightNodeProxy.verifyProofData(headers.verifyProof);
         expect(result.success).eq(true);
     });
@@ -211,7 +214,7 @@ describe("LightNode start test", function () {
         let result = await verifyTool.decodeHeaderExtraData(block.extraData);
 
         let data = lightNodeContract.interface.encodeFunctionData("initialize",
-            [result.extData.validators,block.number,verifyTool.address]);
+            [result.extData.validators,block.number,verifyTool.address,mpt.address]);
 
         console.log("validators",result.extData.validators)
 
@@ -273,6 +276,7 @@ describe("LightNode start test", function () {
     it("lightNode verify proof 114350210",async function (){
 
         let result = await LightNodeProxy.verifyProofData(headers.transcationProof2);
+
         expect(result.success).eq(true);
     });
 
