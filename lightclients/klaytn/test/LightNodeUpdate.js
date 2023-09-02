@@ -81,7 +81,7 @@ describe("LightNode start test", function () {
 
         let end = ethers.utils.formatUnits(range.end,0)
 
-        expect(end).to.equal((startHeight + 3600).toString())
+        expect(end).to.equal((startHeight + 3600 - 1).toString())
     });
 
     it("lightNode updateBlockHeaders", async function (){
