@@ -22,7 +22,8 @@ interface IVerifyTool {
     pure
     returns (bool);
 
-    function getBlockNewHash(IKlaytn.BlockHeader memory header)
+
+    function getBlockHashAndExtData(IKlaytn.BlockHeader memory header)
     external
     pure
     returns (bytes32 blockHash, bytes32 removeSealHash, IKlaytn.ExtraData memory ext);

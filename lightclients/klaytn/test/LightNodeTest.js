@@ -50,7 +50,7 @@ describe("LightNode start test", function () {
         let data = lightNodeContract.interface.encodeFunctionData("initialize",
             [result.extData.validators,block.number,verifyTool.address,mpt.address]);
 
-        console.log("validators",result.extData.validators)
+        console.log("validators: ",result.extData.validators)
 
         let proxy = await ethers.getContractFactory("LightNodeProxy");
 
@@ -80,8 +80,8 @@ describe("LightNode start test", function () {
 
 
     it("lightNode verify Header",async function (){
-
         let result = await LightNodeProxy.verifyProofData(headers.verifyProof);
+        console.log("verify: ", result.message);
         expect(result.success).eq(true);
     });
 
@@ -108,8 +108,6 @@ describe("LightNode start test", function () {
         header.push(block.baseFeePerGas)
         let headers = [header];
 
-
-
         let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
 
         await LightNodeProxy.updateBlockHeader(headerBytes);
@@ -117,6 +115,8 @@ describe("LightNode start test", function () {
         let heightHeight = await LightNodeProxy.headerHeight();
 
         heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        console.log(heightHeight);
 
         expect((108288000+ 3600).toString()).to.eq(heightHeight);
     });

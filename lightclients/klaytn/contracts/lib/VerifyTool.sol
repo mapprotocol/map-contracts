@@ -51,9 +51,9 @@ contract VerifyTool is IVerifyTool {
 
 
     function decodeHeaderExtraData(bytes memory _extBytes)
-    internal
+    public
     pure
-    returns (IKlaytn.ExtraData memory ext, bytes memory extWithoutCommitteeSeal, bytes memory extWithoutCommitteeSealAndSeal)
+    returns (IKlaytn.ExtraData memory extData, bytes memory extWithoutCommitteeSeal, bytes memory extWithoutCommitteeSealAndSeal)
     {
         (bytes memory extraHead, bytes memory istBytes) = _splitExtra(_extBytes);
 
@@ -71,15 +71,15 @@ contract VerifyTool is IVerifyTool {
             _committedSeal[i] = itemCommittedSeal[i].toBytes();
         }
 
-        ext = IKlaytn.ExtraData({
+        extData = IKlaytn.ExtraData({
             validators : _validators,
             seal : _seal,
             committedSeal : _committedSeal
         });
 
         bytes[] memory listExt = new bytes[](3);
-        listExt[0] = ls[0].toBytes();
-        listExt[1] = _seal;
+        listExt[0] = ls[0].toRlpBytes();
+        listExt[1] = ls[1].toRlpBytes();
         listExt[2] = RLPEncode.encodeList(new bytes[](0));
 
         bytes memory output = RLPEncode.encodeList(listExt);
@@ -111,7 +111,7 @@ contract VerifyTool is IVerifyTool {
 
 
 
-    function getBlockNewHash(IKlaytn.BlockHeader memory _header)
+    function getBlockHashAndExtData(IKlaytn.BlockHeader memory _header)
     external
     pure
     returns (bytes32 blockHash, bytes32 removeSealHash, IKlaytn.ExtraData memory ext)

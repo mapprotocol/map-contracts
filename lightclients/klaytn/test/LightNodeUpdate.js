@@ -166,7 +166,7 @@ describe("LightNode start test", function () {
 
         await LightNodeProxy.updateBlockHeader(headerBytes);
 
-        let heightHeight = await LightNodeProxy.tempBlockHeight();
+        let heightHeight = await LightNodeProxy.lastCommitteeHeight();
         console.log(heightHeight);
 
         heightHeight = ethers.utils.formatUnits(heightHeight,0)
@@ -245,7 +245,7 @@ describe("LightNode start test", function () {
 
         await LightNodeProxy.updateBlockHeader(headerBytes);
 
-        let heightHeight = await LightNodeProxy.tempBlockHeight();
+        let heightHeight = await LightNodeProxy.lastCommitteeHeight();
         console.log(heightHeight);
 
         heightHeight = ethers.utils.formatUnits(heightHeight,0)
