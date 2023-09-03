@@ -16,7 +16,7 @@ module.exports = async (taskArgs,hre) => {
 
    // let rpc = mainRpcUrl;
     let rpc = testRpcUrl;
-    if (deployChainId === 22776){
+    if (deployChainId === 22776) {
         console.log("deploy id :", deployChainId );
         rpc = mainRpcUrl;
     }

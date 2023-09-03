@@ -121,7 +121,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
             IKlaytn.ReceiptProofOriginal memory proof = abi.decode(receiptProof.proof, (IKlaytn.ReceiptProofOriginal));
 
             (success, ) = checkBlockHeader(proof.header, true);
-            if (!success){
+            if (!success) {
                 message = "DeriveShaOriginal header verify failed";
                 return(success, message, logs);
             }
@@ -165,7 +165,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
                 uint256 validatorIdx = _getValidatorIndex(bh.number);
                 Validator memory tempValidators = validators[validatorIdx];
 
-                cleanValidator(tempValidators.headerHeight);
+                _cleanValidator(tempValidators.headerHeight);
 
                 Validator memory v = Validator({
                 validators : data.validators,
@@ -174,13 +174,15 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
                 validators[validatorIdx] = v;
                 lastEpochHeight = bh.number;
 
-                firstEpochHeight = firstEpochHeight + CHANGE_VALIDATORS_SIZE;
-
+                if (lastEpochHeight - firstEpochHeight >= CHANGE_VALIDATORS_SIZE * MAX_EPOCH_SIZE) {
+                    firstEpochHeight = firstEpochHeight + CHANGE_VALIDATORS_SIZE;
+                }
                 emit UpdateBlockHeader(msg.sender, lastEpochHeight);
             }
         }
 
     }
+
 
     function updateLightClient(bytes memory _data) external override {
     }
@@ -204,7 +206,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     returns (uint256 start, uint256 end) {
         start = firstEpochHeight;
         end = (lastEpochHeight / CHANGE_VALIDATORS_SIZE + 1) * CHANGE_VALIDATORS_SIZE - 1;
-        //return (_getStartValidatorHeight(), _getEndValidatorHeight());
     }
 
 
@@ -231,13 +232,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     function setCommitteeSize(uint256 _committeeSize) external onlyOwner {
         require(_committeeSize > 0,"Committee size error");
         committeeSize = _committeeSize;
-
+        // TODO: add event
     }
 
     // remove all validator sets in the epoch
-    function cleanValidator(uint256 epochHeight) internal {
+    function _cleanValidator(uint256 _epochHeight) internal {
         uint256 nextHeight;
-        uint256 height = epochHeight;
+        uint256 height = _epochHeight;
         while (extendList[height] > 0) {
             nextHeight = extendList[height];
 
