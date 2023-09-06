@@ -1,0 +1,10 @@
+PRIVATE_KEY = 
+# bsc rpc url
+RPCURI = 
+# mainnet 199 testnet 1028
+CHAINID = 
+// 0 - for latest
+START_SYNCY_BLOCK = 0
+# bttc mainnet 417 
+MinEpochBlockExtraDataLen = 417
+
