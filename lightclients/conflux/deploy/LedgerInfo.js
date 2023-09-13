@@ -20,8 +20,7 @@ module.exports = async function ({ethers, deployments}) {
         contract: 'LedgerInfo'
     })
 
-
-    let ledgerInfo = await ethers.getContract('LedgerInfo');
+    let ledgerInfo = await deployments.get('LedgerInfo');
 
     console.log("LedgerInfo success：",ledgerInfo.address)
 }

@@ -1,5 +1,4 @@
 require("@nomiclabs/hardhat-waffle");
-//require('hardhat-gas-reporter')
 require('hardhat-spdx-license-identifier')
 require('hardhat-deploy')
 require('hardhat-abi-exporter')
@@ -9,7 +8,7 @@ require('@nomiclabs/hardhat-etherscan')
 require('solidity-coverage')
 require('./tasks');
 
-const { PRIVATE_KEY, INFURA_KEY} = process.env;
+const { PRIVATE_KEY} = process.env;
 
 let accounts = [];
 
@@ -30,7 +29,7 @@ module.exports = {
       forking: {
         enabled: false,
         //url: `https://bsctest.pls2e.cc`,
-        url: `https://data-seed-prebsc-1-s1.binance.org:8545`
+        url: `https://testnet-rpc.maplabs.io/`
         //url: `https://bsc-dataseed.eme-node.com`,
         //url: `https://bsc-dataseed2.defibit.io/`,
       },
@@ -48,26 +47,12 @@ module.exports = {
       url: `https://testnet-rpc.maplabs.io/`,
       chainId : 212,
       accounts: accounts
-    },
-    MapDev: {
-      url: `http://3.0.19.66:7445/`,
-      chainId : 213,
-      accounts: accounts
     }
   },
   solidity: {
     compilers: [
       {
         version: '0.8.12',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200
-          }
-        }
-      },
-      {
-        version: '0.4.22',
         settings: {
           optimizer: {
             enabled: true,
@@ -83,8 +68,5 @@ module.exports = {
   },
   mocha: {
     timeout: 2000000
-  },
-  etherscan: {
-    apiKey: process.env.BSC_SCAN_KEY
   }
 }

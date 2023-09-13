@@ -29,13 +29,14 @@ module.exports = async (taskArgs,hre) => {
         contract: 'LightNode',
     })
 
-    let lightNode = await ethers.getContract('LightNode');
+    let lightNode = await deployments.get('LightNode');
+    let LightNode = await ethers.getContractFactory('LightNode');
     console.log('light node implementation address:', lightNode.address);
 
     let epoch = await conflux.pos.getCommittee()
     let epochNumber;
     if (taskArgs.epoch === 0){
-        epochNumber = epoch.currentCommittee.epochNumber
+        epochNumber = Number(epoch.currentCommittee.epochNumber) - 1
         console.log(epochNumber)
     }else{
         epochNumber = taskArgs.epoch
@@ -126,7 +127,7 @@ module.exports = async (taskArgs,hre) => {
 
     console.log(ledgerInfoSignatures)
 
-    let data = lightNode.interface.encodeFunctionData(
+    let data = LightNode.interface.encodeFunctionData(
         "initialize",
         [deployer.address,taskArgs.ledger,taskArgs.mpt,nextEpochStates,ledgerInfoSignatures]
     );

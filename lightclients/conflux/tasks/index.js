@@ -5,8 +5,8 @@ task("lightClientDeploy",
     "deploy LightNode proxy and init",
     require("./lightClientDeploy")
 )
-    .addOptionalParam("epoch", "init epoch default current epoch",0,types.int)
-    .addOptionalParam("mpt", " Provable address","0xf0EEbaE3e4541b7762442a70046564be5330fA7D",types.string)
-    .addOptionalParam("ledger", " LedgerInfo address","0x871264fb8A6F4584Fea4038D23f2f7f7B8166e3A",types.string)
-    .addOptionalParam("salt", "deploy contract salt",LIGHTNODE_SALT , types.string)
-    .addOptionalParam("factory", "mos contract address",DEPLOY_FACTORY , types.string)
+    .addParam("mpt", " Provable address")
+    .addParam("ledger", " LedgerInfo address")
+    .addOptionalParam("epoch", "Init epoch default current epoch sub 1",0,types.int)
+    .addOptionalParam("salt", "Deploy contract salt",LIGHTNODE_SALT , types.string)
+    .addOptionalParam("factory", "Deploy factory contract address",DEPLOY_FACTORY , types.string)

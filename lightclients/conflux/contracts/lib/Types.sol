@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.4;
 
-import "./RLPEncode.sol";
-import "./RLPReader.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
 import "./ProofLib.sol";
 
 library Types {
@@ -27,6 +27,51 @@ library Types {
         bytes[] custom;
         uint256 nonce;
         bytes32 posReference;
+    }
+
+    struct BlockHeaderWrapper {
+        bytes32 parentHash;
+        uint256 height;
+        bytes32 deferredReceiptsRoot;
+    }
+
+
+    struct ReceiptProof {
+        // Continuous block headers (RLP encoded), that head is for receipts root,
+        // and tail block should be relayed on chain.
+        bytes[] headers;
+
+        bytes blockIndex;
+        ProofLib.ProofNode[] blockProof;
+
+        bytes32 receiptsRoot;
+        bytes index;
+        bytes receipt; // RLP encoded
+        ProofLib.ProofNode[] receiptProof;
+    }
+
+    struct TxReceipt {
+        uint256 accumulatedGasUsed;
+        uint256 gasFee;
+        bool gasSponsorPaid;
+        bytes logBloom;
+        TxLog[] logs;
+        uint8 outcomeStatus;
+        bool storageSponsorPaid;
+        StorageChange[] storageCollateralized;
+        StorageChange[] storageReleased;
+    }
+
+    struct TxLog {
+        address addr;
+        bytes32[] topics;
+        bytes data;
+        uint8 space; // Native: 1, Ethereum: 2
+    }
+
+    struct StorageChange {
+        address account;
+        uint64 collaterals;
     }
 
     function encodeBlockHeader(BlockHeader memory header) internal pure returns (bytes memory) {
@@ -90,12 +135,6 @@ library Types {
         return keccak256(encoded);
     }
 
-    struct BlockHeaderWrapper {
-        bytes32 parentHash;
-        uint256 height;
-        bytes32 deferredReceiptsRoot;
-    }
-
     function rlpDecodeBlockHeader(bytes memory header) internal pure returns (BlockHeaderWrapper memory wrapper) {
         RLPReader.Iterator memory iter = RLPReader.toRlpItem(header).iterator();
         wrapper.parentHash = bytes32(iter.next().toUintStrict());
@@ -105,44 +144,6 @@ library Types {
         iter.next(); // txs root
         iter.next(); // state root
         wrapper.deferredReceiptsRoot = bytes32(iter.next().toUintStrict());
-    }
-
-    struct ReceiptProof {
-        // Continuous block headers (RLP encoded), that head is for receipts root,
-        // and tail block should be relayed on chain.
-        bytes[] headers;
-
-        bytes blockIndex;
-        ProofLib.ProofNode[] blockProof;
-
-        bytes32 receiptsRoot;
-        bytes index;
-        bytes receipt; // RLP encoded
-        ProofLib.ProofNode[] receiptProof;
-    }
-
-    struct TxReceipt {
-        uint256 accumulatedGasUsed;
-        uint256 gasFee;
-        bool gasSponsorPaid;
-        bytes logBloom;
-        TxLog[] logs;
-        uint8 outcomeStatus;
-        bool storageSponsorPaid;
-        StorageChange[] storageCollateralized;
-        StorageChange[] storageReleased;
-    }
-
-    struct TxLog {
-        address addr;
-        bytes32[] topics;
-        bytes data;
-        uint8 space; // Native: 1, Ethereum: 2
-    }
-
-    struct StorageChange {
-        address account;
-        uint64 collaterals;
     }
 
     function encodeReceipt(TxReceipt memory receipt) internal pure returns (bytes memory) {
