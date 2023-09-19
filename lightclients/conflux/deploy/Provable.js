@@ -21,7 +21,7 @@ module.exports = async function ({ethers, deployments}) {
     })
 
 
-    let provable = await ethers.getContract('Provable');
+    let provable = await deployments.get('Provable');
 
     console.log("Provable success：",provable.address)
 }

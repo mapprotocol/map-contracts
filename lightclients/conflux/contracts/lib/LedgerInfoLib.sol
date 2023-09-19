@@ -8,6 +8,7 @@ import "./Bytes.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 library LedgerInfoLib {
+    bytes32 private constant BCS_CFX_PREFIX = 0xcd510d1ab583c33b54fa949014601df0664857c18c4cfb228c862dd869df1b62;
 
     struct LedgerInfoWithSignatures {
         uint64 epoch;
@@ -157,8 +158,6 @@ library LedgerInfoLib {
 
         require(voted >= committee.quorumVotingPower, "voting power not enough");
     }
-
-    bytes32 private constant BCS_CFX_PREFIX = 0xcd510d1ab583c33b54fa949014601df0664857c18c4cfb228c862dd869df1b62;
 
     function bcsEncodeLedgerInfo(LedgerInfoWithSignatures memory ledgerInfo) internal pure returns (bytes memory) {
         bytes memory consensusDataHash = abi.encodePacked(ledgerInfo.consensusDataHash);

@@ -18,11 +18,11 @@ module.exports = async function ({ethers, deployments}) {
         contract: 'LightNode',
     })
 
-    let LightClient= await ethers.getContract('LightNode');
+    let LightClient= await deployments.get('LightNode');
 
     console.log("LightNode",LightClient.address);
 
-    let LightClientProxy = await ethers.getContract('LightNodeProxy');
+    let LightClientProxy = await deployments.get('LightNodeProxy');
 
     console.log("LightNodeProxy",LightClientProxy.address);
 

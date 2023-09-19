@@ -6,14 +6,15 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
-import "./interface/IConflux.sol";
-import "./lib/LedgerInfoLib.sol";
-import "./lib/Types.sol";
-import "./LedgerInfo.sol";
-import "./Provable.sol";
+import "../interface/IConflux.sol";
+import "../lib/LedgerInfoLib.sol";
+import "../lib/Types.sol";
+import "../LedgerInfo.sol";
+import "../Provable.sol";
 
-contract LightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
+contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
     using RLPReader for RLPReader.RLPItem;
+
 
     LedgerInfo private _ledgerInfo;
     Provable private _mptVerify;
@@ -23,7 +24,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
 
     // pow block number => pow block hash
     mapping(uint256 => bytes32) public finalizedBlocks;
-
 
     function initialize(
         address controller,
@@ -49,7 +49,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         _state.earliestBlockNumber = ledgerInfo.pivot.height;
         _state.finalizedBlockNumber = ledgerInfo.pivot.height;
         _state.blocks = 1;
-        _state.maxBlocks = 3 * 1440 * 30; // 3 updateBlockHeader(120)/3 * day 1440 blocks * 30 days
+        _state.maxBlocks = 3 * 1440 * 30; // about 1 month
         finalizedBlocks[ledgerInfo.pivot.height] = ledgerInfo.pivot.blockHash;
 
         // init committee
@@ -76,8 +76,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
 
         bytes memory message = _ledgerInfo.bcsEncode(ledgerInfo);
         (bytes memory signature, bytes[] memory publicKeys) = LedgerInfoLib.packSignatures(_committee, ledgerInfo);
-        bool verified = _ledgerInfo.aggregateVerifyBLS(signature, message, publicKeys);
-        require(verified, "invalid BLS signatures");
+//        bool verified = _ledgerInfo.aggregateVerifyBLS(signature, message, publicKeys);
+//        require(verified, "invalid BLS signatures");
 
         if (ledgerInfo.nextEpochState.epoch == 0) {
             _state.round = ledgerInfo.round;
@@ -254,7 +254,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
-        require(msg.sender == _getAdmin(), "lightNode only admin can upgrade");
+        require(msg.sender == _getAdmin(), "lightNode only Admin can upgrade");
     }
 
     function changeAdmin(address _admin) public onlyOwner {

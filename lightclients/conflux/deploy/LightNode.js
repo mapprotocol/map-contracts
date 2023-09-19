@@ -32,12 +32,13 @@ module.exports = async function ({ethers, deployments}) {
         contract: 'LightNode',
     })
 
-    let lightNode = await ethers.getContract('LightNode');
+    let lightNode = await deployments.get('LightNode');
+    let LightNode = await ethers.getContractFactory('LightNode');
     console.log('light node implementation address:', lightNode.address);
 
     let epoch = await conflux.pos.getCommittee()
 
-    let epochNumber = epoch.currentCommittee.epochNumber
+    let epochNumber = Number(epoch.currentCommittee.epochNumber) - 1
     console.log(epochNumber)
 
     let preLedgerInfo = await conflux.provider.request({method: 'pos_getLedgerInfoByEpoch', params: ["0x" + (Number(epochNumber) - 1).toString(16)]})
@@ -130,7 +131,7 @@ module.exports = async function ({ethers, deployments}) {
     let provable =  await deployments.get("Provable")
     console.log("Provable address:",provable.address)
 
-    let data = lightNode.interface.encodeFunctionData(
+    let data = LightNode.interface.encodeFunctionData(
         "initialize",
         [deployer.address,ledger.address,provable.address,nextEpochStates,ledgerInfoSignatures]
     );
@@ -143,7 +144,7 @@ module.exports = async function ({ethers, deployments}) {
         gasLimit:10000000
     })
 
-    let lightNodeProxy = await ethers.getContract('LightNodeProxy');
+    let lightNodeProxy = await deployments.get('LightNodeProxy');
 
     let proxy = await ethers.getContractAt("LightNode",lightNodeProxy.address)
 
