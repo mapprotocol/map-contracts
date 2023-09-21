@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "bsc light node in the solidity implementation",
   "dependencies": {
+    "@mapprotocol/protocol": "^0.4.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.2",
     "@openzeppelin/contracts": "^4.6.0",
     "dotenv": "^16.0.0",
