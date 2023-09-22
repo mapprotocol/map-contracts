@@ -2,10 +2,9 @@
 
 pragma solidity 0.8.7;
 
-import "./RLPReader.sol";
-import "./RLPEncode.sol";
-import "../interface/IMPTVerify.sol";
-import "hardhat/console.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
+import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 
 
 library Verify {
@@ -105,7 +104,7 @@ library Verify {
         BlockHeader memory _header,
         uint256 _minEpochBlockExtraDataLen,
         BlockHeader memory _parent,
-        uint256 _chainId
+        uint256 //_chainId
     ) internal pure returns (bool) {
         if (_header.extraData.length < (EXTRA_VANITY + EXTRASEAL)) {
             return false;

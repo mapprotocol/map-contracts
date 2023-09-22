@@ -5,7 +5,7 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./interface/ILightNode.sol";
+import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
 import "./lib/Verify.sol";
 
 
@@ -232,6 +232,18 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     {
         return (minValidBlocknum, maxCanVerifyNum());
     }
+
+        function updateLightClient(bytes memory _data) external override {
+    }
+
+    function clientState() external override pure returns(bytes memory) {
+        return bytes("");
+    }
+
+    function finalizedState(bytes memory ) external override pure returns(bytes memory) {
+        return bytes("");
+    }
+
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
