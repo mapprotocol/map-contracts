@@ -1,3 +1,4 @@
+const initializeData = require("./config");
 
 module.exports = async function ({ethers, deployments}) {
     const {deploy} = deployments
