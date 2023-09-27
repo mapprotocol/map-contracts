@@ -14,7 +14,7 @@ module.exports = async function ({ethers, deployments}) {
     );
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
-   // console.log(initializeData.initData)
+    // console.log(initializeData.initData)
     await deploy('VerifyTool', {
         from: deployer.address,
         args: [],
@@ -30,9 +30,10 @@ module.exports = async function ({ethers, deployments}) {
     })
 
 
-    let verifyTool = await ethers.getContract('VerifyTool');
-    let lightNode = await ethers.getContract('LightNode');
+    let VerifyTool = await deployments.get('VerifyTool');
+    let LightNode = await deployments.get('LightNode');
 
+    let lightNode = await ethers.getContractAt("LightNode",LightNode.address)
     console.log(lightNode.address)
     //let validatorNum = initializeData.initData.validators;
     let validatorNum = initializeData.validators;
@@ -53,7 +54,7 @@ module.exports = async function ({ethers, deployments}) {
     let epochSize = initializeData.epoch_size;
 
 
-    let data = lightNode.interface.encodeFunctionData("initialize", [threshold, addresss, g1List, weights, epoch, epochSize,verifyTool.address]);
+    let data = lightNode.interface.encodeFunctionData("initialize", [threshold, addresss, g1List, weights, epoch, epochSize,VerifyTool.address]);
     console.log("initialize success")
 
 
@@ -61,10 +62,10 @@ module.exports = async function ({ethers, deployments}) {
         from: deployer.address,
         args: [lightNode.address,data],
         log: true,
-        contract: 'LightNodeProxy',
+        contract: 'LightNodeProxy'
     })
 
-    let lightProxyClient = await ethers.getContract('LightNodeProxy');
+    let lightProxyClient = await deployments.get('LightNodeProxy');
 
     console.log("lightProxyClient Address",lightProxyClient.address)
 

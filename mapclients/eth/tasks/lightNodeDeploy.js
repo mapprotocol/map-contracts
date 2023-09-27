@@ -21,7 +21,8 @@ module.exports = async (taskArgs,hre) => {
         contract: 'LightNode',
     })
 
-    let lightNode = await ethers.getContract('LightNode');
+    let LightNode = await deployments.get('LightNode');
+    let lightNode = await ethers.getContractAt("LightNode",LightNode.address);
 
     console.log(lightNode.address)
     //let validatorNum = initializeData.initData.validators;
