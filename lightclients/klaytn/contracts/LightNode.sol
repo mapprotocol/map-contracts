@@ -40,6 +40,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
 
     uint256 public committeeSize;
 
+    address[] newV;
+
     struct Validator {
         address[] validators;
         uint256 headerHeight;
@@ -285,22 +287,27 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     internal
     returns(IKlaytn.ExtraData memory)
     {
-        (bool success, IKlaytn.ExtraData memory header1Extra,) = checkBlockHeader(header1, true);
         (bool headerTag0, ,bytes32 header0hash) = checkBlockHeader(header0, true);
-        require(success && headerTag0, "Header change verify fail");
+        require(headerTag0, "Header0 change verify fail");
         require(header0hash == bytes32(header1.parentHash),"Header parentHash verfiy fail");
 
         IKlaytn.Vote memory vote = verifyTool.decodeVote(header0.voteData);
         require( vote.value.length % ADDRESS_LENGTH == 0, "Address error");
         address[] memory newValidators = verifyTool.bytesToAddressArray(vote.value);
         bool success1;
+        bool success;
+        IKlaytn.ExtraData memory header1Extra;
         if (keccak256(vote.key) == ADD_VALIDATOR) {
             for(uint256 i = 0; i < newValidators.length; i++) {
+                (success,header1Extra,) = checkNextBlockHeader(header1, true,newValidators,true);
+                require(success, "Header1 change verify fail");
                 success1  = _checkCommittedAddress(header1Extra.validators, newValidators[i]);
                 require(success1,"ADD_VALIDATOR error");
             }
         } else if (keccak256(vote.key) == REMOVE_VALIDATOR) {
             for(uint256 i = 0; i < newValidators.length; i++) {
+                (success,header1Extra,) = checkNextBlockHeader(header1, true,newValidators,false);
+                require(success, "Header1 change verify fail");
                 success1  = _checkCommittedAddress(header1Extra.validators, newValidators[i]);
                 require(!success1 ,"REMOVE_VALIDATOR error");
             }
@@ -391,7 +398,50 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
 
         bytes memory committedMsg = abi.encodePacked(hash, MSG_COMMIT);
 
-        return (_checkCommitSeal(v, committedMsg, ext.committedSeal), ext, hash);
+        return (_checkCommitSeal(v.validators, committedMsg, ext.committedSeal), ext, hash);
+    }
+
+    function checkNextBlockHeader(IKlaytn.BlockHeader memory _header, bool _tag,address[] memory _updateV,bool _addOrSub)
+    internal
+    returns (bool, IKlaytn.ExtraData memory,bytes32)
+    {
+        require(_header.number >= firstEpochHeight, "Out of verifiable range");
+
+        bool success = verifyTool.checkHeaderParam(_header);
+
+        require(success, "Header param error");
+
+        (bytes32 hash, bytes32 signerHash, IKlaytn.ExtraData memory ext) = verifyTool.getBlockHashAndExtData(_header);
+
+        address signer = verifyTool.recoverSigner(ext.seal, keccak256(abi.encodePacked(signerHash)));
+
+        uint num = _header.number;
+
+        if (!_tag) {
+            num = _header.number - CHANGE_VALIDATORS_SIZE;
+        }
+
+        Validator memory v = _getCanVerifyValidator(num, _tag);
+
+        require(v.headerHeight > 0, "Validator load fail");
+
+        require(v.headerHeight + CHANGE_VALIDATORS_SIZE >= _header.number, "Check block height error");
+
+        success = _checkCommittedAddress(v.validators, signer);
+
+        require(success, "Signer fail");
+
+        bytes memory committedMsg = abi.encodePacked(hash, MSG_COMMIT);
+
+        newV = v.validators;
+
+        if(_addOrSub){
+            for(uint256 i = 0; i < _updateV.length; i++){
+                newV.push(_updateV[i]);
+            }
+        }
+
+        return (_checkCommitSeal(newV, committedMsg, ext.committedSeal), ext, hash);
     }
 
 
@@ -462,7 +512,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
      *
      */
     function _checkCommitSeal(
-        Validator memory _v,
+        address[] memory _v,
         bytes memory _committedMsg,
         bytes[] memory _committedSeal)
     internal
@@ -470,17 +520,17 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     returns (bool)
     {
         bytes32 msgHash = keccak256(_committedMsg);
-        address[] memory miners = new address[](_v.validators.length);
+        address[] memory miners = new address[](_v.length);
 
         uint checkedCommittee = 0;
         for (uint i = 0; i < _committedSeal.length; i++) {
             address committee = verifyTool.recoverSigner(_committedSeal[i], msgHash);
-            if (_checkCommittedAddress(_v.validators, committee) && !(verifyTool.isRepeat(miners,committee,i))) {
+            if (_checkCommittedAddress(_v, committee) && !(verifyTool.isRepeat(miners,committee,i))) {
                 checkedCommittee++;
             }
             miners[i] = committee;
         }
-        return checkedCommittee > (_getFaultyNodeNumber(_v.validators.length)) * 2;
+        return checkedCommittee > (_getFaultyNodeNumber(_v.length)) * 2;
     }
 
 
