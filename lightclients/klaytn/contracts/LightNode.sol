@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
-
 import "./interface/IVerifyTool.sol";
 import "./interface/IKlaytn.sol";
 
@@ -39,8 +38,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     Validator[MAX_EPOCH_SIZE] public validators;
 
     uint256 public committeeSize;
-
-    address[] newV;
 
     struct Validator {
         address[] validators;
@@ -294,27 +291,18 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         IKlaytn.Vote memory vote = verifyTool.decodeVote(header0.voteData);
         require( vote.value.length % ADDRESS_LENGTH == 0, "Address error");
         address[] memory newValidators = verifyTool.bytesToAddressArray(vote.value);
-        bool success1;
+       // bool success1;
         bool success;
         IKlaytn.ExtraData memory header1Extra;
         if (keccak256(vote.key) == ADD_VALIDATOR) {
-            for(uint256 i = 0; i < newValidators.length; i++) {
-                (success,header1Extra,) = checkNextBlockHeader(header1, true,newValidators,true);
-                require(success, "Header1 change verify fail");
-                success1  = _checkCommittedAddress(header1Extra.validators, newValidators[i]);
-                require(success1,"ADD_VALIDATOR error");
-            }
+            (success,header1Extra) = checkNextBlockHeader(header1,newValidators,true);
+            require(success, "Header1 add validator fail");
         } else if (keccak256(vote.key) == REMOVE_VALIDATOR) {
-            for(uint256 i = 0; i < newValidators.length; i++) {
-                (success,header1Extra,) = checkNextBlockHeader(header1, true,newValidators,false);
-                require(success, "Header1 change verify fail");
-                success1  = _checkCommittedAddress(header1Extra.validators, newValidators[i]);
-                require(!success1 ,"REMOVE_VALIDATOR error");
-            }
+            (success,header1Extra) = checkNextBlockHeader(header1,newValidators,false);
+            require(success, "Header1 remove validator fail");
         } else {
             require(false, "Not the expected instruction");
         }
-
         return header1Extra;
     }
 
@@ -401,9 +389,9 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         return (_checkCommitSeal(v.validators, committedMsg, ext.committedSeal), ext, hash);
     }
 
-    function checkNextBlockHeader(IKlaytn.BlockHeader memory _header, bool _tag,address[] memory _updateV,bool _addOrSub)
+    function checkNextBlockHeader(IKlaytn.BlockHeader memory _header,address[] memory _updateV,bool _addOrSub)
     internal
-    returns (bool, IKlaytn.ExtraData memory,bytes32)
+    returns (bool, IKlaytn.ExtraData memory)
     {
         require(_header.number >= firstEpochHeight, "Out of verifiable range");
 
@@ -417,31 +405,41 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
 
         uint num = _header.number;
 
-        if (!_tag) {
-            num = _header.number - CHANGE_VALIDATORS_SIZE;
-        }
-
-        Validator memory v = _getCanVerifyValidator(num, _tag);
+        Validator memory v = _getCanVerifyValidator(num, false);
 
         require(v.headerHeight > 0, "Validator load fail");
 
         require(v.headerHeight + CHANGE_VALIDATORS_SIZE >= _header.number, "Check block height error");
+        address[] memory newValidators;
+        if(_addOrSub){
+            newValidators = new address[](v.validators.length + _updateV.length);
+            for(uint256 i = 0; i < newValidators.length; i++){
+                if(i >= v.validators.length){
+                    require(!_checkCommittedAddress(v.validators,_updateV[i - v.validators.length]),"Validators repetition add");
+                    newValidators[i] = _updateV[i - v.validators.length];
+                }else{
+                    newValidators[i] = v.validators[i];
+                }
+            }
+        }else{
+            newValidators = new address[](v.validators.length - _updateV.length);
+            uint256 index = 0;
+            for(uint256 i = 0; i < v.validators.length; i++){
+                if(_checkCommittedAddress(_updateV, v.validators[i])){
+                    index ++;
+                }else{
+                    newValidators[i-index] = v.validators[i];
+                }
+            }
+        }
 
-        success = _checkCommittedAddress(v.validators, signer);
+        success = _checkCommittedAddress(newValidators, signer);
 
         require(success, "Signer fail");
 
         bytes memory committedMsg = abi.encodePacked(hash, MSG_COMMIT);
 
-        newV = v.validators;
-
-        if(_addOrSub){
-            for(uint256 i = 0; i < _updateV.length; i++){
-                newV.push(_updateV[i]);
-            }
-        }
-
-        return (_checkCommitSeal(newV, committedMsg, ext.committedSeal), ext, hash);
+        return (_checkCommitSeal(newValidators, committedMsg, ext.committedSeal), ext);
     }
 
 
