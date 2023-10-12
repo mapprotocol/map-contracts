@@ -18,8 +18,10 @@
   },
   "homepage": "https://github.com/mapprotocol/map-contracts#readme.md",
   "dependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
     "ajv": "^8.8.2",
     "bignumber.js": "^9.0.1",
+    "hardhat": "^2.17.3",
     "keythereum": "^1.2.0",
     "node-fetch": "^3.3.0",
     "prompt-sync": "^4.2.0",
@@ -27,14 +29,14 @@
     "request": "^2.88.2",
     "secp256k1": "^4.0.2",
     "source-map": "^0.7.3",
-    "stdio": "^2.1.1"
+    "stdio": "^2.1.1",
+    "tronweb": "^5.3.0"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
-    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.13",
     "@nomiclabs/hardhat-etherscan": "^2.1.8",
     "@nomiclabs/hardhat-solhint": "^2.0.0",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
@@ -52,7 +54,6 @@
     "dotenv": "^8.2.0",
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.7.2",
-    "hardhat": "^2.9.7",
     "hardhat-abi-exporter": "^2.2.1",
     "hardhat-deploy": "^0.7.11",
     "hardhat-deploy-ethers": "^0.3.0-beta.7",

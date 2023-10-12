@@ -18,7 +18,8 @@ describe("LightNode start test", function () {
 
     beforeEach(async function () {
         [owner, adminChange] = await ethers.getSigners();
-        caver = new Caver("https://public-node-api.klaytnapi.com/v1/baobab");
+       // caver = new Caver("https://public-node-api.klaytnapi.com/v1/baobab");
+        caver = new Caver("https://klaytn-baobab.blockpi.network/v1/rpc/public");
         //caver = new Caver("https://public-node-api.klaytnapi.com/v1/cypress");
     });
 

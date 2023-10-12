@@ -19,7 +19,7 @@ module.exports = async function ({ethers, deployments}) {
         contract: 'LightNode',
     })
 
-    let lightNode = await ethers.getContract('LightNode');
+    let lightNode = await deployments.get('LightNode');
     console.log(lightNode.address)
 
     let proxy =  await deployments.get("LightNodeProxy")

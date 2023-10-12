@@ -22,3 +22,10 @@ task("verifyToolDeploy",
 )
     .addOptionalParam("toolsalt", "deploy contract salt",VERIFYTOOL_SALT , types.string)
     .addOptionalParam("factory", "mos contract address",DEPLOY_FACTORY , types.string)
+
+
+task("tronDeploy",
+    "Write initialization data required by LightNode",
+    require("./tronDeploy")
+)
+    .addParam("chain", "Tron is the mainnet or TronTest is testnet")
