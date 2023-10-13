@@ -451,5 +451,81 @@ describe("LightNode start test", function () {
         expect((134954064).toString()).to.eq(heightHeight);
     });
 
+    it("lightNode updateBlockHeader 134954671", async function (){
+
+        let headers = [];
+        startHeight = 134954671;
+        for (i=0;i<2;i++){
+            startHeight += i;
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.lastCommitteeHeight();
+        console.log(heightHeight);
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((134954672).toString()).to.eq(heightHeight);
+    });
+
+    it("lightNode updateBlockHeaders 134953200", async function (){
+        startHeight = 134953200;
+        let headers = [];
+        for (i=0;i<1;i++){
+            startHeight += 3600;
+            console.log(startHeight)
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        //  await LightNodeProxy.updateBlockHeaderChange(headers);
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.headerHeight();
+        console.log(heightHeight);
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((134953200 + 3600).toString()).to.eq(heightHeight);
+    });
 
 });
