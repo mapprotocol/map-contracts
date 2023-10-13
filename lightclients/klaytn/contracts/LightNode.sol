@@ -298,7 +298,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         if (keccak256(vote.key) == ADD_VALIDATOR) {
             newValidators = _getUpdateValidators(header1, updateValidators, true);
         } else if (keccak256(vote.key) == REMOVE_VALIDATOR) {
-            newValidators = _getUpdateValidators(header1, updateValidators, true);
+            newValidators = _getUpdateValidators(header1, updateValidators, false);
         } else {
             require(false, "Not the expected instruction");
         }
