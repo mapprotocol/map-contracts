@@ -424,28 +424,17 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
                 }
             }
         } else {
-            uint j = 0;
-            address[] memory oldValidators = v.validators;
 
+            address[] memory oldValidators = v.validators;
             for (uint256 i = 0; i < _updateV.length; i++) {
-                for (j = 0; j < oldValidators.length; j++) {
+                for (uint j = 0; j < oldValidators.length; j++) {
                     if (_updateV[i] == oldValidators[j]) {
                         oldValidators[j] = address(0);
                         break;
                     }
                 }
-                require(j < oldValidators.length, "Validator not included");
             }
-
-            newValidators = new address[](v.validators.length - _updateV.length);
-            j = 0;
-            for (uint256 i = 0; i < oldValidators.length; i++) {
-                if (oldValidators[i] == address(0)) {
-                    continue;
-                }
-                newValidators[j] = oldValidators[i];
-                j++;
-            }
+            newValidators = oldValidators;
         }
 
         return newValidators;
