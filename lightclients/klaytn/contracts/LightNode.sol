@@ -260,21 +260,35 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
 
         require(header0.number >= lastCommitteeHeight, "Update height0 error");
 
-        require(header1.number < lastEpochHeight + CHANGE_VALIDATORS_SIZE, "Update height1 error");
-
         IKlaytn.ExtraData memory header1Extra = _checkUpdateBlockHeader(header0,header1);
 
         Validator memory v = Validator({
         validators : header1Extra.validators,
         headerHeight : header1.number
         });
-        extendValidator[header1.number] = v;
 
-        uint256 startHeight = _getLastCommitteeHeight(header1.number, true);
-        extendList[startHeight] = header1.number;
+        if(header1.number % CHANGE_VALIDATORS_SIZE > 0){
+            require(header1.number < lastEpochHeight + CHANGE_VALIDATORS_SIZE, "Update height1 error");
+            extendValidator[header1.number] = v;
+            uint256 startHeight = _getLastCommitteeHeight(header1.number, true);
+            extendList[startHeight] = header1.number;
 
-        lastCommitteeHeight = header1.number;
-        emit UpdateBlockHeader(msg.sender, lastCommitteeHeight);
+            lastCommitteeHeight = header1.number;
+        }else{
+            uint256 validatorIdx = _getValidatorIndex(header1.number);
+            Validator memory tempValidators = validators[validatorIdx];
+
+            _cleanValidator(tempValidators.headerHeight);
+
+            validators[validatorIdx] = v;
+            lastEpochHeight = header1.number;
+
+            if (lastEpochHeight - firstEpochHeight >= CHANGE_VALIDATORS_SIZE * MAX_EPOCH_SIZE) {
+                firstEpochHeight = firstEpochHeight + CHANGE_VALIDATORS_SIZE;
+            }
+        }
+
+        emit UpdateBlockHeader(msg.sender, header1.number);
     }
 
     function _checkUpdateBlockHeader(
@@ -291,14 +305,17 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         IKlaytn.Vote memory vote = verifyTool.decodeVote(header0.voteData);
         require( vote.value.length % ADDRESS_LENGTH == 0, "Address error");
         address[] memory updateValidators = verifyTool.bytesToAddressArray(vote.value);
-       // bool success1;
+        uint256 headerHeight = header1.number;
+        if(headerHeight % CHANGE_VALIDATORS_SIZE == 0){
+            headerHeight = header1.number - 1;
+        }
         bool success;
         address[] memory newValidators;
         IKlaytn.ExtraData memory header1Extra;
         if (keccak256(vote.key) == ADD_VALIDATOR) {
-            newValidators = _getUpdateValidators(header1, updateValidators, true);
+            newValidators = _getUpdateValidators(headerHeight, updateValidators, true);
         } else if (keccak256(vote.key) == REMOVE_VALIDATOR) {
-            newValidators = _getUpdateValidators(header1, updateValidators, false);
+            newValidators = _getUpdateValidators(headerHeight, updateValidators, false);
         } else {
             require(false, "Not the expected instruction");
         }
@@ -401,16 +418,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         return _checkBlockHeader(_header, v.validators);
     }
 
-    function _getUpdateValidators(IKlaytn.BlockHeader memory _header, address[] memory _updateV, bool _addOrSub)
+    function _getUpdateValidators(uint256 _headerHeight, address[] memory _updateV, bool _addOrSub)
     internal
     returns (address[] memory)
     {
-        uint num = _header.number;
-
-        Validator memory v = _getCanVerifyValidator(num, false);
-
+        Validator memory v = _getCanVerifyValidator(_headerHeight, false);
         require(v.headerHeight > 0, "Validator load fail");
-        require(v.headerHeight + CHANGE_VALIDATORS_SIZE >= _header.number, "Check block height error");
+        require(v.headerHeight + CHANGE_VALIDATORS_SIZE >= _headerHeight, "Check block height error");
 
         address[] memory newValidators;
         if (_addOrSub) {
@@ -464,7 +478,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     }
 
     function _getCanVerifyValidator(uint256 _height, bool _tag)
-    public
+    internal
     view
     returns (Validator memory v)
     {

@@ -57,7 +57,7 @@ describe("LightNode start test", function () {
         let data = lightNodeContract.interface.encodeFunctionData("initialize",
             [result.extData.validators,block.number,verifyTool.address,mpt.address]);
 
-        console.log("validators",result.extData.validators)
+       // console.log("validators",result.extData.validators)
 
         let proxy = await ethers.getContractFactory("LightNodeProxy");
 
@@ -323,7 +323,7 @@ describe("LightNode start test", function () {
         let data = lightNodeContract.interface.encodeFunctionData("initialize",
             [result.extData.validators,block.number,verifyTool.address,mpt.address]);
 
-        console.log("validators",result.extData.validators)
+        //console.log("validators",result.extData.validators)
 
         let proxy = await ethers.getContractFactory("LightNodeProxy");
 
@@ -558,7 +558,7 @@ describe("LightNode start test", function () {
         let data = lightNodeContract.interface.encodeFunctionData("initialize",
             [result.extData.validators,block.number,verifyTool.address,mpt.address]);
 
-        console.log("validators",result.extData.validators)
+        //console.log("validators",result.extData.validators)
 
         let proxy = await ethers.getContractFactory("LightNodeProxy");
 
@@ -647,5 +647,397 @@ describe("LightNode start test", function () {
 
         expect((135022023).toString()).to.eq(heightHeight);
     });
+
+    it("deploy LightNode init height 135118800",async function () {
+
+        let height = 135118800;
+
+        console.log("init height:",height);
+
+        let block = await caver.rpc.klay.getBlockByNumber(height);
+
+
+        verifyTool = await (await ethers.getContractFactory("VerifyTool")).deploy();
+
+        mpt = await (await ethers.getContractFactory("MPTVerify")).deploy();
+
+        let result = await verifyTool.decodeHeaderExtraData(block.extraData);
+
+        let data = lightNodeContract.interface.encodeFunctionData("initialize",
+            [result.extData.validators,block.number,verifyTool.address,mpt.address]);
+
+        //console.log("validators",result.extData.validators)
+
+        let proxy = await ethers.getContractFactory("LightNodeProxy");
+
+        lightProxyClient = await proxy.deploy(lightNodeContractAddress,data);
+
+        await lightProxyClient.deployed()
+
+        LightNodeProxy = lightNodeContract.attach(lightProxyClient.address);
+
+        console.log("LightNode Proxy deploy ok")
+    });
+
+    it("lightNode updateBlockHeader 135122372", async function (){
+
+        let headers = [];
+        startHeight = 135122372;
+        for (i=0;i<2;i++){
+            startHeight += i;
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.lastCommitteeHeight();
+        console.log(heightHeight);
+
+
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((135122373).toString()).to.eq(heightHeight);
+    });
+
+    it("lightNode updateBlockHeader 135122399", async function (){
+
+        let headers = [];
+        startHeight = 135122399;
+        for (i=0;i<2;i++){
+            startHeight += i;
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.lastEpochHeight();
+        console.log(heightHeight);
+
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((135122400).toString()).to.eq(heightHeight);
+    });
+
+
+    it("lightNode updateBlockHeader 135122450", async function (){
+
+        let headers = [];
+        startHeight = 135122450;
+        for (i=0;i<2;i++){
+            startHeight += i;
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.lastCommitteeHeight();
+        console.log(heightHeight);
+
+
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((135122451).toString()).to.eq(heightHeight);
+    });
+
+
+    it("lightNode updateBlockHeader 135122883", async function (){
+
+        let headers = [];
+        startHeight = 135122883;
+        for (i=0;i<2;i++){
+            startHeight += i;
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.lastCommitteeHeight();
+        console.log(heightHeight);
+
+
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((135122884).toString()).to.eq(heightHeight);
+    });
+
+    it("lightNode updateBlockHeader 135122976", async function (){
+
+        let headers = [];
+        startHeight = 135122976;
+        for (i=0;i<2;i++){
+            startHeight += i;
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.lastCommitteeHeight();
+        console.log(heightHeight);
+
+
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((135122977).toString()).to.eq(heightHeight);
+    });
+
+    it("lightNode updateBlockHeader 135125766 ", async function (){
+
+        let headers = [];
+        startHeight = 135125766;
+        for (i=0;i<2;i++){
+            startHeight += i;
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.lastCommitteeHeight();
+        console.log(heightHeight);
+
+
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((135125767).toString()).to.eq(heightHeight);
+    });
+
+    it("lightNode updateBlockHeader 135125778", async function (){
+
+        let headers = [];
+        startHeight = 135125778;
+        for (i=0;i<2;i++){
+            startHeight += i;
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.lastCommitteeHeight();
+        console.log(heightHeight);
+
+
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((135125779).toString()).to.eq(heightHeight);
+    });
+
+    it("lightNode updateBlockHeader 135125782", async function (){
+
+        let headers = [];
+        startHeight = 135125782;
+        for (i=0;i<2;i++){
+            startHeight += i;
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.lastCommitteeHeight();
+        console.log(heightHeight);
+
+
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((135125783).toString()).to.eq(heightHeight);
+    });
+
+    it("lightNode updateBlockHeaders 135122400", async function (){
+        startHeight = 135122400;
+        let headers = [];
+        for (i=0;i<1;i++){
+            startHeight += 3600;
+            console.log(startHeight)
+            let block = await caver.rpc.klay.getBlockByNumber(startHeight);
+            let header = [];
+            header.push(block.parentHash)
+            header.push(block.reward)
+            header.push(block.stateRoot)
+            header.push(block.transactionsRoot)
+            header.push(block.receiptsRoot)
+            header.push(block.logsBloom)
+            header.push(block.blockScore)
+            header.push(block.number)
+            header.push(block.gasUsed)
+            header.push(block.timestamp)
+            header.push(block.timestampFoS)
+            header.push(block.extraData)
+            header.push(block.governanceData)
+            header.push(block.voteData)
+            header.push(block.baseFeePerGas)
+            headers.push(header);
+        }
+
+        let headerBytes = await LightNodeProxy.getHeadersBytes(headers);
+
+        //  await LightNodeProxy.updateBlockHeaderChange(headers);
+        await LightNodeProxy.updateBlockHeader(headerBytes);
+
+        let heightHeight = await LightNodeProxy.headerHeight();
+        console.log(heightHeight);
+
+        heightHeight = ethers.utils.formatUnits(heightHeight,0)
+
+        expect((135122400 + 3600).toString()).to.eq(heightHeight);
+    });
+
 
 });
