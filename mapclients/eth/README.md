@@ -78,6 +78,11 @@ Note you'll need some testnet funds in your wallet to deploy the contract.
 npx hardhat deploy --tags LightNode --network <network> 
 ```
 
+For Tron network, using the command
+```shell
+npx hardhat tronDeploy --network TronTest
+```
+
 If you want to use the upgrade contract, please execute the following command, pay attention to use the correct network
 
 ```shell

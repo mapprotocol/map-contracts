@@ -28,4 +28,3 @@ task("tronDeploy",
     "Write initialization data required by LightNode",
     require("./tronDeploy")
 )
-    .addParam("chain", "Tron is the mainnet or TronTest is testnet")

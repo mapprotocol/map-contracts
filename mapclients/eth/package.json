@@ -1,6 +1,6 @@
 {
-  "name": "mapClientsEthContract",
-  "version": "1.0.0",
+  "name": "@mapprotocol/map-client-evm-contracts",
+  "version": "1.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {

@@ -108,6 +108,18 @@ module.exports = {
       accounts: accounts
     },
 
+    Tron: {
+      url: `https://api.trongrid.io`,
+      chainId : 728126428,
+      accounts: accounts
+    },
+
+    TronTest: {
+      url: `https://nile.trongrid.io`,
+      chainId : 3448148188,
+      accounts: accounts
+    },
+
     Avax: {
       url: `https://rpc.ankr.com/avalanche`,
       chainId : 43114,
