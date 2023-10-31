@@ -1,0 +1,13 @@
+node_modules
+
+
+#Hardhat files
+abi
+cache
+artifacts
+
+#goland files
+.idea
+
+#hardhat plugin
+deployments
