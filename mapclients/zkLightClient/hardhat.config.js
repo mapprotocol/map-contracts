@@ -76,10 +76,9 @@ module.exports = {
       accounts: accounts
     },
     BscTest: {
-      url: `https://data-seed-prebsc-2-s2.binance.org:8545`,
+      url: `https://data-seed-prebsc-2-s1.binance.org:8545/`,
       chainId : 97,
-      accounts: accounts,
-      gasPrice: 11 * 1000000000
+      accounts: accounts
     },
     Klay: {
       url: `https://public-node-api.klaytnapi.com/v1/cypress`,
@@ -116,6 +115,7 @@ module.exports = {
             enabled: true,
             runs: 200,
           },
+          evmVersion: "london",
         },
       }
     ]

@@ -25,7 +25,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     address private pendingAdmin;
     uint256 public startHeight;
     ValidatorCommitment public validatorCommitment;
-    mapping(uint256 => ValidatorCommitment) validatorCommitments;
+    mapping(uint256 => ValidatorCommitment) public validatorCommitments;
 
     struct ValidatorCommitment {
         bytes32 commitment;
