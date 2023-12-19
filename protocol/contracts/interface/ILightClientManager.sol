@@ -7,6 +7,9 @@ interface ILightClientManager {
 
     function updateLightClient(uint256 _chainId, bytes memory _data) external;
 
+    function verifyProofDataWithCache(uint256 _chainId, bytes memory _receiptProof) external
+    returns (bool success, string memory message,bytes memory logs);
+
     function verifyProofData(uint256 _chainId, bytes memory _receiptProof) external
     view returns (bool success, string memory message,bytes memory logs);
 
