@@ -31,12 +31,9 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     mapping(uint256 => bytes32) private cachedReceiptRoot;
 
-    event ChangePendingAdmin(
-        address indexed previousPending,
-        address indexed newPending
-    );
+    event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event SetMptVerify(address newMptVerify);
-    
+
     event AdminTransferred(address indexed previous, address indexed newAdmin);
 
     struct ProofData {
@@ -60,10 +57,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     ) external initializer {
         require(chainId == 0, "already initialized");
         require(_chainId > 0, "_chainId is zero");
-        require(
-            _minEpochBlockExtraDataLen > 0,
-            "_minEpochBlockExtraDataLen is zero"
-        );
+        require(_minEpochBlockExtraDataLen > 0, "_minEpochBlockExtraDataLen is zero");
         require(_controller != address(0), "_controller zero address");
         require(_mptVerify != address(0), "_mptVerify zero address");
         mptVerify = _mptVerify;
@@ -85,29 +79,31 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     function setMptVerify(address _newMptVerify) external onlyOwner {
-        require(_newMptVerify.code.length > 0,"_newMptVerify must contract address");
+        require(_newMptVerify.code.length > 0, "_newMptVerify must contract address");
         mptVerify = _newMptVerify;
         emit SetMptVerify(_newMptVerify);
     }
 
-    function updateBlockHeader(
-        bytes memory _blockHeadersBytes
-    ) external override whenNotPaused {
-        Verify.BlockHeader[] memory _blockHeaders = abi.decode(_blockHeadersBytes,(Verify.BlockHeader[]));
+    function updateBlockHeader(bytes memory _blockHeadersBytes) external override whenNotPaused {
+        Verify.BlockHeader[] memory _blockHeaders = abi.decode(_blockHeadersBytes, (Verify.BlockHeader[]));
         require(_lastSyncedBlock > 0, "light node uninitialized");
         _lastSyncedBlock += EPOCH_NUM;
 
-        require(_blockHeaders[0].number == _lastSyncedBlock,"invalid start block");
+        require(_blockHeaders[0].number == _lastSyncedBlock, "invalid start block");
         // min is number of validators half + 1
         uint256 min = _getValidatorNum(validators[_lastSyncedBlock - EPOCH_NUM]) / 2 + 1;
 
         require(_blockHeaders.length >= min, "proof headers not enough");
 
-        (bool result, string memory message) = _verifyBlockHeaders(_blockHeaders,min);
+        (bool result, string memory message) = _verifyBlockHeaders(_blockHeaders, min);
 
         require(result, message);
 
-        validators[_lastSyncedBlock] = Verify._getValidators(chainId,_blockHeaders[0].number,_blockHeaders[0].extraData);
+        validators[_lastSyncedBlock] = Verify._getValidators(
+            chainId,
+            _blockHeaders[0].number,
+            _blockHeaders[0].extraData
+        );
 
         _removeExcessEpochValidators();
 
@@ -116,12 +112,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     function verifyProofData(
         bytes memory _receiptProof
-    )
-        external
-        view
-        override
-        returns (bool success, string memory message, bytes memory logs)
-    {
+    ) external view override returns (bool success, string memory message, bytes memory logs) {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
 
         Verify.BlockHeader[] memory headers = proof.headers;
@@ -131,39 +122,31 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     function verifyProofDataWithCache(
         bytes memory _receiptProof
-    )
-        external
-        override
-        returns (bool success, string memory message, bytes memory logs)
-    {
+    ) external override returns (bool success, string memory message, bytes memory logs) {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
         Verify.BlockHeader[] memory headers = proof.headers;
 
         uint256 verifyBlockNum = headers[0].number;
-        bytes32 receiptRoot = cachedReceiptRoot[verifyBlockNum];  
-        if(cachedReceiptRoot[verifyBlockNum] != bytes32("")){
-            (success, logs) = Verify._validateProof(receiptRoot,proof.receiptProof,mptVerify);
+        bytes32 receiptRoot = cachedReceiptRoot[verifyBlockNum];
+        if (cachedReceiptRoot[verifyBlockNum] != bytes32("")) {
+            (success, logs) = Verify._validateProof(receiptRoot, proof.receiptProof, mptVerify);
             if (!success) {
                 message = "mpt verification failed";
             }
         } else {
-          (success,message,logs) = _verifyProofData(proof, headers);
-          if(success) cachedReceiptRoot[verifyBlockNum] = bytes32(headers[0].receiptsRoot);
+            (success, message, logs) = _verifyProofData(proof, headers);
+            if (success) cachedReceiptRoot[verifyBlockNum] = bytes32(headers[0].receiptsRoot);
         }
     }
 
     function _verifyProofData(
         ProofData memory proof,
         Verify.BlockHeader[] memory headers
-    )
-        private
-        view
-        returns (bool success, string memory message, bytes memory logs)
-    {
+    ) private view returns (bool success, string memory message, bytes memory logs) {
         require(
             minValidBlocknum > 0 &&
-            headers[0].number >= minValidBlocknum &&
-            headers[headers.length - 1].number <= maxCanVerifyNum(),
+                headers[0].number >= minValidBlocknum &&
+                headers[headers.length - 1].number <= maxCanVerifyNum(),
             "Out of verify range"
         );
         // min is number of min validators half + 1
@@ -176,10 +159,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 min = _getValidatorNum(validators[recently - EPOCH_NUM]) / 2 + 1;
                 //Spanning two validator sets if Spanning two validator validators[recently].lenght must > 0
                 //take the recently one
-            } else if (
-                beyond <= _getValidatorNum(validators[recently - EPOCH_NUM]) / 2
-            ) {
-                require(validators[recently].length > 0,"Out of verify range");
+            } else if (beyond <= _getValidatorNum(validators[recently - EPOCH_NUM]) / 2) {
+                require(validators[recently].length > 0, "Out of verify range");
                 min = _getValidatorNum(validators[recently]) / 2 + 1;
             } else {
                 min = _getValidatorNum(validators[recently]) / 2 + 1;
@@ -191,7 +172,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         if (success) {
             bytes32 rootHash = bytes32(headers[0].receiptsRoot);
-            (success, logs) = Verify._validateProof(rootHash,proof.receiptProof,mptVerify);
+            (success, logs) = Verify._validateProof(rootHash, proof.receiptProof, mptVerify);
 
             if (!success) {
                 message = "mpt verification failed";
@@ -204,10 +185,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         require(_headers[0].number + EPOCH_NUM == _headers[1].number);
 
-        for (uint256 i = 0; i < 2; i++) {  
-            require( _headers[i].number % EPOCH_NUM == 0,"invalid init block number");
-            require( _headers[i].extraData.length >= minEpochBlockExtraDataLen,"invalid init block");
-            validators[_headers[i].number] = Verify._getValidators(chainId,_headers[i].number,_headers[i].extraData);
+        for (uint256 i = 0; i < 2; i++) {
+            require(_headers[i].number % EPOCH_NUM == 0, "invalid init block number");
+            require(_headers[i].extraData.length >= minEpochBlockExtraDataLen, "invalid init block");
+            validators[_headers[i].number] = Verify._getValidators(chainId, _headers[i].number, _headers[i].extraData);
         }
 
         minValidBlocknum = _headers[1].number;
@@ -241,21 +222,16 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                     return (false, "invalid block time");
                 }
 
-                if (
-                    _blockHeaders[i].parentHash.length != 32 ||
-                    bytes32(_blockHeaders[i].parentHash) != preBlockHash
-                ) {
+                if (_blockHeaders[i].parentHash.length != 32 || bytes32(_blockHeaders[i].parentHash) != preBlockHash) {
                     return (false, "invalid parentHash");
                 }
             }
 
-            preBlockHash = Verify._getBlockHash(_blockHeaders[i],chainId);
+            preBlockHash = Verify._getBlockHash(_blockHeaders[i], chainId);
 
             preBlockTime = _blockHeaders[i].timestamp;
 
-            if (
-                !Verify._validateHeader( _blockHeaders[i],preGasLimt,minEpochBlockExtraDataLen)
-            ) {
+            if (!Verify._validateHeader(_blockHeaders[i], preGasLimt, minEpochBlockExtraDataLen)) {
                 return (false, "invalid block");
             }
 
@@ -263,16 +239,18 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
             uint256 recently = _blockHeaders[i].number - (_blockHeaders[i].number % EPOCH_NUM);
             // get the block validators
-            if (
-                _blockHeaders[i].number % EPOCH_NUM > _getValidatorNum(validators[recently - EPOCH_NUM]) / 2
-            ) {
+            if (_blockHeaders[i].number % EPOCH_NUM > _getValidatorNum(validators[recently - EPOCH_NUM]) / 2) {
                 vals = validators[recently];
             } else {
                 vals = validators[recently - EPOCH_NUM];
             }
 
             if (
-                !Verify._containsValidator(vals,_blockHeaders[i].miner,_blockHeaders[i].number % (_getValidatorNum(vals)))
+                !Verify._containsValidator(
+                    vals,
+                    _blockHeaders[i].miner,
+                    _blockHeaders[i].number % (_getValidatorNum(vals))
+                )
             ) {
                 return (false, "invalid signer");
             }
@@ -293,11 +271,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return (true, "");
     }
 
-    function _isRepeat(
-        address[] memory _miners,
-        address _miner,
-        uint256 _limit
-    ) private pure returns (bool) {
+    function _isRepeat(address[] memory _miners, address _miner, uint256 _limit) private pure returns (bool) {
         for (uint256 i = 0; i < _limit; i++) {
             if (_miners[i] == _miner) {
                 return true;
@@ -311,9 +285,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         if (_lastSyncedBlock > EPOCH_NUM * MAX_SAVED_EPOCH_NUM) {
             uint256 remove = _lastSyncedBlock - EPOCH_NUM * MAX_SAVED_EPOCH_NUM;
 
-            if (
-                remove + EPOCH_NUM > minValidBlocknum && validators[remove].length > 0
-            ) { 
+            if (remove + EPOCH_NUM > minValidBlocknum && validators[remove].length > 0) {
                 uint256 bond = _getValidatorNum(validators[remove]) / 2 + 1;
                 minValidBlocknum = remove + EPOCH_NUM + bond;
                 delete validators[remove];
@@ -321,21 +293,15 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
-    function _getValidatorNum(
-        bytes memory _validators
-    ) private pure returns (uint256) {
+    function _getValidatorNum(bytes memory _validators) private pure returns (uint256) {
         return _validators.length / ADDRESS_LENGTH;
     }
 
-    function getBytes(
-        ProofData calldata _proof
-    ) external pure returns (bytes memory) {
+    function getBytes(ProofData calldata _proof) external pure returns (bytes memory) {
         return abi.encode(_proof);
     }
 
-    function getHeadersBytes(
-        Verify.BlockHeader[] calldata _blockHeaders
-    ) external pure returns (bytes memory) {
+    function getHeadersBytes(Verify.BlockHeader[] calldata _blockHeaders) external pure returns (bytes memory) {
         return abi.encode(_blockHeaders);
     }
 
@@ -344,22 +310,13 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     function maxCanVerifyNum() public view returns (uint256) {
-        return
-            _lastSyncedBlock +
-            EPOCH_NUM +
-            _getValidatorNum(validators[_lastSyncedBlock]) / 2;
+        return _lastSyncedBlock + EPOCH_NUM + _getValidatorNum(validators[_lastSyncedBlock]) / 2;
     }
 
-    function verifiableHeaderRange()
-        external
-        view
-        override
-        returns (uint256, uint256)
-    {
+    function verifiableHeaderRange() external view override returns (uint256, uint256) {
         return (minValidBlocknum, maxCanVerifyNum());
     }
 
-    
     function updateLightClient(bytes memory) external pure override {}
 
     function clientState() external pure override returns (bytes memory) {}
@@ -382,10 +339,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     function setPendingAdmin(address pendingAdmin_) external onlyOwner {
-        require(
-            pendingAdmin_ != address(0),
-            "Ownable: pendingAdmin is the zero address"
-        );
+        require(pendingAdmin_ != address(0), "Ownable: pendingAdmin is the zero address");
         emit ChangePendingAdmin(_pendingAdmin, pendingAdmin_);
         _pendingAdmin = pendingAdmin_;
     }

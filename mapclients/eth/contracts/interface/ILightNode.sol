@@ -13,6 +13,9 @@ interface ILightNode is ILightNodePoint{
     external
     returns (bool success, string memory message,bytes memory logsHash);
 
+    function verifyProofDataWithCache(bytes memory _receiptProofBytes) external
+    returns (bool success, string memory message,bytes memory logs);
+
     //Validate headers and update validation members
     function updateBlockHeader(blockHeader memory bh,istanbulExtra memory ist, G2 memory aggPk) external;
 

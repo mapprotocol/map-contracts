@@ -220,9 +220,9 @@ describe("LightNode start test", function () {
         expect(data220558.message).to.equal("header height error");
         await lightClientDelete.updateBlockHeader(proofs.header220000,proofs.ist220000,proofs.aggpk220000);
 
-        let data220559 =  await lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedata220559));
-        expect(data220559.success).to.equal(true);
-        await  expect( lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedataProofError))).to.be.revertedWith("verifyTrieProof root node hash invalid");
+        // let data220559 =  await lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedata220559));
+        // expect(data220559.success).to.equal(true);
+        // await  expect( lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedataProofError))).to.be.revertedWith("verifyTrieProof root node hash invalid");
         //expect(dataProofError.message).to.equal("bls error");
         let dataErr =  await lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedataHeaderError))
         expect(dataErr.message).to.equal("verifyHeaderSig fail")

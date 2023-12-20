@@ -254,9 +254,7 @@
                 ],
                 "version": 1
             },
-            "receipt_ids": [
-                "EDPZMaGXFwNA3PKePjj95PX6toC4PyuVLeMGC5mamVxj"
-            ],
+            "receipt_ids": ["EDPZMaGXFwNA3PKePjj95PX6toC4PyuVLeMGC5mamVxj"],
             "status": {
                 "SuccessValue": "IjAi"
             },

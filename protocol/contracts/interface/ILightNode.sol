@@ -11,9 +11,21 @@ interface ILightNode {
 
     function updateLightClient(bytes memory _data) external;
 
+    // @notice Validate the receipt according to the block header and receipt merkel proof
+    //         Using block header number and block receipt root cache to optimize the validation gas cost.
+    // @param _receiptProof - the bytes to receipt proof
+    // @return success - verification result
+    // @return message - the result message
+    // @return logs - the logs included in the receipt
+    function verifyProofDataWithCache(bytes memory _receiptProof) external
+    returns (bool success, string memory message,bytes memory logs);
 
-    // Verify the validity of the transaction according to the header, receipt
-    // The interface will be updated later to return logs
+
+    // @notice Validate the receipt according to the block header and receipt merkel proof
+    // @param _receiptProof - the bytes to receipt proof
+    // @return success - verification result
+    // @return message - the result message
+    // @return logs - the logs included in the receipt
     function verifyProofData(bytes memory _receiptProof) external view returns (bool success, string memory message, bytes memory logs);
 
 
@@ -22,6 +34,8 @@ interface ILightNode {
 
     function finalizedState(bytes memory _data) external view returns(bytes memory);
 
+    // @notice Get the light client block height
+    // @return height - current block height or slot number
     function headerHeight() external view returns (uint256 height);
 
     //

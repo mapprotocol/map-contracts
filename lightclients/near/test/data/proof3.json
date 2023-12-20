@@ -244,9 +244,7 @@
                 ],
                 "version": 1
             },
-            "receipt_ids": [
-                "58UD9aKX5xrZD7XMsaLX4qXqK23mnEArk1zpgEjczc6c"
-            ],
+            "receipt_ids": ["58UD9aKX5xrZD7XMsaLX4qXqK23mnEArk1zpgEjczc6c"],
             "status": {
                 "SuccessValue": ""
             },

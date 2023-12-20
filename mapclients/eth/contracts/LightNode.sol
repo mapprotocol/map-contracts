@@ -8,7 +8,6 @@ import "./interface/ILightNode.sol";
 import "./bls/BlsCode.sol";
 import "./bls/BGLS.sol";
 import "./interface/IVerifyTool.sol";
-import "hardhat/console.sol";
 
 contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
@@ -30,13 +29,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     }
 
     validator verifier;
+
+    mapping(uint256 => bytes32) private cachedReceiptRoot;
+
     event mapInitializeValidators(uint256 _threshold, G1[] _pairKeys, uint[] _weights, uint256 epoch);
     event MapUpdateValidators(G1[] _pairKeysAdd, uint[] _weights, uint256 epoch, bytes bits);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
 
     modifier onlyOwner() {
-        require(msg.sender == _getAdmin(), "lightnode :: only admin");
+        require(msg.sender == _getAdmin(), "Lightnode only admin");
         _;
     }
 
@@ -103,22 +105,63 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     returns (bool success, string memory message, bytes memory logsHash) {
         receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
 
+        return _verifyProofData(_receiptProof);
+
+    }
+
+    function verifyProofDataWithCache(bytes memory _receiptProofBytes)
+    external
+    override
+    returns (bool success, string memory message,bytes memory logsHash){
+        receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
+        logsHash = verifyTool.decodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
+        if(cachedReceiptRoot[_receiptProof.header.number] != bytes32("")){
+            (success, message) = verifyTool.getVerifyTrieProof(
+                cachedReceiptRoot[_receiptProof.header.number],
+                _receiptProof.keyIndex,
+                _receiptProof.proof,
+                _receiptProof.txReceiptRlp.receiptRlp,
+                _receiptProof.txReceiptRlp.receiptType
+            );
+            if (!success) {
+                message = "Mpt verification failed";
+                return (success, message, logsHash);
+            }
+        }else {
+            (success,message,logsHash) = _verifyProofData(_receiptProof);
+            if(success){
+                cachedReceiptRoot[_receiptProof.header.number] = bytes32(_receiptProof.header.receiptHash);
+            }
+        }
+    }
+
+    function _verifyProofData(receiptProof memory _receiptProof)
+    internal
+    view
+    returns(bool success, string memory message, bytes memory logsHash)
+    {
         (uint min, uint max) = verifiableHeaderRange();
         uint height = _receiptProof.header.number;
         if (height <= min || height >= max) {
-            message = "header height error";
+            message = "Out of verify range";
             return (false, message, logsHash);
         }
 
         logsHash = verifyTool.decodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
-        (success, message) = verifyTool.getVerifyTrieProof(_receiptProof);
+        (success, message) = verifyTool.getVerifyTrieProof(
+            bytes32(_receiptProof.header.receiptHash),
+            _receiptProof.keyIndex,
+            _receiptProof.proof,
+            _receiptProof.txReceiptRlp.receiptRlp,
+            _receiptProof.txReceiptRlp.receiptType
+        );
         if (!success) {
-            message = "receipt mismatch";
+            message = "Mpt verification failed";
             return (success, message, logsHash);
         }
         success = verifyHeaderSig(_receiptProof.header, _receiptProof.ist, _receiptProof.aggPk);
         if (!success) {
-            message = "verifyHeaderSig fail";
+            message = "VerifyHeaderSig fail";
             return (success, message, logsHash);
         }
         return (success, message, logsHash);
@@ -135,7 +178,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
             startHeight = headerHeight - epochSize;
         }
         bool success = verifyHeaderSig(bh, ist, aggPk);
-        require(success, "checkSig error");
+        require(success, "CheckSig error");
         uint256 len = ist.addedG1PubKey.length;
         G1[] memory _pairKeysAdd = new G1[](len);
         uint256[] memory _weights = new uint256[](len);
@@ -198,7 +241,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch)
     internal
     {
-        require(_pairKeys.length == _weights.length, 'mismatch arg');
+        require(_pairKeys.length == _weights.length, 'Mismatch arg');
         uint256 id = getValidatorsId(epoch);
         validator storage v = validators[id];
 
@@ -324,7 +367,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     internal
     pure
     returns (bytes memory){
-        require(num < 2 ** 24, "num is too large");
+        require(num < 2 ** 24, "Num is too large");
         bytes memory result;
         if (num < 256) {
             result = abi.encodePacked(uint8(num));
@@ -352,11 +395,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     internal
     view
     override {
-        require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
+        require(msg.sender == _getAdmin(), "LightNode only Admin can upgrade");
     }
 
     function changeAdmin() public {
-        require(_pendingAdmin == msg.sender, "only pendingAdmin");
+        require(_pendingAdmin == msg.sender, "Only pendingAdmin");
         emit AdminTransferred(_getAdmin(), _pendingAdmin);
         _changeAdmin(_pendingAdmin);
     }
@@ -367,7 +410,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     }
 
     function setPendingAdmin(address pendingAdmin_) public onlyOwner {
-        require(pendingAdmin_ != address(0), "Ownable: pendingAdmin is the zero address");
+        require(pendingAdmin_ != address(0), "Ownable pendingAdmin is the zero address");
         emit ChangePendingAdmin(_pendingAdmin, pendingAdmin_);
         _pendingAdmin = pendingAdmin_;
     }

@@ -30,7 +30,9 @@ module.exports = async (taskArgs,hre) => {
         contract: 'LightNode',
     })
 
-    let lightNode = await ethers.getContract('LightNode');
+    let LightNode = await hre.deployments.get('LightNode');
+
+    let lightNode = await ethers.getContractAt('LightNode',LightNode.address);
     console.log('light node implementation address:', lightNode.address);
 
     let verifyTool = await ethers.getContractAt("VerifyTool",taskArgs.tool)

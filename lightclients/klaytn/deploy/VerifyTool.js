@@ -22,7 +22,7 @@ module.exports = async function ({ethers, deployments}) {
     })
 
 
-    let verifyTool = await ethers.getContract('VerifyTool');
+    let verifyTool = await deployments.get('VerifyTool');
 
     console.log("VerifyTool success：",verifyTool.address)
 }

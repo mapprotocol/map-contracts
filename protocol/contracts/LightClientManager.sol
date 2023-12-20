@@ -45,6 +45,13 @@ contract LightClientManager is ILightClientManager, Initializable,UUPSUpgradeabl
         lightNode.updateLightClient(_data);
     }
 
+    function verifyProofDataWithCache(uint256 _chainId, bytes memory _receiptProof) external override
+    returns (bool success, string memory message,bytes memory logs) {
+        require(lightClientContract[_chainId] != address(0), "not register");
+        ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
+        return lightNode.verifyProofDataWithCache(_receiptProof);
+    }
+
     function verifyProofData(uint256 _chainId, bytes memory _receiptProof) external view override
     returns (bool success, string memory message, bytes memory logs) {
         require(lightClientContract[_chainId] != address(0), "not register");

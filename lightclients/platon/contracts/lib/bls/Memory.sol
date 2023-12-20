@@ -5,7 +5,6 @@
 pragma solidity 0.8.17;
 
 library Memory {
-
     uint internal constant WORD_SIZE = 32;
 
     // Compares the 'len' bytes starting at address 'addr' in memory with the 'len'
@@ -25,7 +24,7 @@ library Memory {
         require(bts.length >= len);
         uint addr2;
         assembly {
-            addr2 := add(bts, /*BYTES_HEADER_SIZE*/32)
+            addr2 := add(bts, /*BYTES_HEADER_SIZE*/ 32)
         }
         return equals(addr, addr2, len);
     }
@@ -33,7 +32,7 @@ library Memory {
     // Returns a memory pointer to the data portion of the provided bytes array.
     function dataPtr(bytes memory bts) internal pure returns (uint addr) {
         assembly {
-            addr := add(bts, /*BYTES_HEADER_SIZE*/32)
+            addr := add(bts, /*BYTES_HEADER_SIZE*/ 32)
         }
     }
 
@@ -44,7 +43,7 @@ library Memory {
         bts = new bytes(len);
         uint btsptr;
         assembly {
-            btsptr := add(bts, /*BYTES_HEADER_SIZE*/32)
+            btsptr := add(bts, /*BYTES_HEADER_SIZE*/ 32)
         }
         copy(addr, btsptr, len);
     }
@@ -55,7 +54,7 @@ library Memory {
     function toBytes(bytes32 self) internal pure returns (bytes memory bts) {
         bts = new bytes(32);
         assembly {
-            mstore(add(bts, /*BYTES_HEADER_SIZE*/32), self)
+            mstore(add(bts, /*BYTES_HEADER_SIZE*/ 32), self)
         }
     }
 
@@ -65,13 +64,13 @@ library Memory {
     function allocate(uint numBytes) internal pure returns (uint addr) {
         // Take the current value of the free memory pointer, and update.
         assembly ("memory-safe") {
-            addr := mload(/*FREE_MEM_PTR*/0x40)
-            mstore(/*FREE_MEM_PTR*/0x40, add(addr, numBytes))
+            addr := mload(/*FREE_MEM_PTR*/ 0x40)
+            mstore(/*FREE_MEM_PTR*/ 0x40, add(addr, numBytes))
         }
         uint words = (numBytes + WORD_SIZE - 1) / WORD_SIZE;
         for (uint i = 0; i < words; i++) {
             assembly ("memory-safe") {
-                mstore(add(addr, mul(i, /*WORD_SIZE*/32)), 0)
+                mstore(add(addr, mul(i, /*WORD_SIZE*/ 32)), 0)
             }
         }
     }
@@ -110,7 +109,7 @@ library Memory {
     function fromBytes(bytes memory bts) internal pure returns (uint addr, uint len) {
         len = bts.length;
         assembly {
-            addr := add(bts, /*BYTES_HEADER_SIZE*/32)
+            addr := add(bts, /*BYTES_HEADER_SIZE*/ 32)
         }
     }
 
