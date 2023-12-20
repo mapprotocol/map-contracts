@@ -5,12 +5,13 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./interface/ILightNode.sol";
+import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
 import "./lib/Borsh.sol";
 import "./lib/NearDecoder.sol";
 import "./lib/ProofDecoder.sol";
 import "./lib/Ed25519Verify.sol";
-import "./lib/RLPEncode.sol";
+
 
 contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     using Borsh for Borsh.Data;
@@ -152,11 +153,26 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         external
         view
         override
-        returns (
-            bool success,
-            string memory message,
-            bytes memory logs
-        )
+        returns (bool success,string memory message,bytes memory logs)
+    {
+        return _verifyProofData(_receiptProof);
+    }
+
+     function verifyProofDataWithCache(
+        bytes memory _receiptProof
+    )
+        external view
+        override
+        returns (bool success, string memory message, bytes memory logs)
+    {
+        return _verifyProofData(_receiptProof);
+    }
+
+
+    function _verifyProofData(bytes memory _receiptProof)
+        private
+        view
+        returns (bool success,string memory message,bytes memory logs)
     {
         (bytes memory _blockHeader, bytes memory proofs) = abi.decode(
             _receiptProof,
@@ -187,7 +203,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         override
         whenNotPaused
     {
-        require(setFirstBlock, "Contract is not initialized");
+        require(setFirstBlock, "light node uninitialized");
         Borsh.Data memory borsh = Borsh.from(_blockHeader);
         NearDecoder.LightClientBlock memory nearBlock = borsh
             .decodeLightClientBlock();
@@ -197,7 +213,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             // Check that the new block's height is greater than the current one's.
             require(
                 nearBlock.inner_lite.height > curHeight,
-                "New block must have higher height"
+                "invalid start block"
             );
 
             // Check that the new block is from the next epoch.
@@ -476,6 +492,13 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     function verifiableHeaderRange() external view override returns (uint256, uint256){
           return (minValidBlocknum,curHeight + EPOCH_NUM);// max verifiable is inaccuracy 
     }
+
+    function updateLightClient(bytes memory) external pure override {}
+
+    function clientState() external pure override returns (bytes memory) {}
+
+    function finalizedState(bytes memory) external pure override returns (bytes memory) {}
+
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address)

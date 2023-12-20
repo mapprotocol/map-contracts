@@ -2,8 +2,8 @@
 
 pragma solidity 0.8.7;
 
-import "./interface/IMPTVerify.sol";
-import "./lib/MPT.sol";
+import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
+import "@mapprotocol/protocol/contracts/lib/MPT.sol";
 contract MPTVerify is IMPTVerify {
     function verifyTrieProof(
         bytes32 _root,

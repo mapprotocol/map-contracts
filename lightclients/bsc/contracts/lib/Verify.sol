@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.7;
 
-import "./RLPReader.sol";
-import "./RLPEncode.sol";
-import "../interface/IMPTVerify.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
+import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 
 library Verify {
     using RLPReader for bytes;
@@ -295,7 +295,7 @@ library Verify {
         bytes memory _extraData
     ) internal pure returns (bytes memory) {
 
-        require(_extraData.length > (EXTRA_VANITY + EXTRASEAL),"_extraData length too short");
+        require(_extraData.length > (EXTRA_VANITY + EXTRASEAL),"invalid _extraData length");
 
         require((_extraData.length - EXTRA_VANITY - EXTRASEAL) % ADDRESS_LENGTH == 0,"invalid _extraData length");
         uint256 ptr;
@@ -322,7 +322,7 @@ library Verify {
 
         uint256 keyLenght = ADDRESS_LENGTH + BLS_PUBLICKEY_LENGTH;
 
-        require(_extraData.length > prefix,"_extraData length too short");
+        require(_extraData.length > prefix,"invalid _extraData length");
 
         uint256 num;
         uint256 point;
@@ -333,7 +333,7 @@ library Verify {
             num := shr(248,mload(point))
         }
 
-        require(_extraData.length >= (prefix + keyLenght * num),"_extraData length mismatch");
+        require(_extraData.length >= (prefix + keyLenght * num),"invalid _extraData length");
 
         assembly {
             // 0x40 is the address of free memory pointer.

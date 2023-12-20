@@ -255,7 +255,7 @@ library Verify {
     ) internal pure returns (bytes memory) {
         require(
             _extraData.length > (EXTRA_VANITY + EXTRASEAL),
-            "_extraData length too short"
+            "invalid _extraData length"
         );
 
         require(
