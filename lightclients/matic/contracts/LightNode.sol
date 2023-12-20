@@ -5,7 +5,7 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./interface/ILightNode.sol";
+import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
 import "./lib/Verify.sol";
 
 
@@ -99,7 +99,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         _lastSyncedBlock += Verify._getEpochNumber(chainId,_lastSyncedBlock + 1);
 
-        require( _blockHeaders[0].number == _lastSyncedBlock,"invalid syncing block");
+        require( _blockHeaders[0].number == _lastSyncedBlock,"invalid start block");
 
         uint256 epoch = Verify._getEpochNumber(chainId, _lastSyncedBlock + 1);
 
@@ -107,6 +107,9 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         validators[(_lastSyncedBlock + 1) / epoch] = Verify._getValidators(_blockHeaders[0].extraData);
         (bool result, string memory message) = _verifyBlockHeaders( _blockHeaders);
         require(result, message);
+
+        _removeExcessEpochValidators();
+
         emit UpdateBlockHeader(tx.origin, _blockHeaders[0].number);
     }
 
@@ -121,15 +124,41 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
 
         Verify.BlockHeader[] memory headers = proof.headers;
+        return _verifyProofData(proof,headers);
+        
+    }
 
+      function verifyProofDataWithCache(
+        bytes memory _receiptProof
+    )
+        external view
+        override
+        returns (bool success, string memory message, bytes memory logs)
+    {
+        ProofData memory proof = abi.decode(_receiptProof, (ProofData));
+
+        Verify.BlockHeader[] memory headers = proof.headers;
+        return _verifyProofData(proof,headers);
+
+    }
+
+
+     function _verifyProofData(
+        ProofData memory proof,
+        Verify.BlockHeader[] memory headers
+    )
+        private
+        view
+        returns (bool success, string memory message, bytes memory logs)
+    {
         require(confirms > 0, "light node uninitialized");
 
-        require(headers.length == confirms, "proof hearders not enough");
+        require(headers.length == confirms, "proof headers not enough");
 
         require(
             headers[0].number >= minValidBlocknum &&
             headers[headers.length - 1].number <= maxCanVerifyNum(),
-            "Can not verify blocks"
+            "Out of verify range"
         );
 
         (success, message) = _verifyBlockHeaders(headers);
@@ -166,14 +195,14 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 if (
                     !Verify._validateHeader(_blockHeaders[i],minEpochBlockExtraDataLen,_blockHeaders[i],chainId)
                 ) {
-                    return (false, "invalid block header");
+                    return (false, "invalid block");
                 }
 
             } else {
                 if (
                     !Verify._validateHeader(_blockHeaders[i],minEpochBlockExtraDataLen,_blockHeaders[i - 1],chainId)
                 ) {
-                    return (false, "invalid block header");
+                    return (false, "invalid block");
                 }
             }
 
@@ -182,7 +211,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             if (
                 !Verify._containsValidator(validators[_blockHeaders[i].number / epoch],signer)
             ) {
-                return (false, "invalid block header signer");
+                return (false, "invalid signer");
             }
         }
 
@@ -234,6 +263,11 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     {
         return (minValidBlocknum, maxCanVerifyNum());
     }
+
+    function updateLightClient(bytes memory) external pure override {}
+    function clientState() external pure override returns (bytes memory) {}
+    function finalizedState(bytes memory) external pure override returns (bytes memory) {}
+
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {

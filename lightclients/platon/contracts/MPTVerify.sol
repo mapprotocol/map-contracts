@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.17;
+pragma solidity 0.8.7;
 
-import "./interface/IMPTVerify.sol";
-import "./lib/MPT.sol";
-
+import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
+import "@mapprotocol/protocol/contracts/lib/MPT.sol";
 contract MPTVerify is IMPTVerify {
     function verifyTrieProof(
         bytes32 _root,
@@ -12,14 +11,7 @@ contract MPTVerify is IMPTVerify {
         bytes[] memory _proof,
         bytes memory _node
     ) external pure override returns (bool) {
-        MPT.MerkleProof memory mp = MPT.MerkleProof({
-            expectedRoot: _root,
-            key: _key,
-            proof: _proof,
-            keyIndex: 0,
-            proofIndex: 0,
-            expectedValue: _node
-        });
-        return MPT.verifyTrieProof(mp);
+        return MPT.verify(_node,_key,_proof,_root);
     }
 }
+

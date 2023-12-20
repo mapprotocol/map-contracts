@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.7;
 
-import "./RLPReader.sol";
-import "./RLPEncode.sol";
-import "../interface/IMPTVerify.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
+import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 
 
 library Verify {
@@ -324,7 +324,7 @@ library Verify {
     ) internal pure returns (bytes memory) {
         require(
             _extraData.length > (EXTRA_VANITY + EXTRASEAL),
-            "_extraData length too short"
+            "invalid _extraData length"
         );
 
         require(
