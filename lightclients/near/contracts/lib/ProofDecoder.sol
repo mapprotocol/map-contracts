@@ -51,11 +51,9 @@ library ProofDecoder {
         bytes32 successReceiptId; // The final action of the receipt returned a promise or the signed transaction was converted to a receipt. Contains the receipt_id of the generated receipt.
     }
 
-    function decodeExecutionStatus(Borsh.Data memory data)
-        internal
-        pure
-        returns (ExecutionStatus memory executionStatus)
-    {
+    function decodeExecutionStatus(
+        Borsh.Data memory data
+    ) internal pure returns (ExecutionStatus memory executionStatus) {
         executionStatus.enumIndex = data.decodeU8();
         if (executionStatus.enumIndex == 0) {
             executionStatus.unknown = true;
@@ -110,11 +108,9 @@ library ProofDecoder {
         bytes32 hash;
     }
 
-    function decodeExecutionOutcomeWithId(Borsh.Data memory data)
-        internal
-        view
-        returns (ExecutionOutcomeWithId memory outcome)
-    {
+    function decodeExecutionOutcomeWithId(
+        Borsh.Data memory data
+    ) internal view returns (ExecutionOutcomeWithId memory outcome) {
         outcome.id = data.decodeBytes32();
         outcome.outcome = data.decodeExecutionOutcome();
 
@@ -152,11 +148,9 @@ library ProofDecoder {
         ExecutionOutcomeWithId outcome_with_id;
     }
 
-    function decodeExecutionOutcomeWithIdAndProof(Borsh.Data memory data)
-        internal
-        view
-        returns (ExecutionOutcomeWithIdAndProof memory outcome)
-    {
+    function decodeExecutionOutcomeWithIdAndProof(
+        Borsh.Data memory data
+    ) internal view returns (ExecutionOutcomeWithIdAndProof memory outcome) {
         outcome.proof = data.decodeMerklePath();
         outcome.block_hash = data.decodeBytes32();
         outcome.outcome_with_id = data.decodeExecutionOutcomeWithId();

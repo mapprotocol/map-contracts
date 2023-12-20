@@ -12,14 +12,12 @@ import "./lib/NearDecoder.sol";
 import "./lib/ProofDecoder.sol";
 import "./lib/Ed25519Verify.sol";
 
-
 contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     using Borsh for Borsh.Data;
     using NearDecoder for Borsh.Data;
     using ProofDecoder for Borsh.Data;
 
-    bytes32 private constant zero_byte32 =
-        0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes32 private constant zero_byte32 = 0x0000000000000000000000000000000000000000000000000000000000000000;
 
     uint256 internal constant MAX_SAVED_EPOCH_NUM = 180;
     bool public setFirstBlock;
@@ -59,10 +57,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     constructor() {}
 
-    function initialize(address _controller, bytes[2] memory initDatas)
-        public
-        initializer
-    {
+    function initialize(address _controller, bytes[2] memory initDatas) public initializer {
         require(_controller != address(0), "_controller zero address");
 
         _changeAdmin(_controller);
@@ -83,14 +78,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     function initWithValidators(bytes memory data) internal {
-        require(
-            !setFirstBlock && epochs[zero_byte32].numBPs == 0,
-            "Wrong initialization stage"
-        );
+        require(!setFirstBlock && epochs[zero_byte32].numBPs == 0, "Wrong initialization stage");
 
         Borsh.Data memory borsh = Borsh.from(data);
-        NearDecoder.BlockProducer[] memory initialValidators = borsh
-            .decodeBlockProducers();
+        NearDecoder.BlockProducer[] memory initialValidators = borsh.decodeBlockProducers();
         borsh.done();
 
         Epoch storage epoch = epochs[zero_byte32];
@@ -100,21 +91,14 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     // The second part of the initialization -- setting the current head.
     function initWithBlock(bytes memory data) internal {
-        require(
-            !setFirstBlock && epochs[zero_byte32].numBPs != 0,
-            "Wrong initialization stage"
-        );
+        require(!setFirstBlock && epochs[zero_byte32].numBPs != 0, "Wrong initialization stage");
         setFirstBlock = true;
 
         Borsh.Data memory borsh = Borsh.from(data);
-        NearDecoder.LightClientBlock memory nearBlock = borsh
-            .decodeLightClientBlock();
+        NearDecoder.LightClientBlock memory nearBlock = borsh.decodeLightClientBlock();
         borsh.done();
 
-        require(
-            nearBlock.next_bps.some,
-            "Initialization block must contain next_bps"
-        );
+        require(nearBlock.next_bps.some, "Initialization block must contain next_bps");
 
         curHeight = nearBlock.inner_lite.height;
 
@@ -132,7 +116,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         epoch.init = true;
 
-        counts ++;
+        counts++;
 
         epochIds[counts] = nearBlock.inner_lite.epoch_id;
 
@@ -142,46 +126,32 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         next.init = true;
 
-        counts ++;
+        counts++;
 
         epochIds[counts] = nearBlock.inner_lite.next_epoch_id;
 
         setBlockProducers(nearBlock.next_bps.blockProducers, next);
     }
 
-    function verifyProofData(bytes memory _receiptProof)
-        external
-        view
-        override
-        returns (bool success,string memory message,bytes memory logs)
-    {
-        return _verifyProofData(_receiptProof);
-    }
-
-     function verifyProofDataWithCache(
+    function verifyProofData(
         bytes memory _receiptProof
-    )
-        external view
-        override
-        returns (bool success, string memory message, bytes memory logs)
-    {
+    ) external view override returns (bool success, string memory message, bytes memory logs) {
         return _verifyProofData(_receiptProof);
     }
 
+    function verifyProofDataWithCache(
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, bytes memory logs) {
+        return _verifyProofData(_receiptProof);
+    }
 
-    function _verifyProofData(bytes memory _receiptProof)
-        private
-        view
-        returns (bool success,string memory message,bytes memory logs)
-    {
-        (bytes memory _blockHeader, bytes memory proofs) = abi.decode(
-            _receiptProof,
-            (bytes, bytes)
-        );
+    function _verifyProofData(
+        bytes memory _receiptProof
+    ) private view returns (bool success, string memory message, bytes memory logs) {
+        (bytes memory _blockHeader, bytes memory proofs) = abi.decode(_receiptProof, (bytes, bytes));
 
         Borsh.Data memory borsh = Borsh.from(_blockHeader);
-        NearDecoder.LightClientBlock memory nearBlock = borsh
-            .decodeLightClientBlock();
+        NearDecoder.LightClientBlock memory nearBlock = borsh.decodeLightClientBlock();
         borsh.done();
 
         (bool _result, string memory _reason) = checkBlockHeader(nearBlock);
@@ -191,41 +161,24 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             message = _reason;
         } else {
             Borsh.Data memory borshData = Borsh.from(proofs);
-            (success, message, logs) = _verifyProofData(
-                nearBlock.inner_lite.block_merkle_root,
-                borshData
-            );
+            (success, message, logs) = _verifyProofData(nearBlock.inner_lite.block_merkle_root, borshData);
         }
     }
 
-    function updateBlockHeader(bytes memory _blockHeader)
-        external
-        override
-        whenNotPaused
-    {
+    function updateBlockHeader(bytes memory _blockHeader) external override whenNotPaused {
         require(setFirstBlock, "light node uninitialized");
         Borsh.Data memory borsh = Borsh.from(_blockHeader);
-        NearDecoder.LightClientBlock memory nearBlock = borsh
-            .decodeLightClientBlock();
+        NearDecoder.LightClientBlock memory nearBlock = borsh.decodeLightClientBlock();
         borsh.done();
 
         unchecked {
             // Check that the new block's height is greater than the current one's.
-            require(
-                nearBlock.inner_lite.height > curHeight,
-                "invalid start block"
-            );
+            require(nearBlock.inner_lite.height > curHeight, "invalid start block");
 
             // Check that the new block is from the next epoch.
-            require(
-                nearBlock.inner_lite.epoch_id == nextEpochId,
-                "initialized or unknown epoch"
-            );
+            require(nearBlock.inner_lite.epoch_id == nextEpochId, "initialized or unknown epoch");
 
-            require(
-                nearBlock.next_bps.some,
-                "Next next_bps should not be None"
-            );
+            require(nearBlock.next_bps.some, "Next next_bps should not be None");
             require(
                 nearBlock.next_bps.hash == nearBlock.inner_lite.next_bp_hash,
                 "Hash of block producers does not match"
@@ -238,9 +191,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             curHeight = nearBlock.inner_lite.height;
 
             nextEpochId = nearBlock.inner_lite.next_epoch_id;
-            Epoch storage nextEpoch = epochs[
-                nearBlock.inner_lite.next_epoch_id
-            ];
+            Epoch storage nextEpoch = epochs[nearBlock.inner_lite.next_epoch_id];
             nextEpoch.init = true;
 
             setBlockProducers(nearBlock.next_bps.blockProducers, nextEpoch);
@@ -259,11 +210,9 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return curHeight;
     }
 
-    function checkBlockHeader(NearDecoder.LightClientBlock memory nearBlock)
-        internal
-        view
-        returns (bool, string memory)
-    {
+    function checkBlockHeader(
+        NearDecoder.LightClientBlock memory nearBlock
+    ) internal view returns (bool, string memory) {
         // Check that the new block is signed by more than 2/3 of the validators.
         Epoch storage thisEpoch = epochs[nearBlock.inner_lite.epoch_id];
 
@@ -295,8 +244,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
 
         for ((uint256 i, uint256 cnt) = (0, thisEpoch.numBPs); i < cnt; i++) {
-            NearDecoder.OptionalSignature memory approval = nearBlock
-                .approvals_after_next[i];
+            NearDecoder.OptionalSignature memory approval = nearBlock.approvals_after_next[i];
             if (approval.some) {
                 bool check = Ed25519Verify.checkBlockProducerSignatureInHead(
                     thisEpoch.keys[i],
@@ -314,10 +262,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return (true, "");
     }
 
-    function setBlockProducers(
-        NearDecoder.BlockProducer[] memory src,
-        Epoch storage epoch
-    ) internal {
+    function setBlockProducers(NearDecoder.BlockProducer[] memory src, Epoch storage epoch) internal {
         uint256 cnt = src.length;
         require(
             cnt <= MAX_BLOCK_PRODUCERS,
@@ -338,9 +283,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 }
                 uint128 stake2 = src[i].stake;
                 totalStake += stake2;
-                epoch.packedStakes[i >> 1] = bytes32(
-                    uint256(bytes32(bytes16(stake1))) + stake2
-                );
+                epoch.packedStakes[i >> 1] = bytes32(uint256(bytes32(bytes16(stake1))) + stake2);
             }
             epoch.stakeThreshold = (totalStake * 2) / 3;
         }
@@ -351,56 +294,32 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     function _verifyProofData(
         bytes32 block_merkle_root,
         Borsh.Data memory borshData
-    )
-        public
-        view
-        returns (
-            bool success,
-            string memory reason,
-            bytes memory logs
-        )
-    {
-        ProofDecoder.FullOutcomeProof memory fullOutcomeProof = borshData
-            .decodeFullOutcomeProof();
+    ) public view returns (bool success, string memory reason, bytes memory logs) {
+        ProofDecoder.FullOutcomeProof memory fullOutcomeProof = borshData.decodeFullOutcomeProof();
         borshData.done();
 
-        (bool _success, string memory _reason) = proveOutcome(
-            fullOutcomeProof,
-            block_merkle_root
-        );
+        (bool _success, string memory _reason) = proveOutcome(fullOutcomeProof, block_merkle_root);
 
         if (!_success) {
             success = _success;
 
             reason = _reason;
         } else {
-            ProofDecoder.ExecutionStatus memory status = fullOutcomeProof
-                .outcome_proof
-                .outcome_with_id
-                .outcome
-                .status;
+            ProofDecoder.ExecutionStatus memory status = fullOutcomeProof.outcome_proof.outcome_with_id.outcome.status;
             success = (!status.failed && !status.unknown);
 
             if (!success) {
                 reason = "failed or unknown transaction";
             } else {
                 logs = encodeLogs(
-                    fullOutcomeProof
-                        .outcome_proof
-                        .outcome_with_id
-                        .outcome
-                        .executor_id,
+                    fullOutcomeProof.outcome_proof.outcome_with_id.outcome.executor_id,
                     fullOutcomeProof.outcome_proof.outcome_with_id.outcome.logs
                 );
             }
         }
     }
 
-    function encodeLogs(bytes memory executor_id, bytes[] memory logs)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function encodeLogs(bytes memory executor_id, bytes[] memory logs) internal pure returns (bytes memory) {
         bytes[] memory list = new bytes[](2);
 
         list[0] = RLPEncode.encodeBytes(executor_id);
@@ -428,29 +347,18 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         hash = _computeRoot(hash, fullOutcomeProof.outcome_root_proof);
 
-        if (
-            hash != fullOutcomeProof.block_header_lite.inner_lite.outcome_root
-        ) {
+        if (hash != fullOutcomeProof.block_header_lite.inner_lite.outcome_root) {
             return (false, "outcome merkle proof is not valid");
         }
 
-        if (
-            _computeRoot(
-                fullOutcomeProof.block_header_lite.hash,
-                fullOutcomeProof.block_proof
-            ) != block_merkle_root
-        ) {
+        if (_computeRoot(fullOutcomeProof.block_header_lite.hash, fullOutcomeProof.block_proof) != block_merkle_root) {
             return (false, "block proof is not valid");
         }
 
         return (true, "");
     }
 
-    function _computeRoot(bytes32 node, ProofDecoder.MerklePath memory proof)
-        internal
-        pure
-        returns (bytes32 hash)
-    {
+    function _computeRoot(bytes32 node, ProofDecoder.MerklePath memory proof) internal pure returns (bytes32 hash) {
         hash = node;
         for (uint256 i = 0; i < proof.items.length; i++) {
             ProofDecoder.MerklePathItem memory item = proof.items[i];
@@ -463,11 +371,11 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     function _removeExcessEpochValidators() internal {
-        if(curHeight < MAX_SAVED_EPOCH_NUM * EPOCH_NUM) {
+        if (curHeight < MAX_SAVED_EPOCH_NUM * EPOCH_NUM) {
             return;
         }
         uint256 remove = curHeight - MAX_SAVED_EPOCH_NUM * EPOCH_NUM;
-        if(minValidBlocknum < remove) {
+        if (minValidBlocknum < remove) {
             minValidBlocknum = remove;
         }
         if (counts > MAX_SAVED_EPOCH_NUM) {
@@ -479,18 +387,14 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
-    function getEpochKeys(bytes32 id)
-        public
-        view
-        returns (bytes32[MAX_BLOCK_PRODUCERS] memory)
-    {
+    function getEpochKeys(bytes32 id) public view returns (bytes32[MAX_BLOCK_PRODUCERS] memory) {
         bytes32[MAX_BLOCK_PRODUCERS] memory keys = epochs[id].keys;
 
         return keys;
     }
 
-    function verifiableHeaderRange() external view override returns (uint256, uint256){
-          return (minValidBlocknum,curHeight + EPOCH_NUM);// max verifiable is inaccuracy 
+    function verifiableHeaderRange() external view override returns (uint256, uint256) {
+        return (minValidBlocknum, curHeight + EPOCH_NUM); // max verifiable is inaccuracy
     }
 
     function updateLightClient(bytes memory) external pure override {}
@@ -499,23 +403,18 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     function finalizedState(bytes memory) external pure override returns (bytes memory) {}
 
-
     /** UUPS *********************************************************/
-    function _authorizeUpgrade(address)
-    internal
-    view
-    override {
+    function _authorizeUpgrade(address) internal view override {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 
     function changeAdmin() public {
         require(_pendingAdmin == msg.sender, "only pendingAdmin");
-        emit AdminTransferred(_getAdmin(),_pendingAdmin);
+        emit AdminTransferred(_getAdmin(), _pendingAdmin);
         _changeAdmin(_pendingAdmin);
     }
 
-
-    function pendingAdmin() external view returns(address){
+    function pendingAdmin() external view returns (address) {
         return _pendingAdmin;
     }
 

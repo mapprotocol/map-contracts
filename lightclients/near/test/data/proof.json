@@ -239,9 +239,7 @@
                 ],
                 "version": 1
             },
-            "receipt_ids": [
-                "DvfSW3c2fpHUo6DuH4hmctU8ZW19Y5GjJm4U9NrK5MzC"
-            ],
+            "receipt_ids": ["DvfSW3c2fpHUo6DuH4hmctU8ZW19Y5GjJm4U9NrK5MzC"],
             "status": {
                 "SuccessValue": ""
             },

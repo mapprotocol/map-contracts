@@ -63,11 +63,9 @@ library NearDecoder {
         bytes32 hash; // Additional computable element
     }
 
-    function decodeOptionalBlockProducers(Borsh.Data memory data)
-        internal
-        view
-        returns (OptionalBlockProducers memory res)
-    {
+    function decodeOptionalBlockProducers(
+        Borsh.Data memory data
+    ) internal view returns (OptionalBlockProducers memory res) {
         res.some = data.decodeBool();
         if (res.some) {
             uint start = data.ptr;
@@ -100,11 +98,9 @@ library NearDecoder {
         bytes32 hash; // Additional computable element
     }
 
-    function decodeBlockHeaderInnerLite(Borsh.Data memory data)
-        internal
-        view
-        returns (BlockHeaderInnerLite memory res)
-    {
+    function decodeBlockHeaderInnerLite(
+        Borsh.Data memory data
+    ) internal view returns (BlockHeaderInnerLite memory res) {
         res.hash = data.peekSha256(208);
         res.height = data.decodeU64();
         res.epoch_id = data.decodeBytes32();
@@ -123,7 +119,7 @@ library NearDecoder {
         bytes32 inner_rest_hash;
         OptionalBlockProducers next_bps;
         OptionalSignature[] approvals_after_next;
-        bytes32 hash;         
+        bytes32 hash;
         bytes32 next_hash;
     }
 
