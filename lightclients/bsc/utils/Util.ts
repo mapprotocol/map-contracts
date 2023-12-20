@@ -1,11 +1,10 @@
 import { BigNumber } from "ethers";
 import { JsonRpcProvider } from "@ethersproject/providers";
-const Rpc = require('isomorphic-rpc')
-const { GetProof } = require('eth-proof')
-const { encode } = require('eth-util-lite')
+const Rpc = require("isomorphic-rpc");
+const { GetProof } = require("eth-proof");
+const { encode } = require("eth-util-lite");
 
 export class BlockHeader {
-
     // struct BlockHeader {
     //     bytes parentHash;
     //     bytes sha3Uncles;
@@ -27,21 +26,23 @@ export class BlockHeader {
     public sha3Uncles?: string;
     public miner?: string;
     public stateRoot?: string;
-    public transactionsRoot?: string
-    public receiptsRoot?: string
-    public logsBloom?: string
-    public difficulty?: BigNumber
-    public number?: BigNumber
-    public gasLimit?: BigNumber
-    public gasUsed?: BigNumber
-    public timestamp?: BigNumber
-    public extraData: string
-    public mixHash?: string
-    public nonce?: string
+    public transactionsRoot?: string;
+    public receiptsRoot?: string;
+    public logsBloom?: string;
+    public difficulty?: BigNumber;
+    public number?: BigNumber;
+    public gasLimit?: BigNumber;
+    public gasUsed?: BigNumber;
+    public timestamp?: BigNumber;
+    public extraData: string;
+    public mixHash?: string;
+    public nonce?: string;
 
-    constructor(parentHash: string,
+    constructor(
+        parentHash: string,
         sha3Uncles: string,
-        miner: string, stateRoot: string,
+        miner: string,
+        stateRoot: string,
         transactionsRoot: string,
         receiptsRoot: string,
         logsBloom: string,
@@ -51,8 +52,9 @@ export class BlockHeader {
         gasUsed: BigNumber,
         timestamp: BigNumber,
         extraData: string,
-        mixHash: string, nonce: string) {
-
+        mixHash: string,
+        nonce: string
+    ) {
         this.parentHash = parentHash;
         this.sha3Uncles = sha3Uncles;
         this.miner = miner;
@@ -61,16 +63,12 @@ export class BlockHeader {
         this.receiptsRoot = receiptsRoot;
         this.logsBloom = logsBloom;
         this.difficulty = difficulty;
-        this.number = number,
-            this.gasLimit = gasLimit,
-            this.gasUsed = gasUsed;
+        (this.number = number), (this.gasLimit = gasLimit), (this.gasUsed = gasUsed);
         this.timestamp = timestamp;
         this.extraData = extraData;
         this.mixHash = mixHash;
         this.nonce = nonce;
-
     }
-
 }
 // struct TxLog {
 //     address addr;
@@ -80,7 +78,7 @@ export class BlockHeader {
 export class TxLog {
     public addr?: string;
     public topics?: Array<string>;
-    public data?: string
+    public data?: string;
 
     constructor(addr: string, topics: Array<string>, data: string) {
         this.addr = addr;
@@ -101,9 +99,15 @@ export class TxReceipt {
     public postStateOrStatus?: string;
     public cumulativeGasUsed?: BigNumber;
     public bloom?: string;
-    public logs?: Array<TxLog>
+    public logs?: Array<TxLog>;
 
-    constructor(receiptType: BigNumber, postStateOrStatus: string, cumulativeGasUsed: BigNumber, bloom: string, logs: Array<TxLog>) {
+    constructor(
+        receiptType: BigNumber,
+        postStateOrStatus: string,
+        cumulativeGasUsed: BigNumber,
+        bloom: string,
+        logs: Array<TxLog>
+    ) {
         this.receiptType = receiptType;
         this.postStateOrStatus = postStateOrStatus;
         this.cumulativeGasUsed = cumulativeGasUsed;
@@ -111,7 +115,6 @@ export class TxReceipt {
         this.logs = logs;
     }
 }
-
 
 //   struct ReceiptProof {
 //     TxReceipt txReceipt;
@@ -127,20 +130,17 @@ export class ReceiptProof {
     constructor(txReceipt: TxReceipt, keyIndex: string, proof: Array<string>) {
         this.txReceipt = txReceipt;
         this.keyIndex = keyIndex;
-        this.proof = proof
+        this.proof = proof;
     }
 }
-
 
 export class ProofData {
     public blockNum?: BigNumber;
     public receiptProof?: ReceiptProof;
 
-
     constructor(blockNum: BigNumber, receiptProof: ReceiptProof) {
         this.blockNum = blockNum;
         this.receiptProof = receiptProof;
-
     }
 }
 
@@ -148,41 +148,49 @@ export class DProofData {
     public headers?: Array<BlockHeader>;
     public receiptProof?: ReceiptProof;
 
-
     constructor(headers: Array<BlockHeader>, receiptProof: ReceiptProof) {
         this.headers = headers;
         this.receiptProof = receiptProof;
-
     }
 }
 
 export async function getBlock(blockNumber: number, provider: JsonRpcProvider) {
-
     let block = await provider.getBlock(blockNumber);
 
-
     const params: { [key: string]: any } = {
-        includeTransactions: !!false
+        includeTransactions: !!false,
     };
     params.blockHash = block.hash;
 
     let rpcHeader = await provider.perform("getBlock", params);
 
-    let blockHeader = new BlockHeader(rpcHeader.parentHash, rpcHeader.sha3Uncles,
-        rpcHeader.miner, rpcHeader.stateRoot, rpcHeader.transactionsRoot,
-        rpcHeader.receiptsRoot, rpcHeader.logsBloom, BigNumber.from(rpcHeader.difficulty), BigNumber.from(rpcHeader.number),
-        BigNumber.from(rpcHeader.gasLimit), BigNumber.from(rpcHeader.gasUsed), BigNumber.from(rpcHeader.timestamp),
-        rpcHeader.extraData, rpcHeader.mixHash, rpcHeader.nonce);
+    let blockHeader = new BlockHeader(
+        rpcHeader.parentHash,
+        rpcHeader.sha3Uncles,
+        rpcHeader.miner,
+        rpcHeader.stateRoot,
+        rpcHeader.transactionsRoot,
+        rpcHeader.receiptsRoot,
+        rpcHeader.logsBloom,
+        BigNumber.from(rpcHeader.difficulty),
+        BigNumber.from(rpcHeader.number),
+        BigNumber.from(rpcHeader.gasLimit),
+        BigNumber.from(rpcHeader.gasUsed),
+        BigNumber.from(rpcHeader.timestamp),
+        rpcHeader.extraData,
+        rpcHeader.mixHash,
+        rpcHeader.nonce
+    );
 
     return blockHeader;
 }
 
 export function index2key(index: number, proofLength: number) {
-    const actualkey: Array<number> = new Array<number>;
+    const actualkey: Array<number> = new Array<number>();
     const encoded = buffer2hex(encode(index)).slice(2);
-    let key = [...new Array(encoded.length / 2).keys()].map(i => parseInt(encoded[i * 2] + encoded[i * 2 + 1], 16));
+    let key = [...new Array(encoded.length / 2).keys()].map((i) => parseInt(encoded[i * 2] + encoded[i * 2 + 1], 16));
 
-    key.forEach(val => {
+    key.forEach((val) => {
         if (actualkey.length + 1 === proofLength) {
             actualkey.push(val);
         } else {
@@ -190,9 +198,9 @@ export function index2key(index: number, proofLength: number) {
             actualkey.push(val % 16);
         }
     });
-    return '0x' + actualkey.map(v => v.toString(16).padStart(2, '0')).join('');
+    return "0x" + actualkey.map((v) => v.toString(16).padStart(2, "0")).join("");
 }
 
 function buffer2hex(buffer: Buffer) {
-    return '0x' + buffer.toString('hex');
+    return "0x" + buffer.toString("hex");
 }

@@ -34,13 +34,11 @@ library Verify {
 
     uint256 internal constant MAINNET_CHAIN_ID = 56;
 
-    bytes32 constant SHA3_UNCLES =
-        0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
+    bytes32 constant SHA3_UNCLES = 0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
 
     bytes8 constant NONCE = 0x0000000000000000;
 
-    bytes32 constant MIX_HASH =
-        0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes32 constant MIX_HASH = 0x0000000000000000000000000000000000000000000000000000000000000000;
 
     struct BlockHeader {
         bytes parentHash;
@@ -81,11 +79,8 @@ library Verify {
         bytes data;
     }
 
-    function _verifyHeaderSignature(
-        BlockHeader memory _header,
-        uint256 _chainId
-    ) internal pure returns (bool) {
-        (bytes memory signature, bytes memory extraData) = _splitExtra( _header.extraData);
+    function _verifyHeaderSignature(BlockHeader memory _header, uint256 _chainId) internal pure returns (bool) {
+        (bytes memory signature, bytes memory extraData) = _splitExtra(_header.extraData);
         bytes32 hash = _getSealHash(_header, extraData, _chainId);
 
         bytes32 r;
@@ -127,10 +122,7 @@ library Verify {
             return false;
         }
 
-        if (
-            _header.sha3Uncles.length != 32 ||
-            bytes32(_header.sha3Uncles) != SHA3_UNCLES
-        ) {
+        if (_header.sha3Uncles.length != 32 || bytes32(_header.sha3Uncles) != SHA3_UNCLES) {
             return false;
         }
 
@@ -138,15 +130,11 @@ library Verify {
             return false;
         }
 
-        if (
-            _header.mixHash.length != 32 || bytes32(_header.mixHash) != MIX_HASH
-        ) {
+        if (_header.mixHash.length != 32 || bytes32(_header.mixHash) != MIX_HASH) {
             return false;
         }
         //2**63 - 1 maxGasLimit
-        if (
-            _header.gasLimit > 2 ** 63 - 1 || _header.gasLimit < _header.gasUsed
-        ) {
+        if (_header.gasLimit > 2 ** 63 - 1 || _header.gasLimit < _header.gasUsed) {
             return false;
         }
 
@@ -168,31 +156,29 @@ library Verify {
     ) internal pure returns (bytes32) {
         bytes[] memory list = new bytes[](16);
         list[0] = RLPEncode.encodeUint(_chainId);
-        _headerToList(_header,_extraData,list,1);
+        _headerToList(_header, _extraData, list, 1);
         return keccak256(RLPEncode.encodeList(list));
     }
 
-    function _getBlockHash(BlockHeader memory _header,uint256 _chainId)
-    internal
-    pure
-    returns (bytes32)
-    {    
-       bytes[] memory list;
-       if(_isAfterLondonFork(_chainId,_header.number)) {
-          list = new bytes[](16);
-          _headerToList(_header,_header.extraData,list,0);
-          list[15] = RLPEncode.encodeUint(_header.baseFeePerGas);
-       } else {
-          list = new bytes[](15);
-          _headerToList(_header,_header.extraData,list,0);
-       }
+    function _getBlockHash(BlockHeader memory _header, uint256 _chainId) internal pure returns (bytes32) {
+        bytes[] memory list;
+        if (_isAfterLondonFork(_chainId, _header.number)) {
+            list = new bytes[](16);
+            _headerToList(_header, _header.extraData, list, 0);
+            list[15] = RLPEncode.encodeUint(_header.baseFeePerGas);
+        } else {
+            list = new bytes[](15);
+            _headerToList(_header, _header.extraData, list, 0);
+        }
         return keccak256(RLPEncode.encodeList(list));
     }
 
-    function _headerToList(BlockHeader memory _header,bytes memory _extraData,bytes[] memory _list,uint256 _start)
-        internal
-        pure
-    {
+    function _headerToList(
+        BlockHeader memory _header,
+        bytes memory _extraData,
+        bytes[] memory _list,
+        uint256 _start
+    ) internal pure {
         _list[_start] = RLPEncode.encodeBytes(_header.parentHash);
         _list[++_start] = RLPEncode.encodeBytes(_header.sha3Uncles);
         _list[++_start] = RLPEncode.encodeAddress(_header.miner);
@@ -208,7 +194,6 @@ library Verify {
         _list[++_start] = RLPEncode.encodeBytes(_extraData);
         _list[++_start] = RLPEncode.encodeBytes(_header.mixHash);
         _list[++_start] = RLPEncode.encodeBytes(_header.nonce);
-       
     }
 
     function _validateProof(
@@ -219,7 +204,7 @@ library Verify {
         bytes memory bytesReceipt = _encodeReceipt(_receipt.txReceipt);
         bytes memory expectedValue = bytesReceipt;
         if (_receipt.txReceipt.receiptType > 0) {
-            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.txReceipt.receiptType)),bytesReceipt);
+            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.txReceipt.receiptType)), bytesReceipt);
         }
 
         success = IMPTVerify(_mptVerify).verifyTrieProof(
@@ -229,15 +214,10 @@ library Verify {
             expectedValue
         );
 
-        if (success)
-            logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
+        if (success) logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
     }
 
-    function _encodeReceipt(TxReceipt memory _txReceipt)
-        internal
-        pure
-        returns (bytes memory output)
-    {
+    function _encodeReceipt(TxReceipt memory _txReceipt) internal pure returns (bytes memory output) {
         bytes[] memory list = new bytes[](4);
         list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
         list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
@@ -277,27 +257,22 @@ library Verify {
         signature = _memoryToBytes(ptr, EXTRASEAL);
     }
 
-
-   function _getValidators(
+    function _getValidators(
         uint256 _chainId,
         uint256 _blockNum,
         bytes memory _extraData
     ) internal pure returns (bytes memory) {
-
-        if(_isAfterLuBanFork(_chainId,_blockNum)){
-            return   _getValidatorsAfterLuBanFork(_extraData);
+        if (_isAfterLuBanFork(_chainId, _blockNum)) {
+            return _getValidatorsAfterLuBanFork(_extraData);
         } else {
-            return   _getValidatorsBeforeLuBanFork(_extraData);
+            return _getValidatorsBeforeLuBanFork(_extraData);
         }
     }
 
-    function _getValidatorsBeforeLuBanFork(
-        bytes memory _extraData
-    ) internal pure returns (bytes memory) {
+    function _getValidatorsBeforeLuBanFork(bytes memory _extraData) internal pure returns (bytes memory) {
+        require(_extraData.length > (EXTRA_VANITY + EXTRASEAL), "invalid _extraData length");
 
-        require(_extraData.length > (EXTRA_VANITY + EXTRASEAL),"invalid _extraData length");
-
-        require((_extraData.length - EXTRA_VANITY - EXTRASEAL) % ADDRESS_LENGTH == 0,"invalid _extraData length");
+        require((_extraData.length - EXTRA_VANITY - EXTRASEAL) % ADDRESS_LENGTH == 0, "invalid _extraData length");
         uint256 ptr;
         assembly {
             ptr := _extraData
@@ -308,75 +283,75 @@ library Verify {
         return _memoryToBytes(ptr, _extraData.length - (EXTRA_VANITY + EXTRASEAL));
     }
 
-
     // getValidatorBytesFromHeader returns the validators bytes extracted from the header's extra field if exists.
     // The validators bytes would be contained only in the epoch block's header, and its each validator bytes length is fixed.
     // On luban fork, we introduce vote attestation into the header's extra field, so extra format is different from before.
     // Before luban fork: |---Extra Vanity---|---Validators Bytes (or Empty)---|---Extra Seal---|
     // After luban fork:  |---Extra Vanity---|---Validators Number and Validators Bytes (or Empty)---|---Vote Attestation (or Empty)---|---Extra Seal---|
-    function _getValidatorsAfterLuBanFork(
-        bytes memory _extraData
-    ) internal pure returns (bytes memory res) {
-        // 1 byte for validators num 
+    function _getValidatorsAfterLuBanFork(bytes memory _extraData) internal pure returns (bytes memory res) {
+        // 1 byte for validators num
         uint256 prefix = EXTRA_VANITY + EXTRASEAL + 1;
 
         uint256 keyLenght = ADDRESS_LENGTH + BLS_PUBLICKEY_LENGTH;
 
-        require(_extraData.length > prefix,"invalid _extraData length");
+        require(_extraData.length > prefix, "invalid _extraData length");
 
         uint256 num;
         uint256 point;
         assembly {
             //skip 32 byte data length + 32 byte EXTRA_VANITY
-            point := add(_extraData,64)
-            // 1 byte for validators num 
-            num := shr(248,mload(point))
+            point := add(_extraData, 64)
+            // 1 byte for validators num
+            num := shr(248, mload(point))
         }
 
-        require(_extraData.length >= (prefix + keyLenght * num),"invalid _extraData length");
+        require(_extraData.length >= (prefix + keyLenght * num), "invalid _extraData length");
 
         assembly {
             // 0x40 is the address of free memory pointer.
             res := mload(0x40)
-            let length := mul(ADDRESS_LENGTH,num)
+            let length := mul(ADDRESS_LENGTH, num)
             //skip 32 byte data length
-            let start := add(res,32)
+            let start := add(res, 32)
             // res end point
-            let end := add(start,length) 
+            let end := add(start, length)
             mstore(0x40, end)
             //store length for first 32 bytes
             mstore(res, length)
-            //skip 1 byte for validators num 
-            point := add(point,1)
-            for { let i := 0 } lt(i,num) { i := add(i,1) } {
-               // address lenth is 20 bytes Discard others 12 bytes
-               let a := and(mload(add(point,mul(i,keyLenght))),0xffffffffffffffffffffffffffffffffffffffff000000000000000000000000)  
-               mstore(add(start,mul(i,ADDRESS_LENGTH)),a)
+            //skip 1 byte for validators num
+            point := add(point, 1)
+            for {
+                let i := 0
+            } lt(i, num) {
+                i := add(i, 1)
+            } {
+                // address lenth is 20 bytes Discard others 12 bytes
+                let a := and(
+                    mload(add(point, mul(i, keyLenght))),
+                    0xffffffffffffffffffffffffffffffffffffffff000000000000000000000000
+                )
+                mstore(add(start, mul(i, ADDRESS_LENGTH)), a)
             }
         }
     }
 
-    function _isAfterLuBanFork(uint256 _chainId,uint256 _blockNum) internal pure returns(bool){
-         if(_chainId == MAINNET_CHAIN_ID) {
+    function _isAfterLuBanFork(uint256 _chainId, uint256 _blockNum) internal pure returns (bool) {
+        if (_chainId == MAINNET_CHAIN_ID) {
             return MAINNET_LU_BAN_FORK_BLOCK > 0 && _blockNum > MAINNET_LU_BAN_FORK_BLOCK;
-         } else {
+        } else {
             return _blockNum > TESTNET_LU_BAN_FORK_BLOCK;
-         }
+        }
     }
 
-    function _isAfterLondonFork(uint256 _chainId,uint256 _blockNum) internal pure returns(bool){
-         if(_chainId == MAINNET_CHAIN_ID) {
+    function _isAfterLondonFork(uint256 _chainId, uint256 _blockNum) internal pure returns (bool) {
+        if (_chainId == MAINNET_CHAIN_ID) {
             return MAINNET_LONDON_FORK_BLOCK > 0 && _blockNum >= MAINNET_LONDON_FORK_BLOCK;
-         } else {
+        } else {
             return _blockNum >= TESTNET_LONDON_FORK_BLOCK;
-         }
+        }
     }
 
-    function _containsValidator(
-        bytes memory _validators,
-        address _miner,
-        uint256 _index
-    ) internal pure returns (bool) {
+    function _containsValidator(bytes memory _validators, address _miner, uint256 _index) internal pure returns (bool) {
         uint256 m = uint256(uint160(_miner));
 
         uint256 ptr;
@@ -401,20 +376,14 @@ library Verify {
         return false;
     }
 
-    function _memoryToBytes(
-        uint _ptr,
-        uint _length
-    ) internal pure returns (bytes memory res) {
+    function _memoryToBytes(uint _ptr, uint _length) internal pure returns (bytes memory res) {
         if (_length != 0) {
             assembly {
                 // 0x40 is the address of free memory pointer.
                 res := mload(0x40)
                 let end := add(
                     res,
-                    and(
-                        add(_length, 63),
-                        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0
-                    )
+                    and(add(_length, 63), 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0)
                 )
                 // end = res + 32 + 32 * ceil(length / 32).
                 mstore(0x40, end)
