@@ -8,9 +8,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
 import "./lib/Verify.sol";
 
-
 contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
-
     uint256 internal constant MAX_SAVED_EPOCH_NUM = 18083; // three month
 
     address public mptVerify;
@@ -27,10 +25,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     mapping(uint256 => bytes32) private cachedReceiptRoot;
 
-    event ChangePendingAdmin(
-        address indexed previousPending,
-        address indexed newPending
-    );
+    event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event SetMptVerify(address newMptVerify);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
 
@@ -75,43 +70,28 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     function setMptVerify(address _newMptVerify) external onlyOwner {
-        require(_newMptVerify.code.length > 0,"_newMptVerify must contract address");
+        require(_newMptVerify.code.length > 0, "_newMptVerify must contract address");
         mptVerify = _newMptVerify;
         emit SetMptVerify(_newMptVerify);
     }
 
-    function updateBlockHeader(
-        bytes memory _blockHeadersBytes
-    ) external override whenNotPaused {
+    function updateBlockHeader(bytes memory _blockHeadersBytes) external override whenNotPaused {
         (
             Verify.BlockHeader memory _blockHeader,
             Verify.QuorumCert memory _quorumCert,
             Verify.Validator[] memory _validators
-        ) = abi.decode(
-                _blockHeadersBytes,
-                (Verify.BlockHeader, Verify.QuorumCert, Verify.Validator[])
-            );
+        ) = abi.decode(_blockHeadersBytes, (Verify.BlockHeader, Verify.QuorumCert, Verify.Validator[]));
 
-        require(
-            _lastSyncedBlock + Verify.EPOCH_NUM == _blockHeader.number,
-            "invalid start block"
-        );
+        require(_lastSyncedBlock + Verify.EPOCH_NUM == _blockHeader.number, "invalid start block");
         // verify blockHeader
         require(Verify._validateHeader(_blockHeader), "invalid block");
         // verify epoch_validators
-        require(
-            Verify._verifyValidators(_validators, _blockHeader.extraData),
-            "invalid signer"
-        );
+        require(Verify._verifyValidators(_validators, _blockHeader.extraData), "invalid signer");
 
         //verify quorumCert
-        bytes32 blockHash = Verify._getBlockHash(_blockHeader,_blockHeader.extraData);
+        bytes32 blockHash = Verify._getBlockHash(_blockHeader, _blockHeader.extraData);
         require(
-            Verify._verifyQuorumCert(
-                blockHash,
-                _quorumCert,
-                validators[(_blockHeader.number - 1) / Verify.EPOCH_NUM]
-            ),
+            Verify._verifyQuorumCert(blockHash, _quorumCert, validators[(_blockHeader.number - 1) / Verify.EPOCH_NUM]),
             "invalid QuorumCert"
         );
         //set validators
@@ -126,47 +106,35 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     function verifyProofData(
         bytes memory _receiptProof
-    )
-        external
-        view
-        override
-        returns (bool success, string memory message, bytes memory logs)
-    {
+    ) external view override returns (bool success, string memory message, bytes memory logs) {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
 
         Verify.BlockHeader memory header = proof.header;
 
-        return _verifyProofData(proof,header);
+        return _verifyProofData(proof, header);
     }
 
-     function verifyProofDataWithCache(
+    function verifyProofDataWithCache(
         bytes memory _receiptProof
-    )
-        external
-        override
-        returns (bool success, string memory message, bytes memory logs)
-    {
+    ) external override returns (bool success, string memory message, bytes memory logs) {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
 
         Verify.BlockHeader memory header = proof.header;
-        bytes32 receiptRoot = cachedReceiptRoot[header.number]; 
-        if(receiptRoot != bytes32("")){
-            (success, logs) = Verify._validateProof(
-                receiptRoot,
-                proof.receiptProof,
-                mptVerify
-            );
+        bytes32 receiptRoot = cachedReceiptRoot[header.number];
+        if (receiptRoot != bytes32("")) {
+            (success, logs) = Verify._validateProof(receiptRoot, proof.receiptProof, mptVerify);
             if (!success) message = "mpt verification failed";
         } else {
-            (success,message,logs) = _verifyProofData(proof, header);
-            if(success)cachedReceiptRoot[header.number] = bytes32(header.receiptsRoot);
+            (success, message, logs) = _verifyProofData(proof, header);
+            if (success) cachedReceiptRoot[header.number] = bytes32(header.receiptsRoot);
         }
     }
 
-    function _verifyProofData(ProofData memory proof,Verify.BlockHeader memory header) private view
-        returns (bool success, string memory message, bytes memory logs)
-    {
-       if (header.number < minValidBlocknum ||header.number > maxCanVerifyNum()) {
+    function _verifyProofData(
+        ProofData memory proof,
+        Verify.BlockHeader memory header
+    ) private view returns (bool success, string memory message, bytes memory logs) {
+        if (header.number < minValidBlocknum || header.number > maxCanVerifyNum()) {
             success = false;
             message = "Out of verify range";
             return (success, message, logs);
@@ -179,14 +147,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             return (success, message, logs);
         }
         //verify quorumCert
-        bytes32 blockHash = Verify._getBlockHash(header,header.extraData);
+        bytes32 blockHash = Verify._getBlockHash(header, header.extraData);
 
         if (
-            !Verify._verifyQuorumCert(
-                blockHash,
-                proof.quorumCert,
-                validators[(header.number - 1) / Verify.EPOCH_NUM]
-            )
+            !Verify._verifyQuorumCert(blockHash, proof.quorumCert, validators[(header.number - 1) / Verify.EPOCH_NUM])
         ) {
             success = false;
             message = "invalid QuorumCert";
@@ -195,11 +159,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         // verify mpt
         if (success) {
             bytes32 rootHash = bytes32(header.receiptsRoot);
-            (success, logs) = Verify._validateProof(
-                rootHash,
-                proof.receiptProof,
-                mptVerify
-            );
+            (success, logs) = Verify._validateProof(rootHash, proof.receiptProof, mptVerify);
 
             if (!success) {
                 message = "mpt verification failed";
@@ -207,17 +167,11 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
-    function _initBlock(
-        Verify.BlockHeader memory _header,
-        Verify.Validator[] memory _validators
-    ) internal {
+    function _initBlock(Verify.BlockHeader memory _header, Verify.Validator[] memory _validators) internal {
         // verify blockHeader
         require(Verify._validateHeader(_header), "invalid blockHeader");
         // verify epoch_validators
-        require(
-            Verify._verifyValidators(_validators, _header.extraData),
-            "invalid validators"
-        );
+        require(Verify._verifyValidators(_validators, _header.extraData), "invalid validators");
 
         _storeValidators(_header.number, _validators);
 
@@ -226,10 +180,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         minValidBlocknum = _header.number + 1;
     }
 
-    function _storeValidators(
-        uint256 _blockNumber,
-        Verify.Validator[] memory _validators
-    ) internal {
+    function _storeValidators(uint256 _blockNumber, Verify.Validator[] memory _validators) internal {
         Verify.Validator[] storage v = validators[_blockNumber / Verify.EPOCH_NUM];
 
         for (uint256 i = 0; i < _validators.length; i++) {
@@ -246,14 +197,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
-    function getBytes(
-        ProofData calldata _proof
-    ) external pure returns (bytes memory) {
+    function getBytes(ProofData calldata _proof) external pure returns (bytes memory) {
         return abi.encode(_proof);
     }
 
-    function decode(bytes calldata p) public pure returns(ProofData memory _proof){
-        return abi.decode(p,(ProofData));
+    function decode(bytes calldata p) public pure returns (ProofData memory _proof) {
+        return abi.decode(p, (ProofData));
     }
 
     function getHeadersBytes(
@@ -272,12 +221,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return _lastSyncedBlock + Verify.EPOCH_NUM;
     }
 
-    function verifiableHeaderRange()
-        external
-        view
-        override
-        returns (uint256, uint256)
-    {
+    function verifiableHeaderRange() external view override returns (uint256, uint256) {
         return (minValidBlocknum, maxCanVerifyNum());
     }
 
@@ -286,7 +230,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     function clientState() external pure override returns (bytes memory) {}
 
     function finalizedState(bytes memory) external pure override returns (bytes memory) {}
-
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
@@ -304,10 +247,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     function setPendingAdmin(address pendingAdmin_) external onlyOwner {
-        require(
-            pendingAdmin_ != address(0),
-            "Ownable: pendingAdmin is the zero address"
-        );
+        require(pendingAdmin_ != address(0), "Ownable: pendingAdmin is the zero address");
         emit ChangePendingAdmin(_pendingAdmin, pendingAdmin_);
         _pendingAdmin = pendingAdmin_;
     }

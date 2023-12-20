@@ -109,13 +109,10 @@ library Verify {
     //     return signer;
     // }
 
-    function _validateHeader(
-        BlockHeader memory _header
-    ) internal pure returns (bool) {
+    function _validateHeader(BlockHeader memory _header) internal pure returns (bool) {
         if (_header.extraData.length != EXTRA_DATA_LENGHT) {
             return false;
         }
-
 
         if (_header.gasUsed > _header.gasLimit) {
             return false;
@@ -128,10 +125,7 @@ library Verify {
         return true;
     }
 
-    function _getBlockHash(
-        BlockHeader memory _header,
-        bytes memory _extraData
-    ) internal pure returns (bytes32) {
+    function _getBlockHash(BlockHeader memory _header, bytes memory _extraData) internal pure returns (bytes32) {
         bytes[] memory list = new bytes[](12);
         list[0] = RLPEncode.encodeBytes(_header.parentHash);
         list[1] = RLPEncode.encodeAddress(_header.miner);
@@ -148,10 +142,7 @@ library Verify {
         return keccak256(RLPEncode.encodeList(list));
     }
 
-    function _verifyValidators(
-        Validator[] memory _validators,
-        bytes memory _extraData
-    ) internal pure returns (bool) {
+    function _verifyValidators(Validator[] memory _validators, bytes memory _extraData) internal pure returns (bool) {
         // if(_validators.length != VALIDATOR_LENGTH) {
         //     return false;
         // }
@@ -159,10 +150,7 @@ library Verify {
         bytes[] memory v = new bytes[](_validators.length);
 
         for (uint256 i = 0; i < _validators.length; i++) {
-            if (
-                _validators[i].NodeId.length != PUBKEY_LENGTH &&
-                _validators[i].BlsPubKey.length != BLS_PUBKEY_LENGTH
-            ) {
+            if (_validators[i].NodeId.length != PUBKEY_LENGTH && _validators[i].BlsPubKey.length != BLS_PUBKEY_LENGTH) {
                 return false;
             }
             bytes[] memory list = new bytes[](2);
@@ -227,9 +215,7 @@ library Verify {
     }
 
     // VerifyAggSig
-    function _getBlsSigMsg(
-        QuorumCert memory _q
-    ) internal pure returns (bytes32) {
+    function _getBlsSigMsg(QuorumCert memory _q) internal pure returns (bytes32) {
         bytes[] memory list = new bytes[](5);
         list[0] = RLPEncode.encodeUint(_q.epoch);
         list[1] = RLPEncode.encodeUint(_q.viewNumber);
@@ -247,10 +233,7 @@ library Verify {
         bytes memory bytesReceipt = _encodeReceipt(_receipt.txReceipt);
         bytes memory expectedValue = bytesReceipt;
         if (_receipt.txReceipt.receiptType > 0) {
-            expectedValue = abi.encodePacked(
-                bytes1(uint8(_receipt.txReceipt.receiptType)),
-                bytesReceipt
-            );
+            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.txReceipt.receiptType)), bytesReceipt);
         }
 
         success = IMPTVerify(_mptVerify).verifyTrieProof(
@@ -263,9 +246,7 @@ library Verify {
         if (success) logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
     }
 
-    function _encodeReceipt(
-        TxReceipt memory _txReceipt
-    ) internal pure returns (bytes memory output) {
+    function _encodeReceipt(TxReceipt memory _txReceipt) internal pure returns (bytes memory output) {
         bytes[] memory list = new bytes[](4);
         list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
         list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
@@ -275,14 +256,10 @@ library Verify {
 
         for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
             loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[](
-                _txReceipt.logs[j].topics.length
-            );
+            bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
 
             for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(
-                    _txReceipt.logs[j].topics[i]
-                );
+                loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
             }
             loglist[1] = RLPEncode.encodeList(loglist1);
             loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
@@ -293,9 +270,7 @@ library Verify {
         output = RLPEncode.encodeList(list);
     }
 
-    function _splitValidatorsHashFromExtra(
-        bytes memory _extraData
-    ) internal pure returns (bytes32, bytes memory) {
+    function _splitValidatorsHashFromExtra(bytes memory _extraData) internal pure returns (bytes32, bytes memory) {
         bytes32 hash;
         uint256 ptr;
         assembly {
@@ -311,20 +286,14 @@ library Verify {
         return (hash, signature);
     }
 
-    function _memoryToBytes(
-        uint _ptr,
-        uint _length
-    ) internal pure returns (bytes memory res) {
+    function _memoryToBytes(uint _ptr, uint _length) internal pure returns (bytes memory res) {
         if (_length != 0) {
             assembly {
                 // 0x40 is the address of free memory pointer.
                 res := mload(0x40)
                 let end := add(
                     res,
-                    and(
-                        add(_length, 63),
-                        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0
-                    )
+                    and(add(_length, 63), 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0)
                 )
                 // end = res + 32 + 32 * ceil(length / 32).
                 mstore(0x40, end)

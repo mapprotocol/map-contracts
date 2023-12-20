@@ -4,6 +4,7 @@ pragma solidity 0.8.7;
 
 import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 import "@mapprotocol/protocol/contracts/lib/MPT.sol";
+
 contract MPTVerify is IMPTVerify {
     function verifyTrieProof(
         bytes32 _root,
@@ -11,7 +12,6 @@ contract MPTVerify is IMPTVerify {
         bytes[] memory _proof,
         bytes memory _node
     ) external pure override returns (bool) {
-        return MPT.verify(_node,_key,_proof,_root);
+        return MPT.verify(_node, _key, _proof, _root);
     }
 }
-

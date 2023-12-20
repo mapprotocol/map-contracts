@@ -1,9 +1,7 @@
-let request = require('request');
-
+let request = require("request");
 
 function httprequest(url: string, requestData: any) {
     return new Promise((resolve, reject) => {
-
         let option = {
             url: url.toString(),
             method: "POST",
@@ -13,22 +11,21 @@ function httprequest(url: string, requestData: any) {
             headers: {
                 "content-type": "application/json",
             },
-            body: requestData
-        }
+            body: requestData,
+        };
         request(option, function (error: any, response: any, body: unknown) {
-            resolve(body)
+            resolve(body);
         });
     });
-
 }
 
 export async function req(url: string, method: string, params: any[]) {
     let requestData = {
-        "jsonrpc": "2.0",
-        "method": method,
-        "params": params,
-        "id": 1
-    }
+        jsonrpc: "2.0",
+        method: method,
+        params: params,
+        id: 1,
+    };
     let data = await httprequest(url, requestData);
 
     return data;
