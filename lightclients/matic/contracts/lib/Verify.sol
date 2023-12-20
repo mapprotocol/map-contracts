@@ -6,7 +6,6 @@ import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
 import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 
-
 library Verify {
     using RLPReader for bytes;
     using RLPReader for uint256;
@@ -28,13 +27,11 @@ library Verify {
     uint256 internal constant BASE_FEE_CHANGEDENOMINATOR = 8;
 
     uint256 internal constant ELASTICITY_MULTIPLIER = 2;
-    bytes32 constant SHA3_UNCLES =
-        0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
+    bytes32 constant SHA3_UNCLES = 0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347;
 
     bytes8 constant NONCE = 0x0000000000000000;
 
-    bytes32 constant MIX_HASH =
-        0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes32 constant MIX_HASH = 0x0000000000000000000000000000000000000000000000000000000000000000;
 
     uint256 constant MAINNET_CHAINID = 137;
 
@@ -81,9 +78,7 @@ library Verify {
         bytes data;
     }
 
-    function _recoverSigner(
-        BlockHeader memory _header
-    ) internal pure returns (address) {
+    function _recoverSigner(BlockHeader memory _header) internal pure returns (address) {
         (bytes memory signature, bytes memory extraData) = _splitExtra(_header.extraData);
         bytes32 hash = keccak256(_encodeSigHeader(_header, extraData));
 
@@ -116,7 +111,7 @@ library Verify {
             return false;
         }
         //Epoch block
-        if ((_header.number + 1) % _getEpochNumber(_chainId,_header.number) == 0) {
+        if ((_header.number + 1) % _getEpochNumber(_chainId, _header.number) == 0) {
             if (_header.extraData.length < _minEpochBlockExtraDataLen) {
                 return false;
             }
@@ -134,10 +129,7 @@ library Verify {
             return false;
         }
 
-        if (
-            _header.sha3Uncles.length != 32 ||
-            bytes32(_header.sha3Uncles) != SHA3_UNCLES
-        ) {
+        if (_header.sha3Uncles.length != 32 || bytes32(_header.sha3Uncles) != SHA3_UNCLES) {
             return false;
         }
 
@@ -145,17 +137,11 @@ library Verify {
             return false;
         }
 
-        if (
-            _header.mixHash.length != 32 || bytes32(_header.mixHash) != MIX_HASH
-        ) {
+        if (_header.mixHash.length != 32 || bytes32(_header.mixHash) != MIX_HASH) {
             return false;
         }
         //2**63 - 1 maxGasLimit minGasLimit 5000
-        if (
-            _header.gasLimit > 2 ** 63 - 1 ||
-            _header.gasLimit < MIN_GAS_LIMIT ||
-            _header.gasLimit < _header.gasUsed
-        ) {
+        if (_header.gasLimit > 2 ** 63 - 1 || _header.gasLimit < MIN_GAS_LIMIT || _header.gasLimit < _header.gasUsed) {
             return false;
         }
 
@@ -197,7 +183,7 @@ library Verify {
         require(_parentGasLimit > 0, "_parentGasLimit not be zero");
         uint256 parentGasTarget = _parentGasLimit / ELASTICITY_MULTIPLIER;
         if (_parentGasUsed == parentGasTarget) {
-           return _parentBaseFee;
+            return _parentBaseFee;
         }
         uint256 baseFeeChangeDenominator = BASE_FEE_CHANGEDENOMINATOR;
         if (MAINNET_CHAINID != _chainId) {
@@ -215,19 +201,14 @@ library Verify {
             uint256 gasUsedDelta = _parentGasUsed - parentGasTarget;
             uint256 x = _parentBaseFee * gasUsedDelta;
             uint256 y = x / parentGasTarget;
-            uint256 baseFeeDelta = y / baseFeeChangeDenominator > 1
-                ? y / baseFeeChangeDenominator
-                : 1;
+            uint256 baseFeeDelta = y / baseFeeChangeDenominator > 1 ? y / baseFeeChangeDenominator : 1;
             return _parentBaseFee + baseFeeDelta;
         } else {
             uint256 gasUsedDelta = parentGasTarget - _parentGasUsed;
             uint256 x = _parentBaseFee * gasUsedDelta;
             uint256 y = x / parentGasTarget;
             uint256 baseFeeDelta = y / baseFeeChangeDenominator;
-            return
-                baseFeeDelta > _parentBaseFee
-                    ? 0
-                    : _parentBaseFee - baseFeeDelta;
+            return baseFeeDelta > _parentBaseFee ? 0 : _parentBaseFee - baseFeeDelta;
         }
     }
 
@@ -263,7 +244,7 @@ library Verify {
         bytes memory bytesReceipt = _encodeReceipt(_receipt.txReceipt);
         bytes memory expectedValue = bytesReceipt;
         if (_receipt.txReceipt.receiptType > 0) {
-            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.txReceipt.receiptType)),bytesReceipt);
+            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.txReceipt.receiptType)), bytesReceipt);
         }
 
         success = IMPTVerify(_mptVerify).verifyTrieProof(
@@ -276,22 +257,20 @@ library Verify {
         if (success) logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
     }
 
-    function _encodeReceipt(
-        TxReceipt memory _txReceipt
-    ) internal pure returns (bytes memory output) {
+    function _encodeReceipt(TxReceipt memory _txReceipt) internal pure returns (bytes memory output) {
         bytes[] memory list = new bytes[](4);
         list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
         list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
         list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
         bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
         bytes[] memory loglist = new bytes[](3);
-        
+
         for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
             loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[]( _txReceipt.logs[j].topics.length);
+            bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
 
             for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes( _txReceipt.logs[j].topics[i]);
+                loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
             }
             loglist[1] = RLPEncode.encodeList(loglist1);
             loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
@@ -319,17 +298,11 @@ library Verify {
         signature = _memoryToBytes(ptr, EXTRASEAL);
     }
 
-    function _getValidators(
-        bytes memory _extraData
-    ) internal pure returns (bytes memory) {
-        require(
-            _extraData.length > (EXTRA_VANITY + EXTRASEAL),
-            "invalid _extraData length"
-        );
+    function _getValidators(bytes memory _extraData) internal pure returns (bytes memory) {
+        require(_extraData.length > (EXTRA_VANITY + EXTRASEAL), "invalid _extraData length");
 
         require(
-            (_extraData.length - EXTRA_VANITY - EXTRASEAL) %
-            (ADDRESS_LENGTH + POWER_LENGTH) == 0,
+            (_extraData.length - EXTRA_VANITY - EXTRASEAL) % (ADDRESS_LENGTH + POWER_LENGTH) == 0,
             "invalid _extraData length"
         );
         uint256 ptr;
@@ -339,8 +312,7 @@ library Verify {
         //skip EXTRA_VANITY + data length
         ptr += 64;
         //extraData =  EXTRA_VANITY + (address + power)... + EXTRASEAL
-        uint256 length = (_extraData.length - (EXTRA_VANITY + EXTRASEAL)) /
-            (ADDRESS_LENGTH + POWER_LENGTH);
+        uint256 length = (_extraData.length - (EXTRA_VANITY + EXTRASEAL)) / (ADDRESS_LENGTH + POWER_LENGTH);
         bytes memory result;
         for (uint256 i = 0; i < length; i++) {
             bytes32 v;
@@ -354,10 +326,7 @@ library Verify {
         return result;
     }
 
-    function _containsValidator(
-        bytes memory _validators,
-        address _miner
-    ) internal pure returns (bool) {
+    function _containsValidator(bytes memory _validators, address _miner) internal pure returns (bool) {
         uint256 m = uint256(uint160(_miner));
 
         uint256 ptr;
@@ -381,33 +350,23 @@ library Verify {
         return false;
     }
 
-    function _getEpochNumber(
-        uint256 _chainId,
-        uint256 _blockNumber
-    ) internal pure returns (uint256 epochNumber) {
+    function _getEpochNumber(uint256 _chainId, uint256 _blockNumber) internal pure returns (uint256 epochNumber) {
         epochNumber = EPOCH_NUM;
         if (_chainId != MAINNET_CHAINID) {
             if (_blockNumber >= MUMBAI_DELHI_BLOCK) epochNumber = EPOCH_NUM / 4;
         } else {
-            if (MAINNET_DELHI_BLOCK > 0 && _blockNumber >= MAINNET_DELHI_BLOCK)
-                epochNumber = EPOCH_NUM / 4;
+            if (MAINNET_DELHI_BLOCK > 0 && _blockNumber >= MAINNET_DELHI_BLOCK) epochNumber = EPOCH_NUM / 4;
         }
     }
 
-    function _memoryToBytes(
-        uint _ptr,
-        uint _length
-    ) internal pure returns (bytes memory res) {
+    function _memoryToBytes(uint _ptr, uint _length) internal pure returns (bytes memory res) {
         if (_length != 0) {
             assembly {
                 // 0x40 is the address of free memory pointer.
                 res := mload(0x40)
                 let end := add(
                     res,
-                    and(
-                        add(_length, 63),
-                        0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0
-                    )
+                    and(add(_length, 63), 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0)
                 )
                 // end = res + 32 + 32 * ceil(length / 32).
                 mstore(0x40, end)
