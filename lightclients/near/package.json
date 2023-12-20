@@ -1,7 +1,16 @@
 {
-  "name": "near_light_node",
-  "version": "0.0.1",
+  "name": "@mapprotocol/near-light-client",
+  "version": "1.0.0",
   "description": "near light node in the solidity implementation",
+  "scripts": {
+    "format": "prettier --print-width 120 --tab-width 4 --write ./contracts ./deploy ./test ./scripts"
+  },
+  "dependencies": {
+    "@mapprotocol/protocol": "^0.5.0",
+    "@openzeppelin/contracts": "^4.6.0",
+    "dotenv": "^8.2.0",
+    "hardhat-deploy": "^0.11.18"
+  },
   "devDependencies": {
     "@ethersproject/abi": "^5.6.4",
     "@ethersproject/providers": "^5.6.8",
@@ -19,13 +28,9 @@
     "lodash": "^4.17.20",
     "near-api-js": "^0.26.0",
     "solidity-coverage": "^0.7.21",
+    "prettier": "^2.8.8",
+    "prettier-plugin-solidity": "^1.1.0",
     "typechain": "^8.1.0",
     "web3": "^1.6.0"
-  },
-  "dependencies": {
-    "@mapprotocol/protocol": "^0.5.0",
-    "@openzeppelin/contracts": "^4.6.0",
-    "dotenv": "^8.2.0",
-    "hardhat-deploy": "^0.11.18"
   }
 }

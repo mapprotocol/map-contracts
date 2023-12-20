@@ -220,6 +220,11 @@ module.exports = {
       chainId : 1030,
       accounts: accounts
     },
+    ConfluxTest: {
+      url: `https://evmtestnet.confluxrpc.com`,
+      chainId : 71,
+      accounts: accounts
+    },
     Oasis: {
       url: `https://emerald.oasis.dev`,
       chainId : 42262,

@@ -8,7 +8,7 @@
 The factory contract helps to deploy to deterministic addresses without an init code factor.
 Every developer can use contract `0x6258e4d2950757A749a4d4683A7342261ce12471` to deploy deterministic addresses contract.
 
-Read [this](contracts/create3/README.md) to get more information.
+Read [this](https://github.com/mapprotocol/map-contracts/blob/main/protocol/contracts/create3/README.md) to get more information.
 
 ### MPT verifier
 The contract deployed on the MAP Relay Chain is responsible for MPT proof verify.
