@@ -1,9 +1,9 @@
-import {loadFixture} from "@nomicfoundation/hardhat-network-helpers";
-import {expect} from "chai";
-import {Contract} from "ethers";
-import {ethers} from "hardhat";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { expect } from "chai";
+import { Contract } from "ethers";
+import { ethers } from "hardhat";
 import config from "../hardhat.config";
-import {delay} from "../utils/Util";
+import { delay } from "../utils/Util";
 
 let chainId = 5; //test data from eth testnet
 
@@ -16,7 +16,7 @@ if (fork) {
     bootstrap = require("../data/goerli/shanghai_fork/bootstrap.js");
     periodUpdate = require("../data/goerli/shanghai_fork/period_update.js");
     exedata = require("../data/goerli/shanghai_fork/exe_headers.js");
-    console.log("use shanghai fork test data")
+    console.log("use shanghai fork test data");
 }
 
 // let bootstrap = require("../data/mainnet/bootstrap.js");
@@ -63,10 +63,7 @@ describe("LightNode", function () {
             false,
         ]);
 
-        const lightNodeProxy = await LightNodeProxy.deploy(
-            lightNode.address,
-            initData
-        );
+        const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
         await lightNodeProxy.connect(wallet).deployed();
         let proxy = LightNode.attach(lightNodeProxy.address);
 
@@ -79,9 +76,7 @@ describe("LightNode", function () {
         }
 
         for (let i = 0; i < bootstrap.nextSyncCommitteePubkeys.length; i++) {
-            await proxy.initSyncCommitteePubkey(
-                bootstrap.nextSyncCommitteePubkeys[i]
-            );
+            await proxy.initSyncCommitteePubkey(bootstrap.nextSyncCommitteePubkeys[i]);
             let initStage = await proxy.initStage();
             let initialized = await proxy.initialized();
             if (i != bootstrap.nextSyncCommitteePubkeys.length - 1) {
@@ -116,9 +111,9 @@ describe("LightNode", function () {
             let initialized = await lightNode.initialized();
             expect(initialized).true;
 
-            await expect(
-                lightNode.initSyncCommitteePubkey(bootstrap.curSyncCommitteePubkeys[0])
-            ).to.be.revertedWith("initialized!");
+            await expect(lightNode.initSyncCommitteePubkey(bootstrap.curSyncCommitteePubkeys[0])).to.be.revertedWith(
+                "initialized!"
+            );
         });
 
         it("re-initialization should fail", async function () {
@@ -170,16 +165,13 @@ describe("LightNode", function () {
                 bootstrap.syncCommitteePubkeyHashes,
                 false,
             ]);
-            const lightNodeProxy = await LightNodeProxy.deploy(
-                lightNode.address,
-                initData
-            );
+            const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
             await lightNodeProxy.connect(wallet).deployed();
             let proxy = LightNode.attach(lightNodeProxy.address);
 
-            await expect(
-                proxy.initSyncCommitteePubkey(bootstrap.curSyncCommitteePubkeys[1])
-            ).to.be.revertedWith("wrong syncCommitteePubkeyPart hash");
+            await expect(proxy.initSyncCommitteePubkey(bootstrap.curSyncCommitteePubkeys[1])).to.be.revertedWith(
+                "wrong syncCommitteePubkeyPart hash"
+            );
 
             let initialized = await lightNode.initialized();
             expect(initialized).false;
@@ -198,9 +190,9 @@ describe("LightNode", function () {
             const newImplement = await LightNode.connect(wallet).deploy();
             await newImplement.deployed();
 
-            await expect(
-                lightNode.connect(other).upgradeTo(newImplement.address)
-            ).to.be.revertedWith("LightNode: only Admin can upgrade");
+            await expect(lightNode.connect(other).upgradeTo(newImplement.address)).to.be.revertedWith(
+                "LightNode: only Admin can upgrade"
+            );
         });
 
         it("Implementation upgrade is OK", async function () {
@@ -234,13 +226,13 @@ describe("LightNode", function () {
             let admin = await lightNode.getAdmin();
             expect(admin).to.eq(wallet.address);
 
-            await expect(
-                lightNode.connect(other).changeAdmin(other.address)
-            ).to.be.revertedWith("lightnode :: only admin");
+            await expect(lightNode.connect(other).changeAdmin(other.address)).to.be.revertedWith(
+                "lightnode :: only admin"
+            );
 
-            await expect(
-                lightNode.connect(wallet).changeAdmin(ethers.constants.AddressZero)
-            ).to.be.revertedWith("zero address");
+            await expect(lightNode.connect(wallet).changeAdmin(ethers.constants.AddressZero)).to.be.revertedWith(
+                "zero address"
+            );
 
             await lightNode.connect(wallet).changeAdmin(other.address);
             expect(await lightNode.getAdmin()).to.eq(other.address);
@@ -253,9 +245,7 @@ describe("LightNode", function () {
             let paused = await lightNode.paused();
             expect(paused).to.false;
 
-            await expect(
-                lightNode.connect(other).togglePause(true)
-            ).to.be.revertedWith("lightnode :: only admin");
+            await expect(lightNode.connect(other).togglePause(true)).to.be.revertedWith("lightnode :: only admin");
 
             await lightNode.connect(wallet).togglePause(true);
             expect(await lightNode.paused()).to.true;
@@ -271,11 +261,9 @@ describe("LightNode", function () {
             let lightNode = await deployFixture();
 
             await lightNode.connect(wallet).togglePause(true);
-            let update = await lightNode.getUpdateBytes(periodUpdate.update)
+            let update = await lightNode.getUpdateBytes(periodUpdate.update);
 
-            await expect(
-                lightNode.updateLightClient(update)
-            ).to.be.revertedWith("Pausable: paused");
+            await expect(lightNode.updateLightClient(update)).to.be.revertedWith("Pausable: paused");
         });
 
         it("updateLightClient ... OK ", async function () {
@@ -283,21 +271,15 @@ describe("LightNode", function () {
             let initialized = await lightNode.initialized();
             expect(initialized).true;
 
-            let update = await lightNode.getUpdateBytes(periodUpdate.update)
+            let update = await lightNode.getUpdateBytes(periodUpdate.update);
             await lightNode.updateLightClient(update);
 
             let finalizedSlot = await lightNode.headerHeight();
             expect(finalizedSlot).to.eq(periodUpdate.update.finalizedHeader.slot);
 
-            expect(await lightNode.exeHeaderStartNumber()).to.eq(
-                bootstrap.finalizedExeHeaderNumber.toNumber() + 1
-            );
-            expect(await lightNode.exeHeaderEndNumber()).to.eq(
-                periodUpdate.update.finalizedExecution.blockNumber - 1
-            );
-            expect(await lightNode.exeHeaderEndHash()).to.eq(
-                periodUpdate.update.finalizedExecution.parentHash
-            );
+            expect(await lightNode.exeHeaderStartNumber()).to.eq(bootstrap.finalizedExeHeaderNumber.toNumber() + 1);
+            expect(await lightNode.exeHeaderEndNumber()).to.eq(periodUpdate.update.finalizedExecution.blockNumber - 1);
+            expect(await lightNode.exeHeaderEndHash()).to.eq(periodUpdate.update.finalizedExecution.parentHash);
         });
 
         it("updateLightClient should be failed when previous exe block headers are not updated ", async function () {
@@ -305,14 +287,12 @@ describe("LightNode", function () {
             let initialized = await lightNode.initialized();
             expect(initialized).true;
 
-            let update = await lightNode.getUpdateBytes(periodUpdate.update)
+            let update = await lightNode.getUpdateBytes(periodUpdate.update);
             await lightNode.updateLightClient(update);
 
-            let headers = await lightNode.getHeadersBytes(exedata.headers)
+            let headers = await lightNode.getHeadersBytes(exedata.headers);
             await lightNode.updateBlockHeader(headers);
-            await expect(
-                lightNode.updateLightClient(update)
-            ).to.be.revertedWith(
+            await expect(lightNode.updateLightClient(update)).to.be.revertedWith(
                 "previous exe block headers should be updated before update light client"
             );
         });
@@ -322,21 +302,15 @@ describe("LightNode", function () {
         it("updateBlockHeader ... ok ", async function () {
             let lightNode = await loadFixture(deployFixture);
 
-            let update = await lightNode.getUpdateBytes(periodUpdate.update)
+            let update = await lightNode.getUpdateBytes(periodUpdate.update);
             await lightNode.updateLightClient(update);
 
-            let headers = await lightNode.getHeadersBytes(exedata.headers)
+            let headers = await lightNode.getHeadersBytes(exedata.headers);
             await lightNode.updateBlockHeader(headers);
 
-            expect(await lightNode.exeHeaderStartNumber()).to.eq(
-                bootstrap.finalizedExeHeaderNumber.toNumber() + 1
-            );
-            expect(await lightNode.exeHeaderEndNumber()).to.eq(
-                exedata.headers[0].number - 1
-            );
-            expect(await lightNode.exeHeaderEndHash()).to.eq(
-                exedata.headers[0].parentHash
-            );
+            expect(await lightNode.exeHeaderStartNumber()).to.eq(bootstrap.finalizedExeHeaderNumber.toNumber() + 1);
+            expect(await lightNode.exeHeaderEndNumber()).to.eq(exedata.headers[0].number - 1);
+            expect(await lightNode.exeHeaderEndHash()).to.eq(exedata.headers[0].parentHash);
         });
     });
 
@@ -344,17 +318,13 @@ describe("LightNode", function () {
         it("verifyProofData ... ok ", async function () {
             let lightNode = await loadFixture(deployFixture);
 
-            let update = await lightNode.getUpdateBytes(periodUpdate.update)
+            let update = await lightNode.getUpdateBytes(periodUpdate.update);
             await lightNode.updateLightClient(update);
-            let headers = await lightNode.getHeadersBytes(exedata.headers)
+            let headers = await lightNode.getHeadersBytes(exedata.headers);
             await lightNode.updateBlockHeader(headers);
 
-            expect(await lightNode.exeHeaderStartNumber()).to.eq(
-                bootstrap.finalizedExeHeaderNumber.toNumber() + 1
-            );
-            expect(await lightNode.exeHeaderEndNumber()).to.eq(
-                exedata.headers[0].number - 1
-            );
+            expect(await lightNode.exeHeaderStartNumber()).to.eq(bootstrap.finalizedExeHeaderNumber.toNumber() + 1);
+            expect(await lightNode.exeHeaderEndNumber()).to.eq(exedata.headers[0].number - 1);
 
             let proofData = await lightNode.getBytes(exedata.receiptProof);
             let result = await lightNode.verifyProofData(proofData, {
@@ -371,13 +341,13 @@ describe("LightNode", function () {
                 expect(begin[0]).to.eq(bootstrap.finalizedExeHeaderNumber);
                 expect(begin[1]).to.eq(bootstrap.finalizedExeHeaderNumber);
 
-                let update = await lightNode.getUpdateBytes(periodUpdate.update)
+                let update = await lightNode.getUpdateBytes(periodUpdate.update);
                 await lightNode.updateLightClient(update);
                 begin = await lightNode.verifiableHeaderRange();
                 expect(begin[0]).to.eq(bootstrap.finalizedExeHeaderNumber);
                 expect(begin[1]).to.eq(bootstrap.finalizedExeHeaderNumber);
 
-                let headers = await lightNode.getHeadersBytes(exedata.headers)
+                let headers = await lightNode.getHeadersBytes(exedata.headers);
                 await lightNode.updateBlockHeader(headers);
                 begin = await lightNode.verifiableHeaderRange();
                 expect(begin[0]).to.eq(bootstrap.finalizedExeHeaderNumber);
@@ -390,11 +360,7 @@ describe("LightNode", function () {
 describe("LightNode Test on MAP", function () {
     let proxy: Contract;
 
-    if (
-        config.defaultNetwork != "local" &&
-        config.defaultNetwork != "makalu" &&
-        config.defaultNetwork != "dev"
-    ) {
+    if (config.defaultNetwork != "local" && config.defaultNetwork != "makalu" && config.defaultNetwork != "dev") {
         return;
     }
 
@@ -425,10 +391,7 @@ describe("LightNode Test on MAP", function () {
                 verifyUpdate,
             ]);
 
-            const lightNodeProxy = await LightNodeProxy.deploy(
-                lightNode.address,
-                initData
-            );
+            const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
             await lightNodeProxy.connect(wallet).deployed();
             proxy = LightNode.attach(lightNodeProxy.address);
             let initStage = await proxy.initStage();
@@ -439,9 +402,7 @@ describe("LightNode Test on MAP", function () {
 
         it("init cur sync committee pub keys should be OK", async function () {
             for (let i = 0; i < bootstrap.curSyncCommitteePubkeys.length; i++) {
-                await proxy.initSyncCommitteePubkey(
-                    bootstrap.curSyncCommitteePubkeys[i]
-                );
+                await proxy.initSyncCommitteePubkey(bootstrap.curSyncCommitteePubkeys[i]);
                 await delay(10000);
                 let initStage = await proxy.initStage();
                 expect(initStage).to.eq(2 + i);
@@ -452,9 +413,7 @@ describe("LightNode Test on MAP", function () {
 
         it("init next sync committee pub keys should be OK", async function () {
             for (let i = 0; i < bootstrap.nextSyncCommitteePubkeys.length; i++) {
-                await proxy.initSyncCommitteePubkey(
-                    bootstrap.nextSyncCommitteePubkeys[i]
-                );
+                await proxy.initSyncCommitteePubkey(bootstrap.nextSyncCommitteePubkeys[i]);
                 await delay(10000);
                 let initStage = await proxy.initStage();
                 let initialized = await proxy.initialized();
@@ -469,23 +428,16 @@ describe("LightNode Test on MAP", function () {
         });
 
         it("updateLightClient should be OK ", async function () {
-            let update = await proxy.getUpdateBytes(periodUpdate.update)
+            let update = await proxy.getUpdateBytes(periodUpdate.update);
             await proxy.updateLightClient(update);
             await delay(10000);
 
             let finalizedSlot = await proxy.headerHeight();
             expect(finalizedSlot).to.eq(periodUpdate.update.finalizedHeader.slot);
 
-
-            expect(await proxy.exeHeaderStartNumber()).to.eq(
-                bootstrap.finalizedExeHeaderNumber.toNumber() + 1
-            );
-            expect(await proxy.exeHeaderEndNumber()).to.eq(
-                periodUpdate.update.finalizedExecution.blockNumber - 1
-            );
-            expect(await proxy.exeHeaderEndHash()).to.eq(
-                periodUpdate.update.finalizedExecution.parentHash
-            );
+            expect(await proxy.exeHeaderStartNumber()).to.eq(bootstrap.finalizedExeHeaderNumber.toNumber() + 1);
+            expect(await proxy.exeHeaderEndNumber()).to.eq(periodUpdate.update.finalizedExecution.blockNumber - 1);
+            expect(await proxy.exeHeaderEndHash()).to.eq(periodUpdate.update.finalizedExecution.parentHash);
         });
     });
 });

@@ -91,13 +91,13 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         initStage = 1;
     }
 
-
     function initSyncCommitteePubkey(bytes memory _syncCommitteePubkeyPart) public {
         require(!initialized, "initialized!");
         require(initStage != 0, "call initialize() first!");
 
         uint256 pubkeyLength;
-        if (initStage % 3 != 0) {// initStage 1, 2, 4, 5
+        if (initStage % 3 != 0) {
+            // initStage 1, 2, 4, 5
             pubkeyLength = 171;
         } else {
             pubkeyLength = 170;
@@ -124,9 +124,15 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         require(exeHeaderEndNumber == 0, "previous exe block headers should be updated before update light client");
 
         Types.LightClientUpdate memory update = abi.decode(_data, (Types.LightClientUpdate));
-        require(update.attestedHeader.slot >= update.finalizedHeader.slot, "invalid attested header and finalized header slot");
+        require(
+            update.attestedHeader.slot >= update.finalizedHeader.slot,
+            "invalid attested header and finalized header slot"
+        );
         require(update.signatureSlot > update.attestedHeader.slot, "invalid signature slot and attested header slot");
-        require(update.finalizedHeader.slot > finalizedBeaconHeader.slot, "the update finalized slot should be higher than the finalized slot");
+        require(
+            update.finalizedHeader.slot > finalizedBeaconHeader.slot,
+            "the update finalized slot should be higher than the finalized slot"
+        );
 
         uint256 finalizedPeriod = Helper.compute_sync_committee_period(finalizedBeaconHeader.slot);
         uint256 updatePeriod = Helper.compute_sync_committee_period(update.finalizedHeader.slot);
@@ -135,7 +141,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         require(update.executionBranch.length == EXECUTION_PROOF_SIZE, "invalid execution branch length");
 
         if (finalizedPeriod + 1 == updatePeriod) {
-            require(update.nextSyncCommitteeBranch.length == NEXT_SYNC_COMMITTEE_PROOF_SIZE, "invalid next sync committee branch length");
+            require(
+                update.nextSyncCommitteeBranch.length == NEXT_SYNC_COMMITTEE_PROOF_SIZE,
+                "invalid next sync committee branch length"
+            );
         }
 
         if (verifyUpdate) {
@@ -190,9 +199,16 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             exeHeaderEndHash = header.parentHash;
         }
 
-        uint256 savedHeaders = finalizedExeHeaderNumber - exeHeaderEndNumber + exeHeaderStartNumber - startExeHeaderNumber;
+        uint256 savedHeaders = finalizedExeHeaderNumber -
+            exeHeaderEndNumber +
+            exeHeaderStartNumber -
+            startExeHeaderNumber;
         uint256 deletedHeaders = 0;
-        while (savedHeaders > MAX_BLOCK_SAVED && startExeHeaderNumber + 1 < exeHeaderStartNumber && deletedHeaders < MAX_DELETE_COUNT) {
+        while (
+            savedHeaders > MAX_BLOCK_SAVED &&
+            startExeHeaderNumber + 1 < exeHeaderStartNumber &&
+            deletedHeaders < MAX_DELETE_COUNT
+        ) {
             delete finalizedExeHeaders[startExeHeaderNumber];
             startExeHeaderNumber++;
             savedHeaders--;
@@ -207,16 +223,9 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         emit UpdateBlockHeader(msg.sender, headers[0].number, headers[headers.length - 1].number);
     }
 
-    function verifyProofData(bytes memory _receiptProof)
-    external
-    view
-    override
-    returns (
-        bool success,
-        string memory message,
-        bytes memory logs
-    )
-    {
+    function verifyProofData(
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, bytes memory logs) {
         require(initialized, "contract is not initialized");
         Types.ReceiptProof memory proof = abi.decode(_receiptProof, (Types.ReceiptProof));
         Types.BlockHeader memory header = proof.header;
@@ -245,14 +254,9 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
-    function verifyProofDataWithCache(bytes memory _receiptProof)
-    external
-    override
-    returns (
-        bool success,
-        string memory message,
-        bytes memory logs
-    ) {
+    function verifyProofDataWithCache(
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, bytes memory logs) {
         return this.verifyProofData(_receiptProof);
     }
 
@@ -260,7 +264,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return abi.encode(exeHeaderStartNumber, exeHeaderEndNumber);
     }
 
-    function finalizedState(bytes memory ) external override pure returns(bytes memory) {
+    function finalizedState(bytes memory) external pure override returns (bytes memory) {
         return bytes("");
     }
 
@@ -286,15 +290,15 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return true;
     }
 
-    function getBytes(Types.ReceiptProof memory receiptProof) public pure returns (bytes memory){
+    function getBytes(Types.ReceiptProof memory receiptProof) public pure returns (bytes memory) {
         return abi.encode(receiptProof);
     }
 
-    function getHeadersBytes(Types.BlockHeader[] memory _headers) public pure returns (bytes memory){
+    function getHeadersBytes(Types.BlockHeader[] memory _headers) public pure returns (bytes memory) {
         return abi.encode(_headers);
     }
 
-    function getUpdateBytes(Types.LightClientUpdate memory _update) public pure returns (bytes memory){
+    function getUpdateBytes(Types.LightClientUpdate memory _update) public pure returns (bytes memory) {
         return abi.encode(_update);
     }
 

@@ -1,7 +1,10 @@
 {
-  "name": "eth2_light_node",
-  "version": "0.0.1",
-  "description": "eth2 light node in the solidity implementation",
+  "name": "@mapprotocol/eth2-light-client",
+  "version": "1.1.0",
+  "description": "ethereum pos light client in the solidity implementation",
+  "scripts": {
+    "format": "prettier --print-width 120 --tab-width 4 --write ./contracts ./deploy ./data ./test ./utils"
+  },
   "dependencies": {
     "@lodestar/api": "^1.7.0",
     "@lodestar/config": "^1.7.0",
@@ -29,6 +32,8 @@
     "hardhat": "^2.9.3",
     "hardhat-gas-reporter": "^1.0.8",
     "solidity-coverage": "^0.7.20",
+    "prettier": "^2.8.8",
+    "prettier-plugin-solidity": "^1.1.0",
     "ts-node": "^10.7.0",
     "typescript": "^4.6.3"
   }

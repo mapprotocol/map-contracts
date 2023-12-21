@@ -24,9 +24,9 @@ library Types {
         uint256 gasLimit;
         uint256 gasUsed;
         uint256 timestamp;
-        bytes extraData;  // 96
+        bytes extraData; // 96
         bytes32 mixHash;
-        bytes nonce;     // 8
+        bytes nonce; // 8
         uint256 baseFeePerGas;
         bytes32 withdrawalsRoot;
     }
@@ -53,7 +53,7 @@ library Types {
     }
 
     struct SyncCommittee {
-        bytes pubkeys;  // 48 * 512
+        bytes pubkeys; // 48 * 512
         bytes aggregatePubkey; // 48
     }
 
@@ -73,7 +73,7 @@ library Types {
         uint256 gasLimit;
         uint256 gasUsed;
         uint256 timestamp;
-        bytes extraData;  // 96
+        bytes extraData; // 96
         uint256 baseFeePerGas;
         bytes32 blockHash;
         bytes32 transactionsRoot;
