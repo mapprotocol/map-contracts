@@ -24,7 +24,6 @@ interface ILightNodePoint is IBLSPoint {
         uint256 baseFee;
     }
 
-
     struct txReceipt {
         bytes postStateOrStatus;
         uint256 cumulativeGasUsed;
@@ -47,7 +46,6 @@ interface ILightNodePoint is IBLSPoint {
         uint256 bitmap;
         bytes signature;
         uint256 round;
-
     }
 
     //Committee change information corresponds to extraData in blockheader
@@ -78,5 +76,4 @@ interface ILightNodePoint is IBLSPoint {
         bytes keyIndex;
         bytes[] proof;
     }
-
 }

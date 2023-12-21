@@ -17,19 +17,15 @@ contract VerifyTool is ILightNodePoint {
     uint8 constant STRING_SHORT_START = 0x80;
     uint8 constant STRING_SHORT_ARRAY_START = 0xc3;
 
-
     function getVerifyTrieProof(
         bytes32 _receiptHash,
         bytes memory _keyIndex,
         bytes[] memory _proof,
         bytes memory _receiptRlp,
         uint256 _receiptType
-    )
-    external
-    pure
-    returns (bool success, string memory message){
-        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptType,_receiptRlp);
-        success = MPT.verify(expectedValue,_keyIndex,_proof,_receiptHash);
+    ) external pure returns (bool success, string memory message) {
+        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptType, _receiptRlp);
+        success = MPT.verify(expectedValue, _keyIndex, _proof, _receiptHash);
         if (!success) {
             message = "mpt verification failed";
         } else {
@@ -37,34 +33,31 @@ contract VerifyTool is ILightNodePoint {
         }
     }
 
-    function decodeHeader(bytes memory rlpBytes)
-    external
-    pure
-    returns (blockHeader memory bh){
+    function decodeHeader(bytes memory rlpBytes) external pure returns (blockHeader memory bh) {
         RLPReader.RLPItem[] memory ls = rlpBytes.toRlpItem().toList();
         bh = blockHeader({
-        parentHash : ls[0].toBytes(),
-        coinbase : ls[1].toAddress(),
-        root : ls[2].toBytes(),
-        txHash : ls[3].toBytes(),
-        receiptHash : ls[4].toBytes(),
-        number : ls[6].toUint(),
-        extraData : ls[10].toBytes(),
-        bloom : ls[5].toBytes(),
-        gasLimit : ls[7].toUint(),
-        gasUsed : ls[8].toUint(),
-        time : ls[9].toUint(),
-        mixDigest : ls[11].toBytes(),
-        nonce : ls[12].toBytes(),
-        baseFee : ls[13].toUint()
+            parentHash: ls[0].toBytes(),
+            coinbase: ls[1].toAddress(),
+            root: ls[2].toBytes(),
+            txHash: ls[3].toBytes(),
+            receiptHash: ls[4].toBytes(),
+            number: ls[6].toUint(),
+            extraData: ls[10].toBytes(),
+            bloom: ls[5].toBytes(),
+            gasLimit: ls[7].toUint(),
+            gasUsed: ls[8].toUint(),
+            time: ls[9].toUint(),
+            mixDigest: ls[11].toBytes(),
+            nonce: ls[12].toBytes(),
+            baseFee: ls[13].toUint()
         });
     }
 
-
-    function encodeHeader(blockHeader memory _bh,bytes memory _deleteAggBytes,bytes memory _deleteSealAndAggBytes)
-    external
-    pure
-    returns (bytes memory deleteAggHeaderBytes,bytes memory deleteSealAndAggHeaderBytes){
+    function encodeHeader(
+        blockHeader memory _bh,
+        bytes memory _deleteAggBytes,
+        bytes memory _deleteSealAndAggBytes
+    ) external pure returns (bytes memory deleteAggHeaderBytes, bytes memory deleteSealAndAggHeaderBytes) {
         bytes[] memory list = new bytes[](14);
         list[0] = RLPEncode.encodeBytes(_bh.parentHash);
         list[1] = RLPEncode.encodeAddress(_bh.coinbase);
@@ -86,9 +79,10 @@ contract VerifyTool is ILightNodePoint {
     }
 
     function manageAgg(istanbulExtra memory ist)
-    external
-    pure
-    returns (bytes memory deleteAggBytes,bytes memory deleteSealAndAggBytes){
+        external
+        pure
+        returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes)
+    {
         bytes[] memory list1 = new bytes[](ist.validators.length);
         bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
         bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
@@ -125,10 +119,7 @@ contract VerifyTool is ILightNodePoint {
         deleteSealAndAggBytes = RLPEncode.encodeList(manageList);
     }
 
-    function encodeTxLog(txLog[] memory _txLogs)
-    external
-    pure
-    returns (bytes memory output){
+    function encodeTxLog(txLog[] memory _txLogs) external pure returns (bytes memory output) {
         bytes[] memory listLog = new bytes[](_txLogs.length);
         bytes[] memory loglist = new bytes[](3);
         for (uint256 j = 0; j < _txLogs.length; j++) {
@@ -145,63 +136,50 @@ contract VerifyTool is ILightNodePoint {
         output = RLPEncode.encodeList(listLog);
     }
 
-    function decodeTxLog(bytes memory logsHash)
-    external
-    pure
-    returns (txLog[] memory _txLogs){
+    function decodeTxLog(bytes memory logsHash) external pure returns (txLog[] memory _txLogs) {
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
         _txLogs = new txLog[](ls.length);
-        for(uint256 i = 0; i< ls.length; i++){
+        for (uint256 i = 0; i < ls.length; i++) {
             RLPReader.RLPItem[] memory item = ls[i].toList();
             RLPReader.RLPItem[] memory firstItemList = item[1].toList();
             bytes[] memory topic = new bytes[](firstItemList.length);
-            for(uint256 j = 0; j < firstItemList.length; j++){
+            for (uint256 j = 0; j < firstItemList.length; j++) {
                 topic[j] = firstItemList[j].toBytes();
             }
-            _txLogs[i] = txLog({
-            addr:item[0].toAddress(),
-            topics : topic,
-            data : item[2].toBytes()
-            });
+            _txLogs[i] = txLog({addr: item[0].toAddress(), topics: topic, data: item[2].toBytes()});
         }
     }
 
-    function decodeTxReceipt(bytes memory _receiptRlp)
-    external
-    pure
-    returns (bytes memory logHash){
+    function decodeTxReceipt(bytes memory _receiptRlp) external pure returns (bytes memory logHash) {
         RLPReader.RLPItem[] memory ls = _receiptRlp.toRlpItem().toList();
         logHash = RLPReader.toRlpBytes(ls[3]);
     }
 
-    function verifyHeader(address _coinbase,bytes memory _seal,bytes memory _headerWithoutSealAndAgg)
-    public
-    pure
-    returns (bool ret, bytes32 headerHash){
-
+    function verifyHeader(
+        address _coinbase,
+        bytes memory _seal,
+        bytes memory _headerWithoutSealAndAgg
+    ) public pure returns (bool ret, bytes32 headerHash) {
         headerHash = keccak256(abi.encodePacked(keccak256(abi.encodePacked(_headerWithoutSealAndAgg))));
-        ret = verifySign(
-            _seal,
-            headerHash,
-            _coinbase
-        );
+        ret = verifySign(_seal, headerHash, _coinbase);
     }
 
-    function getVerifyExpectedValueHash(uint256 _receiptType,bytes memory receiptRlp) internal pure returns(bytes memory expectedValue){
-        if(_receiptType == 0){
+    function getVerifyExpectedValueHash(uint256 _receiptType, bytes memory receiptRlp)
+        internal
+        pure
+        returns (bytes memory expectedValue)
+    {
+        if (_receiptType == 0) {
             return receiptRlp;
-        }else{
+        } else {
             bytes memory tempType = abi.encode(_receiptType);
             bytes1 tip = tempType[31];
             return abi.encodePacked(tip, receiptRlp);
         }
     }
 
-    function splitExtra(bytes memory extra)
-    internal
-    pure
-    returns (bytes memory newExtra){
-        require(extra.length >= 32,"invalid extra result type");
+    function splitExtra(bytes memory extra) internal pure returns (bytes memory newExtra) {
+        require(extra.length >= 32, "invalid extra result type");
         newExtra = new bytes(extra.length - 32);
         uint256 n = 0;
         for (uint256 i = 32; i < extra.length; i++) {
@@ -211,11 +189,11 @@ contract VerifyTool is ILightNodePoint {
         return newExtra;
     }
 
-
-    function encodeAggregatedSeal(uint256 bitmap, bytes memory signature, uint256 round)
-    internal
-    pure
-    returns (bytes memory output) {
+    function encodeAggregatedSeal(
+        uint256 bitmap,
+        bytes memory signature,
+        uint256 round
+    ) internal pure returns (bytes memory output) {
         bytes memory output1 = RLPEncode.encodeUint(bitmap);
         bytes memory output2 = RLPEncode.encodeBytes(signature);
         bytes memory output3 = RLPEncode.encodeUint(round);
@@ -226,22 +204,27 @@ contract VerifyTool is ILightNodePoint {
         output = RLPEncode.encodeList(list);
     }
 
-    function verifySign(bytes memory seal, bytes32 hash, address coinbase)
-    internal
-    pure
-    returns (bool) {
+    function verifySign(
+        bytes memory seal,
+        bytes32 hash,
+        address coinbase
+    ) internal pure returns (bool) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(seal);
-        if(v <= 1){
+        if (v <= 1) {
             v = v + 27;
         }
         return coinbase == ECDSA.recover(hash, v, r, s);
     }
 
     function splitSignature(bytes memory sig)
-    internal
-    pure
-    returns
-    (bytes32 r, bytes32 s, uint8 v){
+        internal
+        pure
+        returns (
+            bytes32 r,
+            bytes32 s,
+            uint8 v
+        )
+    {
         require(sig.length == 65, "invalid signature length");
         assembly {
             r := mload(add(sig, 32))
@@ -249,5 +232,4 @@ contract VerifyTool is ILightNodePoint {
             v := byte(0, mload(add(sig, 96)))
         }
     }
-
 }

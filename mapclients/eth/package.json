@@ -6,7 +6,7 @@
   "scripts": {
     "map:deploy:lightnode": "npx hardhat deploy --tags LightNode --network Bsc",
     "map:deploy:lightnodeUp": "npx hardhat deploy --tags LightNodeUp --network Bsc",
-    "format": "prettier --write ."
+    "format": "prettier --print-width 120 --tab-width 4 --write ./contracts ./deploy ./tasks ./test"
   },
   "repository": {
     "type": "git",
@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/mapprotocol/map-contracts#readme.md",
   "dependencies": {
+    "@mapprotocol/protocol": "^0.5.0",
     "@openzeppelin/contracts": "^4.3.1",
     "hardhat-deploy-ethers": "^0.3.0-beta.13",
     "ajv": "^8.8.2",

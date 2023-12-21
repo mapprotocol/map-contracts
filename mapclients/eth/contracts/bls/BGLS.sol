@@ -7,38 +7,43 @@ import "../interface/IBLSPoint.sol";
 contract BGLS is IBLSPoint {
     G1 g1 = G1(1, 2);
 
-    G2 g2 = G2(
-        0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed,
-        0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2,
-        0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa,
-        0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b
-    );
+    G2 g2 =
+        G2(
+            0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed,
+            0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2,
+            0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa,
+            0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b
+        );
 
-    function expMod(uint256 base, uint256 e, uint256 m) private view returns (uint256 result) {
+    function expMod(
+        uint256 base,
+        uint256 e,
+        uint256 m
+    ) private view returns (uint256 result) {
         bool success;
         assembly {
-        // define pointer
+            // define pointer
             let p := mload(0x40)
-        // store data assembly-favouring ways
-            mstore(p, 0x20)             // Length of Base
-            mstore(add(p, 0x20), 0x20)  // Length of Exponent
-            mstore(add(p, 0x40), 0x20)  // Length of Modulus
-            mstore(add(p, 0x60), base)  // Base
-            mstore(add(p, 0x80), e)     // Exponent
-            mstore(add(p, 0xa0), m)     // Modulus
-        // 0x05           id of precompiled modular exponentiation contract
-        // 0xc0 == 192    size of call parameters
-        // 0x20 ==  32    size of result
+            // store data assembly-favouring ways
+            mstore(p, 0x20) // Length of Base
+            mstore(add(p, 0x20), 0x20) // Length of Exponent
+            mstore(add(p, 0x40), 0x20) // Length of Modulus
+            mstore(add(p, 0x60), base) // Base
+            mstore(add(p, 0x80), e) // Exponent
+            mstore(add(p, 0xa0), m) // Modulus
+            // 0x05           id of precompiled modular exponentiation contract
+            // 0xc0 == 192    size of call parameters
+            // 0x20 ==  32    size of result
             success := staticcall(gas(), 0x05, p, 0xc0, p, 0x20)
-        // data
+            // data
             result := mload(p)
         }
         require(success, "modular exponentiation failed");
     }
 
     function addPoints(G1 memory a, G1 memory b) public view returns (G1 memory) {
-        uint[4] memory input = [a.x, a.y, b.x, b.y];
-        uint[2] memory result;
+        uint256[4] memory input = [a.x, a.y, b.x, b.y];
+        uint256[2] memory result;
         bool success = false;
         assembly {
             success := staticcall(gas(), 6, input, 0x80, result, 0x40)
@@ -47,13 +52,13 @@ contract BGLS is IBLSPoint {
         return G1(result[0], result[1]);
     }
 
-    function chkBit(bytes memory b, uint x) internal pure returns (bool) {
-        return uint(uint8(b[31 - x / 8])) & (uint(1) << (x % 8)) != 0;
+    function chkBit(bytes memory b, uint256 x) internal pure returns (bool) {
+        return uint256(uint8(b[31 - x / 8])) & (uint256(1) << (x % 8)) != 0;
     }
 
     function sumPoints(G1[] memory points, bytes memory indices) public view returns (G1 memory) {
         G1 memory acc = G1(0, 0);
-        for (uint i = 0; i < points.length; i++) {
+        for (uint256 i = 0; i < points.length; i++) {
             if (chkBit(indices, i)) {
                 acc = addPoints(acc, points[i]);
             }
@@ -62,9 +67,9 @@ contract BGLS is IBLSPoint {
     }
 
     // kP
-    function scalarMultiply(G1 memory point, uint scalar) public returns (G1 memory) {
-        uint[3] memory input = [point.x, point.y, scalar];
-        uint[2] memory result;
+    function scalarMultiply(G1 memory point, uint256 scalar) public returns (G1 memory) {
+        uint256[3] memory input = [point.x, point.y, scalar];
+        uint256[2] memory result;
         assembly {
             if iszero(call(not(0), 0x07, 0, input, 0x60, result, 0x40)) {
                 revert(0, 0)
@@ -74,25 +79,28 @@ contract BGLS is IBLSPoint {
     }
 
     //returns e(a,x) == e(b,y)
-    function pairingCheck(G1 memory a, G2 memory x, G1 memory b, G2 memory y) public view returns (bool) {
-        uint[12] memory input = [a.x, a.y, x.xi, x.xr, x.yi, x.yr, b.x, prime - b.y, y.xi, y.xr, y.yi, y.yr];
-        uint[1] memory result;
+    function pairingCheck(
+        G1 memory a,
+        G2 memory x,
+        G1 memory b,
+        G2 memory y
+    ) public view returns (bool) {
+        uint256[12] memory input = [a.x, a.y, x.xi, x.xr, x.yi, x.yr, b.x, prime - b.y, y.xi, y.xr, y.yi, y.yr];
+        uint256[1] memory result;
         bool success = false;
         assembly {
             success := staticcall(gas(), 8, input, 0x180, result, 0x20)
         }
         require(success, "pairing check fail");
         return result[0] == 1;
-
     }
-
 
     // compatible with https://github.com/dusk-network/dusk-crypto/blob/master/bls/bls.go#L138-L148
     // which is used in github.com/mapprotocol/atlas
     // https://github.com/mapprotocol/atlas/blob/main/helper/bls/bn256.go#L84-L94
 
-    uint constant order = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
-    uint constant prime = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47;
+    uint256 constant order = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
+    uint256 constant prime = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47;
 
     // try-and-increment is an acceptable way to hash to G1, although not ideal
     // todo by long: eip-3068 is a much better way, should explore the implementation
@@ -121,7 +129,11 @@ contract BGLS is IBLSPoint {
     //        return res;
     //    }
 
-    function checkSignature(bytes memory message, G1 memory sig, G2 memory aggKey) public view returns (bool) {
+    function checkSignature(
+        bytes memory message,
+        G1 memory sig,
+        G2 memory aggKey
+    ) public view returns (bool) {
         return pairingCheck(sig, g2, hashToG1(message), aggKey);
     }
 
@@ -174,10 +186,10 @@ contract BGLS is IBLSPoint {
         bool success;
         uint256[2] memory result;
         assembly {
-        // 0x06     id of precompiled bn256Add contract
-        // 128      size of call parameters, i.e. 128 bytes total
-        // 64       size of call return value,
-        //              i.e. 64 bytes / 512 bit for a BN256 curve point
+            // 0x06     id of precompiled bn256Add contract
+            // 128      size of call parameters, i.e. 128 bytes total
+            // 64       size of call return value,
+            //              i.e. 64 bytes / 512 bit for a BN256 curve point
             success := staticcall(gas(), 0x06, input, 128, result, 64)
         }
         require(success, "elliptic curve addition failed");
@@ -188,10 +200,9 @@ contract BGLS is IBLSPoint {
 
     function bn256G1IsOnCurve(G1 memory point) private pure returns (bool) {
         // check if the provided point is on the bn256 curve (y**2 = x**3 + curveB)
-        return mulmod(point.y, point.y, prime) ==
-        addmod(
-            mulmod(point.x, mulmod(point.x, point.x, prime), prime), curveB, prime
-        );
+        return
+            mulmod(point.y, point.y, prime) ==
+            addmod(mulmod(point.x, mulmod(point.x, point.x, prime), prime), curveB, prime);
     }
 
     // safeSigningPoint ensures that the HashToG1 point we are returning
@@ -235,7 +246,7 @@ contract BGLS is IBLSPoint {
     // modulo prime, and legendre(t) == 0 when t == 0 mod prime.
     function legendre(uint256 t) private view returns (int256 chi) {
         uint256 s = expMod(t, pMinus1Over2, prime);
-        chi = s != 0 ? (2 * int256(s & 1) - 1) : int(0);
+        chi = s != 0 ? (2 * int256(s & 1) - 1) : int256(0);
     }
 
     // neg computes the additive inverse (the negative) modulo prime.
@@ -281,7 +292,11 @@ contract BGLS is IBLSPoint {
     // distribution is ~1e-77. This is a *significant* improvement from s0 mod p.
     // For all practical purposes, there is no difference from a
     // uniform distribution
-    function hashToBase(bytes memory message, bytes1 c0, bytes1 c1) internal pure returns (uint256 t) {
+    function hashToBase(
+        bytes memory message,
+        bytes1 c0,
+        bytes1 c1
+    ) internal pure returns (uint256 t) {
         uint256 s0 = uint256(keccak256(abi.encodePacked(c0, message)));
         uint256 s1 = uint256(keccak256(abi.encodePacked(c1, message)));
         t = addmod(mulmod(s0, Two256ModP, prime), s1, prime);
@@ -394,18 +409,16 @@ contract BGLS is IBLSPoint {
         int256 residue2 = legendre(y);
 
         // i is the index which gives us the correct x value (x1, x2, or x3)
-        int256 i = (residue1 - 1) * (residue2 - 3) / 4 + 1;
+        int256 i = ((residue1 - 1) * (residue2 - 3)) / 4 + 1;
 
         // This is the simplest way to determine which x value is correct
         // but is not secure. If possible, we should improve this.
         uint256 x;
         if (i == 1) {
             x = x1;
-        }
-        else if (i == 2) {
+        } else if (i == 2) {
             x = x2;
-        }
-        else {
+        } else {
             x = x3;
         }
 
