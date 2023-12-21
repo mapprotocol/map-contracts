@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
-import "./interface/ILightNode.sol";
-import "./interface/IMPTVerify.sol";
-import "./lib/RLPReader.sol";
+import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
+import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 import "./lib/Helper.sol";
 import "./lib/Types.sol";
 
@@ -65,11 +65,11 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         bytes32[] memory _syncCommitteePubkeyHashes, // divide 512 pubkeys into 3 parts: 171 + 171 + 170
         bool _verifyUpdate
     ) public initializer {
-        require(_controller != address(0), "invalid controller address");
-        require(_mptVerify != address(0), "invalid mptVerify address");
-        require(_syncCommitteePubkeyHashes.length == 6, "invalid syncCommitteePubkeyHashes length");
+        require(_controller != address(0), "invalid controller");
+        require(_mptVerify != address(0), "invalid mptVerify");
+        require(_syncCommitteePubkeyHashes.length == 6, "invalid syncCommitteePubkeyHashes");
         for (uint256 i = 0; i < _syncCommitteePubkeyHashes.length; i++) {
-            require(_syncCommitteePubkeyHashes[i] != bytes32(0), "invalid syncCommitteePubkeyHashes item");
+            require(_syncCommitteePubkeyHashes[i] != bytes32(0), "invalid syncCommitteePubkeyHashes");
         }
         require(_curSyncCommitteeAggPubKey.length == BLS_PUBKEY_LENGTH, "invalid curSyncCommitteeAggPubKey");
         require(_nextSyncCommitteeAggPubKey.length == BLS_PUBKEY_LENGTH, "invalid nextSyncCommitteeAggPubKey");
@@ -93,8 +93,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
 
     function initSyncCommitteePubkey(bytes memory _syncCommitteePubkeyPart) public {
-        require(!initialized, "contract is initialized!");
-        require(initStage != 0, "should call initialize() first!");
+        require(!initialized, "initialized!");
+        require(initStage != 0, "call initialize() first!");
 
         uint256 pubkeyLength;
         if (initStage % 3 != 0) {// initStage 1, 2, 4, 5
@@ -120,7 +120,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     }
 
     function updateLightClient(bytes memory _data) external override whenNotPaused {
-        require(initialized, "contract is not initialized!");
+        require(initialized, "not initialized!");
         require(exeHeaderEndNumber == 0, "previous exe block headers should be updated before update light client");
 
         Types.LightClientUpdate memory update = abi.decode(_data, (Types.LightClientUpdate));
@@ -207,7 +207,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         emit UpdateBlockHeader(msg.sender, headers[0].number, headers[headers.length - 1].number);
     }
 
-
     function verifyProofData(bytes memory _receiptProof)
     external
     view
@@ -246,8 +245,23 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
+    function verifyProofDataWithCache(bytes memory _receiptProof)
+    external
+    override
+    returns (
+        bool success,
+        string memory message,
+        bytes memory logs
+    ) {
+        return this.verifyProofData(_receiptProof);
+    }
+
     function clientState() external view override returns (bytes memory) {
         return abi.encode(exeHeaderStartNumber, exeHeaderEndNumber);
+    }
+
+    function finalizedState(bytes memory ) external override pure returns(bytes memory) {
+        return bytes("");
     }
 
     function headerHeight() external view override returns (uint256) {

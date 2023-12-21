@@ -118,7 +118,7 @@ describe("LightNode", function () {
 
             await expect(
                 lightNode.initSyncCommitteePubkey(bootstrap.curSyncCommitteePubkeys[0])
-            ).to.be.revertedWith("contract is initialized!");
+            ).to.be.revertedWith("initialized!");
         });
 
         it("re-initialization should fail", async function () {

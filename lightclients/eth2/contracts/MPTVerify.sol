@@ -2,8 +2,8 @@
 
 pragma solidity 0.8.7;
 
-import "./interface/IMPTVerify.sol";
-import "./lib/MPT.sol";
+import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
+import "@mapprotocol/protocol/contracts/lib/MPT.sol";
 
 contract MPTVerify is IMPTVerify {
     function verifyTrieProof(
@@ -12,14 +12,6 @@ contract MPTVerify is IMPTVerify {
         bytes[] memory proof,
         bytes memory node
     ) external pure override returns (bool) {
-        MPT.MerkleProof memory mp = MPT.MerkleProof({
-            expectedRoot: root,
-            key: key,
-            proof: proof,
-            keyIndex: 0,
-            proofIndex: 0,
-            expectedValue: node
-        });
-        return MPT.verifyTrieProof(mp);
+        return MPT.verify(node, key, proof, root);
     }
 }
