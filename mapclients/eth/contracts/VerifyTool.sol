@@ -2,38 +2,36 @@
 
 pragma solidity 0.8.7;
 
-import "./lib/RLPReader.sol";
-import "./lib/RLPEncode.sol";
-import "./interface/ILightNodePoint.sol";
-import "./lib/MPT.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
+import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
+import "@mapprotocol/protocol/contracts/lib/MPT.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "./interface/ILightNodePoint.sol";
 
 contract VerifyTool is ILightNodePoint {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
-    using MPT for MPT.MerkleProof;
 
     uint8 constant STRING_SHORT_START = 0x80;
     uint8 constant STRING_SHORT_ARRAY_START = 0xc3;
 
 
-    function getVerifyTrieProof(receiptProof memory _receiptProof)
+    function getVerifyTrieProof(
+        bytes32 _receiptHash,
+        bytes memory _keyIndex,
+        bytes[] memory _proof,
+        bytes memory _receiptRlp,
+        uint256 _receiptType
+    )
     external
     pure
     returns (bool success, string memory message){
-        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptProof.txReceiptRlp.receiptType,_receiptProof.txReceiptRlp.receiptRlp);
-        MPT.MerkleProof memory mp;
-        mp.expectedRoot = bytes32(_receiptProof.header.receiptHash);
-        mp.key = _receiptProof.keyIndex;
-        mp.proof = _receiptProof.proof;
-        mp.keyIndex = 0;
-        mp.proofIndex = 0;
-        mp.expectedValue = expectedValue;
-        success = MPT.verifyTrieProof(mp);
+        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptType,_receiptRlp);
+        success = MPT.verify(expectedValue,_keyIndex,_proof,_receiptHash);
         if (!success) {
-            message = "receipt mismatch";
+            message = "mpt verification failed";
         } else {
             message = "success";
         }
@@ -203,7 +201,7 @@ contract VerifyTool is ILightNodePoint {
     internal
     pure
     returns (bytes memory newExtra){
-        require(extra.length >= 32,"Invalid extra result type");
+        require(extra.length >= 32,"invalid extra result type");
         newExtra = new bytes(extra.length - 32);
         uint256 n = 0;
         for (uint256 i = 32; i < extra.length; i++) {

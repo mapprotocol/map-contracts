@@ -4,7 +4,13 @@ pragma solidity 0.8.7;
 import "./ILightNodePoint.sol";
 
 interface IVerifyTool is ILightNodePoint {
-    function getVerifyTrieProof(receiptProof memory _receiptProof)
+    function getVerifyTrieProof(
+        bytes32 _receiptHash,
+        bytes memory _keyIndex,
+        bytes[] memory _proof,
+        bytes memory _receiptRlp,
+        uint256 _receiptType
+    )
     external
     pure
     returns (bool success, string memory message);

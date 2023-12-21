@@ -25,7 +25,7 @@ module.exports = async function ({ethers, deployments}) {
     })
 
 
-    let lightNode = await ethers.getContract('LightNode');
+    let lightNode = await deployments.get('LightNode');
 
     console.log("LightNode success：",lightNode.address)
 }

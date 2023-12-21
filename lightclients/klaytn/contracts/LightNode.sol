@@ -44,6 +44,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         uint256 headerHeight;
     }
 
+    mapping(uint256 => bytes32) private cachedReceiptRoot;
+
     event SetCommitteeSize(uint256 committeeSize);
 
     function initialize(
@@ -120,29 +122,93 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
             }
         } else if (receiptProof.deriveSha == IKlaytn.DeriveShaOriginal.DeriveShaOriginal) {
             IKlaytn.ReceiptProofOriginal memory proof = abi.decode(receiptProof.proof, (IKlaytn.ReceiptProofOriginal));
-
-            (success, ,) = checkBlockHeader(proof.header, true);
-            if (!success) {
-                message = "DeriveShaOriginal header verify failed";
-                return(success, message, logs);
-            }
-
-            success = mptVerifier.verifyTrieProof(bytes32(proof.header.receiptsRoot), proof.keyIndex, proof.proof, proof.txReceipt);
-
-            if (success) {
-                message = "DeriveShaOriginal mpt verify success";
-
-                logs = proof.txReceipt.toRlpItem().toList()[RLP_INDEX].toRlpBytes();
-
-                return(success, message, logs);
-            } else {
-                message = "DeriveShaOriginal mpt verify failed";
-                return(false, message, logs);
-            }
+            (success, message, logs) = _verifyProofData(proof);
         } else {
             message = "Klaytn verify failed";
             return(false, message, logs);
         }
+    }
+
+    function verifyProofDataWithCache(bytes memory _receiptProof)
+    external
+    override
+    returns (bool success, string memory message,bytes memory logs){
+        IKlaytn.ReceiptProof memory receiptProof = abi.decode(_receiptProof, (IKlaytn.ReceiptProof));
+
+        if (receiptProof.deriveSha == IKlaytn.DeriveShaOriginal.DeriveShaConcat) {
+            IKlaytn.ReceiptProofConcat memory proof = abi.decode(receiptProof.proof, (IKlaytn.ReceiptProofConcat));
+            IKlaytn.BlockHeader memory header = proof.header;
+
+            (success, ,) = checkBlockHeader(header, true);
+            if (!success) {
+                message = "DeriveShaConcat header verify failed";
+                return(success, message, logs);
+            }
+            success = verifyTool.checkReceiptsConcat(proof.receipts, (bytes32)(header.receiptsRoot));
+            if (success) {
+                bytes memory bytesReceipt = proof.receipts[proof.logIndex];
+
+                logs = bytesReceipt.toRlpItem().toList()[RLP_INDEX].toRlpBytes();
+
+                message = "DeriveShaConcat mpt verify success";
+                return(success, message, logs);
+            }else{
+                message = "DeriveShaConcat mpt verify failed";
+                return(success, message, logs);
+            }
+        } else if (receiptProof.deriveSha == IKlaytn.DeriveShaOriginal.DeriveShaOriginal) {
+            IKlaytn.ReceiptProofOriginal memory proof = abi.decode(receiptProof.proof, (IKlaytn.ReceiptProofOriginal));
+
+            if(cachedReceiptRoot[proof.header.number] != bytes32("")){
+
+                logs = proof.txReceipt.toRlpItem().toList()[RLP_INDEX].toRlpBytes();
+
+                success = mptVerifier.verifyTrieProof(cachedReceiptRoot[proof.header.number], proof.keyIndex, proof.proof, proof.txReceipt);
+                if (!success) {
+                    message = "Mpt verification failed";
+                } else {
+                    message = "DeriveShaOriginal mpt verify success";
+                }
+
+                return(success, message, logs);
+
+            }else{
+                (success,message,logs)= _verifyProofData(proof);
+                if(success) {
+                    cachedReceiptRoot[proof.header.number] = bytes32(proof.header.receiptsRoot);
+                }
+            }
+
+
+        } else {
+            message = "Klaytn verify failed";
+            return(false, message, logs);
+        }
+    }
+
+
+    function _verifyProofData(IKlaytn.ReceiptProofOriginal memory proof)
+    internal
+    view
+    returns (bool success, string memory message, bytes memory logs){
+
+        logs = proof.txReceipt.toRlpItem().toList()[RLP_INDEX].toRlpBytes();
+
+        (success, ,) = checkBlockHeader(proof.header, true);
+        if (!success) {
+            message = "DeriveShaOriginal header verify failed";
+            return(success, message, logs);
+        }
+
+        success = mptVerifier.verifyTrieProof(bytes32(proof.header.receiptsRoot), proof.keyIndex, proof.proof, proof.txReceipt);
+
+        if (!success) {
+            message = "Mpt verification failed";
+        } else {
+            message = "DeriveShaOriginal mpt verify success";
+        }
+
+        return(success, message, logs);
     }
 
     function updateBlockHeader(bytes memory _blockHeaders)

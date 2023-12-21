@@ -29,8 +29,8 @@ module.exports = {
     hardhat: {
       forking: {
         enabled: false,
-        //url: `https://bsctest.pls2e.cc`,
-        url: `https://data-seed-prebsc-1-s1.binance.org:8545`
+        url: `https://rpc.maplabs.io/`,
+        //url: `https://data-seed-prebsc-1-s1.binance.org:8545`
         //url: `https://bsc-dataseed.eme-node.com`,
         //url: `https://bsc-dataseed2.defibit.io/`,
       },

@@ -128,7 +128,11 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         }
     }
 
-    function updateBlockHeader(bytes memory _blockHeaders)
+    function verifyProofDataWithCache(bytes memory _receiptProof) external override
+    returns (bool success, string memory message,bytes memory logs){}
+
+
+function updateBlockHeader(bytes memory _blockHeaders)
     external
     override
     {
