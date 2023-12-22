@@ -203,7 +203,7 @@ describe("LightNode start test", function () {
             await lightClientDelete.getBytes(proofs.provedata220559)
         );
         expect(data220558.success).to.equal(false);
-        expect(data220558.message).to.equal("header height error");
+        expect(data220558.message).to.equal("Out of verify range");
         await lightClientDelete.updateBlockHeader(proofs.header220000, proofs.ist220000, proofs.aggpk220000);
 
         // let data220559 =  await lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedata220559));
@@ -213,6 +213,6 @@ describe("LightNode start test", function () {
         let dataErr = await lightClientDelete.callStatic.verifyProofData(
             await lightClientDelete.getBytes(proofs.provedataHeaderError)
         );
-        expect(dataErr.message).to.equal("verifyHeaderSig fail");
+        expect(dataErr.message).to.equal("VerifyHeaderSig fail");
     });
 });

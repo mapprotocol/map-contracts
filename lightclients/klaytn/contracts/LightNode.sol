@@ -44,8 +44,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         uint256 headerHeight;
     }
 
-    mapping(uint256 => bytes32) private cachedReceiptRoot;
-
     event SetCommitteeSize(uint256 committeeSize);
 
     function initialize(
@@ -93,9 +91,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     external
     view
     override
-    returns (bool success,
-        string memory message,
-        bytes memory logs)
+    returns (bool success, string memory message, bytes memory logs)
     {
         IKlaytn.ReceiptProof memory receiptProof = abi.decode(_receiptProof, (IKlaytn.ReceiptProof));
 
@@ -158,28 +154,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
             }
         } else if (receiptProof.deriveSha == IKlaytn.DeriveShaOriginal.DeriveShaOriginal) {
             IKlaytn.ReceiptProofOriginal memory proof = abi.decode(receiptProof.proof, (IKlaytn.ReceiptProofOriginal));
-
-            if(cachedReceiptRoot[proof.header.number] != bytes32("")){
-
-                logs = proof.txReceipt.toRlpItem().toList()[RLP_INDEX].toRlpBytes();
-
-                success = mptVerifier.verifyTrieProof(cachedReceiptRoot[proof.header.number], proof.keyIndex, proof.proof, proof.txReceipt);
-                if (!success) {
-                    message = "Mpt verification failed";
-                } else {
-                    message = "DeriveShaOriginal mpt verify success";
-                }
-
-                return(success, message, logs);
-
-            }else{
-                (success,message,logs)= _verifyProofData(proof);
-                if(success) {
-                    cachedReceiptRoot[proof.header.number] = bytes32(proof.header.receiptsRoot);
-                }
-            }
-
-
+            (success, message, logs) = _verifyProofData(proof);
         } else {
             message = "Klaytn verify failed";
             return(false, message, logs);

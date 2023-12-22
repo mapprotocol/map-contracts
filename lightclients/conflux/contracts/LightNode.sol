@@ -196,6 +196,21 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         }
     }
 
+    function verifyProofDataWithCache(bytes memory _receiptProof)
+    external
+    override
+    returns
+    (bool success, string memory message,bytes memory logs){
+        Types.ReceiptProof memory proof = abi.decode(_receiptProof, (Types.ReceiptProof));
+        success = verifyReceiptProof(proof);
+
+        if (success) {
+            logs = RLPReader.toRlpItem(proof.receipt).toList()[4].toRlpBytes();
+        } else {
+            message = "failed to verify mpt";
+        }
+    }
+
     function clientState() external view override returns(bytes memory) {
         return abi.encode(
             _state.epoch,
