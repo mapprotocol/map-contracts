@@ -14,4 +14,7 @@ task("verifyToolDeploy", "Write initialization data required by LightNode", requ
     .addOptionalParam("toolsalt", "deploy contract salt", VERIFYTOOL_SALT, types.string)
     .addOptionalParam("factory", "mos contract address", DEPLOY_FACTORY, types.string);
 
+task("setVerifyTool", "LightNode set the verifyTool contract address", require("./setVerifyTool"))
+    .addParam("tool", "verifyTool contract address",)
+
 task("tronDeploy", "Write initialization data required by LightNode", require("./tronDeploy"));

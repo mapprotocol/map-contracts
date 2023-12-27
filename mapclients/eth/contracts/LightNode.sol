@@ -99,7 +99,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         return abi.encode(_receiptProof);
     }
 
-    function setVerifyTool(address _verifyTool) external {
+    function setVerifyTool(address _verifyTool) external onlyOwner {
         verifyTool = IVerifyTool(_verifyTool);
         emit NewVerifyTool(_verifyTool);
     }
