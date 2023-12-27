@@ -25,6 +25,9 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
     mapping(uint256 => bytes32) public finalizedBlocks;
 
 
+    event NewLedgerInfo(address ledgerInfo);
+    event NewProvable(address mptVerify);
+
     function initialize(
         address controller,
         address ledgerInfoUtil,
@@ -265,6 +268,18 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         }
 
         return true;
+    }
+
+    //    LedgerInfo private _ledgerInfo;
+    //    Provable private _mptVerify;
+    function setLedgerInfo(address ledgerInfo) external onlyOwner {
+        _ledgerInfo = LedgerInfo(ledgerInfo);
+        emit NewLedgerInfo(ledgerInfo);
+    }
+
+    function setProvable(address mptVerify) external onlyOwner {
+        _mptVerify = Provable(mptVerify);
+        emit NewProvable(mptVerify);
     }
 
     /** UUPS *********************************************************/

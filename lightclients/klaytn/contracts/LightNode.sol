@@ -45,6 +45,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
     }
 
     event SetCommitteeSize(uint256 committeeSize);
+    event NewVerifyTool(address newVerifyTool);
 
     function initialize(
         address[] memory _validators,
@@ -161,31 +162,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         }
     }
 
-
-    function _verifyProofData(IKlaytn.ReceiptProofOriginal memory proof)
-    internal
-    view
-    returns (bool success, string memory message, bytes memory logs){
-
-        logs = proof.txReceipt.toRlpItem().toList()[RLP_INDEX].toRlpBytes();
-
-        (success, ,) = checkBlockHeader(proof.header, true);
-        if (!success) {
-            message = "DeriveShaOriginal header verify failed";
-            return(success, message, logs);
-        }
-
-        success = mptVerifier.verifyTrieProof(bytes32(proof.header.receiptsRoot), proof.keyIndex, proof.proof, proof.txReceipt);
-
-        if (!success) {
-            message = "Mpt verification failed";
-        } else {
-            message = "DeriveShaOriginal mpt verify success";
-        }
-
-        return(success, message, logs);
-    }
-
     function updateBlockHeader(bytes memory _blockHeaders)
     external
     override
@@ -275,6 +251,35 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         committeeSize = _committeeSize;
 
         emit SetCommitteeSize(_committeeSize);
+    }
+
+    function setVerifyTool(address _verifyTool) external onlyOwner {
+        verifyTool = IVerifyTool(_verifyTool);
+        emit NewVerifyTool(_verifyTool);
+    }
+
+    function _verifyProofData(IKlaytn.ReceiptProofOriginal memory proof)
+    internal
+    view
+    returns (bool success, string memory message, bytes memory logs){
+
+        logs = proof.txReceipt.toRlpItem().toList()[RLP_INDEX].toRlpBytes();
+
+        (success, ,) = checkBlockHeader(proof.header, true);
+        if (!success) {
+            message = "DeriveShaOriginal header verify failed";
+            return(success, message, logs);
+        }
+
+        success = mptVerifier.verifyTrieProof(bytes32(proof.header.receiptsRoot), proof.keyIndex, proof.proof, proof.txReceipt);
+
+        if (!success) {
+            message = "Mpt verification failed";
+        } else {
+            message = "DeriveShaOriginal mpt verify success";
+        }
+
+        return(success, message, logs);
     }
 
     // remove all validator sets in the epoch
