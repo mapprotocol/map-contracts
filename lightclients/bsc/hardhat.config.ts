@@ -6,6 +6,8 @@ import 'hardhat-deploy';
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 
+require("./tasks");
+
 dotenv.config();
 
 const config: HardhatUserConfig ={

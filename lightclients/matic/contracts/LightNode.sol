@@ -31,6 +31,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     address private _pendingAdmin;
 
+    event SetMptVerify(address newMptVerify);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
 
@@ -68,9 +69,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         _initBlock(_header);
     }
 
-    function setMptVerifier(address _verifier) external onlyOwner {
+    function setMptVerify(address _verifier) external onlyOwner {
         require(_verifier != address(0), "LightNode: verifier is the zero address");
         mptVerify = _verifier;
+        emit SetMptVerify(_verifier);
     }
 
     function togglePause(bool _flag) external onlyOwner returns (bool) {
