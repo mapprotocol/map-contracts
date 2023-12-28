@@ -26,6 +26,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     uint256 public startHeight;
     ValidatorCommitment public validatorCommitment;
     mapping(uint256 => ValidatorCommitment) public validatorCommitments;
+    mapping(uint256 => bytes32) private cachedReceiptRoot;
 
     struct ValidatorCommitment {
         bytes32 commitment;
@@ -37,6 +38,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     event MapUpdateValidators(bytes32 commitment, uint256 epoch);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
+    event NewVerifyTool(address newVerifyTool);
+    event NewZKVerifier(address zkVerifier);
 
     modifier onlyOwner() {
         require(msg.sender == _getAdmin(), "LightNode: only admin");
@@ -100,6 +103,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         return abi.encode(_receiptProof, _zkProofs);
     }
 
+    function setVerifyTool(address _verifyTool) external onlyOwner {
+        verifyTool = IVerifyTool(_verifyTool);
+        emit NewVerifyTool(_verifyTool);
+    }
+
+    function setZKVerifier(address _zkVerifier) external onlyOwner {
+        zkVerifier = IZKVerifyTool(_zkVerifier);
+        emit NewZKVerifier(_zkVerifier);
+    }
+
     function verifyProofData(
         bytes memory _receiptProofBytes
     ) external view override returns (bool success, string memory message, bytes memory logsHash) {
@@ -108,6 +121,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
             (receiptProof, uint256[8])
         );
 
+        return _verifyProofData(_receiptProof, _zkProofs);
+    }
+
+    function _verifyProofData(
+        receiptProof memory _receiptProof,
+        uint256[8] memory _zkProofs
+    ) internal view returns (bool success, string memory message, bytes memory logsHash) {
         (uint min, uint max) = verifiableHeaderRange();
         uint height = _receiptProof.header.number;
         if (height <= min || height >= max) {
@@ -116,7 +136,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         }
 
         logsHash = verifyTool.decodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
-        (success, message) = verifyTool.getVerifyTrieProof(_receiptProof);
+        (success, message) = verifyTool.getVerifyTrieProof(
+            bytes32(_receiptProof.header.receiptHash),
+            _receiptProof.keyIndex,
+            _receiptProof.proof,
+            _receiptProof.txReceiptRlp.receiptRlp,
+            _receiptProof.txReceiptRlp.receiptType
+        );
         if (!success) {
             message = "LightNode: receipt mismatch";
             return (success, message, logsHash);
@@ -127,6 +153,35 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
             return (success, message, logsHash);
         }
         return (success, message, logsHash);
+    }
+
+    function verifyProofDataWithCache(
+        bytes memory _receiptProofBytes
+    ) external override returns (bool success, string memory message, bytes memory logsHash) {
+        (receiptProof memory _receiptProof, uint256[8] memory _zkProofs) = abi.decode(
+            _receiptProofBytes,
+            (receiptProof, uint256[8])
+        );
+
+        logsHash = verifyTool.decodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
+        if (cachedReceiptRoot[_receiptProof.header.number] != bytes32("")) {
+            (success, message) = verifyTool.getVerifyTrieProof(
+                cachedReceiptRoot[_receiptProof.header.number],
+                _receiptProof.keyIndex,
+                _receiptProof.proof,
+                _receiptProof.txReceiptRlp.receiptRlp,
+                _receiptProof.txReceiptRlp.receiptType
+            );
+            if (!success) {
+                message = "Mpt verification failed";
+                return (success, message, logsHash);
+            }
+        } else {
+            (success, message, logsHash) = _verifyProofData(_receiptProof, _zkProofs);
+            if (success) {
+                cachedReceiptRoot[_receiptProof.header.number] = bytes32(_receiptProof.header.receiptHash);
+            }
+        }
     }
 
     function updateBlockHeader(
