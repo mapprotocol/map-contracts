@@ -6,7 +6,7 @@
   "scripts": {
     "map:deploy:lightnode": "npx hardhat deploy --tags LightNode --network MapDev",
     "map:deploy:lightnodeUp": "npx hardhat deploy --tags LightNodeUp --network MapDev",
-    "map:deploy:lightnodeDev": "npx hardhat deploy --tags LightNodeDev --network MapDev"
+    "format": "prettier --print-width 120 --tab-width 4 --write ./contracts ./deploy ./tasks ./test"
   },
   "repository": {
     "type": "git",
@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/mapprotocol/map-contracts#readme.md",
   "dependencies": {
-    "@mapprotocol/protocol": "^0.4.0",
+    "@mapprotocol/protocol": "^0.5.0",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "ajv": "^8.8.2",
     "bignumber.js": "^9.0.1",

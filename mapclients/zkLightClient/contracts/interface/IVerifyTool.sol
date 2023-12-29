@@ -5,7 +5,11 @@ import "./ILightNodePoint.sol";
 
 interface IVerifyTool is ILightNodePoint {
     function getVerifyTrieProof(
-        receiptProof memory _receiptProof
+        bytes32 _receiptHash,
+        bytes memory _keyIndex,
+        bytes[] memory _proof,
+        bytes memory _receiptRlp,
+        uint256 _receiptType
     ) external pure returns (bool success, string memory message);
 
     function decodeHeader(bytes memory rlpBytes) external view returns (blockHeader memory bh);

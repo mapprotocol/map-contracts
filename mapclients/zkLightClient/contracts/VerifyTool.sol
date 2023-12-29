@@ -18,21 +18,16 @@ contract VerifyTool is ILightNodePoint {
     uint8 constant STRING_SHORT_ARRAY_START = 0xc3;
 
     function getVerifyTrieProof(
-        receiptProof memory _receiptProof
+        bytes32 _receiptHash,
+        bytes memory _keyIndex,
+        bytes[] memory _proof,
+        bytes memory _receiptRlp,
+        uint256 _receiptType
     ) external pure returns (bool success, string memory message) {
-        bytes memory expectedValue = getVerifyExpectedValueHash(
-            _receiptProof.txReceiptRlp.receiptType,
-            _receiptProof.txReceiptRlp.receiptRlp
-        );
-
-        success = MPT.verify(
-            expectedValue,
-            _receiptProof.keyIndex,
-            _receiptProof.proof,
-            bytes32(_receiptProof.header.receiptHash)
-        );
+        bytes memory expectedValue = getVerifyExpectedValueHash(_receiptType, _receiptRlp);
+        success = MPT.verify(expectedValue, _keyIndex, _proof, _receiptHash);
         if (!success) {
-            message = "receipt mismatch";
+            message = "mpt verification failed";
         } else {
             message = "success";
         }

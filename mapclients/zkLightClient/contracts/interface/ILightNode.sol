@@ -13,6 +13,10 @@ interface ILightNode is ILightNodePoint {
         bytes memory _receiptProof
     ) external returns (bool success, string memory message, bytes memory logsHash);
 
+    function verifyProofDataWithCache(
+        bytes memory _receiptProofBytes
+    ) external returns (bool success, string memory message, bytes memory logs);
+
     //Validate headers and update validation members
     function updateBlockHeader(
         bytes memory cur_validitors,
