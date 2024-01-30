@@ -176,7 +176,7 @@ contract VerifyTool is ILightNodePoint {
     }
 
     function splitExtra(bytes memory extra) internal pure returns (bytes memory newExtra) {
-        require(extra.length >= 32, "Invalid extra result type");
+        require(extra.length > 32, "Invalid extra result type");
         newExtra = new bytes(extra.length - 32);
         uint256 n = 0;
         for (uint256 i = 32; i < extra.length; i++) {

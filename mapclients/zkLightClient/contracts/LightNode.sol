@@ -56,7 +56,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         address _verifyTool,
         address _zkVerifier
     ) external override initializer {
-        require(_epoch > 0, "LightNode: initializing epoch error");
+        require(_epoch > 1, "LightNode: initializing epoch error");
         _changeAdmin(tx.origin);
         maxValidators = 1728000 / _epochSize;
         headerHeight = (_epoch - 1) * _epochSize;
@@ -191,7 +191,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         uint256[8] memory zkProofs
     ) external override {
         require(bh.number % epochSize == 0, "LightNode: header number is error");
-        require(bh.number > headerHeight, "LightNode: header is have");
+        require(bh.number - epochSize == headerHeight, "LightNode: header is have");
         if (startHeight == 0) {
             startHeight = headerHeight - epochSize;
         }
@@ -377,6 +377,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         require(pendingAdmin == msg.sender, "LightNode: only pendingAdmin");
         emit AdminTransferred(_getAdmin(), pendingAdmin);
         _changeAdmin(pendingAdmin);
+        pendingAdmin = address(0);
     }
 
     function getPendingAdmin() external view returns (address) {
