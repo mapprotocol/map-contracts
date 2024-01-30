@@ -41,30 +41,30 @@ contract BGLS is IBLSPoint {
         require(success, "modular exponentiation failed");
     }
 
-    function addPoints(G1 memory a, G1 memory b) public view returns (G1 memory) {
-        uint256[4] memory input = [a.x, a.y, b.x, b.y];
-        uint256[2] memory result;
-        bool success = false;
-        assembly {
-            success := staticcall(gas(), 6, input, 0x80, result, 0x40)
-        }
-        require(success, "add points fail");
-        return G1(result[0], result[1]);
-    }
+//    function addPoints(G1 memory a, G1 memory b) public view returns (G1 memory) {
+//        uint256[4] memory input = [a.x, a.y, b.x, b.y];
+//        uint256[2] memory result;
+//        bool success = false;
+//        assembly {
+//            success := staticcall(gas(), 6, input, 0x80, result, 0x40)
+//        }
+//        require(success, "add points fail");
+//        return G1(result[0], result[1]);
+//    }
 
     function chkBit(bytes memory b, uint256 x) internal pure returns (bool) {
         return uint256(uint8(b[31 - x / 8])) & (uint256(1) << (x % 8)) != 0;
     }
 
-    function sumPoints(G1[] memory points, bytes memory indices) public view returns (G1 memory) {
-        G1 memory acc = G1(0, 0);
-        for (uint256 i = 0; i < points.length; i++) {
-            if (chkBit(indices, i)) {
-                acc = addPoints(acc, points[i]);
-            }
-        }
-        return G1(acc.x, acc.y);
-    }
+//    function sumPoints(G1[] memory points, bytes memory indices) public view returns (G1 memory) {
+//        G1 memory acc = G1(0, 0);
+//        for (uint256 i = 0; i < points.length; i++) {
+//            if (chkBit(indices, i)) {
+//                acc = addPoints(acc, points[i]);
+//            }
+//        }
+//        return G1(acc.x, acc.y);
+//    }
 
     // kP
     function scalarMultiply(G1 memory point, uint256 scalar) public returns (G1 memory) {

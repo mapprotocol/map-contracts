@@ -58,7 +58,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     external
     override
     initializer {
-        require(_epoch > 0, "Error initializing epco");
+        require(_epoch > 1, "Error initializing epco");
         _changeAdmin(tx.origin);
         maxValidators = 1728000 / _epochSize;
         headerHeight = (_epoch - 1) * _epochSize;
@@ -178,7 +178,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     override
     {
         require(bh.number % epochSize == 0, "Header number is error");
-        require(bh.number > headerHeight, "Header is have");
+        require(bh.number - epochSize == headerHeight, "Header is have");
         headerHeight = bh.number;
         if (startHeight == 0) {
             startHeight = headerHeight - epochSize;
@@ -408,6 +408,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         require(_pendingAdmin == msg.sender, "Only pendingAdmin");
         emit AdminTransferred(_getAdmin(), _pendingAdmin);
         _changeAdmin(_pendingAdmin);
+        pendingAdmin = address(0);
     }
 
 
