@@ -115,6 +115,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
     }
 
+    function getData(bytes memory _receiptProofBytes)
+    external
+    view
+    returns (receiptProof memory) {
+        receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
+
+        return _receiptProof;
+
+    }
+
     function verifyProofDataWithCache(bytes memory _receiptProofBytes)
     external
     override
@@ -408,7 +418,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         require(_pendingAdmin == msg.sender, "Only pendingAdmin");
         emit AdminTransferred(_getAdmin(), _pendingAdmin);
         _changeAdmin(_pendingAdmin);
-        pendingAdmin = address(0);
+        _pendingAdmin = address(0);
     }
 
 
