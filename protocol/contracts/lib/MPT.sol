@@ -11,31 +11,30 @@ pragma solidity ^0.8.0;
 
 import {RLPReader} from "./RLPReader.sol";
 
-
 library MPT {
     /*
-   * @dev Verifies a merkle patricia proof.
-   * @param value The terminating value in the trie.
-   * @param encodedPath The path in the trie leading to value.
-   * @param rlpParentNodes The rlp encoded stack of nodes.
-   * @param root The root hash of the trie.
-   * @return The boolean validity of the proof.
-   */
+     * @dev Verifies a merkle patricia proof.
+     * @param value The terminating value in the trie.
+     * @param encodedPath The path in the trie leading to value.
+     * @param rlpParentNodes The rlp encoded stack of nodes.
+     * @param root The root hash of the trie.
+     * @return The boolean validity of the proof.
+     */
     function verify(
         bytes memory value,
         bytes memory encodedPath,
         bytes[] memory rlpParentNodes,
         bytes32 root
     ) internal pure returns (bool) {
-      //  RLPReader.RLPItem memory item = RLPReader.toRlpItem(rlpParentNodes);
-      //  RLPReader.RLPItem[] memory parentNodes = RLPReader.toList(item);
+        //  RLPReader.RLPItem memory item = RLPReader.toRlpItem(rlpParentNodes);
+        //  RLPReader.RLPItem[] memory parentNodes = RLPReader.toList(item);
 
         bytes memory currentNode;
         RLPReader.RLPItem[] memory currentNodeList;
 
         bytes32 nodeKey = root;
         uint256 pathPtr = 0;
-        bytes memory path = encodedPath;//_getNibbleArray(encodedPath);
+        bytes memory path = encodedPath; //_getNibbleArray(encodedPath);
         if (path.length == 0) {
             return false;
         }
@@ -53,10 +52,7 @@ library MPT {
 
             if (currentNodeList.length == 17) {
                 if (pathPtr == path.length) {
-                    if (
-                        keccak256(RLPReader.toBytes(currentNodeList[16])) ==
-                        keccak256(value)
-                    ) {
+                    if (keccak256(RLPReader.toBytes(currentNodeList[16])) == keccak256(value)) {
                         return true;
                     } else {
                         return false;
@@ -67,22 +63,13 @@ library MPT {
                 if (nextPathNibble > 16) {
                     return false;
                 }
-                nodeKey = bytes32(
-                    RLPReader.toUintStrict(currentNodeList[nextPathNibble])
-                );
+                nodeKey = bytes32(RLPReader.toUintStrict(currentNodeList[nextPathNibble]));
                 pathPtr += 1;
             } else if (currentNodeList.length == 2) {
-                uint256 traversed = _nibblesToTraverse(
-                    RLPReader.toBytes(currentNodeList[0]),
-                    path,
-                    pathPtr
-                );
+                uint256 traversed = _nibblesToTraverse(RLPReader.toBytes(currentNodeList[0]), path, pathPtr);
                 if (pathPtr + traversed == path.length) {
                     //leaf node
-                    if (
-                        keccak256(RLPReader.toBytes(currentNodeList[1])) ==
-                        keccak256(value)
-                    ) {
+                    if (keccak256(RLPReader.toBytes(currentNodeList[1])) == keccak256(value)) {
                         return true;
                     } else {
                         return false;
@@ -131,11 +118,7 @@ library MPT {
     }
 
     // bytes b must be hp encoded
-    function _getNibbleArray(bytes memory b)
-        private
-        pure
-        returns (bytes memory)
-    {
+    function _getNibbleArray(bytes memory b) private pure returns (bytes memory) {
         bytes memory nibbles;
         if (b.length > 0) {
             uint8 offset;
@@ -157,14 +140,7 @@ library MPT {
         return nibbles;
     }
 
-    function _getNthNibbleOfBytes(uint256 n, bytes memory str)
-        private
-        pure
-        returns (bytes1)
-    {
-        return
-            bytes1(
-                n % 2 == 0 ? uint8(str[n / 2]) / 0x10 : uint8(str[n / 2]) % 0x10
-            );
+    function _getNthNibbleOfBytes(uint256 n, bytes memory str) private pure returns (bytes1) {
+        return bytes1(n % 2 == 0 ? uint8(str[n / 2]) / 0x10 : uint8(str[n / 2]) % 0x10);
     }
 }

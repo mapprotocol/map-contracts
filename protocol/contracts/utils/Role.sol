@@ -4,24 +4,24 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract Role is AccessControl{
+contract Role is AccessControl {
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
-    constructor(){
+    constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MANAGER_ROLE, msg.sender);
     }
 
-    modifier onlyManager(){
+    modifier onlyManager() {
         require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
         _;
     }
 
-    function addManager(address manager) external onlyRole(DEFAULT_ADMIN_ROLE){
+    function addManager(address manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setupRole(MANAGER_ROLE, manager);
     }
 
-    function removeManager(address manager) external onlyRole(DEFAULT_ADMIN_ROLE){
-        _revokeRole(MANAGER_ROLE,manager);
+    function removeManager(address manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _revokeRole(MANAGER_ROLE, manager);
     }
 }

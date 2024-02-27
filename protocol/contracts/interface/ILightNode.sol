@@ -3,11 +3,9 @@
 pragma solidity ^0.8.0;
 
 interface ILightNode {
-
     event UpdateBlockHeader(address indexed maintainer, uint256 indexed blockHeight);
 
     event NotifySend(address indexed sender, uint256 indexed blockHeight, bytes notifyData);
-
 
     function updateBlockHeader(bytes memory _blockHeader) external;
 
@@ -23,22 +21,32 @@ interface ILightNode {
     // @return success - verification result
     // @return message - the result message
     // @return logs - the logs included in the receipt
-    function verifyProofDataWithCache(bytes memory _receiptProof) external
-    returns (bool success, string memory message,bytes memory logs);
-
+    function verifyProofDataWithCache(bytes memory _receiptProof)
+        external
+        returns (
+            bool success,
+            string memory message,
+            bytes memory logs
+        );
 
     // @notice Validate the receipt according to the block header and receipt merkel proof
     // @param _receiptProof - the bytes to receipt proof
     // @return success - verification result
     // @return message - the result message
     // @return logs - the logs included in the receipt
-    function verifyProofData(bytes memory _receiptProof) external view returns (bool success, string memory message, bytes memory logs);
-
+    function verifyProofData(bytes memory _receiptProof)
+        external
+        view
+        returns (
+            bool success,
+            string memory message,
+            bytes memory logs
+        );
 
     // Get client state
-    function clientState() external view returns(bytes memory);
+    function clientState() external view returns (bytes memory);
 
-    function finalizedState(bytes memory _data) external view returns(bytes memory);
+    function finalizedState(bytes memory _data) external view returns (bytes memory);
 
     // @notice Get the light client block height
     // @return height - current block height or slot number
@@ -50,7 +58,6 @@ interface ILightNode {
     // @notice Check whether the block can be verified
     // @return
     function isVerifiable(uint256 _blockHeight, bytes32 _hash) external view returns (bool);
-
 
     // @notice Get the light client type
     // @return - 1 default light client

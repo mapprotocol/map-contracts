@@ -8,9 +8,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-
-contract MaintainerManager is UUPSUpgradeable,Initializable {
-    using SafeMath for uint;
+contract MaintainerManager is UUPSUpgradeable, Initializable {
+    using SafeMath for uint256;
     using SafeERC20 for IERC20;
     // Info of each pool.
     PoolInfo public pool;
@@ -21,7 +20,7 @@ contract MaintainerManager is UUPSUpgradeable,Initializable {
 
     // Info of each user.
     struct UserInfo {
-        uint256 amount;     // How many MAP tokens the user has provided.
+        uint256 amount; // How many MAP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
     }
 
@@ -38,28 +37,23 @@ contract MaintainerManager is UUPSUpgradeable,Initializable {
     event EmergencyWithdraw(address indexed user, uint256 amount);
     event WhiteList(address indexed user, uint256 tag);
 
-
     //Bind a worker to submit data
     mapping(address => address) public userWorker;
     mapping(address => address) public workerUser;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor()  {}
+    constructor() {}
 
     /** initialize  **********************************************************/
-    function initialize()
-    external
-    initializer {
+    function initialize() external initializer {
         _changeAdmin(msg.sender);
     }
 
-
     receive() external payable {}
-
 
     function save() external payable {}
 
-    function getAllAwards() public view returns (uint256){
+    function getAllAwards() public view returns (uint256) {
         return address(this).balance.add(pool.awardWithdraw).sub(pool.allStake);
     }
 
@@ -76,7 +70,7 @@ contract MaintainerManager is UUPSUpgradeable,Initializable {
     // Update reward variables of the given pool to be up-to-date.
     function updatePool(uint256 amount) internal {
         if (getAllAwards().sub(amount) > 0) {
-            uint awardAdd = getAllAwards().sub(amount).sub(pool.lastAwards);
+            uint256 awardAdd = getAllAwards().sub(amount).sub(pool.lastAwards);
             if (awardAdd > 0 && pool.allStake > 0) {
                 pool.accMapsPerShare = pool.accMapsPerShare.add(awardAdd.mul(1e12).div(pool.allStake));
                 pool.lastAwards = getAllAwards().sub(amount);
@@ -84,7 +78,7 @@ contract MaintainerManager is UUPSUpgradeable,Initializable {
         }
     }
 
-    function getSub() public view returns (uint256){
+    function getSub() public view returns (uint256) {
         return getAllAwards();
     }
 
@@ -136,7 +130,7 @@ contract MaintainerManager is UUPSUpgradeable,Initializable {
 
     // Withdraw reward. EMERGENCY ONLY.
     function emergencyRewardWithdraw(uint256 _amount) public onlyOwner {
-        require(_amount < address(this).balance.sub(pool.allStake), 'not enough token');
+        require(_amount < address(this).balance.sub(pool.allStake), "not enough token");
         payable(msg.sender).transfer(_amount);
         pool.allStake = pool.allStake.sub(_amount);
     }
@@ -152,14 +146,14 @@ contract MaintainerManager is UUPSUpgradeable,Initializable {
     }
 
     function bindWorker(address _worker) external {
-        require(whiteList[msg.sender],"only while list");
+        require(whiteList[msg.sender], "only while list");
         userWorker[msg.sender] = _worker;
         workerUser[_worker] = msg.sender;
     }
 
-    function checkWorker(address _worker) external view returns (address user){
+    function checkWorker(address _worker) external view returns (address user) {
         user = workerUser[_worker];
-        if(user != address(0) && whiteList[user]){
+        if (user != address(0) && whiteList[user]) {
             return user;
         }
         return address(0);
@@ -170,12 +164,8 @@ contract MaintainerManager is UUPSUpgradeable,Initializable {
         _;
     }
 
-
     /** UUPS *********************************************************/
-    function _authorizeUpgrade(address)
-    internal
-    view
-    override {
+    function _authorizeUpgrade(address) internal view override {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 
@@ -191,5 +181,4 @@ contract MaintainerManager is UUPSUpgradeable,Initializable {
     function getImplementation() external view returns (address) {
         return _getImplementation();
     }
-
 }

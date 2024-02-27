@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-
 interface IMPTVerify {
     function verifyTrieProof(
         bytes32 _root,

@@ -1,6 +1,6 @@
 {
   "name": "@mapprotocol/protocol",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "MAP Protocol management and utils contracts",
   "files": [
     "artifacts/contracts/*.sol/*.json",
@@ -12,7 +12,8 @@
   ],
   "scripts": {
     "compile": "npx hardhat compile",
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "format": "prettier --print-width 120 --tab-width 4 --write ./contracts ./deploy ./tasks ./test"
   },
   "repository": {
     "type": "git",
@@ -58,8 +59,7 @@
     "hardhat-deploy-ethers": "^0.3.0-beta.7",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-spdx-license-identifier": "^2.0.3",
-    "prettier": "^2.2.1",
-    "prettier-plugin-solidity": "^1.0.0-beta.5",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
     "ts-node": "^9.1.1",
     "typescript": "^4.2.2",
     "web3": "^1.3.4"

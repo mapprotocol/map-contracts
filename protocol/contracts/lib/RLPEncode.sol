@@ -17,11 +17,7 @@ library RLPEncode {
      * @param self The byte string to encode.
      * @return The RLP encoded string in bytes.
      */
-    function encodeBytes(bytes memory self)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function encodeBytes(bytes memory self) internal pure returns (bytes memory) {
         bytes memory encoded;
         if (self.length == 1 && uint8(self[0]) < 128) {
             encoded = self;
@@ -36,11 +32,7 @@ library RLPEncode {
      * @param self The list of RLP encoded byte strings.
      * @return The RLP encoded list of items in bytes.
      */
-    function encodeList(bytes[] memory self)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function encodeList(bytes[] memory self) internal pure returns (bytes memory) {
         bytes memory list = flatten(self);
         return concat(encodeLength(list.length, 192), list);
     }
@@ -50,11 +42,7 @@ library RLPEncode {
      * @param self The string to encode.
      * @return The RLP encoded string in bytes.
      */
-    function encodeString(string memory self)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function encodeString(string memory self) internal pure returns (bytes memory) {
         return encodeBytes(bytes(self));
     }
 
@@ -67,10 +55,7 @@ library RLPEncode {
         bytes memory inputBytes;
         assembly {
             let m := mload(0x40)
-            mstore(
-                add(m, 20),
-                xor(0x140000000000000000000000000000000000000000, self)
-            )
+            mstore(add(m, 20), xor(0x140000000000000000000000000000000000000000, self))
             mstore(0x40, add(m, 52))
             inputBytes := m
         }
@@ -116,11 +101,7 @@ library RLPEncode {
      * @param offset 128 if item is string, 192 if item is list.
      * @return RLP encoded bytes.
      */
-    function encodeLength(uint256 len, uint256 offset)
-        private
-        pure
-        returns (bytes memory)
-    {
+    function encodeLength(uint256 len, uint256 offset) private pure returns (bytes memory) {
         bytes memory encoded;
         if (len < 56) {
             encoded = new bytes(1);
@@ -244,11 +225,7 @@ library RLPEncode {
      * @param _postBytes Second byte string.
      * @return Both byte string combined.
      */
-    function concat(bytes memory _preBytes, bytes memory _postBytes)
-        private
-        pure
-        returns (bytes memory)
-    {
+    function concat(bytes memory _preBytes, bytes memory _postBytes) private pure returns (bytes memory) {
         bytes memory tempBytes;
 
         assembly {
@@ -284,13 +261,7 @@ library RLPEncode {
                 mstore(mc, mload(cc))
             }
 
-            mstore(
-                0x40,
-                and(
-                    add(add(end, iszero(add(length, mload(_preBytes)))), 31),
-                    not(31)
-                )
-            )
+            mstore(0x40, and(add(add(end, iszero(add(length, mload(_preBytes)))), 31), not(31)))
         }
 
         return tempBytes;

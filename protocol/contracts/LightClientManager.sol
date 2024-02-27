@@ -10,11 +10,10 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./interface/ILightClientManager.sol";
 import "./interface/ILightNode.sol";
 
-
-contract LightClientManager is ILightClientManager, Initializable,UUPSUpgradeable {
+contract LightClientManager is ILightClientManager, Initializable, UUPSUpgradeable {
     mapping(uint256 => address) public lightClientContract;
 
-    modifier checkAddress(address _address){
+    modifier checkAddress(address _address) {
         require(_address != address(0), "address is zero");
         _;
     }
@@ -24,8 +23,7 @@ contract LightClientManager is ILightClientManager, Initializable,UUPSUpgradeabl
         _;
     }
 
-    function initialize() public initializer
-    {
+    function initialize() public initializer {
         _changeAdmin(msg.sender);
     }
 
@@ -51,50 +49,67 @@ contract LightClientManager is ILightClientManager, Initializable,UUPSUpgradeabl
         lightNode.notifyLightClient(_data);
     }
 
-    function verifyProofDataWithCache(uint256 _chainId, bytes memory _receiptProof) external override
-    returns (bool success, string memory message,bytes memory logs) {
+    function verifyProofDataWithCache(uint256 _chainId, bytes memory _receiptProof)
+        external
+        override
+        returns (
+            bool success,
+            string memory message,
+            bytes memory logs
+        )
+    {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.verifyProofDataWithCache(_receiptProof);
     }
 
-
-    function verifyProofData(uint256 _chainId, bytes memory _receiptProof) external view override
-    returns (bool success, string memory message, bytes memory logs) {
+    function verifyProofData(uint256 _chainId, bytes memory _receiptProof)
+        external
+        view
+        override
+        returns (
+            bool success,
+            string memory message,
+            bytes memory logs
+        )
+    {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.verifyProofData(_receiptProof);
     }
 
-    function clientState(uint256 _chainId) external view override returns(bytes memory) {
+    function clientState(uint256 _chainId) external view override returns (bytes memory) {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
 
         return lightNode.clientState();
     }
 
-    function headerHeight(uint256 _chainId) external view override returns (uint256){
+    function headerHeight(uint256 _chainId) external view override returns (uint256) {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
 
         return lightNode.headerHeight();
     }
 
-    function verifiableHeaderRange(uint256 _chainId) external view override returns (uint256, uint256){
+    function verifiableHeaderRange(uint256 _chainId) external view override returns (uint256, uint256) {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
-        (uint256 min,uint256 max) = lightNode.verifiableHeaderRange();
-        return(min,max);
+        (uint256 min, uint256 max) = lightNode.verifiableHeaderRange();
+        return (min, max);
     }
 
-
-    function finalizedState(uint256 _chainId,bytes memory _data) external view override returns(bytes memory){
+    function finalizedState(uint256 _chainId, bytes memory _data) external view override returns (bytes memory) {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.finalizedState(_data);
     }
 
-    function isVerifiable(uint256 _chainId, uint256 _blockHeight, bytes32 _hash) external view override returns (bool) {
+    function isVerifiable(
+        uint256 _chainId,
+        uint256 _blockHeight,
+        bytes32 _hash
+    ) external view override returns (bool) {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.isVerifiable(_blockHeight, _hash);
@@ -105,8 +120,6 @@ contract LightClientManager is ILightClientManager, Initializable,UUPSUpgradeabl
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.nodeType();
     }
-
-
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
@@ -124,5 +137,4 @@ contract LightClientManager is ILightClientManager, Initializable,UUPSUpgradeabl
     function getImplementation() external view returns (address) {
         return _getImplementation();
     }
-
 }
