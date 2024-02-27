@@ -264,7 +264,17 @@ module.exports = {
       url: `https://mainnet-rpc.thundercore.com`,
       chainId : 108,
       accounts: accounts
-    }
+    },
+    Merlin: {
+      url: `https://rpc.merlinchain.io`,
+      chainId : 4200,
+      accounts: accounts,
+    },
+    Bevm: {
+      url: `https://rpc-canary-2.bevm.io/`,
+      chainId : 1501,
+      accounts: accounts,
+    },
   },
   solidity: {
     compilers: [

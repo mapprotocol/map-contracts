@@ -6,10 +6,16 @@ interface ILightNode {
 
     event UpdateBlockHeader(address indexed maintainer, uint256 indexed blockHeight);
 
+    event NotifySend(address indexed sender, uint256 indexed blockHeight, bytes notifyData);
+
 
     function updateBlockHeader(bytes memory _blockHeader) external;
 
     function updateLightClient(bytes memory _data) external;
+
+    // @notice Notify light client to relay the block
+    // @param _data - notify data, if no data set it to empty
+    function notifyLightClient(bytes memory _data) external;
 
     // @notice Validate the receipt according to the block header and receipt merkel proof
     //         Using block header number and block receipt root cache to optimize the validation gas cost.
@@ -40,4 +46,15 @@ interface ILightNode {
 
     //
     function verifiableHeaderRange() external view returns (uint256, uint256);
+
+    // @notice Check whether the block can be verified
+    // @return
+    function isVerifiable(uint256 _blockHeight, bytes32 _hash) external view returns (bool);
+
+
+    // @notice Get the light client type
+    // @return - 1 default light client
+    //           2 zk light client
+    //           3 oracle client
+    function nodeType() external view returns (uint256);
 }

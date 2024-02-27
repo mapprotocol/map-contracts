@@ -7,6 +7,8 @@ interface ILightClientManager {
 
     function updateLightClient(uint256 _chainId, bytes memory _data) external;
 
+    function notifyLightClient(uint256 _chainId, bytes memory _data) external;
+
     function verifyProofDataWithCache(uint256 _chainId, bytes memory _receiptProof) external
     returns (bool success, string memory message,bytes memory logs);
 
@@ -20,4 +22,8 @@ interface ILightClientManager {
     function verifiableHeaderRange(uint256 _chainId) external view returns (uint256, uint256);
 
     function finalizedState(uint256 _chainId,bytes memory _data) external view returns(bytes memory);
+
+    function isVerifiable(uint256 _chainId, uint256 _blockHeight, bytes32 _hash) external view returns (bool);
+
+    function nodeType(uint256 _chainId) external view returns (uint256);
 }
