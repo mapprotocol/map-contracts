@@ -1,0 +1,5 @@
+PRIVATE_KEY = 
+//MPTVerify address
+MPT_VERIFY = 
+
+CHAIN_Id = 1
