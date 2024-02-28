@@ -280,6 +280,22 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return (startExeHeaderNumber, exeHeaderStartNumber - 1);
     }
 
+    function isVerifiable(uint256 _blockHeight, bytes32 _hash) external view override returns (bool) {
+        if (exeHeaderStartNumber == 0) {
+            return _blockHeight >= startExeHeaderNumber && _blockHeight <= finalizedExeHeaderNumber;
+        }
+
+        return _blockHeight >= startExeHeaderNumber && _blockHeight <= exeHeaderStartNumber - 1;
+    }
+
+    function nodeType() external pure override returns (uint256) {
+        return 1;
+    }
+
+    function notifyLightClient(bytes memory _data) external override {
+        emit NotifySend(msg.sender, block.number, _data);
+    }
+
     function togglePause(bool flag) external onlyOwner returns (bool) {
         if (flag) {
             _pause();
