@@ -317,6 +317,22 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return (minValidBlocknum, maxCanVerifyNum());
     }
 
+    function notifyLightClient(bytes memory _data) external override{
+        emit NotifySend(msg.sender,block.number,_data);
+    }
+
+    function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool){
+             return minValidBlocknum <= _blockHeight && _blockHeight <= maxCanVerifyNum();
+    }
+
+    function nodeType() external view override returns (uint256){
+            // return this chain light node type on target chain
+            // 1 default light client
+            // 2 zk light client
+            // 3 oracle client
+            return 1;
+    }
+
     function updateLightClient(bytes memory) external pure override {}
 
     function clientState() external pure override returns (bytes memory) {}
