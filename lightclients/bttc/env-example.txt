@@ -1,10 +1,16 @@
-PRIVATE_KEY = 
-# bsc rpc url
-RPCURI = 
+PRIVATE_KEY =
+
+# bttc rpc url
+RPCURI =
+
 # mainnet 199 testnet 1028
-CHAINID = 
+CHAINID =
+
 // 0 - for latest
 START_SYNCY_BLOCK = 0
-# bttc mainnet 417 
+
+# bttc mainnet 417
 MinEpochBlockExtraDataLen = 417
+
+MPT_VERIFY = 0x4b1EE84A72b44B78346e069D1c66509940827E22
 

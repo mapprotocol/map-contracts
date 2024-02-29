@@ -28,6 +28,8 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         mpt = MPTVerify.address;
     }
 
+    console.log("mpt addresss: ", mpt);
+
     let lightNode = await deployments.get("LightNode");
 
     const provider = new ethers.providers.JsonRpcProvider(uri);
@@ -37,6 +39,8 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     if (currentBlock == undefined || currentBlock == 0) {
         currentBlock = await provider.getBlockNumber();
     }
+
+    console.log("currentBlock: ", currentBlock);
 
     let lastEpoch = currentBlock - (currentBlock % epochNum) - 1 - epochNum;
 

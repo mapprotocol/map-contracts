@@ -20,12 +20,12 @@ const config: HardhatUserConfig ={
     deployer: 0,
   },
   networks: {
-    makalu: {
+    Makalu: {
       chainId: 212,
       url:"https://testnet-rpc.maplabs.io",
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    map : {
+    Mapo : {
       chainId: 22776,
       url:"https://rpc.maplabs.io",
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
