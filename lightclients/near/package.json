@@ -1,12 +1,12 @@
 {
   "name": "@mapprotocol/near-light-client",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "near light node in the solidity implementation",
   "scripts": {
     "format": "prettier --print-width 120 --tab-width 4 --write ./contracts ./deploy ./test ./scripts"
   },
   "dependencies": {
-    "@mapprotocol/protocol": "^0.6.0",
+    "@mapprotocol/protocol": "^0.6.1",
     "@openzeppelin/contracts": "^4.6.0",
     "dotenv": "^8.2.0",
     "hardhat-deploy": "^0.11.18"
