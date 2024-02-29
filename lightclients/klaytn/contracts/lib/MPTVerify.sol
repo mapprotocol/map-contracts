@@ -12,6 +12,6 @@ contract MPTVerify is IMPTVerify {
         bytes[] memory _proof,
         bytes memory _node
     ) external pure override returns (bool) {
-        return MPT.verify(_node,_key,_proof,_root);
+        return MPT.verify(_node, _key, _proof, _root);
     }
 }

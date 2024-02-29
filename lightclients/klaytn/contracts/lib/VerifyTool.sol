@@ -13,14 +13,9 @@ contract VerifyTool is IVerifyTool {
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
 
-    uint256 constant EXTRA_VANITY = 32;   // Fixed number of extra-data bytes reserved for validator vanity
+    uint256 constant EXTRA_VANITY = 32; // Fixed number of extra-data bytes reserved for validator vanity
 
-    function bytesToAddressArray(bytes memory _data)
-    external
-    pure
-    returns (address[] memory)
-    {
-
+    function bytesToAddressArray(bytes memory _data) external pure returns (address[] memory) {
         uint256 dataNb = _data.length / 20;
         address[] memory dataList = new address[](dataNb);
         uint256 index = 0;
@@ -35,25 +30,21 @@ contract VerifyTool is IVerifyTool {
         return dataList;
     }
 
-    function decodeVote(bytes memory _votes)
-    external
-    pure
-    returns
-    (IKlaytn.Vote memory votes)
-    {
+    function decodeVote(bytes memory _votes) external pure returns (IKlaytn.Vote memory votes) {
         RLPReader.RLPItem[] memory ls = _votes.toRlpItem().toList();
-        return ( IKlaytn.Vote({
-        validator : ls[0].toAddress(),
-        key : ls[1].toBytes(),
-        value : ls[2].toBytes()
-        }));
+        return (IKlaytn.Vote({validator: ls[0].toAddress(), key: ls[1].toBytes(), value: ls[2].toBytes()}));
     }
 
-
-    function decodeHeaderExtraData(bytes memory _extBytes)
-    public
-    pure
-    returns (IKlaytn.ExtraData memory extData, bytes memory extWithoutCommitteeSeal, bytes memory extWithoutCommitteeSealAndSeal)
+    function decodeHeaderExtraData(
+        bytes memory _extBytes
+    )
+        public
+        pure
+        returns (
+            IKlaytn.ExtraData memory extData,
+            bytes memory extWithoutCommitteeSeal,
+            bytes memory extWithoutCommitteeSealAndSeal
+        )
     {
         (bytes memory extraHead, bytes memory istBytes) = _splitExtra(_extBytes);
 
@@ -71,11 +62,7 @@ contract VerifyTool is IVerifyTool {
             _committedSeal[i] = itemCommittedSeal[i].toBytes();
         }
 
-        extData = IKlaytn.ExtraData({
-            validators : _validators,
-            seal : _seal,
-            committedSeal : _committedSeal
-        });
+        extData = IKlaytn.ExtraData({validators: _validators, seal: _seal, committedSeal: _committedSeal});
 
         bytes[] memory listExt = new bytes[](3);
         listExt[0] = ls[0].toRlpBytes();
@@ -84,7 +71,7 @@ contract VerifyTool is IVerifyTool {
 
         bytes memory output = RLPEncode.encodeList(listExt);
 
-        extraHead[EXTRA_VANITY - 1] = 0;   // set round
+        extraHead[EXTRA_VANITY - 1] = 0; // set round
 
         extWithoutCommitteeSeal = abi.encodePacked(extraHead, output);
 
@@ -94,14 +81,7 @@ contract VerifyTool is IVerifyTool {
         extWithoutCommitteeSealAndSeal = abi.encodePacked(extraHead, output);
     }
 
-
-    function checkReceiptsConcat(
-        bytes[] memory _receipts,
-        bytes32 _receiptsHash)
-    external
-    pure
-    returns (bool)
-    {
+    function checkReceiptsConcat(bytes[] memory _receipts, bytes32 _receiptsHash) external pure returns (bool) {
         bytes memory receiptsAll;
         for (uint i = 0; i < _receipts.length; i++) {
             receiptsAll = bytes.concat(receiptsAll, _receipts[i]);
@@ -109,13 +89,9 @@ contract VerifyTool is IVerifyTool {
         return keccak256(receiptsAll) == _receiptsHash;
     }
 
-
-
-    function getBlockHashAndExtData(IKlaytn.BlockHeader memory _header)
-    external
-    pure
-    returns (bytes32 blockHash, bytes32 removeSealHash, IKlaytn.ExtraData memory ext)
-    {
+    function getBlockHashAndExtData(
+        IKlaytn.BlockHeader memory _header
+    ) external pure returns (bytes32 blockHash, bytes32 removeSealHash, IKlaytn.ExtraData memory ext) {
         bytes memory extWithoutCommitteeSeal;
         bytes memory extWithoutCommitteeSealAndSeal;
 
@@ -143,24 +119,17 @@ contract VerifyTool is IVerifyTool {
         removeSealHash = keccak256(RLPEncode.encodeList(list));
     }
 
-
-    function checkHeaderParam(IKlaytn.BlockHeader memory _header)
-    external
-    view
-    returns (bool)
-    {
-        if (_header.timestamp + 60 > block.timestamp) {return false;}
-        if (_header.blockScore == 0) {return false;}
+    function checkHeaderParam(IKlaytn.BlockHeader memory _header) external view returns (bool) {
+        if (_header.timestamp + 60 > block.timestamp) {
+            return false;
+        }
+        if (_header.blockScore == 0) {
+            return false;
+        }
         return true;
     }
 
-    function recoverSigner(
-        bytes memory _seal,
-        bytes32 _hash)
-    external
-    pure
-    returns (address)
-    {
+    function recoverSigner(bytes memory _seal, bytes32 _hash) external pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(_seal);
         if (v <= 1) {
             v = v + 27;
@@ -168,15 +137,7 @@ contract VerifyTool is IVerifyTool {
         return ECDSA.recover(_hash, v, r, s);
     }
 
-
-    function isRepeat(
-        address[] memory _miners,
-        address _miner,
-        uint256 _limit)
-    external
-    pure
-    returns (bool)
-    {
+    function isRepeat(address[] memory _miners, address _miner, uint256 _limit) external pure returns (bool) {
         for (uint256 i = 0; i < _limit; i++) {
             if (_miners[i] == _miner) {
                 return true;
@@ -186,14 +147,7 @@ contract VerifyTool is IVerifyTool {
         return false;
     }
 
-
-    function _splitExtra(bytes memory _extra)
-    internal
-    pure
-    returns (
-        bytes memory extraHead,
-        bytes memory extraEnd)
-    {
+    function _splitExtra(bytes memory _extra) internal pure returns (bytes memory extraHead, bytes memory extraEnd) {
         require(_extra.length >= EXTRA_VANITY, "Invalid extra result type");
         extraEnd = new bytes(_extra.length - EXTRA_VANITY);
         extraHead = new bytes(EXTRA_VANITY);
@@ -210,11 +164,7 @@ contract VerifyTool is IVerifyTool {
         return (extraHead, extraEnd);
     }
 
-    function _splitSignature(bytes memory _sig)
-    internal
-    pure
-    returns (bytes32 r, bytes32 s, uint8 v)
-    {
+    function _splitSignature(bytes memory _sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
         require(_sig.length == 65, "invalid signature length");
         assembly {
             r := mload(add(_sig, 32))
@@ -222,5 +172,4 @@ contract VerifyTool is IVerifyTool {
             v := byte(0, mload(add(_sig, 96)))
         }
     }
-
 }

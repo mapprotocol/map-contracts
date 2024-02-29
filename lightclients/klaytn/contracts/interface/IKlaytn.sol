@@ -3,7 +3,6 @@
 pragma solidity 0.8.12;
 
 interface IKlaytn {
-
     enum DeriveShaOriginal {
         DeriveShaOriginal,
         DeriveShaSimple,
@@ -30,7 +29,6 @@ interface IKlaytn {
         uint256 baseFee;
     }
 
-
     struct TxReceipt {
         uint256 receiptType;
         bytes postStateOrStatus;
@@ -51,7 +49,6 @@ interface IKlaytn {
         bytes value;
     }
 
-
     struct ExtraData {
         address[] validators;
         bytes seal;
@@ -70,7 +67,7 @@ interface IKlaytn {
         bytes keyIndex;
     }
 
-    struct ReceiptProofConcat{
+    struct ReceiptProofConcat {
         BlockHeader header;
         bytes[] receipts;
         uint logIndex;

@@ -12,7 +12,6 @@ import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
 
-
 import "./interface/IKlaytn.sol";
 
 contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
@@ -21,7 +20,7 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
 
-    uint8   constant MSG_COMMIT = 2;
+    uint8 constant MSG_COMMIT = 2;
     uint256 constant MAX_VALIDATORS_SIZE = 2160;
     uint256 constant CHANGE_VALIDATORS_SIZE = 3600;
     uint256 constant RLP_INDEX = 3;
@@ -38,21 +37,12 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         uint256 headerHeight;
     }
 
-
     function initialize(
         address[] memory _validators,
         uint256 _headerHeight,
         address _mptVerify
-    )
-    external
-    initializer
-    checkAddress(_mptVerify)
-    checkMultipleAddress(_validators)
-    {
-        Validator memory _validator = Validator({
-        validators : _validators,
-        headerHeight : _headerHeight
-        });
+    ) external initializer checkAddress(_mptVerify) checkMultipleAddress(_validators) {
+        Validator memory _validator = Validator({validators: _validators, headerHeight: _headerHeight});
         headerHeight = _headerHeight;
         validatorIdx = _getValidatorIndex(headerHeight);
         validators[validatorIdx] = _validator;
@@ -63,37 +53,30 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
         _transferOwnership(tx.origin);
     }
 
-
-    modifier checkAddress(address _address){
+    modifier checkAddress(address _address) {
         require(_address != address(0), "address is zero");
         _;
     }
 
-    modifier checkMultipleAddress(address[] memory _addressArray){
+    modifier checkMultipleAddress(address[] memory _addressArray) {
         for (uint i = 0; i < _addressArray.length; i++) {
             require(_addressArray[i] != address(0), "address have zero");
         }
         _;
     }
 
-
-    function verifyProofData(bytes memory _receiptProof)
-    external
-    view
-    override
-    returns (bool success,
-        string memory message,
-        bytes memory logs)
-    {
+    function verifyProofData(
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, bytes memory logs) {
         IKlaytn.ReceiptProof memory receiptProof = abi.decode(_receiptProof, (IKlaytn.ReceiptProof));
 
         if (receiptProof.deriveSha == IKlaytn.DeriveShaOriginal.DeriveShaConcat) {
             IKlaytn.ReceiptProofConcat memory proof = abi.decode(receiptProof.proof, (IKlaytn.ReceiptProofConcat));
             IKlaytn.BlockHeader memory header = proof.header;
-            (success, ) = checkBlockHeader(header,true);
+            (success, ) = checkBlockHeader(header, true);
             if (!success) {
                 message = "DeriveShaOriginal header verify failed";
-                return(success, message, logs);
+                return (success, message, logs);
             }
             success = _checkReceiptsConcat(proof.receipts, (bytes32)(header.receiptsRoot));
             if (success) {
@@ -101,138 +84,109 @@ contract LightNodeV1 is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step
                 RLPReader.RLPItem memory logsItem = bytesReceipt.toRlpItem().toList()[RLP_INDEX];
                 logs = RLPReader.toRlpBytes(logsItem);
                 message = "DeriveShaConcat mpt verify success";
-                return(success, message, logs);
+                return (success, message, logs);
             } else {
                 message = "DeriveShaConcat mpt verify failed";
-                return(success, message, logs);
+                return (success, message, logs);
             }
         } else if (receiptProof.deriveSha == IKlaytn.DeriveShaOriginal.DeriveShaOriginal) {
             IKlaytn.ReceiptProofOriginal memory proof = abi.decode(receiptProof.proof, (IKlaytn.ReceiptProofOriginal));
-            (success, ) = checkBlockHeader(proof.header,true);
+            (success, ) = checkBlockHeader(proof.header, true);
             if (!success) {
                 message = "DeriveShaOriginal header verify failed";
-                return(success, message, logs);
+                return (success, message, logs);
             }
-            (success,logs) = _checkReceiptsOriginal(proof);
+            (success, logs) = _checkReceiptsOriginal(proof);
             if (success) {
                 message = "DeriveShaOriginal mpt verify success";
-                return(success, message, logs);
+                return (success, message, logs);
             } else {
                 message = "DeriveShaOriginal mpt verify failed";
-                return(success, message, logs);
+                return (success, message, logs);
             }
         } else {
             message = "mpt verify failed";
             success = false;
-            return(success, message, logs);
+            return (success, message, logs);
         }
     }
 
-    function verifyProofDataWithCache(bytes memory _receiptProof) external override
-    returns (bool success, string memory message,bytes memory logs){}
+    function verifyProofDataWithCache(
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, bytes memory logs) {}
 
+    function updateBlockHeader(bytes memory _blockHeaders) external override {
+        IKlaytn.BlockHeader[] memory _headers = abi.decode(_blockHeaders, (IKlaytn.BlockHeader[]));
 
-function updateBlockHeader(bytes memory _blockHeaders)
-    external
-    override
-    {
-        IKlaytn.BlockHeader[] memory _headers = abi.decode(
-            _blockHeaders, (IKlaytn.BlockHeader[]));
-
-        require(_headers[0].number > headerHeight,
-            "height error");
+        require(_headers[0].number > headerHeight, "height error");
 
         for (uint256 i = 0; i < _headers.length; i++) {
-            require(_headers[i].number == headerHeight + CHANGE_VALIDATORS_SIZE,
-                "height error");
+            require(_headers[i].number == headerHeight + CHANGE_VALIDATORS_SIZE, "height error");
             IKlaytn.BlockHeader memory bh = _headers[i];
             (bool success, IKlaytn.ExtraData memory data) = checkBlockHeader(bh, false);
             require(success, "header verify fail");
 
             validatorIdx = _getValidatorIndex(bh.number);
-            Validator memory v = Validator({
-            validators : data.validators,
-            headerHeight : bh.number
-            });
+            Validator memory v = Validator({validators: data.validators, headerHeight: bh.number});
             validators[validatorIdx] = v;
             headerHeight = bh.number;
             emit UpdateBlockHeader(tx.origin, _headers[i].number);
         }
     }
 
-    function verifiableHeaderRange()
-    external
-    override
-    view
-    returns (uint256 start, uint256 end){
+    function verifiableHeaderRange() external view override returns (uint256 start, uint256 end) {
         return (_getStartValidatorHeight(), _getEndValidatorHeight());
     }
 
-    function updateLightClient(bytes memory _data) external override {
-    }
+    function updateLightClient(bytes memory _data) external override {}
 
-    function clientState() external override view returns(bytes memory) {
+    function clientState() external view override returns (bytes memory) {
         return bytes("");
     }
 
-    function finalizedState(bytes memory _data) external override view returns(bytes memory) {
+    function finalizedState(bytes memory _data) external view override returns (bytes memory) {
         return bytes("");
     }
 
-    function isVerifiable(uint256 _blockHeight, bytes32 ) external override view returns (bool){
-
+    function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool) {
         return false;
     }
 
-    function nodeType() external override view returns (uint256){
+    function nodeType() external view override returns (uint256) {
         return 1;
     }
 
     function notifyLightClient(bytes memory _data) external override {
-        emit NotifySend(msg.sender,block.number,_data);
+        emit NotifySend(msg.sender, block.number, _data);
     }
 
-    function getBytes(IKlaytn.ReceiptProofOriginal memory _proof)
-    external
-    pure
-    returns (bytes memory)
-    {
+    function getBytes(IKlaytn.ReceiptProofOriginal memory _proof) external pure returns (bytes memory) {
         bytes memory proof = abi.encode(_proof);
 
-        IKlaytn.ReceiptProof memory receiptProof = IKlaytn.ReceiptProof(proof, IKlaytn.DeriveShaOriginal.DeriveShaOriginal);
+        IKlaytn.ReceiptProof memory receiptProof = IKlaytn.ReceiptProof(
+            proof,
+            IKlaytn.DeriveShaOriginal.DeriveShaOriginal
+        );
 
         return abi.encode(receiptProof);
     }
 
-    function getHeadersBytes(IKlaytn.BlockHeader[] memory _blockHeaders)
-    external
-    pure
-    returns (bytes memory)
-    {
+    function getHeadersBytes(IKlaytn.BlockHeader[] memory _blockHeaders) external pure returns (bytes memory) {
         return abi.encode(_blockHeaders);
     }
 
-    function getHeadersArray(bytes memory _blockHeaders)
-    external
-    pure
-    returns (IKlaytn.BlockHeader[] memory)
-    {
-        IKlaytn.BlockHeader[] memory _headers = abi.decode(
-            _blockHeaders, (IKlaytn.BlockHeader[]));
+    function getHeadersArray(bytes memory _blockHeaders) external pure returns (IKlaytn.BlockHeader[] memory) {
+        IKlaytn.BlockHeader[] memory _headers = abi.decode(_blockHeaders, (IKlaytn.BlockHeader[]));
         return _headers;
     }
 
-    function decodeVerifyProofData(bytes memory _receiptProof)
-    external
-    pure
-    returns (IKlaytn.ReceiptProof memory proof){
+    function decodeVerifyProofData(
+        bytes memory _receiptProof
+    ) external pure returns (IKlaytn.ReceiptProof memory proof) {
         proof = abi.decode(_receiptProof, (IKlaytn.ReceiptProof));
     }
 
-    function _checkReceiptsConcat(bytes[] memory _receipts, bytes32 _receiptsHash)
-    internal
-    pure
-    returns (bool){
+    function _checkReceiptsConcat(bytes[] memory _receipts, bytes32 _receiptsHash) internal pure returns (bool) {
         bytes memory receiptsAll;
         for (uint i = 0; i < _receipts.length; i++) {
             receiptsAll = bytes.concat(receiptsAll, _receipts[i]);
@@ -240,11 +194,9 @@ function updateBlockHeader(bytes memory _blockHeaders)
         return keccak256(receiptsAll) == _receiptsHash;
     }
 
-    function _checkReceiptsOriginal(IKlaytn.ReceiptProofOriginal memory _proof)
-    internal
-    view
-    returns (bool success,bytes memory logs){
-
+    function _checkReceiptsOriginal(
+        IKlaytn.ReceiptProofOriginal memory _proof
+    ) internal view returns (bool success, bytes memory logs) {
         //bytes memory bytesReceipt = _encodeReceipt(_proof.txReceipt);
 
         success = IMPTVerify(mptVerify).verifyTrieProof(
@@ -256,16 +208,13 @@ function updateBlockHeader(bytes memory _blockHeaders)
         uint256 rlpIndex = 3;
         logs = _proof.txReceipt.toRlpItem().toList()[rlpIndex].toRlpBytes();
 
-        return (success,logs);
+        return (success, logs);
     }
 
-
-    function checkBlockHeader(IKlaytn.BlockHeader memory header,bool tag)
-    internal
-    view
-    returns (bool, IKlaytn.ExtraData memory)
-    {
-
+    function checkBlockHeader(
+        IKlaytn.BlockHeader memory header,
+        bool tag
+    ) internal view returns (bool, IKlaytn.ExtraData memory) {
         bool success = _checkHeaderParam(header);
 
         require(success, "header param error");
@@ -278,7 +227,7 @@ function updateBlockHeader(bytes memory _blockHeaders)
 
         uint num = header.number;
 
-        if(!tag){
+        if (!tag) {
             num = header.number - CHANGE_VALIDATORS_SIZE;
         }
 
@@ -292,7 +241,7 @@ function updateBlockHeader(bytes memory _blockHeaders)
 
         require(success, "signer fail");
 
-        (bytes memory extra,) = _getRemoveSealExtraData(ext, extHead, true);
+        (bytes memory extra, ) = _getRemoveSealExtraData(ext, extHead, true);
 
         bytes32 hash = _getBlockNewHash(header, extra);
 
@@ -301,14 +250,10 @@ function updateBlockHeader(bytes memory _blockHeaders)
         return (_checkCommitSeal(v, committedMsg, ext.committedSeal), ext);
     }
 
-    function decodeHeaderExtraData(bytes memory _extBytes)
-    public
-    pure
-    returns (
-        bytes memory extTop,
-        IKlaytn.ExtraData memory extData)
-    {
-        (bytes memory extraHead,bytes memory istBytes) = _splitExtra(_extBytes);
+    function decodeHeaderExtraData(
+        bytes memory _extBytes
+    ) public pure returns (bytes memory extTop, IKlaytn.ExtraData memory extData) {
+        (bytes memory extraHead, bytes memory istBytes) = _splitExtra(_extBytes);
 
         RLPReader.RLPItem[] memory ls = istBytes.toRlpItem().toList();
         RLPReader.RLPItem[] memory itemValidators = ls[0].toList();
@@ -324,45 +269,32 @@ function updateBlockHeader(bytes memory _blockHeaders)
             _committedSeal[i] = itemCommittedSeal[i].toBytes();
         }
 
-        return (extraHead, IKlaytn.ExtraData({
-        validators : _validators,
-        seal : _seal,
-        committedSeal : _committedSeal
-        }));
+        return (extraHead, IKlaytn.ExtraData({validators: _validators, seal: _seal, committedSeal: _committedSeal}));
     }
 
-    function _checkHeaderParam(IKlaytn.BlockHeader memory header)
-    internal
-    view
-    returns (bool)
-    {
-        if (header.timestamp + 60 > block.timestamp) {return false;}
-        if (header.blockScore == 0) {return false;}
+    function _checkHeaderParam(IKlaytn.BlockHeader memory header) internal view returns (bool) {
+        if (header.timestamp + 60 > block.timestamp) {
+            return false;
+        }
+        if (header.blockScore == 0) {
+            return false;
+        }
         return true;
     }
 
-
-    function _getEndValidatorHeight()
-    internal
-    view
-    returns (uint256)
-    {
+    function _getEndValidatorHeight() internal view returns (uint256) {
         Validator memory v = validators[validatorIdx];
         return (v.headerHeight / CHANGE_VALIDATORS_SIZE + 1) * CHANGE_VALIDATORS_SIZE;
     }
 
-    function _getStartValidatorHeight()
-    internal
-    view
-    returns (uint256)
-    {
+    function _getStartValidatorHeight() internal view returns (uint256) {
         uint idx = validatorIdx;
         uint start = validators[idx].headerHeight;
         for (uint i = 0; i < MAX_VALIDATORS_SIZE; i++) {
             if (idx == 0) {
                 idx = MAX_VALIDATORS_SIZE - 1;
             } else {
-                idx --;
+                idx--;
             }
             Validator memory v = validators[idx];
             if (v.headerHeight != 0 && v.headerHeight < start) {
@@ -372,33 +304,20 @@ function updateBlockHeader(bytes memory _blockHeaders)
             }
         }
         return start;
-
     }
 
-    function _getValidatorIndex(uint _startHeight)
-    internal
-    pure
-    returns (uint)
-    {
+    function _getValidatorIndex(uint _startHeight) internal pure returns (uint) {
         return (_startHeight / CHANGE_VALIDATORS_SIZE) % MAX_VALIDATORS_SIZE;
     }
 
-
-    function _getNextValidatorIndex() internal view returns (uint){
+    function _getNextValidatorIndex() internal view returns (uint) {
         if (validatorIdx == MAX_VALIDATORS_SIZE - 1) {
             return 0;
         }
         return validatorIdx + 1;
     }
 
-
-    function _splitExtra(bytes memory _extra)
-    internal
-    pure
-    returns (
-        bytes memory extraHead,
-        bytes memory extraEnd)
-    {
+    function _splitExtra(bytes memory _extra) internal pure returns (bytes memory extraHead, bytes memory extraEnd) {
         require(_extra.length >= 32, "Invalid extra result type");
         extraEnd = new bytes(_extra.length - EXTRA_VANITY);
         extraHead = new bytes(EXTRA_VANITY);
@@ -415,17 +334,12 @@ function updateBlockHeader(bytes memory _blockHeaders)
     function _getRemoveSealExtraData(
         IKlaytn.ExtraData memory _ext,
         bytes memory _extHead,
-        bool _keepSeal)
-    internal
-    pure
-    returns (
-        bytes memory,
-        bytes memory)
-    {
+        bool _keepSeal
+    ) internal pure returns (bytes memory, bytes memory) {
         bytes[] memory listExt = new bytes[](3);
         bytes[] memory listValidators = new bytes[](_ext.validators.length);
 
-        for (uint i = 0; i < _ext.validators.length; i ++) {
+        for (uint i = 0; i < _ext.validators.length; i++) {
             listValidators[i] = RLPEncode.encodeAddress(_ext.validators[i]);
         }
         listExt[0] = RLPEncode.encodeList(listValidators);
@@ -441,11 +355,7 @@ function updateBlockHeader(bytes memory _blockHeaders)
         return (abi.encodePacked(_extHead, output), _ext.seal);
     }
 
-    function _splitSignature(bytes memory _sig)
-    internal
-    pure
-    returns (bytes32 r, bytes32 s, uint8 v)
-    {
+    function _splitSignature(bytes memory _sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
         require(_sig.length == 65, "invalid signature length");
         assembly {
             r := mload(add(_sig, 32))
@@ -454,11 +364,7 @@ function updateBlockHeader(bytes memory _blockHeaders)
         }
     }
 
-    function _recoverSigner(bytes memory seal, bytes32 hash)
-    internal
-    pure
-    returns (address)
-    {
+    function _recoverSigner(bytes memory seal, bytes32 hash) internal pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(seal);
         if (v <= 1) {
             v = v + 27;
@@ -466,11 +372,10 @@ function updateBlockHeader(bytes memory _blockHeaders)
         return ECDSA.recover(hash, v, r, s);
     }
 
-    function _getBlockNewHash(IKlaytn.BlockHeader memory header, bytes memory extraData)
-    internal
-    pure
-    returns (bytes32)
-    {
+    function _getBlockNewHash(
+        IKlaytn.BlockHeader memory header,
+        bytes memory extraData
+    ) internal pure returns (bytes32) {
         bytes[] memory list = new bytes[](15);
         list[0] = RLPEncode.encodeBytes(header.parentHash);
         list[1] = RLPEncode.encodeAddress(header.reward);
@@ -490,38 +395,20 @@ function updateBlockHeader(bytes memory _blockHeaders)
         return keccak256(RLPEncode.encodeList(list));
     }
 
-
-    function _getCanVerifyValidator(uint256 height)
-    internal
-    view
-    returns (Validator memory v)
-    {
+    function _getCanVerifyValidator(uint256 height) internal view returns (Validator memory v) {
         uint256 idx = _getValidatorIndex(height);
         v = validators[idx];
         return v;
     }
 
-
-    function _checkCommittedAddress(
-        address[] memory _validators,
-        address _address)
-    internal
-    pure
-    returns (bool)
-    {
+    function _checkCommittedAddress(address[] memory _validators, address _address) internal pure returns (bool) {
         for (uint i = 0; i < _validators.length; i++) {
             if (_validators[i] == _address) return true;
         }
         return false;
     }
 
-    function _isRepeat(
-        address[] memory _miners,
-        address _miner,
-        uint256 _limit)
-    internal
-    pure
-    returns (bool) {
+    function _isRepeat(address[] memory _miners, address _miner, uint256 _limit) internal pure returns (bool) {
         for (uint256 i = 0; i < _limit; i++) {
             if (_miners[i] == _miner) {
                 return true;
@@ -531,21 +418,18 @@ function updateBlockHeader(bytes memory _blockHeaders)
         return false;
     }
 
-
-
     /**
      * @dev Calculate the number of faulty nodes.
      * https://github.com/klaytn/klaytn/blob/841a8ad3b45e92f4ea378c1ee1f06cdb963afbac/consensus/istanbul/validator/default.go#L370
      *
      */
-    function _getFaultyNodeNumber(uint256 _n) internal pure returns(uint256){
-        if(_n % 3 == 0){
+    function _getFaultyNodeNumber(uint256 _n) internal pure returns (uint256) {
+        if (_n % 3 == 0) {
             return _n / 3 - 1;
-        }else{
+        } else {
             return _n / 3;
         }
     }
-
 
     /**
      * @dev Check whether the CommitSeal is adequate.
@@ -555,18 +439,15 @@ function updateBlockHeader(bytes memory _blockHeaders)
     function _checkCommitSeal(
         Validator memory v,
         bytes memory committedMsg,
-        bytes[] memory committedSeal)
-    internal
-    pure
-    returns (bool)
-    {
+        bytes[] memory committedSeal
+    ) internal pure returns (bool) {
         bytes32 msgHash = keccak256(committedMsg);
         address[] memory miners = new address[](v.validators.length);
 
         uint checkedCommittee = 0;
         for (uint i = 0; i < committedSeal.length; i++) {
             address committee = _recoverSigner(committedSeal[i], msgHash);
-            if (_checkCommittedAddress(v.validators,committee) && !_isRepeat(miners,committee,i)) {
+            if (_checkCommittedAddress(v.validators, committee) && !_isRepeat(miners, committee, i)) {
                 checkedCommittee++;
             }
             miners[i] = committee;
@@ -574,12 +455,7 @@ function updateBlockHeader(bytes memory _blockHeaders)
         return checkedCommittee > (_getFaultyNodeNumber(v.validators.length)) * 2;
     }
 
-
-    function _getBytesSlice(bytes memory b, uint256 start, uint256 length)
-    internal
-    pure
-    returns (bytes memory)
-    {
+    function _getBytesSlice(bytes memory b, uint256 start, uint256 length) internal pure returns (bytes memory) {
         bytes memory out = new bytes(length);
 
         for (uint256 i = 0; i < length; i++) {
@@ -589,11 +465,7 @@ function updateBlockHeader(bytes memory _blockHeaders)
         return out;
     }
 
-    function _encodeReceipt(IKlaytn.TxReceipt memory _txReceipt)
-    internal
-    pure
-    returns (bytes memory output)
-    {
+    function _encodeReceipt(IKlaytn.TxReceipt memory _txReceipt) internal pure returns (bytes memory output) {
         bytes[] memory list = new bytes[](4);
         list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
         list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
@@ -602,13 +474,9 @@ function updateBlockHeader(bytes memory _blockHeaders)
         bytes[] memory loglist = new bytes[](3);
         for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
             loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[](
-                _txReceipt.logs[j].topics.length
-            );
+            bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
             for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(
-                    _txReceipt.logs[j].topics[i]
-                );
+                loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
             }
             loglist[1] = RLPEncode.encodeList(loglist1);
             loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
@@ -624,20 +492,14 @@ function updateBlockHeader(bytes memory _blockHeaders)
         _changeAdmin(newOwner);
     }
 
-
     /** UUPS *********************************************************/
-    function _authorizeUpgrade(address)
-    internal
-    view
-    onlyOwner
-    override {}
+    function _authorizeUpgrade(address) internal view override onlyOwner {}
 
-    function getAdmin() external view returns (address){
+    function getAdmin() external view returns (address) {
         return _getAdmin();
     }
 
     function getImplementation() external view returns (address) {
         return _getImplementation();
     }
-
 }
