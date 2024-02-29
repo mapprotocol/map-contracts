@@ -95,7 +95,11 @@ library BLS {
      * @param message message to verify.
      * @param publicKeys uncompressed BLS public keys.
      */
-    function batchVerify(bytes[] memory signatures, bytes memory message, bytes[] memory publicKeys) internal view returns (bool) {
+    function batchVerify(
+        bytes[] memory signatures,
+        bytes memory message,
+        bytes[] memory publicKeys
+    ) internal view returns (bool) {
         require(signatures.length == publicKeys.length, "signatures and publicKeys length mismatch");
         bytes memory aggSignature = aggregateSignatures(signatures);
         return aggregateVerify(aggSignature, message, publicKeys);
@@ -107,7 +111,11 @@ library BLS {
      * @param message message to verify.
      * @param publicKeys uncompressed BLS public keys.
      */
-    function aggregateVerify(bytes memory signature, bytes memory message, bytes[] memory publicKeys) internal view returns (bool) {
+    function aggregateVerify(
+        bytes memory signature,
+        bytes memory message,
+        bytes[] memory publicKeys
+    ) internal view returns (bool) {
         bytes memory aggPubKey = aggregatePublicKeys(publicKeys);
         return verify(signature, message, aggPubKey);
     }
@@ -123,7 +131,11 @@ library BLS {
         return verifyHashed(signature, hashedMessage, publicKey);
     }
 
-    function verifyHashed(bytes memory signature, bytes memory hashedMessage, bytes memory publicKey) internal view returns (bool) {
+    function verifyHashed(
+        bytes memory signature,
+        bytes memory hashedMessage,
+        bytes memory publicKey
+    ) internal view returns (bool) {
         Bytes.Builder memory builder = Bytes.newBuilder(768);
 
         // public key
@@ -208,7 +220,7 @@ library BLS {
 
         for (uint256 i = 2; i <= ELL; i++) {
             builder.reset();
-            // append b[0] ^ b[i-1] 
+            // append b[0] ^ b[i-1]
             bytes32 xorVal;
             uint256 offset = b.offset;
             assembly {
@@ -232,7 +244,13 @@ library BLS {
         callPrecompile(PRECOMPILE_BIG_MOD_EXP, builder.seal(), buf, offset, L);
     }
 
-    function _paddingAppend(Bytes.Builder memory builder, uint256 padding, bytes memory val, uint256 offset, uint256 len) private pure {
+    function _paddingAppend(
+        Bytes.Builder memory builder,
+        uint256 padding,
+        bytes memory val,
+        uint256 offset,
+        uint256 len
+    ) private pure {
         builder.appendEmpty(padding);
         builder.appendBytes(val, offset, len);
     }
@@ -268,13 +286,24 @@ library BLS {
         return callPrecompile(precompile, input, 0, input.length, output, 0, output.length);
     }
 
-    function callPrecompile(address precompile, bytes memory input, bytes memory output, uint256 outputOffset, uint256 outputLen) internal view {
+    function callPrecompile(
+        address precompile,
+        bytes memory input,
+        bytes memory output,
+        uint256 outputOffset,
+        uint256 outputLen
+    ) internal view {
         return callPrecompile(precompile, input, 0, input.length, output, outputOffset, outputLen);
     }
 
-    function callPrecompile(address precompile, 
-        bytes memory input, uint256 inputOffset, uint256 inputLen,
-        bytes memory output, uint256 outputOffset, uint256 outputLen
+    function callPrecompile(
+        address precompile,
+        bytes memory input,
+        uint256 inputOffset,
+        uint256 inputLen,
+        bytes memory output,
+        uint256 outputOffset,
+        uint256 outputLen
     ) internal view {
         require(inputOffset + inputLen <= input.length, "BLS: input out of bound");
         require(outputOffset + outputLen <= output.length, "BLS: output out of bound");
@@ -287,7 +316,10 @@ library BLS {
             success := staticcall(gas(), precompile, inputPtr, inputLen, outputPtr, outputLen)
         }
 
-        require(success, string(abi.encodePacked("BLS: Failed to call pre-compile contract ", Strings.toHexString(precompile))));
+        require(
+            success,
+            string(abi.encodePacked("BLS: Failed to call pre-compile contract ", Strings.toHexString(precompile)))
+        );
     }
 
     // COMPRESSION_P = P / 2
@@ -298,7 +330,10 @@ library BLS {
      * @dev Compress public key into 48 bytes.
      */
     function compressPublicKey(bytes memory uncompressed) internal pure returns (bytes memory) {
-        require(uncompressed.length == 96 || uncompressed.length == 128, "BLS: uncompressed public key length mismatch");
+        require(
+            uncompressed.length == 96 || uncompressed.length == 128,
+            "BLS: uncompressed public key length mismatch"
+        );
 
         bytes memory compressed = new bytes(48);
         bytes32 y0;
@@ -328,5 +363,4 @@ library BLS {
 
         return compressed;
     }
-
 }

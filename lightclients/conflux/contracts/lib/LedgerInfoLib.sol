@@ -13,12 +13,12 @@ library LedgerInfoLib {
     struct LedgerInfoWithSignatures {
         uint64 epoch;
         uint64 round;
-        bytes32 id;                 // block hash
+        bytes32 id; // block hash
         bytes32 executedStateId;
         uint64 version;
         uint64 timestampUsecs;
-        EpochState nextEpochState;  // only available for the last block of epoch
-        Decision pivot;             // may be empty for epoch genesis block
+        EpochState nextEpochState; // only available for the last block of epoch
+        Decision pivot; // may be empty for epoch genesis block
         bytes32 consensusDataHash;
         bytes32[] accounts;
         bytes aggregatedSignature;
@@ -46,7 +46,7 @@ library LedgerInfoLib {
 
     struct Committee {
         uint64 quorumVotingPower;
-        mapping (bytes32 => CommitteeMember) members;
+        mapping(bytes32 => CommitteeMember) members;
         bytes32[] accounts;
         uint256 numAccounts;
     }
@@ -62,7 +62,7 @@ library LedgerInfoLib {
         require(state.validators.length > 0, "EpochState: empty validators");
 
         // IMPORTANT: SECURITY CHECK REQUIRED TO AVOID MALICIOUS MODIFIED UNCOMPRESSED PUBLIC KEY RELAYED.
-        // 
+        //
         // Validate uncompressed public key, since it is not verified via BLS signature.
         // Basically, use BLS12_G1ADD to verify all public keys are valid (on curve).
         bytes memory input = new bytes(256);
@@ -132,9 +132,10 @@ library LedgerInfoLib {
         }
     }
 
-    function packSignatures(Committee storage committee, LedgerInfoWithSignatures memory ledgerInfo) internal view returns (
-        bytes memory signature, bytes[] memory publicKeys
-    ) {
+    function packSignatures(
+        Committee storage committee,
+        LedgerInfoWithSignatures memory ledgerInfo
+    ) internal view returns (bytes memory signature, bytes[] memory publicKeys) {
         uint256 numAccounts = ledgerInfo.accounts.length;
         signature = ledgerInfo.aggregatedSignature;
         publicKeys = new bytes[](numAccounts);
@@ -164,16 +165,17 @@ library LedgerInfoLib {
         bytes memory id = abi.encodePacked(ledgerInfo.id);
         bytes memory executedStateId = abi.encodePacked(ledgerInfo.executedStateId);
 
-        uint256 size = BCS.SIZE_BYTES32 // BCS prefix
-            + BCS.SIZE_UINT64 // epoch
-            + BCS.SIZE_UINT64 // round
-            + BCS.sizeBytes(id)
-            + BCS.sizeBytes(executedStateId)
-            + BCS.SIZE_UINT64 // version
-            + BCS.SIZE_UINT64 // timestampUsecs
-            + BCS.SIZE_OPTION + _bcsSize(ledgerInfo.nextEpochState) // Option(nextEpochState)
-            + BCS.SIZE_OPTION // Option(pivot)
-            + BCS.sizeBytes(consensusDataHash);
+        uint256 size = BCS.SIZE_BYTES32 + // BCS prefix
+            BCS.SIZE_UINT64 + // epoch
+            BCS.SIZE_UINT64 + // round
+            BCS.sizeBytes(id) +
+            BCS.sizeBytes(executedStateId) +
+            BCS.SIZE_UINT64 + // version
+            BCS.SIZE_UINT64 + // timestampUsecs
+            BCS.SIZE_OPTION +
+            _bcsSize(ledgerInfo.nextEpochState) + // Option(nextEpochState)
+            BCS.SIZE_OPTION + // Option(pivot)
+            BCS.sizeBytes(consensusDataHash);
 
         bytes memory pivotBlockHash;
         if (ledgerInfo.pivot.blockHash != 0) {
@@ -267,5 +269,4 @@ library LedgerInfoLib {
         BCS.encodeUint64(builder, state.totalVotingPower);
         BCS.encodeBytes(builder, state.vrfSeed);
     }
-
 }

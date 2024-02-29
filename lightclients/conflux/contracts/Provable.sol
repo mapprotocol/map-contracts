@@ -5,7 +5,6 @@ pragma solidity ^0.8.4;
 import "./lib/ProofLib.sol";
 
 contract Provable {
-
     function prove(
         bytes32 root,
         bytes memory key,
@@ -31,5 +30,4 @@ contract Provable {
         bytes memory blockValue = abi.encodePacked(receiptsRoot);
         return ProofLib.Prove(blockRoot, blockIndex, keccak256(blockValue), blockProof);
     }
-
 }

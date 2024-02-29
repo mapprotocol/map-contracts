@@ -8,7 +8,6 @@ pragma solidity ^0.8.4;
  * Note, client should make sure the buffer size is enough for append operations.
  */
 library Bytes {
-
     uint256 private constant BYTES_HEADER_SIZE = 32;
     uint256 private constant WORD = 32;
 
@@ -83,7 +82,13 @@ library Bytes {
         memcopy(b1, offset, b2, 0, b2.length);
     }
 
-    function memcopy(bytes memory dst, uint256 dstOffset, bytes memory src, uint256 srcOffset, uint256 len) internal pure {
+    function memcopy(
+        bytes memory dst,
+        uint256 dstOffset,
+        bytes memory src,
+        uint256 srcOffset,
+        uint256 len
+    ) internal pure {
         require(srcOffset + len <= src.length, "Bytes: src out of bound");
         require(dstOffset + len <= dst.length, "Bytes: dst out of bound");
 
@@ -95,7 +100,7 @@ library Bytes {
         }
 
         // copy word by word
-        uint256 copied = len / WORD * WORD;
+        uint256 copied = (len / WORD) * WORD;
         for (; len >= WORD; len -= WORD) {
             assembly {
                 mstore(dstPtr, mload(srcPtr))
@@ -109,7 +114,13 @@ library Bytes {
         }
     }
 
-    function _copyIncompleteWord(bytes memory dst, uint256 dstOffset, bytes memory src, uint256 srcOffset, uint256 len) private pure {
+    function _copyIncompleteWord(
+        bytes memory dst,
+        uint256 dstOffset,
+        bytes memory src,
+        uint256 srcOffset,
+        uint256 len
+    ) private pure {
         if (dstOffset + len >= WORD) {
             dstOffset = dstOffset + len - WORD;
             assembly {
@@ -138,5 +149,4 @@ library Bytes {
             }
         }
     }
-
 }

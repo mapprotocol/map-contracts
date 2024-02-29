@@ -62,5 +62,4 @@ library BCS {
             builder.appendUint8(0);
         }
     }
-
 }

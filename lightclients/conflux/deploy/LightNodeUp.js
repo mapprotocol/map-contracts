@@ -1,37 +1,33 @@
-const BigNumber = require('bignumber.js')
-BigNumber.config({ROUNDING_MODE: BigNumber.ROUND_FLOOR})
-module.exports = async function ({ethers, deployments}) {
-    const {deploy} = deployments
-    const accounts = await ethers.getSigners()
+const BigNumber = require("bignumber.js");
+BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR });
+module.exports = async function ({ ethers, deployments }) {
+    const { deploy } = deployments;
+    const accounts = await ethers.getSigners();
     const deployer = accounts[0];
-    console.log(
-        "Deploying contracts with the account:",
-        await deployer.getAddress()
-    );
+    console.log("Deploying contracts with the account:", await deployer.getAddress());
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
-    await deploy('LightNode', {
+    await deploy("LightNode", {
         from: deployer.address,
         args: [],
         log: true,
-        contract: 'LightNode',
-    })
+        contract: "LightNode",
+    });
 
-    let LightClient= await deployments.get('LightNode');
+    let LightClient = await deployments.get("LightNode");
 
-    console.log("LightNode",LightClient.address);
+    console.log("LightNode", LightClient.address);
 
-    let LightClientProxy = await deployments.get('LightNodeProxy');
+    let LightClientProxy = await deployments.get("LightNodeProxy");
 
-    console.log("LightNodeProxy",LightClientProxy.address);
+    console.log("LightNodeProxy", LightClientProxy.address);
 
-    let lightClientProxy = await ethers.getContractAt("LightNode",LightClientProxy.address);
+    let lightClientProxy = await ethers.getContractAt("LightNode", LightClientProxy.address);
 
-    await  lightClientProxy.upgradeTo(LightClient.address);
+    await lightClientProxy.upgradeTo(LightClient.address);
 
-    console.log("LightNodeUp success")
+    console.log("LightNodeUp success");
+};
 
-}
-
-module.exports.tags = ['LightNodeUp']
+module.exports.tags = ["LightNodeUp"];

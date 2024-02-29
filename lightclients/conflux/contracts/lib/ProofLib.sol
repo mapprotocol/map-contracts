@@ -11,9 +11,9 @@ library ProofLib {
 
     // full bytes recoverable
     struct NibblePath {
-        bytes32 nibbles;    // use fixed array to avoid stack too deep
-        uint256 start;      // inclusive
-        uint256 end;        // exclusive
+        bytes32 nibbles; // use fixed array to avoid stack too deep
+        uint256 start; // inclusive
+        uint256 end; // exclusive
     }
 
     function _newNibblePath(bytes memory key) private pure returns (NibblePath memory) {
@@ -51,7 +51,7 @@ library ProofLib {
         uint256 offset = 0;
 
         for (uint256 i = start; i < end; i += 2) {
-            result[offset] = bytes1(uint8(path.nibbles[i]) << 4 + uint8(path.nibbles[i + 1]));
+            result[offset] = bytes1(uint8(path.nibbles[i]) << (4 + uint8(path.nibbles[i + 1])));
             offset++;
         }
 
@@ -62,7 +62,10 @@ library ProofLib {
         return result;
     }
 
-    function _trimPrefix(NibblePath memory path, NibblePath memory prefix) private pure returns (NibblePath memory remain, bool ok) {
+    function _trimPrefix(
+        NibblePath memory path,
+        NibblePath memory prefix
+    ) private pure returns (NibblePath memory remain, bool ok) {
         uint256 prefixLen = _pathLength(prefix);
         if (prefixLen == 0) {
             return (path, true);
@@ -130,7 +133,7 @@ library ProofLib {
         uint256 valueBufLen = value.length == 0 ? 0 : value.length + 1;
         Bytes.Builder memory builder = Bytes.newBuilder(1 + 16 * 32 + valueBufLen);
 
-        builder.appendUint8(uint8(bytes1('n')));
+        builder.appendUint8(uint8(bytes1("n")));
 
         // children
         for (uint256 i = 0; i < 16; i++) {
@@ -139,7 +142,7 @@ library ProofLib {
 
         // value
         if (value.length > 0) {
-            builder.appendUint8(uint8(bytes1('v')));
+            builder.appendUint8(uint8(bytes1("v")));
             builder.appendBytes(value);
         }
 
@@ -197,5 +200,4 @@ library ProofLib {
 
         revert("ProofLib: invalid key length");
     }
-
 }

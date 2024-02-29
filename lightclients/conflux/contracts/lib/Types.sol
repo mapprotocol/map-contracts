@@ -35,15 +35,12 @@ library Types {
         bytes32 deferredReceiptsRoot;
     }
 
-
     struct ReceiptProof {
         // Continuous block headers (RLP encoded), that head is for receipts root,
         // and tail block should be relayed on chain.
         bytes[] headers;
-
         bytes blockIndex;
         ProofLib.ProofNode[] blockProof;
-
         bytes32 receiptsRoot;
         bytes index;
         bytes receipt; // RLP encoded
@@ -197,5 +194,4 @@ library Types {
 
         return RLPEncode.encodeList(list);
     }
-
 }

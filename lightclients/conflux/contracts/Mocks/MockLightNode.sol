@@ -15,7 +15,6 @@ import "../Provable.sol";
 contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
     using RLPReader for RLPReader.RLPItem;
 
-
     LedgerInfo private _ledgerInfo;
     Provable private _mptVerify;
 
@@ -66,18 +65,23 @@ contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
     }
 
     function updateLightClient(bytes memory _data) external override {
-        LedgerInfoLib.LedgerInfoWithSignatures memory ledgerInfo = abi.decode(_data, (LedgerInfoLib.LedgerInfoWithSignatures));
+        LedgerInfoLib.LedgerInfoWithSignatures memory ledgerInfo = abi.decode(
+            _data,
+            (LedgerInfoLib.LedgerInfoWithSignatures)
+        );
         relayPOS(ledgerInfo);
     }
 
-    function relayPOS(LedgerInfoLib.LedgerInfoWithSignatures memory ledgerInfo) public override onlyInitialized whenNotPaused {
+    function relayPOS(
+        LedgerInfoLib.LedgerInfoWithSignatures memory ledgerInfo
+    ) public override onlyInitialized whenNotPaused {
         require(ledgerInfo.epoch == _state.epoch, "epoch mismatch");
         require(ledgerInfo.round > _state.round, "round mismatch");
 
         bytes memory message = _ledgerInfo.bcsEncode(ledgerInfo);
         (bytes memory signature, bytes[] memory publicKeys) = LedgerInfoLib.packSignatures(_committee, ledgerInfo);
-//        bool verified = _ledgerInfo.aggregateVerifyBLS(signature, message, publicKeys);
-//        require(verified, "invalid BLS signatures");
+        //        bool verified = _ledgerInfo.aggregateVerifyBLS(signature, message, publicKeys);
+        //        require(verified, "invalid BLS signatures");
 
         if (ledgerInfo.nextEpochState.epoch == 0) {
             _state.round = ledgerInfo.round;
@@ -96,7 +100,7 @@ contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         }
 
         removeBlockHeader(1);
-        emit UpdateBlockHeader(tx.origin,ledgerInfo.pivot.height);
+        emit UpdateBlockHeader(tx.origin, ledgerInfo.pivot.height);
     }
 
     function updateBlockHeader(bytes memory _blockHeader) external override {
@@ -114,7 +118,7 @@ contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
 
         removeBlockHeader(1);
 
-        emit UpdateBlockHeader(tx.origin,head.height);
+        emit UpdateBlockHeader(tx.origin, head.height);
     }
 
     function _validateHeaders(bytes[] memory headers) private view returns (Types.BlockHeaderWrapper memory head) {
@@ -172,20 +176,21 @@ contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
     function verifyReceiptProof(Types.ReceiptProof memory proof) public view override returns (bool) {
         Types.BlockHeaderWrapper memory head = _validateHeaders(proof.headers);
 
-        return _mptVerify.proveReceipt(
-            head.deferredReceiptsRoot,
-            proof.blockIndex,
-            proof.blockProof,
-            proof.receiptsRoot,
-            proof.index,
-            proof.receipt,
-            proof.receiptProof
-        );
+        return
+            _mptVerify.proveReceipt(
+                head.deferredReceiptsRoot,
+                proof.blockIndex,
+                proof.blockProof,
+                proof.receiptsRoot,
+                proof.index,
+                proof.receipt,
+                proof.receiptProof
+            );
     }
 
-    function verifyProofData(bytes memory receiptProof) external view override returns (
-        bool success, string memory message, bytes memory rlpLogs
-    ) {
+    function verifyProofData(
+        bytes memory receiptProof
+    ) external view override returns (bool success, string memory message, bytes memory rlpLogs) {
         Types.ReceiptProof memory proof = abi.decode(receiptProof, (Types.ReceiptProof));
         success = verifyReceiptProof(proof);
 
@@ -196,11 +201,9 @@ contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         }
     }
 
-    function verifyProofDataWithCache(bytes memory _receiptProof)
-    external
-    override
-    returns
-    (bool success, string memory message,bytes memory logs){
+    function verifyProofDataWithCache(
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, bytes memory logs) {
         Types.ReceiptProof memory proof = abi.decode(_receiptProof, (Types.ReceiptProof));
         success = verifyReceiptProof(proof);
 
@@ -211,18 +214,19 @@ contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         }
     }
 
-    function clientState() external view override returns(bytes memory) {
-        return abi.encode(
-            _state.epoch,
-            _state.round,
-            _state.earliestBlockNumber,
-            _state.finalizedBlockNumber,
-            _state.blocks,
-            _state.maxBlocks
-        );
+    function clientState() external view override returns (bytes memory) {
+        return
+            abi.encode(
+                _state.epoch,
+                _state.round,
+                _state.earliestBlockNumber,
+                _state.finalizedBlockNumber,
+                _state.blocks,
+                _state.maxBlocks
+            );
     }
 
-    function state() external view override returns(State memory) {
+    function state() external view override returns (State memory) {
         return _state;
     }
 
@@ -234,17 +238,16 @@ contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         return (_state.earliestBlockNumber, _state.finalizedBlockNumber);
     }
 
-    function isVerifiable(uint256 _blockHeight, bytes32 ) external override view returns (bool){
-
+    function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool) {
         return _state.earliestBlockNumber <= _blockHeight && _blockHeight <= _state.finalizedBlockNumber;
     }
 
-    function nodeType() external override view returns (uint256){
+    function nodeType() external view override returns (uint256) {
         return 1;
     }
 
-    function notifyLightClient(bytes memory _data) external override {
-        emit NotifySend(msg.sender,block.number,_data);
+    function notifyLightClient(address _from, bytes memory _data) external override {
+        emit ClientNotifySend(_from, block.number, _data);
     }
 
     function nearestPivot(uint256 height) public view override returns (uint256) {

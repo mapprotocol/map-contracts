@@ -6,7 +6,6 @@ import "./lib/LedgerInfoLib.sol";
 import "./lib/BLS.sol";
 
 contract LedgerInfo {
-
     /**
      * @dev BCS encode the specified `ledgerInfo`.
      */
@@ -20,7 +19,11 @@ contract LedgerInfo {
      * @param message message to verify.
      * @param publicKeys uncompressed BLS public keys (each in 96 or 128 bytes).
      */
-    function batchVerifyBLS(bytes[] memory signatures, bytes memory message, bytes[] memory publicKeys) public view returns (bool) {
+    function batchVerifyBLS(
+        bytes[] memory signatures,
+        bytes memory message,
+        bytes[] memory publicKeys
+    ) public view returns (bool) {
         return BLS.batchVerify(signatures, message, publicKeys);
     }
 
@@ -30,7 +33,11 @@ contract LedgerInfo {
      * @param message message to verify.
      * @param publicKeys uncompressed BLS public keys (each in 96 or 128 bytes).
      */
-    function aggregateVerifyBLS(bytes memory signature, bytes memory message, bytes[] memory publicKeys) public view returns (bool) {
+    function aggregateVerifyBLS(
+        bytes memory signature,
+        bytes memory message,
+        bytes[] memory publicKeys
+    ) public view returns (bool) {
         return BLS.aggregateVerify(signature, message, publicKeys);
     }
 
@@ -40,7 +47,11 @@ contract LedgerInfo {
      * @param message message to verify.
      * @param publicKey uncompressed BLS public key in 96 or 128 bytes.
      */
-    function verifyBLS(bytes memory signature, bytes memory message, bytes memory publicKey) public view returns (bool) {
+    function verifyBLS(
+        bytes memory signature,
+        bytes memory message,
+        bytes memory publicKey
+    ) public view returns (bool) {
         return BLS.verify(signature, message, publicKey);
     }
 
@@ -50,7 +61,11 @@ contract LedgerInfo {
      * @param g2Message hashed message (G2 point encoded) in 256 bytes to verify.
      * @param publicKey uncompressed BLS public key in 96 or 128 bytes.
      */
-    function verifyBLSHashed(bytes memory signature, bytes memory g2Message, bytes memory publicKey) public view returns (bool) {
+    function verifyBLSHashed(
+        bytes memory signature,
+        bytes memory g2Message,
+        bytes memory publicKey
+    ) public view returns (bool) {
         return BLS.verifyHashed(signature, g2Message, publicKey);
     }
 
@@ -66,10 +81,13 @@ contract LedgerInfo {
         return BLS.expandMessageXmd(message);
     }
 
-    function callPrecompile(address precompile, bytes memory input, uint256 outputLen) public view returns (bytes memory) {
+    function callPrecompile(
+        address precompile,
+        bytes memory input,
+        uint256 outputLen
+    ) public view returns (bytes memory) {
         bytes memory output = new bytes(outputLen);
         BLS.callPrecompile(precompile, input, output);
         return output;
     }
-
 }

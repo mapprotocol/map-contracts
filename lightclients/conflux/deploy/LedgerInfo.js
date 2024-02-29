@@ -1,28 +1,25 @@
-const BigNumber = require('bignumber.js')
-BigNumber.config({ROUNDING_MODE: BigNumber.ROUND_FLOOR})
+const BigNumber = require("bignumber.js");
+BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR });
 
-module.exports = async function ({ethers, deployments}) {
-    const {deploy} = deployments
-    const accounts = await ethers.getSigners()
+module.exports = async function ({ ethers, deployments }) {
+    const { deploy } = deployments;
+    const accounts = await ethers.getSigners();
     const deployer = accounts[0];
 
-    console.log(
-        "Deploying contracts with the account:",
-        await deployer.getAddress()
-    );
+    console.log("Deploying contracts with the account:", await deployer.getAddress());
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
-    await deploy('LedgerInfo', {
+    await deploy("LedgerInfo", {
         from: deployer.address,
         args: [],
         log: true,
-        contract: 'LedgerInfo'
-    })
+        contract: "LedgerInfo",
+    });
 
-    let ledgerInfo = await deployments.get('LedgerInfo');
+    let ledgerInfo = await deployments.get("LedgerInfo");
 
-    console.log("LedgerInfo success：",ledgerInfo.address)
-}
+    console.log("LedgerInfo success：", ledgerInfo.address);
+};
 
-module.exports.tags = ['LedgerInfo']
+module.exports.tags = ["LedgerInfo"];

@@ -1,4 +1,3 @@
-
 module.exports = async (taskArgs, hre) => {
     const { deploy } = deployments;
     const accounts = await ethers.getSigners();
@@ -14,7 +13,5 @@ module.exports = async (taskArgs, hre) => {
 
     await (await proxy.connect(deployer).setProvable(taskArgs.provable)).wait();
 
-    console.log(
-        `LightNode setLedgerInfo is : ${taskArgs.provable} `
-    );
+    console.log(`LightNode setLedgerInfo is : ${taskArgs.provable} `);
 };

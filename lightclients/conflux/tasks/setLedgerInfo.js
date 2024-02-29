@@ -1,4 +1,3 @@
-
 module.exports = async (taskArgs, hre) => {
     const { deploy } = deployments;
     const accounts = await ethers.getSigners();
@@ -14,7 +13,5 @@ module.exports = async (taskArgs, hre) => {
 
     await (await proxy.connect(deployer).setLedgerInfo(taskArgs.ledger)).wait();
 
-    console.log(
-        `LightNode setLedgerInfo is : ${taskArgs.ledger} `
-    );
+    console.log(`LightNode setLedgerInfo is : ${taskArgs.ledger} `);
 };
