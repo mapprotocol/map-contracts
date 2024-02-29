@@ -20,7 +20,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     let proxy = LightNode.attach(LightNodeProxy.address);
 
-    console.log("mpt before: ", await proxy.mptVerify());
+    // console.log("mpt before: ", await proxy.mptVerify());
 
     console.log("implementation before: ", await proxy.getImplementation());
 
@@ -28,9 +28,9 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     console.log("implementation after: ", await proxy.getImplementation());
 
-    await (await proxy.setMptVerifier("0x4b1EE84A72b44B78346e069D1c66509940827E22")).wait();
+    // await (await proxy.setMptVerify("0x4b1EE84A72b44B78346e069D1c66509940827E22")).wait();
 
-    console.log("mpt after: ", await proxy.mptVerify());
+    // console.log("mpt after: ", await proxy.mptVerify());
 };
 
 export default deploy;
