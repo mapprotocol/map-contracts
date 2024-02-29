@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/mapprotocol/map-contracts#readme.md",
   "dependencies": {
-    "@mapprotocol/protocol": "^0.5.0",
+    "@mapprotocol/protocol": "^0.6.0",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@openzeppelin/contracts": "^4.8.1",
     "ajv": "^8.8.2",

@@ -212,7 +212,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         return bytes("");
     }
 
-    function finalizedState(bytes memory _data) external override view returns(bytes memory) {
+    function finalizedState(bytes memory ) external override view returns(bytes memory) {
         return bytes("");
     }
 
@@ -225,6 +225,18 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         end = (lastEpochHeight / CHANGE_VALIDATORS_SIZE + 1) * CHANGE_VALIDATORS_SIZE - 1;
     }
 
+    function isVerifiable(uint256 _blockHeight, bytes32 ) external override view returns (bool){
+        uint256 end = (lastEpochHeight / CHANGE_VALIDATORS_SIZE + 1) * CHANGE_VALIDATORS_SIZE - 1;
+        return firstEpochHeight <= _blockHeight && _blockHeight <= end;
+    }
+
+    function nodeType() external override view returns (uint256){
+        return 1;
+    }
+
+    function notifyLightClient(bytes memory _data) external override {
+        emit NotifySend(msg.sender,block.number,_data);
+    }
 
     function getBytes(IKlaytn.ReceiptProofOriginal memory _proof)
     external
@@ -351,17 +363,17 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         IKlaytn.Vote memory vote = verifyTool.decodeVote(header0.voteData);
         require( vote.value.length % ADDRESS_LENGTH == 0, "Address error");
         address[] memory updateValidators = verifyTool.bytesToAddressArray(vote.value);
-        uint256 headerHeight = header1.number;
-        if(headerHeight % CHANGE_VALIDATORS_SIZE == 0){
-            headerHeight = header1.number - 1;
+        uint256 headerHeight1 = header1.number;
+        if(headerHeight1 % CHANGE_VALIDATORS_SIZE == 0){
+            headerHeight1 = header1.number - 1;
         }
         bool success;
         address[] memory newValidators;
         IKlaytn.ExtraData memory header1Extra;
         if (keccak256(vote.key) == ADD_VALIDATOR) {
-            newValidators = _getUpdateValidators(headerHeight, updateValidators, true);
+            newValidators = _getUpdateValidators(headerHeight1, updateValidators, true);
         } else if (keccak256(vote.key) == REMOVE_VALIDATOR) {
-            newValidators = _getUpdateValidators(headerHeight, updateValidators, false);
+            newValidators = _getUpdateValidators(headerHeight1, updateValidators, false);
         } else {
             require(false, "Not the expected instruction");
         }

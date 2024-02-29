@@ -179,6 +179,18 @@ function updateBlockHeader(bytes memory _blockHeaders)
         return bytes("");
     }
 
+    function isVerifiable(uint256 _blockHeight, bytes32 ) external override view returns (bool){
+
+        return false;
+    }
+
+    function nodeType() external override view returns (uint256){
+        return 1;
+    }
+
+    function notifyLightClient(bytes memory _data) external override {
+        emit NotifySend(msg.sender,block.number,_data);
+    }
 
     function getBytes(IKlaytn.ReceiptProofOriginal memory _proof)
     external
