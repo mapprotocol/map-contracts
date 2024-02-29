@@ -225,8 +225,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return (minValidBlocknum, maxCanVerifyNum());
     }
 
-    function notifyLightClient(bytes memory _data) external override {
-        emit NotifySend(msg.sender, block.number, _data);
+    function notifyLightClient(address _from, bytes memory _data) external override {
+        emit ClientNotifySend(_from, block.number, _data);
     }
 
     function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool) {
