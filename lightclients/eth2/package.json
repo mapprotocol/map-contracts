@@ -9,7 +9,7 @@
     "@lodestar/api": "^1.7.0",
     "@lodestar/config": "^1.7.0",
     "@lodestar/types": "^1.7.0",
-    "@mapprotocol/protocol": "^0.6.0",
+    "@mapprotocol/protocol": "^0.6.1",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.2",
     "@openzeppelin/contracts": "^4.6.0",
     "dotenv": "^16.0.0",

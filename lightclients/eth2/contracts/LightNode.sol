@@ -292,8 +292,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return 1;
     }
 
-    function notifyLightClient(bytes memory _data) external override {
-        emit NotifySend(msg.sender, block.number, _data);
+    function notifyLightClient(address _from, bytes memory _data) external override {
+        emit ClientNotifySend(_from, block.number, _data);
     }
 
     function togglePause(bool flag) external onlyOwner returns (bool) {
