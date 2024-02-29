@@ -1,6 +1,6 @@
 {
   "name": "@mapprotocol/bsc-light-client",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "bsc light client in the solidity implementation",
   "scripts": {
     "format": "prettier --print-width 120 --tab-width 4 --write ./contracts ./deploy ./data ./test ./scripts ./utils"
