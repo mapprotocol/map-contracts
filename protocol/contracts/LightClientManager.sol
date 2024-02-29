@@ -43,36 +43,27 @@ contract LightClientManager is ILightClientManager, Initializable, UUPSUpgradeab
         lightNode.updateLightClient(_data);
     }
 
-    function notifyLightClient(uint256 _chainId, bytes memory _data) external override {
+    function notifyLightClient(uint256 _chainId, address _from, bytes memory _data) external override {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
-        lightNode.notifyLightClient(_data);
+        lightNode.notifyLightClient(_from, _data);
+
+        emit ManagerNotifySend(_chainId, _from, block.number, _data);
     }
 
-    function verifyProofDataWithCache(uint256 _chainId, bytes memory _receiptProof)
-        external
-        override
-        returns (
-            bool success,
-            string memory message,
-            bytes memory logs
-        )
-    {
+    function verifyProofDataWithCache(
+        uint256 _chainId,
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, bytes memory logs) {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.verifyProofDataWithCache(_receiptProof);
     }
 
-    function verifyProofData(uint256 _chainId, bytes memory _receiptProof)
-        external
-        view
-        override
-        returns (
-            bool success,
-            string memory message,
-            bytes memory logs
-        )
-    {
+    function verifyProofData(
+        uint256 _chainId,
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, bytes memory logs) {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.verifyProofData(_receiptProof);
@@ -105,11 +96,7 @@ contract LightClientManager is ILightClientManager, Initializable, UUPSUpgradeab
         return lightNode.finalizedState(_data);
     }
 
-    function isVerifiable(
-        uint256 _chainId,
-        uint256 _blockHeight,
-        bytes32 _hash
-    ) external view override returns (bool) {
+    function isVerifiable(uint256 _chainId, uint256 _blockHeight, bytes32 _hash) external view override returns (bool) {
         require(lightClientContract[_chainId] != address(0), "not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.isVerifiable(_blockHeight, _hash);

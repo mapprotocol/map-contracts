@@ -117,7 +117,7 @@ library RLPEncode {
             encoded = new bytes(lenLen + 1);
             encoded[0] = bytes32(lenLen + offset + 55)[31];
             for (i = 1; i <= lenLen; i++) {
-                encoded[i] = bytes32((len / (256**(lenLen - i))) % 256)[31];
+                encoded[i] = bytes32((len / (256 ** (lenLen - i))) % 256)[31];
             }
         }
         return encoded;
@@ -154,11 +154,7 @@ library RLPEncode {
      * @param _src Source location.
      * @param _len Length of memory to copy.
      */
-    function memcpy(
-        uint256 _dest,
-        uint256 _src,
-        uint256 _len
-    ) private pure {
+    function memcpy(uint256 _dest, uint256 _src, uint256 _len) private pure {
         uint256 dest = _dest;
         uint256 src = _src;
         uint256 len = _len;
@@ -171,7 +167,7 @@ library RLPEncode {
             src += 32;
         }
         if (len > 0) {
-            uint256 mask = 256**(32 - len) - 1;
+            uint256 mask = 256 ** (32 - len) - 1;
             assembly {
                 let srcpart := and(mload(src), not(mask))
                 let destpart := and(mload(dest), mask)
