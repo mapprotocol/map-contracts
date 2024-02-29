@@ -10,28 +10,16 @@ interface ILightNode is ILightNodePoint {
     event NotifySend(address indexed sender, uint256 indexed blockHeight, bytes notifyData);
     //Verify the validity of the transaction according to the header, receipt, and aggPk
     //The interface will be updated later to return logs
-    function verifyProofData(bytes memory _receiptProof)
-        external
-        returns (
-            bool success,
-            string memory message,
-            bytes memory logsHash
-        );
+    function verifyProofData(
+        bytes memory _receiptProof
+    ) external returns (bool success, string memory message, bytes memory logsHash);
 
-    function verifyProofDataWithCache(bytes memory _receiptProofBytes)
-        external
-        returns (
-            bool success,
-            string memory message,
-            bytes memory logs
-        );
+    function verifyProofDataWithCache(
+        bytes memory _receiptProofBytes
+    ) external returns (bool success, string memory message, bytes memory logs);
 
     //Validate headers and update validation members
-    function updateBlockHeader(
-        blockHeader memory bh,
-        istanbulExtra memory ist,
-        G2 memory aggPk
-    ) external;
+    function updateBlockHeader(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) external;
 
     //Initialize the first validator
     function initialize(

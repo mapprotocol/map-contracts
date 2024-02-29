@@ -19,9 +19,7 @@ module.exports = async (taskArgs, hre) => {
 
     let verifyToolAddress = "0x" + verifyTool.address.substring(2);
 
-    console.log(
-        `VerifyTool deployed on: ${tronWeb.address.fromHex(verifyTool.address)} (${verifyTool.address.toHex()})`
-    );
+    console.log(`VerifyTool deployed on: ${tronWeb.address.fromHex(verifyTool.address)} (${verifyTool.address})`);
 
     let LightNode = await artifacts.readArtifact("LightNode");
 
@@ -35,7 +33,7 @@ module.exports = async (taskArgs, hre) => {
 
     let lightnodeAddress = "0x" + lightNode.address.substring(2);
 
-    console.log(`LightNode deployed on: ${tronWeb.address.fromHex(lightNode.address)} (${lightNode.address.toHex()})`);
+    console.log(`LightNode deployed on: ${tronWeb.address.fromHex(lightNode.address)} (${lightNode.address})`);
 
     let validatorNum = initializeData.validators;
     let g1List = [];
@@ -79,9 +77,7 @@ module.exports = async (taskArgs, hre) => {
     });
 
     console.log(
-        `LightNodeProxy deployed on: ${tronWeb.address.fromHex(
-            lightNodeProxy.address
-        )} (${lightNodeProxy.address.toHex()})`
+        `LightNodeProxy deployed on: ${tronWeb.address.fromHex(lightNodeProxy.address)} (${lightNodeProxy.address})`
     );
 };
 

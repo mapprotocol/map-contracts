@@ -10,7 +10,6 @@ import "./bls/BGLS.sol";
 import "./interface/IVerifyTool.sol";
 
 contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
-
     uint256 public maxValidators;
     uint256 public epochSize;
     uint256 public headerHeight;
@@ -23,7 +22,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
     struct validator {
         G1[] pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
-        uint[] weights; // voting power
+        uint256[] weights; // voting power
         uint256 threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
         uint256 epoch;
     }
@@ -32,8 +31,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
     mapping(uint256 => bytes32) private cachedReceiptRoot;
 
-    event mapInitializeValidators(uint256 _threshold, G1[] _pairKeys, uint[] _weights, uint256 epoch);
-    event MapUpdateValidators(G1[] _pairKeysAdd, uint[] _weights, uint256 epoch, bytes bits);
+    event mapInitializeValidators(uint256 _threshold, G1[] _pairKeys, uint256[] _weights, uint256 epoch);
+    event MapUpdateValidators(G1[] _pairKeysAdd, uint256[] _weights, uint256 epoch, bytes bits);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
     event NewVerifyTool(address newVerifyTool);
@@ -44,20 +43,18 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor()  {}
+    constructor() {}
 
     /** initialize  **********************************************************/
     function initialize(
-        uint _threshold,
-        address[]  memory _validatorAddress,
+        uint256 _threshold,
+        address[] memory _validatorAddress,
         G1[] memory _pairKeys,
-        uint[] memory _weights,
-        uint _epoch,
-        uint _epochSize,
-        address _verifyTool)
-    external
-    override
-    initializer {
+        uint256[] memory _weights,
+        uint256 _epoch,
+        uint256 _epochSize,
+        address _verifyTool
+    ) external override initializer {
         require(_epoch > 1, "Error initializing epco");
         _changeAdmin(tx.origin);
         maxValidators = 1728000 / _epochSize;
@@ -65,7 +62,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         startHeight = headerHeight;
         epochSize = _epochSize;
         validatorAddress = _validatorAddress;
-        for(uint256 i = 0; i < maxValidators ; i ++){
+        for (uint256 i = 0; i < maxValidators; i++) {
             validators.push(verifier);
         }
         setStateInternal(_threshold, _pairKeys, _weights, _epoch);
@@ -81,21 +78,15 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         emit mapInitializeValidators(_threshold, _pairKeys, _weights, _epoch);
     }
 
-    function getValidator(uint id)
-    public
-    view
-    returns (G1[] memory){
+    function getValidator(uint256 id) public view returns (G1[] memory) {
         return validators[id].pairKeys;
     }
 
-    function getValiditors()
-    public
-    view
-    returns (uint256){
+    function getValiditors() public view returns (uint256) {
         return maxValidators;
     }
 
-    function getBytes(receiptProof memory _receiptProof) public pure returns (bytes memory){
+    function getBytes(receiptProof memory _receiptProof) public pure returns (bytes memory) {
         return abi.encode(_receiptProof);
     }
 
@@ -104,34 +95,26 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         emit NewVerifyTool(_verifyTool);
     }
 
-    function verifyProofData(bytes memory _receiptProofBytes)
-    external
-    view
-    override
-    returns (bool success, string memory message, bytes memory logsHash) {
+    function verifyProofData(
+        bytes memory _receiptProofBytes
+    ) external view override returns (bool success, string memory message, bytes memory logsHash) {
         receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
 
         return _verifyProofData(_receiptProof);
-
     }
 
-    function getData(bytes memory _receiptProofBytes)
-    external
-    view
-    returns (receiptProof memory) {
+    function getData(bytes memory _receiptProofBytes) external view returns (receiptProof memory) {
         receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
 
         return _receiptProof;
-
     }
 
-    function verifyProofDataWithCache(bytes memory _receiptProofBytes)
-    external
-    override
-    returns (bool success, string memory message,bytes memory logsHash){
+    function verifyProofDataWithCache(
+        bytes memory _receiptProofBytes
+    ) external override returns (bool success, string memory message, bytes memory logsHash) {
         receiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (receiptProof));
         logsHash = verifyTool.decodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
-        if(cachedReceiptRoot[_receiptProof.header.number] != bytes32("")){
+        if (cachedReceiptRoot[_receiptProof.header.number] != bytes32("")) {
             (success, message) = verifyTool.getVerifyTrieProof(
                 cachedReceiptRoot[_receiptProof.header.number],
                 _receiptProof.keyIndex,
@@ -143,21 +126,19 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
                 message = "Mpt verification failed";
                 return (success, message, logsHash);
             }
-        }else {
-            (success,message,logsHash) = _verifyProofData(_receiptProof);
-            if(success){
+        } else {
+            (success, message, logsHash) = _verifyProofData(_receiptProof);
+            if (success) {
                 cachedReceiptRoot[_receiptProof.header.number] = bytes32(_receiptProof.header.receiptHash);
             }
         }
     }
 
-    function _verifyProofData(receiptProof memory _receiptProof)
-    internal
-    view
-    returns(bool success, string memory message, bytes memory logsHash)
-    {
-        (uint min, uint max) = verifiableHeaderRange();
-        uint height = _receiptProof.header.number;
+    function _verifyProofData(
+        receiptProof memory _receiptProof
+    ) internal view returns (bool success, string memory message, bytes memory logsHash) {
+        (uint256 min, uint256 max) = verifiableHeaderRange();
+        uint256 height = _receiptProof.header.number;
         if (height <= min || height >= max) {
             message = "Out of verify range";
             return (false, message, logsHash);
@@ -183,10 +164,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         return (success, message, logsHash);
     }
 
-    function updateBlockHeader(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk)
-    external
-    override
-    {
+    function updateBlockHeader(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) external override {
         require(bh.number % epochSize == 0, "Header number is error");
         require(bh.number - epochSize == headerHeight, "Header is have");
         headerHeight = bh.number;
@@ -211,29 +189,31 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         emit MapUpdateValidators(_pairKeysAdd, _weights, epoch, bits);
     }
 
-    function verifyHeaderSig(blockHeader memory _bh, istanbulExtra memory ist, G2 memory _aggPk)
-    internal
-    view
-    returns (bool success){
+    function verifyHeaderSig(
+        blockHeader memory _bh,
+        istanbulExtra memory ist,
+        G2 memory _aggPk
+    ) internal view returns (bool success) {
         bytes32 extraDataPre = bytes32(_bh.extraData);
-        (bytes memory deleteAggBytes,
-        bytes memory deleteSealAndAggBytes) = verifyTool.manageAgg(ist);
+        (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes) = verifyTool.manageAgg(ist);
         deleteAggBytes = abi.encodePacked(extraDataPre, deleteAggBytes);
         deleteSealAndAggBytes = abi.encodePacked(extraDataPre, deleteSealAndAggBytes);
 
-        (bytes memory deleteAggHeaderBytes,bytes memory deleteSealAndAggHeaderBytes) =
-        verifyTool.encodeHeader(_bh, deleteAggBytes, deleteSealAndAggBytes);
+        (bytes memory deleteAggHeaderBytes, bytes memory deleteSealAndAggHeaderBytes) = verifyTool.encodeHeader(
+            _bh,
+            deleteAggBytes,
+            deleteSealAndAggBytes
+        );
 
-        (success,) = verifyTool.verifyHeader(_bh.coinbase, ist.seal, deleteSealAndAggHeaderBytes);
+        (success, ) = verifyTool.verifyHeader(_bh.coinbase, ist.seal, deleteSealAndAggHeaderBytes);
         if (!success) return success;
         success = checkSig(_bh, ist, _aggPk, deleteAggHeaderBytes);
         return success;
     }
 
-
-    function verifiableHeaderRange() public view override returns (uint256, uint256){
-        uint start;
-        if(headerHeight > maxValidators * epochSize){
+    function verifiableHeaderRange() public view override returns (uint256, uint256) {
+        uint256 start;
+        if (headerHeight > maxValidators * epochSize) {
             start = headerHeight - (maxValidators * epochSize);
         }
 
@@ -243,23 +223,25 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         return (start, headerHeight + epochSize);
     }
 
-    function isVerifiable(uint256 _blockHeight, bytes32 ) external override view returns (bool){
-        (uint256 start,uint256 end) = verifiableHeaderRange();
+    function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool) {
+        (uint256 start, uint256 end) = verifiableHeaderRange();
         return start <= _blockHeight && _blockHeight <= end;
     }
 
-    function nodeType() external override view returns (uint256){
+    function nodeType() external view override returns (uint256) {
         return 1;
     }
 
     function notifyLightClient(bytes memory _data) external override {
-        emit NotifySend(msg.sender,block.number,_data);
+        emit NotifySend(msg.sender, block.number, _data);
     }
 
-    function checkSig(blockHeader memory _bh, istanbulExtra memory _ist, G2 memory _aggPk, bytes memory _headerWithoutAgg)
-    internal
-    view
-    returns (bool){
+    function checkSig(
+        blockHeader memory _bh,
+        istanbulExtra memory _ist,
+        G2 memory _aggPk,
+        bytes memory _headerWithoutAgg
+    ) internal view returns (bool) {
         uint256 epoch = getEpochNumber(_bh.number);
         bytes memory message = getPrepareCommittedSeal(_headerWithoutAgg, _ist.aggregatedSeal.round);
         bytes memory bits = abi.encodePacked(_ist.aggregatedSeal.bitmap);
@@ -267,19 +249,18 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         return checkSigTag(bits, message, sig, _aggPk, epoch);
     }
 
-    function setStateInternal(uint256 _threshold, G1[] memory _pairKeys, uint[] memory _weights, uint256 epoch)
-    internal
-    {
-        require(_pairKeys.length == _weights.length, 'Mismatch arg');
+    function setStateInternal(
+        uint256 _threshold,
+        G1[] memory _pairKeys,
+        uint256[] memory _weights,
+        uint256 epoch
+    ) internal {
+        require(_pairKeys.length == _weights.length, "Mismatch arg");
         uint256 id = getValidatorsId(epoch);
         validator storage v = validators[id];
 
         for (uint256 i = 0; i < _pairKeys.length; i++) {
-            v.pairKeys.push(
-                G1({
-            x : _pairKeys[i].x,
-            y : _pairKeys[i].y
-            }));
+            v.pairKeys.push(G1({x: _pairKeys[i].x, y: _pairKeys[i].y}));
             v.weights.push(_weights[i]);
         }
 
@@ -287,15 +268,18 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         v.epoch = epoch;
     }
 
-    function updateValidators(G1[] memory _pairKeysAdd, uint[] memory _weights, uint256 epoch, bytes memory bits)
-    internal
-    {
+    function updateValidators(
+        G1[] memory _pairKeysAdd,
+        uint256[] memory _weights,
+        uint256 epoch,
+        bytes memory bits
+    ) internal {
         uint256 idPre = getValidatorsIdPrev(epoch);
         validator memory vPre = validators[idPre];
         uint256 id = getValidatorsId(epoch);
         validator storage v = validators[id];
         v.epoch = epoch;
-        uint _weight = 0;
+        uint256 _weight = 0;
         if (v.pairKeys.length > 0) {
             delete (v.weights);
             delete (v.pairKeys);
@@ -303,11 +287,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
         for (uint256 i = 0; i < vPre.pairKeys.length; i++) {
             if (!chkBit(bits, i)) {
-                v.pairKeys.push(
-                    G1({
-                x : vPre.pairKeys[i].x,
-                y : vPre.pairKeys[i].y
-                }));
+                v.pairKeys.push(G1({x: vPre.pairKeys[i].x, y: vPre.pairKeys[i].y}));
                 v.weights.push(vPre.weights[i]);
                 _weight = _weight + vPre.weights[i];
             }
@@ -315,11 +295,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
 
         if (_pairKeysAdd.length > 0) {
             for (uint256 i = 0; i < _pairKeysAdd.length; i++) {
-                v.pairKeys.push(
-                    G1({
-                x : _pairKeysAdd[i].x,
-                y : _pairKeysAdd[i].y
-                }));
+                v.pairKeys.push(G1({x: _pairKeysAdd[i].x, y: _pairKeysAdd[i].y}));
                 v.weights.push(_weights[i]);
                 _weight = _weight + _weights[i];
             }
@@ -327,18 +303,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         v.threshold = _weight - _weight / 3;
     }
 
-
-    function getValidatorsId(uint256 epoch)
-    internal
-    view
-    returns (uint){
+    function getValidatorsId(uint256 epoch) internal view returns (uint256) {
         return epoch % maxValidators;
     }
 
-    function getValidatorsIdPrev(uint256 epoch)
-    internal
-    view
-    returns (uint){
+    function getValidatorsIdPrev(uint256 epoch) internal view returns (uint256) {
         uint256 id = getValidatorsId(epoch);
         if (id == 0) {
             return maxValidators - 1;
@@ -347,10 +316,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         }
     }
 
-    function isQuorum(bytes memory bits, uint[] memory weights, uint256 threshold)
-    internal
-    pure
-    returns (bool) {
+    function isQuorum(bytes memory bits, uint256[] memory weights, uint256 threshold) internal pure returns (bool) {
         uint256 weight = 0;
         for (uint256 i = 0; i < weights.length; i++) {
             if (chkBit(bits, i)) weight += weights[i];
@@ -358,31 +324,32 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         return weight >= threshold;
     }
 
-    function checkAggPk(bytes memory bits, G2 memory aggPk, G1[] memory pairKeys)
-    internal
-    view
-    returns (bool) {
+    function checkAggPk(bytes memory bits, G2 memory aggPk, G1[] memory pairKeys) internal view returns (bool) {
         return pairingCheck(sumPoints(pairKeys, bits), g2, g1, aggPk);
     }
 
     // aggPk2, sig1 --> in contract: check aggPk2 is valid with bits by summing points in G2
     // how to check aggPk2 is valid --> via checkAggPk
     //
-    function checkSigTag(bytes memory bits, bytes memory message, G1 memory sig, G2 memory aggPk, uint256 epoch)
-    internal
-    view
-    returns (bool) {
+    function checkSigTag(
+        bytes memory bits,
+        bytes memory message,
+        G1 memory sig,
+        G2 memory aggPk,
+        uint256 epoch
+    ) internal view returns (bool) {
         uint256 id = getValidatorsId(epoch);
         validator memory v = validators[id];
-        return isQuorum(bits, v.weights, v.threshold)
-        && checkAggPk(bits, aggPk, v.pairKeys)
-        && checkSignature(message, sig, aggPk);
+        return
+            isQuorum(bits, v.weights, v.threshold) &&
+            checkAggPk(bits, aggPk, v.pairKeys) &&
+            checkSignature(message, sig, aggPk);
     }
 
-    function getPrepareCommittedSeal(bytes memory _headerWithoutAgg, uint256 _round)
-    internal
-    pure
-    returns (bytes memory result){
+    function getPrepareCommittedSeal(
+        bytes memory _headerWithoutAgg,
+        uint256 _round
+    ) internal pure returns (bytes memory result) {
         bytes32 hash = keccak256(_headerWithoutAgg);
         if (_round == 0) {
             result = abi.encodePacked(hash, uint8(2));
@@ -391,11 +358,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         }
     }
 
-
-    function getLengthInBytes(uint256 num)
-    internal
-    pure
-    returns (bytes memory){
+    function getLengthInBytes(uint256 num) internal pure returns (bytes memory) {
         require(num < 2 ** 24, "Num is too large");
         bytes memory result;
         if (num < 256) {
@@ -408,11 +371,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         return result;
     }
 
-
-    function getEpochNumber(uint256 blockNumber)
-    internal
-    view
-    returns (uint256){
+    function getEpochNumber(uint256 blockNumber) internal view returns (uint256) {
         if (blockNumber % epochSize == 0) {
             return blockNumber / epochSize;
         }
@@ -420,10 +379,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     }
 
     /** UUPS *********************************************************/
-    function _authorizeUpgrade(address)
-    internal
-    view
-    override {
+    function _authorizeUpgrade(address) internal view override {
         require(msg.sender == _getAdmin(), "LightNode only Admin can upgrade");
     }
 
@@ -434,8 +390,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         _pendingAdmin = address(0);
     }
 
-
-    function pendingAdmin() external view returns (address){
+    function pendingAdmin() external view returns (address) {
         return _pendingAdmin;
     }
 
@@ -452,5 +407,4 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
     function getImplementation() external view returns (address) {
         return _getImplementation();
     }
-
 }

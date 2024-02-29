@@ -14,11 +14,7 @@ interface IDeployFactory {
     // @param salt - the bytes to deterministic address
     // @param creationCode - code to be deployed, include the init parameters.
     // @param value - native value when calling to deploy
-    function deploy(
-        bytes32 salt,
-        bytes memory creationCode,
-        uint256 value
-    ) external;
+    function deploy(bytes32 salt, bytes memory creationCode, uint256 value) external;
 
     // @notice Get the deterministic addresses.
     // @param salt - the bytes to deterministic address

@@ -15,11 +15,7 @@ contract BGLS is IBLSPoint {
             0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b
         );
 
-    function expMod(
-        uint256 base,
-        uint256 e,
-        uint256 m
-    ) private view returns (uint256 result) {
+    function expMod(uint256 base, uint256 e, uint256 m) private view returns (uint256 result) {
         bool success;
         assembly {
             // define pointer
@@ -79,12 +75,7 @@ contract BGLS is IBLSPoint {
     }
 
     //returns e(a,x) == e(b,y)
-    function pairingCheck(
-        G1 memory a,
-        G2 memory x,
-        G1 memory b,
-        G2 memory y
-    ) public view returns (bool) {
+    function pairingCheck(G1 memory a, G2 memory x, G1 memory b, G2 memory y) public view returns (bool) {
         uint256[12] memory input = [a.x, a.y, x.xi, x.xr, x.yi, x.yr, b.x, prime - b.y, y.xi, y.xr, y.yi, y.yr];
         uint256[1] memory result;
         bool success = false;
@@ -129,11 +120,7 @@ contract BGLS is IBLSPoint {
     //        return res;
     //    }
 
-    function checkSignature(
-        bytes memory message,
-        G1 memory sig,
-        G2 memory aggKey
-    ) public view returns (bool) {
+    function checkSignature(bytes memory message, G1 memory sig, G2 memory aggKey) public view returns (bool) {
         return pairingCheck(sig, g2, hashToG1(message), aggKey);
     }
 
@@ -292,11 +279,7 @@ contract BGLS is IBLSPoint {
     // distribution is ~1e-77. This is a *significant* improvement from s0 mod p.
     // For all practical purposes, there is no difference from a
     // uniform distribution
-    function hashToBase(
-        bytes memory message,
-        bytes1 c0,
-        bytes1 c1
-    ) internal pure returns (uint256 t) {
+    function hashToBase(bytes memory message, bytes1 c0, bytes1 c1) internal pure returns (uint256 t) {
         uint256 s0 = uint256(keccak256(abi.encodePacked(c0, message)));
         uint256 s1 = uint256(keccak256(abi.encodePacked(c1, message)));
         t = addmod(mulmod(s0, Two256ModP, prime), s1, prime);

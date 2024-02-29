@@ -6,16 +6,18 @@ task("initializeData", "Write initialization data required by LightNode", requir
 );
 
 task("lightNodeDeploy", "Write initialization data required by LightNode", require("./lightNodeDeploy"))
-    .addParam("verify", "The epoch number")
+    .addParam("verify", "verify tool address")
     .addOptionalParam("salt", "deploy contract salt", LIGHTNODE_SALT, types.string)
     .addOptionalParam("factory", "mos contract address", DEPLOY_FACTORY, types.string);
 
 task("verifyToolDeploy", "Write initialization data required by LightNode", require("./verifyToolDeploy"))
-    .addOptionalParam("toolsalt", "deploy contract salt", VERIFYTOOL_SALT, types.string)
+    .addOptionalParam("salt", "deploy contract salt", VERIFYTOOL_SALT, types.string)
     .addOptionalParam("factory", "mos contract address", DEPLOY_FACTORY, types.string);
 
-task("setVerifyTool", "LightNode set the verifyTool contract address", require("./setVerifyTool"))
-    .addParam("tool", "verifyTool contract address")
+task("setVerifyTool", "LightNode set the verifyTool contract address", require("./setVerifyTool")).addParam(
+    "tool",
+    "verifyTool contract address"
+);
 
 task("factorySetVerifyTool", "LightNode set the verifyTool contract address", require("./factorySetVerifyTool"))
     .addParam("tool", "verifyTool contract address")

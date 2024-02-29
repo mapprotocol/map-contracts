@@ -9,9 +9,9 @@ module.exports = async (taskArgs, hre) => {
 
     let deployData = VerifyTool.bytecode;
 
-    console.log("mos salt:", taskArgs.toolsalt);
+    console.log("verifyTool salt:", taskArgs.salt);
 
-    let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(taskArgs.toolsalt));
+    let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(taskArgs.salt));
 
     let factory = await ethers.getContractAt("IDeployFactory", taskArgs.factory);
 

@@ -22,10 +22,9 @@ interface IVerifyTool is ILightNodePoint {
 
     function decodeExtraData(bytes memory extraData) external view returns (istanbulExtra memory ist);
 
-    function manageAgg(istanbulExtra memory ist)
-        external
-        pure
-        returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes);
+    function manageAgg(
+        istanbulExtra memory ist
+    ) external pure returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes);
 
     function encodeTxLog(txLog[] memory _txLogs) external view returns (bytes memory output);
 

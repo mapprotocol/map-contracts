@@ -1,4 +1,3 @@
-
 module.exports = async (taskArgs, hre) => {
     const { deploy } = deployments;
     const accounts = await ethers.getSigners();
@@ -22,7 +21,5 @@ module.exports = async (taskArgs, hre) => {
 
     await (await proxy.connect(deployer).setVerifyTool(taskArgs.tool)).wait();
 
-    console.log(
-        `LightNode setVerifyTool is : ${taskArgs.tool} `
-    );
+    console.log(`LightNode setVerifyTool is : ${taskArgs.tool} `);
 };

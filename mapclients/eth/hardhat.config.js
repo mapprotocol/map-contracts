@@ -121,6 +121,30 @@ module.exports = {
       accounts: accounts,
     },
 
+    zkEvm: {
+      url: `https://zkevm-rpc.com`,
+      chainId : 1101,
+      accounts: accounts,
+    },
+
+    zkEvmTest: {
+      url: `https://rpc.public.zkevm-test.net`,
+      chainId : 1442,
+      accounts: accounts,
+    },
+
+    Merlin: {
+      url: `https://rpc.merlinchain.io`,
+      chainId : 4200,
+      accounts: accounts,
+    },
+
+    Bevm: {
+      url: `https://rpc-canary-2.bevm.io/`,
+      chainId : 1501,
+      accounts: accounts,
+    },
+
     Avax: {
       url: `https://rpc.ankr.com/avalanche`,
       chainId: 43114,

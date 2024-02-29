@@ -1,6 +1,6 @@
 {
   "name": "@mapprotocol/map-client-evm-contracts",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/mapprotocol/map-contracts#readme.md",
   "dependencies": {
-    "@mapprotocol/protocol": "^0.6.0",
+    "@mapprotocol/protocol": "^0.6.1",
     "@openzeppelin/contracts": "^4.3.1",
     "ajv": "^8.8.2",
     "bignumber.js": "^9.0.1",
@@ -61,8 +61,8 @@
     "hardhat-deploy": "^0.9.29",
     "hardhat-gas-reporter": "^1.0.9",
     "hardhat-spdx-license-identifier": "^2.0.3",
-    "prettier": "^2.4.1",
-    "prettier-plugin-solidity": "^1.0.0-beta.19",
+    "prettier": "^2.8.8",
+    "prettier-plugin-solidity": "^1.1.0",
     "solidity-coverage": "^0.7.22",
     "ts-node": "^9.1.1",
     "typechain": "^8.1.0",

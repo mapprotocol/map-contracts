@@ -78,11 +78,9 @@ contract VerifyTool is ILightNodePoint {
         deleteSealAndAggHeaderBytes = RLPEncode.encodeList(list);
     }
 
-    function manageAgg(istanbulExtra memory ist)
-        external
-        pure
-        returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes)
-    {
+    function manageAgg(
+        istanbulExtra memory ist
+    ) external pure returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes) {
         bytes[] memory list1 = new bytes[](ist.validators.length);
         bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
         bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
@@ -164,11 +162,10 @@ contract VerifyTool is ILightNodePoint {
         ret = verifySign(_seal, headerHash, _coinbase);
     }
 
-    function getVerifyExpectedValueHash(uint256 _receiptType, bytes memory receiptRlp)
-        internal
-        pure
-        returns (bytes memory expectedValue)
-    {
+    function getVerifyExpectedValueHash(
+        uint256 _receiptType,
+        bytes memory receiptRlp
+    ) internal pure returns (bytes memory expectedValue) {
         if (_receiptType == 0) {
             return receiptRlp;
         } else {
@@ -204,11 +201,7 @@ contract VerifyTool is ILightNodePoint {
         output = RLPEncode.encodeList(list);
     }
 
-    function verifySign(
-        bytes memory seal,
-        bytes32 hash,
-        address coinbase
-    ) internal pure returns (bool) {
+    function verifySign(bytes memory seal, bytes32 hash, address coinbase) internal pure returns (bool) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(seal);
         if (v <= 1) {
             v = v + 27;
@@ -216,15 +209,7 @@ contract VerifyTool is ILightNodePoint {
         return coinbase == ECDSA.recover(hash, v, r, s);
     }
 
-    function splitSignature(bytes memory sig)
-        internal
-        pure
-        returns (
-            bytes32 r,
-            bytes32 s,
-            uint8 v
-        )
-    {
+    function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
         require(sig.length == 65, "invalid signature length");
         assembly {
             r := mload(add(sig, 32))
