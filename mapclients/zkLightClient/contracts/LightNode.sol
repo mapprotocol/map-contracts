@@ -303,6 +303,19 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, BGLS {
         return (start, headerHeight + epochSize);
     }
 
+    function isVerifiable(uint256 _blockHeight, bytes32 ) external override view returns (bool){
+        (uint256 start,uint256 end) = verifiableHeaderRange();
+        return start <= _blockHeight && _blockHeight <= end;
+    }
+
+    function nodeType() external override view returns (uint256){
+        return 1;
+    }
+
+    function notifyLightClient(bytes memory _data) external override {
+        emit NotifySend(msg.sender,block.number,_data);
+    }
+
     function checkSig(
         uint256 _round,
         bytes32 _commitment,

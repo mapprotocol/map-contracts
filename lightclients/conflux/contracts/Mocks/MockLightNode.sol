@@ -234,6 +234,19 @@ contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         return (_state.earliestBlockNumber, _state.finalizedBlockNumber);
     }
 
+    function isVerifiable(uint256 _blockHeight, bytes32 ) external override view returns (bool){
+
+        return _state.earliestBlockNumber <= _blockHeight && _blockHeight <= _state.finalizedBlockNumber;
+    }
+
+    function nodeType() external override view returns (uint256){
+        return 1;
+    }
+
+    function notifyLightClient(bytes memory _data) external override {
+        emit NotifySend(msg.sender,block.number,_data);
+    }
+
     function nearestPivot(uint256 height) public view override returns (uint256) {
         require(height >= _state.earliestBlockNumber, "block already pruned");
         require(height <= _state.finalizedBlockNumber, "block not finalized yet");
