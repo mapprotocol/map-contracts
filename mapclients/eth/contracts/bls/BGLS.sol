@@ -162,19 +162,31 @@ library BGLS {
         return uint256(uint8(b[31 - x / 8])) & (uint256(1) << (x % 8)) != 0;
     }
 
-    function sumPoints(G1[] memory points, bytes memory indices, uint256[] memory weights) internal view returns (G1 memory, uint256) {
+    function sumPoints(
+        uint256[] memory points,
+        bytes memory indices,
+        uint256[] memory weights
+    ) internal view returns (G1 memory, uint256) {
         G1 memory acc = G1(0, 0);
         uint256 weight = 0;
-        for (uint256 i = 0; i < points.length; i++) {
+        uint256 pointLen = points.length / 2;
+        for (uint256 i = 0; i < pointLen; i++) {
             if (chkBit(indices, i)) {
-                acc = addPoints(acc, points[i]);
+                G1 memory point = G1(points[2 * i], points[2 * i + 1]);
+                acc = addPoints(acc, point);
                 weight += weights[i];
             }
         }
         return (G1(acc.x, acc.y), weight);
     }
 
-    function checkAggPk(bytes memory bits, G2 memory aggPk, G1[] memory pairKeys, uint256[] memory weights, uint256 threshold) internal view returns (bool) {
+    function checkAggPk(
+        bytes memory bits,
+        G2 memory aggPk,
+        uint256[] memory pairKeys,
+        uint256[] memory weights,
+        uint256 threshold
+    ) internal view returns (bool) {
         G1 memory g1 = G1(g1x, g1y);
         G2 memory g2 = G2(g2xr, g2xi, g2yr, g2yi);
 

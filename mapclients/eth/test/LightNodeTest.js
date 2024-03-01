@@ -163,17 +163,17 @@ describe("LightNode start test", function () {
     let lightNodeContractDelete;
     let lightNodeContractDeleteAddress;
 
-    let blsCodeDelete;
-    let bcDelete;
+    //let blsCodeDelete;
+    //let bcDelete;
 
     it("delete deploy", async function () {
         LightClientDelete = await ethers.getContractFactory("LightNode");
         lightClientDelete = await LightClientDelete.deploy();
         lightNodeContractDelete = await lightClientDelete.deployed();
         lightNodeContractDeleteAddress = lightNodeContractDelete.address;
-        blsCodeDelete = await ethers.getContractFactory("BlsCode");
-        bcDelete = await blsCodeDelete.deploy();
-        await bcDelete.deployed();
+        //blsCodeDelete = await ethers.getContractFactory("BlsCode");
+        //bcDelete = await blsCodeDelete.deploy();
+        //await bcDelete.deployed();
     });
 
     it("verifyProofData error test ", async function () {

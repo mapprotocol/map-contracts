@@ -6,9 +6,9 @@ import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
 import "@mapprotocol/protocol/contracts/lib/MPT.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "./interface/ILightNodePoint.sol";
+import "./interface/IVerifyTool.sol";
 
-contract VerifyTool is ILightNodePoint {
+contract VerifyTool is IVerifyTool {
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
@@ -23,7 +23,7 @@ contract VerifyTool is ILightNodePoint {
         bytes[] memory _proof,
         bytes memory _receiptRlp,
         uint256 _receiptType
-    ) external pure returns (bool success, string memory message) {
+    ) external pure override returns (bool success, string memory message) {
         bytes memory expectedValue = getVerifyExpectedValueHash(_receiptType, _receiptRlp);
         success = MPT.verify(expectedValue, _keyIndex, _proof, _receiptHash);
         if (!success) {
@@ -33,7 +33,7 @@ contract VerifyTool is ILightNodePoint {
         }
     }
 
-    function decodeHeader(bytes memory rlpBytes) external pure returns (blockHeader memory bh) {
+    function decodeHeader(bytes memory rlpBytes) external pure override returns (blockHeader memory bh) {
         RLPReader.RLPItem[] memory ls = rlpBytes.toRlpItem().toList();
         bh = blockHeader({
             parentHash: ls[0].toBytes(),
@@ -57,7 +57,7 @@ contract VerifyTool is ILightNodePoint {
         blockHeader memory _bh,
         bytes memory _deleteAggBytes,
         bytes memory _deleteSealAndAggBytes
-    ) external pure returns (bytes memory deleteAggHeaderBytes, bytes memory deleteSealAndAggHeaderBytes) {
+    ) external pure override returns (bytes memory deleteAggHeaderBytes, bytes memory deleteSealAndAggHeaderBytes) {
         bytes[] memory list = new bytes[](14);
         list[0] = RLPEncode.encodeBytes(_bh.parentHash);
         list[1] = RLPEncode.encodeAddress(_bh.coinbase);
@@ -80,7 +80,7 @@ contract VerifyTool is ILightNodePoint {
 
     function manageAgg(
         istanbulExtra memory ist
-    ) external pure returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes) {
+    ) external pure override returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes) {
         bytes[] memory list1 = new bytes[](ist.validators.length);
         bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
         bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
@@ -117,7 +117,7 @@ contract VerifyTool is ILightNodePoint {
         deleteSealAndAggBytes = RLPEncode.encodeList(manageList);
     }
 
-    function encodeTxLog(txLog[] memory _txLogs) external pure returns (bytes memory output) {
+    function encodeTxLog(txLog[] memory _txLogs) external pure override returns (bytes memory output) {
         bytes[] memory listLog = new bytes[](_txLogs.length);
         bytes[] memory loglist = new bytes[](3);
         for (uint256 j = 0; j < _txLogs.length; j++) {
@@ -134,7 +134,7 @@ contract VerifyTool is ILightNodePoint {
         output = RLPEncode.encodeList(listLog);
     }
 
-    function decodeTxLog(bytes memory logsHash) external pure returns (txLog[] memory _txLogs) {
+    function decodeTxLog(bytes memory logsHash) external pure override returns (txLog[] memory _txLogs) {
         RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
         _txLogs = new txLog[](ls.length);
         for (uint256 i = 0; i < ls.length; i++) {
@@ -148,7 +148,7 @@ contract VerifyTool is ILightNodePoint {
         }
     }
 
-    function decodeTxReceipt(bytes memory _receiptRlp) external pure returns (bytes memory logHash) {
+    function decodeTxReceipt(bytes memory _receiptRlp) external pure override returns (bytes memory logHash) {
         RLPReader.RLPItem[] memory ls = _receiptRlp.toRlpItem().toList();
         logHash = RLPReader.toRlpBytes(ls[3]);
     }
@@ -157,7 +157,7 @@ contract VerifyTool is ILightNodePoint {
         address _coinbase,
         bytes memory _seal,
         bytes memory _headerWithoutSealAndAgg
-    ) public pure returns (bool ret, bytes32 headerHash) {
+    ) public pure override returns (bool ret, bytes32 headerHash) {
         headerHash = keccak256(abi.encodePacked(keccak256(abi.encodePacked(_headerWithoutSealAndAgg))));
         ret = verifySign(_seal, headerHash, _coinbase);
     }
