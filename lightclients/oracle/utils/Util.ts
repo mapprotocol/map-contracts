@@ -7,7 +7,6 @@ const Tree = require("merkle-patricia-tree");
 const { Header, Proof, Receipt, Transaction } = require("eth-object");
 const { promisfy } = require("promisfy");
 export class BlockHeader {
-
     public parentHash?: string;
     public sha3Uncles?: string;
     public miner?: string;
@@ -159,7 +158,6 @@ export async function getProof(txHash: string, rpc: string) {
     let r = await provider.getTransactionReceipt(txHash);
 
     console.log(r.blockNumber);
-
 
     let logs: TxLog[] = new Array<TxLog>();
 

@@ -1,5 +1,14 @@
-PRIVATE_KEY = 
-//MPTVerify address
-MPT_VERIFY = 
+
+// mainnet private key
+PRIVATE_KEY =
+
+// testnet private key
+TESTNET_PRIVATE_KEY =
+
+// MPTVerify address
+// Mapo and Makalu mpt verify address
+MPT_VERIFY = 0x4b1EE84A72b44B78346e069D1c66509940827E22
+
+NODE_TYPE = 3
 
 CHAIN_Id = 1

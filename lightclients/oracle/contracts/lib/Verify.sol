@@ -76,5 +76,4 @@ library Verify {
         list[3] = RLPEncode.encodeList(listLog);
         output = RLPEncode.encodeList(list);
     }
-
 }

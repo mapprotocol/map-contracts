@@ -1,10 +1,10 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
-import {getProof } from "../utils/Util";
+import { getProof } from "../utils/Util";
 
 let chainId = process.env.CHAIN_Id;
-let uri = ''
+let uri = "";
 
 async function main() {
     let [wallet] = await ethers.getSigners();
@@ -29,13 +29,7 @@ async function main() {
 
     const LightNodeProxy = await ethers.getContractFactory("LightNodeProxy");
 
-    
-
-    let initData = LightNode.interface.encodeFunctionData("initialize", [
-        chainId,
-        wallet.address,
-        mPTVerify.address
-    ]);
+    let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, wallet.address, mPTVerify.address]);
 
     const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
 
@@ -52,9 +46,7 @@ async function main() {
     await verify(txHash, uri, LightNode.attach(lightNodeProxy.address));
 }
 
-async function updateHeader(wallet: SignerWithAddress, lightNode: Contract) {
- 
-}
+async function updateHeader(wallet: SignerWithAddress, lightNode: Contract) {}
 
 async function verify(txHash: string, rpc: string, lightNode: Contract) {
     let proof = await getProof(txHash, rpc);

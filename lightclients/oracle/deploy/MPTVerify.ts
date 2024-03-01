@@ -17,5 +17,5 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 export default deploy;
 deploy.tags = ["MPTVerify"];
 deploy.skip = async () => {
-    return (process.env.MPT_VERIFY !== undefined) && (process.env.MPT_VERIFY !== '');
-}
+    return process.env.MPT_VERIFY !== undefined && process.env.MPT_VERIFY !== "";
+};

@@ -3,10 +3,9 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { BigNumber } from "ethers";
-import {TxLog, ReceiptProof, TxReceipt, index2key, ProofData } from "../utils/Util";
+import { TxLog, ReceiptProof, TxReceipt, index2key, ProofData } from "../utils/Util";
 
 let chainId = 137;
-
 
 describe("LightNode", function () {
     // We define a fixture to reuse the same setup in every test.
@@ -33,7 +32,6 @@ describe("LightNode", function () {
             chainId,
             wallet.address,
             mPTVerify.address,
-
         ]);
 
         const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
@@ -50,7 +48,6 @@ describe("LightNode", function () {
             let [wallet, other] = await ethers.getSigners();
 
             const lightNode = await loadFixture(deployFixture);
-
         });
 
         it("upgradeTo() -> reverts only Admin", async function () {
@@ -179,22 +176,18 @@ describe("LightNode", function () {
             let lightNode = await loadFixture(deployFixture);
 
             await lightNode.connect(wallet).togglePause(true);
-
         });
 
         it("updateBlockHeader() -> correct ", async function () {
             let [wallet] = await ethers.getSigners();
 
             let lightNode = await loadFixture(deployFixture);
-
-      
         });
 
         it("verifyProofData() -> correct ", async function () {
             let [wallet] = await ethers.getSigners();
 
             let lightNode = await loadFixture(deployFixture);
-
         });
     });
 });

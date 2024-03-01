@@ -1,7 +1,6 @@
 const TronWeb = require("tronweb");
 require("dotenv").config();
 
-
 async function deploy_contract(artifacts, name, args, tronWeb) {
     let c = await artifacts.readArtifact(name);
     let contract_instance = await tronWeb.contract().new({

@@ -20,10 +20,15 @@ const config: HardhatUserConfig ={
     deployer: 0,
   },
   networks: {
-    makalu: {
+    Makalu: {
       chainId: 212,
       url:"https://testnet-rpc.maplabs.io",
-      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
+    },
+    MakaluArbitrum: {
+      chainId: 212,
+      url:"https://testnet-rpc.maplabs.io",
+      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
     map_op : {
       chainId: 22776,
@@ -34,6 +39,18 @@ const config: HardhatUserConfig ={
       chainId: 22776,
       url:"https://rpc.maplabs.io",
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+
+    Arbitrum: {
+      chainId: 42161,
+      url: `https://1rpc.io/arb`,
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+
+    ArbitrumSepolia: {
+      chainId: 421614,
+      url: `https://arbitrum-sepolia.blockpi.network/v1/rpc/public`,
+      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
     
   },

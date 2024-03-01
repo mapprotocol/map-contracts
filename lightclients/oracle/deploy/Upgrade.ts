@@ -27,7 +27,6 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     await (await proxy.upgradeTo(LightNodeDeploy.address)).wait();
 
     console.log("implementation after: ", await proxy.getImplementation());
-
 };
 
 export default deploy;

@@ -1,54 +1,52 @@
 import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+task("setMptVerify", "set mpt verify address")
+    .addParam("mpt", "mpt address")
+    .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+        let [wallet] = await hre.ethers.getSigners();
+        console.log("wallet address is:", wallet.address);
+        let LightNodeProxy = await hre.deployments.get("LightNodeProxy");
+        if (!LightNodeProxy) {
+            throw "light node not deploy.......";
+        }
+        console.log("light node proxy address is :", LightNodeProxy.address);
+        const LightNode = await hre.ethers.getContractFactory("LightNode");
 
+        let proxy = LightNode.attach(LightNodeProxy.address);
 
-task("setMptVerify","set mpt verify address")
-  .addParam("mpt","mpt address")
-  .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
-      let [wallet] = await hre.ethers.getSigners();
-      console.log("wallet address is:",wallet.address);
-      let LightNodeProxy = await hre.deployments.get("LightNodeProxy");
-      if(!LightNodeProxy){
-        throw("light node not deploy.......");
-      }
-      console.log("light node proxy address is :", LightNodeProxy.address);
-      const LightNode = await hre.ethers.getContractFactory("LightNode");
+        let old_verify = await proxy.mptVerify();
 
-      let proxy = LightNode.attach(LightNodeProxy.address);
+        console.log("old mptVerify address is :", old_verify);
 
-      let old_verify = await proxy.mptVerify();
+        await (await proxy.setMptVerify(taskArgs.mpt)).wait();
 
-      console.log("old mptVerify address is :", old_verify);
-  
-      await (await proxy.setMptVerify(taskArgs.mpt)).wait();
-  
-      let new_verify = await proxy.mptVerify();
-  
-      console.log("new mptVerify address is :", new_verify);
-  })
+        let new_verify = await proxy.mptVerify();
 
-  task("setOracle","set oracle address")
-  .addParam("oracle","oracle address")
-  .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
-      let [wallet] = await hre.ethers.getSigners();
-      console.log("wallet address is:",wallet.address);
-      let LightNodeProxy = await hre.deployments.get("LightNodeProxy");
-      if(!LightNodeProxy){
-        throw("light node not deploy.......");
-      }
-      console.log("light node proxy address is :", LightNodeProxy.address);
-      const LightNode = await hre.ethers.getContractFactory("LightNode");
+        console.log("new mptVerify address is :", new_verify);
+    });
 
-      let proxy = LightNode.attach(LightNodeProxy.address);
+task("setOracle", "set oracle address")
+    .addParam("oracle", "oracle address")
+    .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+        let [wallet] = await hre.ethers.getSigners();
+        console.log("wallet address is:", wallet.address);
+        let LightNodeProxy = await hre.deployments.get("LightNodeProxy");
+        if (!LightNodeProxy) {
+            throw "light node not deploy.......";
+        }
+        console.log("light node proxy address is :", LightNodeProxy.address);
+        const LightNode = await hre.ethers.getContractFactory("LightNode");
 
-      let old_oracle = await proxy.oracle();
+        let proxy = LightNode.attach(LightNodeProxy.address);
 
-      console.log("old oracle address is :", old_oracle);
-  
-      await (await proxy.setOracle(taskArgs.oracle)).wait();
-  
-      let new_oracle = await proxy.oracle();
-  
-      console.log("new oracle address is :", new_oracle);
-  })
+        let old_oracle = await proxy.oracle();
+
+        console.log("old oracle address is :", old_oracle);
+
+        await (await proxy.setOracle(taskArgs.oracle)).wait();
+
+        let new_oracle = await proxy.oracle();
+
+        console.log("new oracle address is :", new_oracle);
+    });
