@@ -69,11 +69,11 @@ module.exports = async (taskArgs, hre) => {
     let datar;
     if (hre.network.config.chainId == 22776) {
         datar = "let initData =" + JSON.stringify(initdata) + "\n" + "module.exports = initData";
-        fs.writeFileSync("./deploy/configMainnet.js", datar);
+        fs.writeFileSync("./deploy/config.mainnet.js", datar);
         console.log(`write epoch ${data.result.epoch} in mainnet success`);
     } else {
         datar = "let initData =" + JSON.stringify(initdata) + "\n" + "module.exports = initData";
-        fs.writeFileSync("./deploy/configTest.js", datar);
+        fs.writeFileSync("./deploy/config.testnet.js", datar);
         console.log(`write epoch ${data.result.epoch} in test success`);
     }
 

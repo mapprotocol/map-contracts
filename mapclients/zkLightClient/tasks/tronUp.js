@@ -1,5 +1,5 @@
 const TronWeb = require("tronweb");
-const { LightNodeProxyMainnetAddress, LightNodeProxyTestAddress } = require("./TronContract");
+const { LightNodeProxyMainnetAddress, LightNodeProxyTestAddress } = require("../deployments/TronContract");
 require("dotenv").config();
 let fs = require("fs");
 

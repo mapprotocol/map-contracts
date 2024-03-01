@@ -57,6 +57,4 @@ interface ILightNode is ILightNodePoint {
     //           2 zk light client
     //           3 oracle client
     function nodeType() external view returns (uint256);
-
-
 }

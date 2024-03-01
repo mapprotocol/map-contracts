@@ -60,16 +60,6 @@ module.exports = {
       chainId : 80001,
       accounts: accounts
     },
-    Heco: {
-      url: `https://http-mainnet-node.huobichain.com`,
-      chainId : 128,
-      accounts: accounts
-    },
-    HecoTest: {
-      url: `https://http-testnet.hecochain.com`,
-      chainId : 256,
-      accounts: accounts
-    },
     Bsc: {
       url: `https://bsc-dataseed1.binance.org/`,
       chainId : 56,
@@ -104,7 +94,18 @@ module.exports = {
       url: `https://rpc.sepolia.org`,
       chainId : 11155111,
       accounts: accounts
-    }
+    },
+    Tron: {
+      url: `https://api.trongrid.io`,
+      chainId: 728126428,
+      accounts: accounts,
+    },
+
+    TronTest: {
+      url: `https://nile.trongrid.io`,
+      chainId: 3448148188,
+      accounts: accounts,
+    },
   },
   solidity: {
     compilers: [

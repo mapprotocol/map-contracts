@@ -1,7 +1,7 @@
 const BigNumber = require("bignumber.js");
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR });
-const initializeDataMainnet = require("../deploy/configMainnet");
-const initializeDataTest = require("../deploy/configTest");
+const initializeDataMainnet = require("../deploy/config.mainnet");
+const initializeDataTest = require("../deploy/config.testnet");
 
 module.exports = async (taskArgs, hre) => {
     const { deploy } = deployments;
@@ -58,7 +58,6 @@ module.exports = async (taskArgs, hre) => {
         taskArgs.verifytool,
         taskArgs.verifier,
     ]);
-    console.log("initialize success");
 
     let lightProxy = await ethers.getContractFactory("LightNodeProxy");
 

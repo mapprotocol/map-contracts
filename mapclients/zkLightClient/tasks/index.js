@@ -16,26 +16,24 @@ task("verifyToolDeploy", "Write initialization data required by LightNode", requ
     .addOptionalParam("toolsalt", "deploy contract salt", VERIFYTOOL_SALT, types.string)
     .addOptionalParam("factory", "mos contract address", DEPLOY_FACTORY, types.string);
 
-task("tronDeploy", "Write initialization data required by LightNode", require("./tronDeploy")).addParam(
-    "chain",
-    "Tron is the mainnet or TronTest is testnet"
-);
+task("tronDeploy", "Write initialization data required by LightNode", require("./tronDeploy"));
 
-task("tronUp", "Write initialization data required by LightNode", require("./tronUp")).addParam(
-    "chain",
-    "Tron is the mainnet or TronTest is testnet"
-);
+task("tronUp", "Write initialization data required by LightNode", require("./tronUp"));
 
-task("setVerifyTool", "LightNode set the verifyTool contract address", require("./setVerifyTool"))
-    .addParam("tool", "verifyTool contract address")
+task("setVerifyTool", "LightNode set the verifyTool contract address", require("./setVerifyTool")).addParam(
+    "tool",
+    "verifyTool contract address"
+);
 
 task("factorySetVerifyTool", "LightNode set the verifyTool contract address", require("./factorySetVerifyTool"))
     .addParam("tool", "verifyTool contract address")
     .addOptionalParam("salt", "deploy contract salt", LIGHTNODE_SALT, types.string)
     .addOptionalParam("factory", "mos contract address", DEPLOY_FACTORY, types.string);
 
-task("setZKVerifier", "LightNode set the ZK Verifier contract address", require("./setZKVerifier"))
-    .addParam("verifier", "verifier contract address")
+task("setZKVerifier", "LightNode set the ZK Verifier contract address", require("./setZKVerifier")).addParam(
+    "verifier",
+    "verifier contract address"
+);
 
 task("factorySetZKVerifier", "LightNode set the ZK Verifier contract address", require("./factorySetZKVerifier"))
     .addParam("verifier", "verifier contract address")
