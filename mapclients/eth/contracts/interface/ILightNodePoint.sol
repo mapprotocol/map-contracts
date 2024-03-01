@@ -2,9 +2,7 @@
 
 pragma solidity 0.8.7;
 
-import "./IBLSPoint.sol";
-
-interface ILightNodePoint is IBLSPoint {
+interface ILightNodePoint {
     //Map chain block header
     struct blockHeader {
         bytes parentHash;
@@ -29,11 +27,6 @@ interface ILightNodePoint is IBLSPoint {
         uint256 cumulativeGasUsed;
         bytes bloom;
         bytes logRlp;
-    }
-
-    struct TxReceiptRlp {
-        uint256 receiptType;
-        bytes receiptRlp;
     }
 
     struct txLog {
@@ -66,14 +59,5 @@ interface ILightNodePoint is IBLSPoint {
         istanbulAggregatedSeal aggregatedSeal;
         //Information on the previous committee
         istanbulAggregatedSeal parentAggregatedSeal;
-    }
-
-    struct receiptProof {
-        blockHeader header;
-        istanbulExtra ist;
-        G2 aggPk;
-        TxReceiptRlp txReceiptRlp;
-        bytes keyIndex;
-        bytes[] proof;
     }
 }

@@ -4,7 +4,7 @@ pragma solidity 0.8.7;
 
 import "../interface/IBLSPoint.sol";
 
-contract BlsCode is IBLSPoint {
+library BlsCode {
     struct G1Bytes {
         bytes32 x;
         bytes32 y;
@@ -35,9 +35,9 @@ contract BlsCode is IBLSPoint {
         return G1Bytes(x, y);
     }
 
-    function decodeG1(bytes memory g1Bytes) public pure returns (G1 memory) {
+    function decodeG1(bytes memory g1Bytes) public pure returns (IBLSPoint.G1 memory) {
         G1Bytes memory g1b = decodeG1Bytes(g1Bytes);
-        return G1(bytesToUint(g1b.x), bytesToUint(g1b.y));
+        return IBLSPoint.G1(bytesToUint(g1b.x), bytesToUint(g1b.y));
     }
 
     function decodeG2Bytes(bytes memory g1Bytes) public pure returns (G2Bytes memory) {
@@ -54,16 +54,16 @@ contract BlsCode is IBLSPoint {
         return G2Bytes(xr, xi, yr, yi);
     }
 
-    function decodeG2(bytes memory g2Bytes) public pure returns (G2 memory) {
+    function decodeG2(bytes memory g2Bytes) public pure returns (IBLSPoint.G2 memory) {
         G2Bytes memory g2b = decodeG2Bytes(g2Bytes);
-        return G2(bytesToUint(g2b.xi), bytesToUint(g2b.xr), bytesToUint(g2b.yi), bytesToUint(g2b.yr));
+        return IBLSPoint.G2(bytesToUint(g2b.xi), bytesToUint(g2b.xr), bytesToUint(g2b.yi), bytesToUint(g2b.yr));
     }
 
-    function encodeG1(G1 memory g1) public pure returns (bytes memory) {
+    function encodeG1(IBLSPoint.G1 memory g1) public pure returns (bytes memory) {
         return abi.encodePacked(g1.x, g1.y);
     }
 
-    function encodeG2(G2 memory g2) public pure returns (bytes memory) {
+    function encodeG2(IBLSPoint.G2 memory g2) public pure returns (bytes memory) {
         return abi.encodePacked(g2.xi, g2.xr, g2.yi, g2.yr);
     }
 }

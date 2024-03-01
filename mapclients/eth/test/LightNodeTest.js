@@ -52,15 +52,37 @@ describe("LightNode start test", function () {
             "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
         ];
 
-        blsCode = await ethers.getContractFactory("BlsCode");
-        bc = await blsCode.deploy();
-        await bc.deployed();
+        //blsCode = await ethers.getContractFactory("BlsCode");
+        //bc = await blsCode.deploy();
+        //await bc.deployed();
 
-        const g0 = await bc.decodeG1(g1Hex[0]);
-        const g1 = await bc.decodeG1(g1Hex[1]);
-        const g2 = await bc.decodeG1(g1Hex[2]);
-        const g3 = await bc.decodeG1(g1Hex[3]);
-        const g4 = await bc.decodeG1(g1Hex[4]);
+        //const g0 = await bc.decodeG1(g1Hex[0]);
+        //const g1 = await bc.decodeG1(g1Hex[1]);
+        //const g2 = await bc.decodeG1(g1Hex[2]);
+        //const g3 = await bc.decodeG1(g1Hex[3]);
+        //const g4 = await bc.decodeG1(g1Hex[4]);
+
+        const g0 = [
+            "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
+            "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
+        ];
+        const g1 = [
+            "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
+            "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
+        ];
+        const g2 = [
+            "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
+            "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
+        ];
+        const g3 = [
+            "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
+            "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
+        ];
+        const g4 = [
+            "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
+            "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
+        ];
+
         g1List = [g0, g1, g2, g3, g4];
 
         let addresss = [
@@ -163,11 +185,33 @@ describe("LightNode start test", function () {
             "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
         ];
 
-        const g0 = await bcDelete.decodeG1(g1Hex[0]);
-        const g1 = await bcDelete.decodeG1(g1Hex[1]);
-        const g2 = await bcDelete.decodeG1(g1Hex[2]);
-        const g3 = await bcDelete.decodeG1(g1Hex[3]);
-        const g4 = await bcDelete.decodeG1(g1Hex[4]);
+        //const g0 = await bcDelete.decodeG1(g1Hex[0]);
+        //const g1 = await bcDelete.decodeG1(g1Hex[1]);
+        //const g2 = await bcDelete.decodeG1(g1Hex[2]);
+        //const g3 = await bcDelete.decodeG1(g1Hex[3]);
+        //const g4 = await bcDelete.decodeG1(g1Hex[4]);
+
+        const g0 = [
+            "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
+            "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
+        ];
+        const g1 = [
+            "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
+            "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
+        ];
+        const g2 = [
+            "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
+            "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
+        ];
+        const g3 = [
+            "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
+            "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
+        ];
+        const g4 = [
+            "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
+            "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
+        ];
+
         let g1ListDelete = [g0, g1, g2, g3, g4];
 
         let addresss = [
@@ -213,6 +257,6 @@ describe("LightNode start test", function () {
         let dataErr = await lightClientDelete.callStatic.verifyProofData(
             await lightClientDelete.getBytes(proofs.provedataHeaderError)
         );
-        expect(dataErr.message).to.equal("VerifyHeaderSig fail");
+        expect(dataErr.message).to.equal("VerifyHeaderSig failed");
     });
 });

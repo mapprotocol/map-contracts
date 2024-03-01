@@ -4,7 +4,7 @@ pragma solidity 0.8.7;
 
 import "./ILightNodePoint.sol";
 
-interface ILightNode is ILightNodePoint {
+interface ILightNode {
     event UpdateBlockHeader(address indexed account, uint256 indexed blockHeight);
 
     event NotifySend(address indexed sender, uint256 indexed blockHeight, bytes notifyData);
@@ -19,24 +19,7 @@ interface ILightNode is ILightNodePoint {
     ) external returns (bool success, string memory message, bytes memory logs);
 
     //Validate headers and update validation members
-    function updateBlockHeader(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) external;
-
-    //Initialize the first validator
-    function initialize(
-        //The total weight of votes
-        uint256 _threshold,
-        //committee members
-        address[] memory validators,
-        //G1 public key corresponding to the committee member
-        G1[] memory _pairKeys,
-        //Weights corresponding to committee members
-        uint256[] memory _weights,
-        //number of committees
-        uint256 epoch,
-        //The number of blocks corresponding to each committee
-        uint256 epochSize,
-        address verifyTool
-    ) external;
+    //function updateBlockHeader(blockHeader memory bh, istanbulExtra memory ist, G2 memory aggPk) external;
 
     function verifiableHeaderRange() external view returns (uint256, uint256);
 

@@ -2,18 +2,100 @@
 
 pragma solidity 0.8.7;
 
-import "../interface/IBLSPoint.sol";
+library BGLS {
+    struct G1 {
+        uint256 x;
+        uint256 y;
+    }
+    struct G2 {
+        uint256 xr;
+        uint256 xi;
+        uint256 yr;
+        uint256 yi;
+    }
 
-contract BGLS is IBLSPoint {
-    G1 g1 = G1(1, 2);
+    struct G1Bytes {
+        bytes32 x;
+        bytes32 y;
+    }
 
-    G2 g2 =
+    struct G2Bytes {
+        bytes32 xr;
+        bytes32 xi;
+        bytes32 yr;
+        bytes32 yi;
+    }
+
+    /* give the constant value for library
+    G1 constant g1 = G1(1, 2);
+    G2 constant g2 =
         G2(
             0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed,
             0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2,
             0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa,
             0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b
         );
+    */
+    uint256 constant g1x = 1;
+    uint256 constant g1y = 2;
+    uint256 constant g2xr = 0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed;
+    uint256 constant g2xi = 0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2;
+    uint256 constant g2yr = 0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa;
+    uint256 constant g2yi = 0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b;
+
+    //
+
+    function bytesToUint(bytes32 b) internal pure returns (uint256) {
+        return uint256(b);
+    }
+
+    function uintToBytes(uint256 x) internal pure returns (bytes memory) {
+        return abi.encodePacked(x);
+    }
+
+    function decodeG1Bytes(bytes memory g1Bytes) internal pure returns (G1Bytes memory) {
+        bytes32 x;
+        bytes32 y;
+        assembly {
+            x := mload(add(g1Bytes, 32))
+            y := mload(add(g1Bytes, 64))
+        }
+        return G1Bytes(x, y);
+    }
+
+    function decodeG1(bytes memory g1Bytes) internal pure returns (G1 memory) {
+        G1Bytes memory g1b = decodeG1Bytes(g1Bytes);
+        return G1(bytesToUint(g1b.x), bytesToUint(g1b.y));
+    }
+
+    function decodeG2Bytes(bytes memory g1Bytes) internal pure returns (G2Bytes memory) {
+        bytes32 xr;
+        bytes32 xi;
+        bytes32 yr;
+        bytes32 yi;
+        assembly {
+            xi := mload(add(g1Bytes, 32))
+            xr := mload(add(g1Bytes, 64))
+            yi := mload(add(g1Bytes, 96))
+            yr := mload(add(g1Bytes, 128))
+        }
+        return G2Bytes(xr, xi, yr, yi);
+    }
+
+    function decodeG2(bytes memory g2Bytes) internal pure returns (G2 memory) {
+        G2Bytes memory g2b = decodeG2Bytes(g2Bytes);
+        return G2(bytesToUint(g2b.xi), bytesToUint(g2b.xr), bytesToUint(g2b.yi), bytesToUint(g2b.yr));
+    }
+
+    function encodeG1(G1 memory _g1) internal pure returns (bytes memory) {
+        return abi.encodePacked(_g1.x, _g1.y);
+    }
+
+    function encodeG2(G2 memory _g2) internal pure returns (bytes memory) {
+        return abi.encodePacked(_g2.xi, _g2.xr, _g2.yi, _g2.yr);
+    }
+
+    //
 
     function expMod(uint256 base, uint256 e, uint256 m) private view returns (uint256 result) {
         bool success;
@@ -37,33 +119,23 @@ contract BGLS is IBLSPoint {
         require(success, "modular exponentiation failed");
     }
 
-    function addPoints(G1 memory a, G1 memory b) public view returns (G1 memory) {
+    function addPoints(G1 memory a, G1 memory b) internal view returns (G1 memory) {
         uint256[4] memory input = [a.x, a.y, b.x, b.y];
         uint256[2] memory result;
         bool success = false;
         assembly {
+            // 0x06     id of precompiled bn256Add contract
+            // 128      size of call parameters, i.e. 128 bytes total
+            // 64       size of call return value,
+            //              i.e. 64 bytes / 512 bit for a BN256 curve point
             success := staticcall(gas(), 6, input, 0x80, result, 0x40)
         }
         require(success, "add points fail");
         return G1(result[0], result[1]);
     }
 
-    function chkBit(bytes memory b, uint256 x) internal pure returns (bool) {
-        return uint256(uint8(b[31 - x / 8])) & (uint256(1) << (x % 8)) != 0;
-    }
-
-    function sumPoints(G1[] memory points, bytes memory indices) public view returns (G1 memory) {
-        G1 memory acc = G1(0, 0);
-        for (uint256 i = 0; i < points.length; i++) {
-            if (chkBit(indices, i)) {
-                acc = addPoints(acc, points[i]);
-            }
-        }
-        return G1(acc.x, acc.y);
-    }
-
     // kP
-    function scalarMultiply(G1 memory point, uint256 scalar) public returns (G1 memory) {
+    function scalarMultiply(G1 memory point, uint256 scalar) internal returns (G1 memory) {
         uint256[3] memory input = [point.x, point.y, scalar];
         uint256[2] memory result;
         assembly {
@@ -75,7 +147,7 @@ contract BGLS is IBLSPoint {
     }
 
     //returns e(a,x) == e(b,y)
-    function pairingCheck(G1 memory a, G2 memory x, G1 memory b, G2 memory y) public view returns (bool) {
+    function pairingCheck(G1 memory a, G2 memory x, G1 memory b, G2 memory y) internal view returns (bool) {
         uint256[12] memory input = [a.x, a.y, x.xi, x.xr, x.yi, x.yr, b.x, prime - b.y, y.xi, y.xr, y.yi, y.yr];
         uint256[1] memory result;
         bool success = false;
@@ -84,6 +156,35 @@ contract BGLS is IBLSPoint {
         }
         require(success, "pairing check fail");
         return result[0] == 1;
+    }
+
+    function chkBit(bytes memory b, uint256 x) internal pure returns (bool) {
+        return uint256(uint8(b[31 - x / 8])) & (uint256(1) << (x % 8)) != 0;
+    }
+
+    function sumPoints(G1[] memory points, bytes memory indices, uint256[] memory weights) internal view returns (G1 memory, uint256) {
+        G1 memory acc = G1(0, 0);
+        uint256 weight = 0;
+        for (uint256 i = 0; i < points.length; i++) {
+            if (chkBit(indices, i)) {
+                acc = addPoints(acc, points[i]);
+                weight += weights[i];
+            }
+        }
+        return (G1(acc.x, acc.y), weight);
+    }
+
+    function checkAggPk(bytes memory bits, G2 memory aggPk, G1[] memory pairKeys, uint256[] memory weights, uint256 threshold) internal view returns (bool) {
+        G1 memory g1 = G1(g1x, g1y);
+        G2 memory g2 = G2(g2xr, g2xi, g2yr, g2yi);
+
+        (G1 memory sumPoint, uint256 weight) = sumPoints(pairKeys, bits, weights);
+
+        if (weight < threshold) {
+            return false;
+        }
+
+        return pairingCheck(sumPoint, g2, g1, aggPk);
     }
 
     // compatible with https://github.com/dusk-network/dusk-crypto/blob/master/bls/bls.go#L138-L148
@@ -120,7 +221,8 @@ contract BGLS is IBLSPoint {
     //        return res;
     //    }
 
-    function checkSignature(bytes memory message, G1 memory sig, G2 memory aggKey) public view returns (bool) {
+    function checkSignature(bytes memory message, G1 memory sig, G2 memory aggKey) internal view returns (bool) {
+        G2 memory g2 = G2(g2xr, g2xi, g2yr, g2yi);
         return pairingCheck(sig, g2, hashToG1(message), aggKey);
     }
 
@@ -161,6 +263,7 @@ contract BGLS is IBLSPoint {
     // pPlus1Over4 == (prime + 1) / 4, this is the exponent used in computing finite field square roots.
     uint256 constant pPlus1Over4 = 5472060717959818805561601436314318772174077789324455915672259473661306552146;
 
+    /*
     // bn256G1Add performs elliptic curve addition on the bn256 curve of Ethereum.
     function bn256G1Add(uint256[4] memory input) private view returns (G1 memory res) {
         // computes P + Q
@@ -183,7 +286,7 @@ contract BGLS is IBLSPoint {
 
         res.x = result[0];
         res.y = result[1];
-    }
+    } */
 
     function bn256G1IsOnCurve(G1 memory point) private pure returns (bool) {
         // check if the provided point is on the bn256 curve (y**2 = x**3 + curveB)
@@ -210,7 +313,8 @@ contract BGLS is IBLSPoint {
         // Here, we check that we have a valid curve point after the addition.
         // Again, this is to ensure that even if something strange happens, we
         // will not return an invalid curvepoint.
-        h = bn256G1Add([h0.x, h0.y, h1.x, h1.y]);
+        h = addPoints(h0, h1);
+        //h = bn256G1Add([h0.x, h0.y, h1.x, h1.y]);
         require(bn256G1IsOnCurve(h), "Invalid hash point: not on elliptic curve");
         require(safeSigningPoint(h), "Dangerous hash point: not safe for signing");
     }
