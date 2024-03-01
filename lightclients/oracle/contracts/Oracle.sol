@@ -11,36 +11,25 @@ interface IOracleLightNode is ILightNode {
 
 contract Oracle is Ownable,ReentrancyGuard{
     address public lightNode;
-    address public proposer;
     uint256 public quorum;
-    uint256 public approveCount;
+    uint256 public proposerCount;
 
-    struct Propose {
-        bytes32 receiptRoot;
-        address[] aprovers;
-    }
+    mapping(address => bool) public proposers;
 
-    uint256[] public pendingProposes;
-    mapping(address => bool) public approvers;
-    mapping(uint256 => Propose) public blockNumToPropose;
+    //receiptRoot => blockNum => proposeCount
+    mapping (bytes32 => mapping(uint256 => uint256)) public proposes;
+     //proposer => blockNum => receiptRoot
+    mapping (address => mapping(uint256 => bytes32)) public records;
 
     event SetQuorum(uint256 indexed _quorum);
-    event SetProposer(address indexed _proposer);
-    event RemovePropose(uint256 indexed blockNum);
     event SetLightNode(address indexed _lightNode);
-    event Approve(uint256 indexed blockNum,address indexed approver);
-    event UpdateApprover(address indexed _approver,bool indexed _flag);
+    event UpdateProposer(address indexed _approver,bool indexed _flag);
     event Excute(uint256 indexed _blockNum,bytes32 indexed _receiptRoot);
-    event ProposeEvent(uint256 indexed blockNum,bytes32 indexed receiptRoot);
-    event UpdatePropose(uint256 indexed BlockNum,bytes32 indexed receiptRoot);
+    event ProposeEvent(address indexed proposers, uint256 indexed blockNum,bytes32 indexed receiptRoot);
+    event RecoverPropose(address indexed proposer,uint256 indexed blockNum);
 
     modifier  onlyProposer {
-        require(msg.sender == proposer,"oracle: only proposer");
-        _;
-    }
-
-    modifier  onlyApprover {
-        require(approvers[msg.sender],"oracle: only approver");
+        require(proposers[msg.sender],"oracle: only proposer");
         _;
     }
 
@@ -54,7 +43,7 @@ contract Oracle is Ownable,ReentrancyGuard{
 
     function setQuorum(uint256 _quorum)external onlyOwner {
         require(_quorum != 0,"oracle: value_0");
-        require(_quorum <= approveCount,"oracle: quorum gt approveCount");
+        require(_quorum <= proposerCount,"oracle: quorum gt proposerCount");
         quorum = _quorum;
         emit SetQuorum(_quorum);
     }
@@ -65,70 +54,35 @@ contract Oracle is Ownable,ReentrancyGuard{
         emit SetLightNode(_lightNode);
     }
 
-    function setProposer(address _proposer) external onlyOwner {
+    function updateProposer(address _proposer,bool _flag) external onlyOwner {
         require(_proposer != address(0),"oracle: address_0");
-        proposer = _proposer;
-        emit SetProposer(_proposer);
-    }
-
-    function updateApprover(address _approver,bool _flag) external onlyOwner {
-        require(_approver != address(0),"oracle: address_0");
-        require(approvers[_approver] != _flag,"oracle: aready is");
-        approvers[_approver] = _flag;
-        if(_flag) approveCount ++;
-        else approveCount --;
-        emit UpdateApprover(_approver,_flag);
+        require(proposers[_proposer] != _flag,"oracle: aready is");
+        proposers[_proposer] = _flag;
+        if(_flag) proposerCount ++;
+        else proposerCount --;
+        emit UpdateProposer(_proposer,_flag);
     }
     
     function propose(uint256 blockNum,bytes32 receiptRoot) external onlyProposer quorumSeted {
+        address proposer = msg.sender;
         require(blockNum != 0,"oracle: value_0");
         require(receiptRoot != bytes32(''),"oracle: empty receipt root");
         bytes32 r = IOracleLightNode(lightNode).receiptRoots(blockNum); 
-        require(blockNumToPropose[blockNum].receiptRoot == bytes32(''),"oracle: aready add");
         require(r == bytes32(''),"already update");
-        blockNumToPropose[blockNum].receiptRoot = receiptRoot;
-        pendingProposes.push(blockNum);
-        emit ProposeEvent(blockNum,receiptRoot);
-    }
-
-    function updatePropose(uint256 index,bytes32 receiptRoot) external onlyProposer{
-        require(receiptRoot != bytes32(''),"oracle: empty receipt root");
-        uint256 blockNum = pendingProposes[index];
-        Propose storage p = blockNumToPropose[blockNum];
-        p.receiptRoot = receiptRoot;
-        delete p.aprovers;
-        emit UpdatePropose(blockNum,receiptRoot);
-    }
-
-    function removePropose(uint256 index) external onlyProposer {
-        uint256 blockNum = pendingProposes[index];
-        delete blockNumToPropose[blockNum];
-        _delPendingPropose(index);
-        emit RemovePropose(blockNum);
-    }
-
-    function approve(uint256 index) external  onlyApprover{
-        uint256 blockNum = pendingProposes[index];
-        Propose storage p = blockNumToPropose[blockNum];
-        uint256 len = p.aprovers.length;
-        for (uint i = 0; i < len; i++) {
-            require(msg.sender != p.aprovers[i],"already approve");
-        } 
-        p.aprovers.push(msg.sender);
-        emit Approve(blockNum,msg.sender);
-        if(p.aprovers.length >= quorum){
-            _excute(blockNum,p.receiptRoot); 
-            delete blockNumToPropose[blockNum];
-            _delPendingPropose(index);
+        require(records[proposer][blockNum] == bytes32(''),"oracle: proposer already propose this blockNum");
+        records[proposer][blockNum] = receiptRoot;
+        proposes[receiptRoot][blockNum] ++;
+        if(proposes[receiptRoot][blockNum] >= quorum){
+           _excute(blockNum,receiptRoot);
         }
+        emit ProposeEvent(proposer,blockNum,receiptRoot);
     }
 
-    function excute(uint256 index) external {
-        uint256 blockNum = pendingProposes[index];
-        Propose storage p = blockNumToPropose[blockNum];
-        require(p.aprovers.length >= quorum,"oracle: approve not enough");
-        _excute(blockNum,p.receiptRoot);
-        delete blockNumToPropose[blockNum];
+    function excute(uint256 blockNum,bytes32 receiptRoot) external {
+        bytes32 r = IOracleLightNode(lightNode).receiptRoots(blockNum); 
+        require(r == bytes32(''),"already update");
+        require(proposes[receiptRoot][blockNum] >= quorum,"oracle: approve not enough");
+        _excute(blockNum,receiptRoot);
     }
 
     function _excute(uint256 _blockNum,bytes32 _receiptRoot) private {
@@ -137,28 +91,14 @@ contract Oracle is Ownable,ReentrancyGuard{
         emit Excute(_blockNum,_receiptRoot);
     }
 
-    function _delPendingPropose(uint256 index) private {
-          uint256 lastIndex = pendingProposes.length - 1;
-          if(index != lastIndex){
-            pendingProposes[index] = pendingProposes[lastIndex];
-          }
-          pendingProposes.pop();        
+    function recoverPropose(address proposer,uint256 blockNum) external onlyOwner {
+        bytes32 r = IOracleLightNode(lightNode).receiptRoots(blockNum); 
+        require(r == bytes32(''),"already update");
+        require(records[proposer][blockNum] != bytes32(""),"oracle: proposer not propose this blockNum");
+        delete records[proposer][blockNum];
+        bytes32 receiptRoot = records[proposer][blockNum];
+        proposes[receiptRoot][blockNum] --;
+        emit RecoverPropose(proposer,blockNum);
     }
-    
-    struct  PendingPropose {
-        uint256 blockNum;
-        Propose propose;
-    }
-    function getPendingProposes() external view returns(PendingPropose[] memory p){
-        uint256 len = pendingProposes.length;
-        p = new PendingPropose[](len);
-        for (uint i = 0; i < len; i++) {
-           uint256 blockNum = pendingProposes[i];
-           p[i] = PendingPropose({
-              blockNum: blockNum,
-              propose: blockNumToPropose[blockNum]
-            });
-        }
-    }
-    
+
 }
