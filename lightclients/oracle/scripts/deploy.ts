@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
-import { BlockHeader, getBlock, getProof } from "../utils/Util";
+import {getProof } from "../utils/Util";
 
 let chainId = process.env.CHAIN_Id;
 let uri = ''
