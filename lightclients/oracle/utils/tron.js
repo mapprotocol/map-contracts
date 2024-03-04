@@ -1,8 +1,9 @@
 const TronWeb = require("tronweb");
 require("dotenv").config();
 
-async function deploy_contract(artifacts, name, args, tronWeb) {
+exports.deploy_contract = async function(artifacts, name, args, network) {
     let c = await artifacts.readArtifact(name);
+    let tronWeb = await getTronWeb(network)
     let contract_instance = await tronWeb.contract().new({
         abi: c.abi,
         bytecode: c.bytecode,
@@ -12,11 +13,8 @@ async function deploy_contract(artifacts, name, args, tronWeb) {
     });
 
     let contract_address = tronWeb.address.fromHex(contract_instance.address);
-
     console.log(`${name} deployed on: ${contract_address}`);
-
-    return contract_address;
-    // return '0x' + contract_instance.address.substring(2);
+    return (contract_address,'0x' + contract_instance.address.substring(2));
 }
 
 async function getTronWeb(network) {

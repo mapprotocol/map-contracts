@@ -5,6 +5,10 @@ PRIVATE_KEY =
 // testnet private key
 TESTNET_PRIVATE_KEY =
 
+TRON_PRIVATE_KEY = 
+ORACLE_SALT =
+NODE_SALT =
+
 // MPTVerify address
 // Mapo and Makalu mpt verify address
 MPT_VERIFY = 0x4b1EE84A72b44B78346e069D1c66509940827E22
