@@ -42,7 +42,7 @@ Here are some important public interfaces.
   ```
 
   submit epoch block header to keep track of validatorSet changes for each epoch.To prove epoch block header legitimacy, (validatorSet length / 2)  block headers need to be submitted consecutively.  If consecutive blockheaders are signed by different signers in validatorSet we don't believe it was forged
-* verify transation receipt
+* verify transaction receipt
 
   ```solidity
   struct ProofData {
@@ -61,7 +61,7 @@ Here are some important public interfaces.
   // _receiptProof: abi.encode(_receiptProof)  ProofData memory _proof
   ```
 
-  verify transation receipt and return receipt logs if succeed.
+  verify transaction receipt and return receipt logs if succeed.
 * get verifiable range
 
   ```solidity
@@ -163,6 +163,6 @@ npx hardhat deploy --tags Proxy --network makalu
 npx hardhat deploy --tags Upgrade --network makalu
 ```
 
-[more details about hardhat-depoly are available](https://github.com/wighawag/hardhat-deploy)
+[more details about hardhat-deploy are available](https://github.com/wighawag/hardhat-deploy)
 
 [makalu faucet ](https://faucet.maplabs.io/)

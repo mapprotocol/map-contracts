@@ -11,7 +11,7 @@ The repository has the following packages (sub projects):
 - [MAP Relay Chain light client](mapclients) - MAP Relay Chain light client implementation on all chains
   - [EVM chains](mapclients/eth) - MAP Relay Chain light client on EVM chains
   - [Near](mapclients/near) - MAP Relay Chain light client on Near Protocol
-- [light clients on MAPO](lightclients) - All light client depolyed on MAP Relay Chain
+- [light clients on MAPO](lightclients) - All light client deployed on MAP Relay Chain
   - [BNB Smart Chain light client](lightclients/bsc) - BNB smart chain light client on MAP Relay Chain
   - [Ploygon light client](lightclients/matic) - Playton light client on MAP Relay Chain
   - [Ethereum light client](lightclients/eth2) - Ethereum light client on MAP Relay Chain

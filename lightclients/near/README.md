@@ -117,6 +117,6 @@ npx hardhat deploy --tags Proxy --network makalu
 npx hardhat deploy --tags Upgrade --network makalu
 ```
 
-[more details about hardhat-depoly are available](https://github.com/wighawag/hardhat-deploy)
+[more details about hardhat-deploy are available](https://github.com/wighawag/hardhat-deploy)
 
 [makalu faucet ](https://faucet.maplabs.io/)

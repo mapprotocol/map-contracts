@@ -191,6 +191,6 @@ The file LightNode.sol implements the main logic of eth2.0 PoS light client. Her
 
 ## More reference
 
-[more details about hardhat-depoly are available](https://github.com/wighawag/hardhat-deploy)
+[more details about hardhat-deploy are available](https://github.com/wighawag/hardhat-deploy)
 
 [makalu faucet ](https://faucet.maplabs.io/)
