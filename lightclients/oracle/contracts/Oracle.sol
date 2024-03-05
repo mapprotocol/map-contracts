@@ -28,18 +28,9 @@ contract Oracle is Ownable, Pausable, ReentrancyGuard {
     event SetLightNode(uint256 indexed _chainId,address indexed _lightNode);
     event UpdateProposer(uint256 indexed _chainId,address indexed _proposer, bool indexed _flag);
     event Execute(uint256 indexed _chainId,uint256 indexed _blockNum, bytes32 indexed _receiptRoot);
-    event Propose(uint256 indexed _chainId,address indexed proposer, uint256 indexed blockNum, bytes32  receiptRoot);
+    event UpdateBlockHeader(uint256 indexed _chainId,address indexed proposer, uint256 indexed blockNum, bytes32  receiptRoot);
     event RecoverProposal(uint256 indexed _chainId,address indexed proposer, uint256 indexed blockNum);
 
-    modifier onlyProposer(uint256 chainId) {
-        require(infos[chainId].proposers[msg.sender], "oracle: only proposer");
-        _;
-    }
-
-    modifier quorumSet(uint256 chainId) {
-        require(infos[chainId].quorum != 0, "oracle: quorum not set");
-        _;
-    }
 
     constructor(address _owner) {
         _transferOwnership(_owner);
@@ -83,12 +74,15 @@ contract Oracle is Ownable, Pausable, ReentrancyGuard {
 
         return true;
     }
-
-    function propose(uint256 _chainId,uint256 blockNum, bytes32 receiptRoot) external whenNotPaused onlyProposer(_chainId) quorumSet(_chainId) {
+     function updateBlockHeader(bytes memory _headerBytes)external whenNotPaused {
+        require(_headerBytes.length != 0,"oracle: empty bytes");
+        (uint256 chainId,uint256 blockNum, bytes32 receiptRoot) = abi.decode(_headerBytes,(uint256,uint256,bytes32));
         address proposer = msg.sender;
         require(blockNum != 0, "oracle: value_0");
         require(receiptRoot != bytes32(""), "oracle: empty receipt root");
-        LightNodeInfo storage info = infos[_chainId];
+        LightNodeInfo storage info = infos[chainId];
+        require(info.proposers[proposer],"oracle: only proposer");
+        require(info.quorum != 0, "oracle: quorum not set");
         bytes32 r = IOracleLightNode(info.lightNode).receiptRoots(blockNum);
         require(r == bytes32(""), "oracle: already update");
         require(info.records[blockNum][proposer] == bytes32(""), "oracle: proposer already propose this blockNum");
@@ -96,10 +90,10 @@ contract Oracle is Ownable, Pausable, ReentrancyGuard {
         info.records[blockNum][proposer] = receiptRoot;
         info.proposals[blockNum][receiptRoot]++;
         if (info.proposals[blockNum][receiptRoot] >= info.quorum) {
-            _execute(_chainId,info.lightNode,blockNum, receiptRoot);
+            _execute(chainId,info.lightNode,blockNum, receiptRoot);
         }
-        emit Propose(_chainId,proposer, blockNum, receiptRoot);
-    }
+        emit UpdateBlockHeader(chainId,proposer, blockNum, receiptRoot);
+     }
 
     function execute(uint256 chainId,uint256 blockNum, bytes32 receiptRoot) external {
         LightNodeInfo storage info = infos[chainId];
@@ -113,8 +107,8 @@ contract Oracle is Ownable, Pausable, ReentrancyGuard {
         LightNodeInfo storage info = infos[_chainId];
         bytes32 r = IOracleLightNode(info.lightNode).receiptRoots(blockNum);
         require(r == bytes32(""), "already update");
-        require(info.records[blockNum][proposer] != bytes32(""), "oracle: proposer not propose this blockNum");
         bytes32 receiptRoot = info.records[blockNum][proposer];
+        require(receiptRoot != bytes32(""), "oracle: proposer not propose this blockNum");
         delete info.records[blockNum][proposer];
         info.proposals[blockNum][receiptRoot]--;
         emit RecoverProposal(_chainId,proposer, blockNum);
@@ -131,12 +125,10 @@ contract Oracle is Ownable, Pausable, ReentrancyGuard {
         return infos[_chainId].proposers[_proposer];
     }
 
-
     function isProposed(uint256 _chainId,address _proposer,uint256 _blockNum)external view returns(bool result){
         LightNodeInfo storage i = infos[_chainId];
         return i.records[_blockNum][_proposer] != bytes32('');
     }
-
 
     function _execute(uint256 _chainId,address _lightNode,uint256 _blockNum, bytes32 _receiptRoot) private {
         bytes memory u = abi.encode(_blockNum, _receiptRoot);
