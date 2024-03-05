@@ -1,6 +1,6 @@
 let fs = require("fs");
 let path = require("path");
-import { ethers } from "hardhat";
+// import { ethers,run } from "hardhat";
 
 let DEPLOY_FACTORY = "0x6258e4d2950757A749a4d4683A7342261ce12471";
 let IDeployFactory_abi = [
@@ -8,13 +8,17 @@ let IDeployFactory_abi = [
     "function getAddress(bytes32 salt) external view returns (address)",
 ];
 
-export interface DeployInfo {
+export interface LightNodeInfo {
     impl: string;
     proxy: string;
-    oracle: string;
 }
 
-async function create(salt: string, bytecode: string, param: string) {
+export interface DeployInfo {
+    oracle: string;
+    lightNodeInfos: Record<string, LightNodeInfo>
+}
+
+export async function create(salt: string, bytecode: string, param: string,ethers:any) {
     let [wallet] = await ethers.getSigners();
     let factory = await ethers.getContractAt(IDeployFactory_abi, DEPLOY_FACTORY, wallet);
     let salt_hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(salt));
@@ -42,25 +46,24 @@ async function create(salt: string, bytecode: string, param: string) {
     return [addr, redeploy];
 }
 
-async function readFromFile(network: string) {
-    let p = path.join(__dirname, "../deployments/mos.json");
-    let deploy: Record<string, DeployInfo>;
+export async function readFromFile(network: string) {
+    let p = path.join(__dirname, "../deployments/deploy.json");
+    let deploy: DeployInfo = {oracle:'',lightNodeInfos:{}} ;
     if (!fs.existsSync(p)) {
-        deploy = {};
-        deploy[network] = { impl: "", proxy: "", oracle: "" };
+        deploy.lightNodeInfos[network] = { impl: "", proxy: ""};
     } else {
         let rawdata = fs.readFileSync(p);
         deploy = JSON.parse(rawdata);
-        if (!deploy[network]) {
-            deploy[network] = { impl: "", proxy: "", oracle: "" };
+        if (!deploy.lightNodeInfos[network]) {
+            deploy.lightNodeInfos[network] = { impl: "", proxy: ""};
         }
     }
 
     return deploy;
 }
 
-async function writeToFile(deploy: Record<string, DeployInfo>) {
-    let p = path.join(__dirname, "../deployments/mos.json");
+export async function writeToFile(deploy: DeployInfo) {
+    let p = path.join(__dirname, "../deployments/deploy.json");
     await folder("../deployments/");
     // fs.writeFileSync(p,JSON.stringify(deploy));
     fs.writeFileSync(p, JSON.stringify(deploy, null, "\t"));
@@ -75,8 +78,11 @@ const folder = async (reaPath: string) => {
         await fs.promises.mkdir(absPath, { recursive: true });
     }
 };
-module.exports = {
-    writeToFile,
-    readFromFile,
-    create,
+export async function verify(addr:string, arg:any, code:string,run:any) {
+    await run("verify:verify", {
+        address: addr,
+        constructorArguments: arg,
+        contract: code,
+    });
+
 };

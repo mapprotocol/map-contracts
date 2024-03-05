@@ -52,7 +52,18 @@ const config: HardhatUserConfig ={
       url: `https://arbitrum-sepolia.blockpi.network/v1/rpc/public`,
       accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
-    
+    Tron: {
+      url: `https://testnet-rpc.maplabs.io`,
+      chainId: 212, //728126428,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    TronTest: {
+      url: `https://testnet-rpc.maplabs.io`,
+      chainId: 212,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
   },
   // gasReporter: {
   //   enabled: process.env.REPORT_GAS !== undefined,
