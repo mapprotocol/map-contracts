@@ -11,6 +11,7 @@ let IDeployFactory_abi = [
 export interface LightNodeInfo {
     impl: string;
     proxy: string;
+    oracle: string;
 }
 
 export interface DeployInfo {
@@ -48,14 +49,14 @@ export async function create(salt: string, bytecode: string, param: string,ether
 
 export async function readFromFile(network: string) {
     let p = path.join(__dirname, "../deployments/deploy.json");
-    let deploy: DeployInfo = {oracle:'',lightNodeInfos:{}} ;
+    let deploy: DeployInfo = {oracle:"",lightNodeInfos:{}} ;
     if (!fs.existsSync(p)) {
-        deploy.lightNodeInfos[network] = { impl: "", proxy: ""};
+        deploy.lightNodeInfos[network] = {oracle:"", impl: "", proxy: ""};
     } else {
         let rawdata = fs.readFileSync(p);
         deploy = JSON.parse(rawdata);
         if (!deploy.lightNodeInfos[network]) {
-            deploy.lightNodeInfos[network] = { impl: "", proxy: ""};
+            deploy.lightNodeInfos[network] = {oracle:"", impl: "", proxy: ""};
         }
     }
 
