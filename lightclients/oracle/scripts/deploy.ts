@@ -11,39 +11,45 @@ async function main() {
 
     console.log("begin ...");
 
-    const MPTVerify = await ethers.getContractFactory("MPTVerify");
+    // const MPTVerify = await ethers.getContractFactory("MPTVerify");
 
-    const mPTVerify = await MPTVerify.deploy();
+    // const mPTVerify = await MPTVerify.deploy();
 
-    await mPTVerify.connect(wallet).deployed();
+    // await mPTVerify.connect(wallet).deployed();
 
-    console.log("mPTVerify Implementation deployed on:", mPTVerify.address);
+    // console.log("mPTVerify Implementation deployed on:", mPTVerify.address);
 
+    // const LightNode = await ethers.getContractFactory("LightNode");
+
+    // const lightNode = await LightNode.deploy();
+
+    // await lightNode.connect(wallet).deployed();
+
+    // console.log("lightNode Implementation deployed on:", lightNode.address);
+
+    // const LightNodeProxy = await ethers.getContractFactory("LightNodeProxy");
+
+    // let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, wallet.address, mPTVerify.address]);
+
+    // const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
+
+    // await lightNodeProxy.connect(wallet).deployed();
+
+    // console.log("lightNode proxy deployed on:", lightNodeProxy.address);
+
+    // await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+
+    // await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+
+    // let txHash = "";
+
+    // await verify(txHash, uri, LightNode.attach(lightNodeProxy.address));
+    let rpc = "https://sepolia-rollup.arbitrum.io/rpc"
+    let txHash = "0x26193897b8d0a26f2b12669010954eb037ba33c164f1e921db9616611e438bb0";
     const LightNode = await ethers.getContractFactory("LightNode");
+    let lightNode = LightNode.attach("0x3eD93c7c36Cf2ceE748eaE3B268F76a766cb8f48");
 
-    const lightNode = await LightNode.deploy();
-
-    await lightNode.connect(wallet).deployed();
-
-    console.log("lightNode Implementation deployed on:", lightNode.address);
-
-    const LightNodeProxy = await ethers.getContractFactory("LightNodeProxy");
-
-    let initData = LightNode.interface.encodeFunctionData("initialize", [chainId, wallet.address, mPTVerify.address]);
-
-    const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
-
-    await lightNodeProxy.connect(wallet).deployed();
-
-    console.log("lightNode proxy deployed on:", lightNodeProxy.address);
-
-    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
-
-    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
-
-    let txHash = "";
-
-    await verify(txHash, uri, LightNode.attach(lightNodeProxy.address));
+    await verify(txHash,rpc,lightNode)
 }
 
 async function updateHeader(wallet: SignerWithAddress, lightNode: Contract) {}
