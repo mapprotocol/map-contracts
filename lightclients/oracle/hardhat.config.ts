@@ -20,31 +20,27 @@ const config: HardhatUserConfig ={
     deployer: 0,
   },
   networks: {
-    Makalu: {
-      chainId: 212,
-      url:"https://testnet-rpc.maplabs.io",
-      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
-    },
-    MakaluArbitrum: {
-      chainId: 212,
-      url:"https://testnet-rpc.maplabs.io",
-      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
-    },
-    map_op : {
+    Mapo : {
       chainId: 22776,
       url:"https://rpc.maplabs.io",
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    map_arb : {
-      chainId: 22776,
-      url:"https://rpc.maplabs.io",
-      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
-    },
-
     Arbitrum: {
       chainId: 42161,
       url: `https://1rpc.io/arb`,
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    Tron: {
+      url: `https://testnet-rpc.maplabs.io`,
+      chainId: 212, //728126428,
+      accounts:
+          process.env.TRON_PRIVATE_KEY !== undefined ? [process.env.TRON_PRIVATE_KEY] : [],
+    },
+
+    Makalu: {
+      chainId: 212,
+      url:"https://testnet-rpc.maplabs.io",
+      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
 
     ArbitrumSepolia: {
@@ -52,17 +48,12 @@ const config: HardhatUserConfig ={
       url: `https://arbitrum-sepolia.blockpi.network/v1/rpc/public`,
       accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
-    Tron: {
-      url: `https://testnet-rpc.maplabs.io`,
-      chainId: 212, //728126428,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
-    },
+
     TronTest: {
       url: `https://testnet-rpc.maplabs.io`,
       chainId: 212,
       accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+        process.env.TRON_PRIVATE_KEY !== undefined ? [process.env.TRON_PRIVATE_KEY] : [],
     },
   },
   // gasReporter: {

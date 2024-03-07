@@ -80,7 +80,7 @@ contract Oracle is Ownable, Pausable, ReentrancyGuard {
     }
 
     function updateBlockHeader(uint256 _chainId, bytes memory _headerBytes) external whenNotPaused {
-        require(_headerBytes.length != 0, "oracle: empty bytes");
+        require(_headerBytes.length != 64, "oracle: invalid bytes");
         (uint256 blockNum, bytes32 receiptRoot) = abi.decode(_headerBytes, (uint256, bytes32));
         address proposer = msg.sender;
         require(blockNum != 0, "oracle: value_0");

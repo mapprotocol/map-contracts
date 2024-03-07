@@ -185,3 +185,78 @@ task("oracle:updateProposer", "update proposer address")
         }
         console.log(`updateProposers ${proposers} status ${taskArgs.flag}`);
     });
+
+task("oracle:pause", "update proposer address").setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+    let [wallet] = await hre.ethers.getSigners();
+    console.log("wallet address is:", wallet.address);
+    const { network } = hre;
+    let d = await readFromFile(network.name);
+    if (d.networks[network.name].oracle === undefined || d.networks[network.name].oracle === "") {
+        throw "oracle not deploy";
+    }
+    console.log("oracle address is:", d.networks[network.name].oracle);
+    if (network.name === "Tron" || network.name === "TronTest") {
+        let oracle = await getTronContractAt(hre.artifacts, "Oracle", d.networks[network.name].oracle, network.name);
+        let result = await oracle.togglePause(true).send();
+        console.log(result);
+    } else {
+        const Oracle = await hre.ethers.getContractFactory("Oracle");
+        let oracle = Oracle.attach(d.networks[network.name].oracle);
+        await (await oracle.togglePause(true)).wait();
+    }
+    console.log(`oracle pause`);
+});
+
+task("oracle:unpause", "update proposer address").setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+    let [wallet] = await hre.ethers.getSigners();
+    console.log("wallet address is:", wallet.address);
+    const { network } = hre;
+    let d = await readFromFile(network.name);
+    if (d.networks[network.name].oracle === undefined || d.networks[network.name].oracle === "") {
+        throw "oracle not deploy";
+    }
+    console.log("oracle address is:", d.networks[network.name].oracle);
+    if (network.name === "Tron" || network.name === "TronTest") {
+        let oracle = await getTronContractAt(hre.artifacts, "Oracle", d.networks[network.name].oracle, network.name);
+        let result = await oracle.togglePause(false).send();
+        console.log(result);
+    } else {
+        const Oracle = await hre.ethers.getContractFactory("Oracle");
+        let oracle = Oracle.attach(d.networks[network.name].oracle);
+        await (await oracle.togglePause(false)).wait();
+    }
+    console.log(`oracle unpause`);
+});
+
+task("oracle:getNode", "get light node info")
+    .addOptionalParam("chain", "chainId", 0, types.int)
+    .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+        let [wallet] = await hre.ethers.getSigners();
+        console.log("wallet address is:", wallet.address);
+        const { network } = hre;
+        let d = await readFromFile(network.name);
+        if (d.networks[network.name].oracle === undefined || d.networks[network.name].oracle === "") {
+            throw "oracle not deploy";
+        }
+        let chain = taskArgs.chain;
+        if (chain == 0) {
+            chain = Object.keys(d.networks[network.name].lightNodes)[0];
+        }
+        let info;
+        if (network.name === "Tron" || network.name === "TronTest") {
+            let oracle = await getTronContractAt(
+                hre.artifacts,
+                "Oracle",
+                d.networks[network.name].oracle,
+                network.name
+            );
+            let result = await oracle.setQuorum(chain, taskArgs.quorum).send();
+            console.log(result);
+            info = await oracle.lightNodeInfo(chain).call();
+        } else {
+            const Oracle = await hre.ethers.getContractFactory("Oracle");
+            let oracle = Oracle.attach(d.networks[network.name].oracle);
+            info = await oracle.lightNodeInfo(chain);
+        }
+        console.log(`node ${chain} ${info.lightNode} quorum: ${info.quorum}, proposers: ${info.proposerCount}`);
+    });

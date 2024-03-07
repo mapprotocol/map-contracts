@@ -193,7 +193,6 @@ task("node:setMptVerify", "set mpt verify address")
 
         let node = taskArgs.node;
         if (node === "node") {
-
             if (d.networks[network.name].oracle === undefined || d.networks[network.name].oracle === "") {
                 throw "oracle not deploy";
             }
@@ -294,4 +293,44 @@ task("node:setOracle", "set oracle address")
             let new_oracle = await proxy.oracle();
             console.log("new oracle address is :", new_oracle);
         }
+    });
+task("node:verifiable", "check the block is  verifiable")
+    .addOptionalParam("chain", "chainId", 0, types.int)
+    .addOptionalParam("node", "light node address", "node", types.string)
+    .addParam("block", "block number")
+    .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+        let [wallet] = await hre.ethers.getSigners();
+        const { network } = hre;
+
+        let d = await readFromFile(network.name);
+        let chain = taskArgs.chain;
+        if (chain == 0) {
+            chain = Object.keys(d.networks[network.name].lightNodes)[0];
+        }
+
+        let node = taskArgs.node;
+        if (node === "node") {
+            if (d.networks[network.name].oracle === undefined || d.networks[network.name].oracle === "") {
+                throw "oracle not deploy";
+            }
+            if (!d.networks[network.name].lightNodes[chain]) {
+                throw "oracle light node not deploy";
+            }
+            if (
+                d.networks[network.name].lightNodes[chain].proxy === undefined ||
+                d.networks[network.name].lightNodes[chain].proxy === ""
+            ) {
+                throw "oracle light node not deploy";
+            }
+            node = d.networks[network.name].lightNodes[chain].proxy;
+        }
+        console.log("light node address:", node);
+        console.log("wallet address is:", wallet.address);
+        const LightNode = await hre.ethers.getContractFactory("LightNode");
+        let proxy = LightNode.attach(node);
+        let isVerifiable = await proxy.isVerifiable(
+            taskArgs.block,
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        );
+        console.log(`The block ${taskArgs.block} verifiable is ${isVerifiable}`);
     });
