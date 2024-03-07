@@ -11,15 +11,18 @@ let IDeployFactory_abi = [
 export interface LightNodeInfo {
     impl: string;
     proxy: string;
+}
+
+export interface NetworkInfo {
     oracle: string;
+    lightNodes: Record<string, LightNodeInfo>;
 }
 
 export interface DeployInfo {
-    oracle: string;
-    lightNodeInfos: Record<string, LightNodeInfo>
+    networks: Record<string, NetworkInfo>;
 }
 
-export async function create(salt: string, bytecode: string, param: string,ethers:any) {
+export async function create(salt: string, bytecode: string, param: string, ethers: any) {
     let [wallet] = await ethers.getSigners();
     let factory = await ethers.getContractAt(IDeployFactory_abi, DEPLOY_FACTORY, wallet);
     let salt_hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(salt));
@@ -49,14 +52,14 @@ export async function create(salt: string, bytecode: string, param: string,ether
 
 export async function readFromFile(network: string) {
     let p = path.join(__dirname, "../deployments/deploy.json");
-    let deploy: DeployInfo = {oracle:"",lightNodeInfos:{}} ;
+    let deploy: DeployInfo = { networks: {} };
     if (!fs.existsSync(p)) {
-        deploy.lightNodeInfos[network] = {oracle:"", impl: "", proxy: ""};
+        deploy.networks[network] = { oracle: "", lightNodes: {} };
     } else {
         let rawdata = fs.readFileSync(p);
         deploy = JSON.parse(rawdata);
-        if (!deploy.lightNodeInfos[network]) {
-            deploy.lightNodeInfos[network] = {oracle:"", impl: "", proxy: ""};
+        if (!deploy.networks[network]) {
+            deploy.networks[network] = { oracle: "", lightNodes: {} };
         }
     }
 
@@ -79,11 +82,10 @@ const folder = async (reaPath: string) => {
         await fs.promises.mkdir(absPath, { recursive: true });
     }
 };
-export async function verify(addr:string, arg:any, code:string,run:any) {
+export async function verify(addr: string, arg: any, code: string, run: any) {
     await run("verify:verify", {
         address: addr,
         constructorArguments: arg,
         contract: code,
     });
-
-};
+}

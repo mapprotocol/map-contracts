@@ -1,8 +1,2 @@
-require("./subs/node.ts")
-require("./subs/oracle.ts")
-
-
-
-
-
-
+require("./subs/node.ts");
+require("./subs/oracle.ts");

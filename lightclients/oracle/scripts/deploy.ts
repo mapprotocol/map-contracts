@@ -44,12 +44,12 @@ async function main() {
     // let txHash = "";
 
     // await verify(txHash, uri, LightNode.attach(lightNodeProxy.address));
-    let rpc = "https://sepolia-rollup.arbitrum.io/rpc"
+    let rpc = "https://sepolia-rollup.arbitrum.io/rpc";
     let txHash = "0x26193897b8d0a26f2b12669010954eb037ba33c164f1e921db9616611e438bb0";
     const LightNode = await ethers.getContractFactory("LightNode");
     let lightNode = LightNode.attach("0x3eD93c7c36Cf2ceE748eaE3B268F76a766cb8f48");
 
-    await verify(txHash,rpc,lightNode)
+    await verify(txHash, rpc, lightNode);
 }
 
 async function updateHeader(wallet: SignerWithAddress, lightNode: Contract) {}
