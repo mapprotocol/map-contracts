@@ -14,8 +14,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     uint256 public maxEpochs; // max epoch number
     uint256 public epochSize; // every epoch block number
 
-    uint256 public startHeight;
-    uint256 public headerHeight; // the last header
+    uint256 public startHeight;     // init epoch start block number
+    uint256 public headerHeight;    // last update block number
     // address[] public validatorAddress;
     Epoch[] public epochs;
     IVerifyTool public verifyTool;
@@ -39,7 +39,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     struct Epoch {
         uint256 epoch;
         uint256 threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
-        uint256[2] aggKey;
+        uint256[2] aggKey;  // agg G1 key
         uint256[] pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
         uint256[] weights; // voting power
     }
@@ -70,11 +70,12 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     ) external initializer {
         require(_epoch > 1, "Error initializing epoch");
         _changeAdmin(tx.origin);
-        maxEpochs = 1200000 / _epochSize;
+        maxEpochs = 1500000 / _epochSize;
         headerHeight = (_epoch - 1) * _epochSize;
         startHeight = headerHeight;
         epochSize = _epochSize;
         // validatorAddress = _validatorAddress;
+        // init all epochs
         for (uint256 i = 0; i < maxEpochs; i++) {
             epochs.push(
                 Epoch({
@@ -186,10 +187,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         uint256 _threshold,
         BGLS.G1[] memory _pairKeys,
         uint256[] memory _weights,
-        uint256 epoch
+        uint256 _epoch
     ) internal {
         require(_pairKeys.length == _weights.length, "Mismatch arg");
-        uint256 id = _getEpochId(epoch);
+        uint256 id = _getEpochId(_epoch);
         Epoch storage v = epochs[id];
 
         for (uint256 i = 0; i < _pairKeys.length; i++) {
@@ -199,11 +200,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         }
 
         v.threshold = _threshold;
-        v.epoch = epoch;
+        v.epoch = _epoch;
     }
 
-    function _updateValidators(uint256 _blockNumber, IVerifyTool.istanbulExtra memory ist) internal {
-        bytes memory bits = abi.encodePacked(ist.removeList);
+    function _updateValidators(uint256 _blockNumber, IVerifyTool.istanbulExtra memory _ist) internal {
+        bytes memory bits = abi.encodePacked(_ist.removeList);
 
         uint256 epoch = _getEpochByNumber(_blockNumber) + 1;
         uint256 idPre = _getPreEpochId(epoch);
@@ -217,23 +218,23 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             delete (v.pairKeys);
         }
 
-        uint256 _weight = 0;
+        uint256 weight = 0;
         uint256 keyLen = vPre.pairKeys.length / 2;
         for (uint256 i = 0; i < keyLen; i++) {
             if (!BGLS.chkBit(bits, i)) {
                 v.pairKeys.push(vPre.pairKeys[2 * i]);
                 v.pairKeys.push(vPre.pairKeys[2 * i + 1]);
                 v.weights.push(vPre.weights[i]);
-                _weight = _weight + vPre.weights[i];
+                weight = weight + vPre.weights[i];
             }
         }
 
-        keyLen = ist.addedG1PubKey.length;
+        keyLen = _ist.addedG1PubKey.length;
         if (keyLen > 0) {
             bytes32 x;
             bytes32 y;
             for (uint256 i = 0; i < keyLen; i++) {
-                bytes memory g1 = ist.addedG1PubKey[i];
+                bytes memory g1 = _ist.addedG1PubKey[i];
                 assembly {
                     x := mload(add(g1, 32))
                     y := mload(add(g1, 64))
@@ -242,12 +243,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
                 v.pairKeys.push(uint256(x));
                 v.pairKeys.push(uint256(y));
                 v.weights.push(1);
-                _weight = _weight + 1;
+                weight = weight + 1;
             }
         }
-        v.threshold = _weight - _weight / 3;
+        if (weight % 3 == 0) {
+            v.threshold = weight - weight / 3 + 1;
+        } else {
+            v.threshold = weight - weight / 3;
+        }
 
-        emit MapUpdateValidators(ist.addedG1PubKey, epoch, bits);
+        emit MapUpdateValidators(_ist.addedG1PubKey, epoch, bits);
     }
 
     /** internal view *********************************************************/
@@ -404,7 +409,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function setPendingAdmin(address pendingAdmin_) public onlyOwner {
-        require(pendingAdmin_ != address(0), "Ownable pendingAdmin is the zero address");
+        require(pendingAdmin_ != address(0), "pendingAdmin is the zero address");
         emit ChangePendingAdmin(_pendingAdmin, pendingAdmin_);
         _pendingAdmin = pendingAdmin_;
     }
