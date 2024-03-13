@@ -39,9 +39,9 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     struct Epoch {
         uint256 epoch;
         uint256 threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
-        uint256[2] aggKey;  // agg G1 key
-        uint256[] pairKeys; // <-- 100 validators, pubkey G2,   (s, s * g2)   s * g1
-        uint256[] weights; // voting power
+        uint256[2] aggKey;  // agg G1 key, not used now
+        uint256[] pairKeys; // <-- validators, pubkey G1,   (s, s * g2)   s * g1
+        uint256[] weights; // voting power, not used now
     }
 
     event MapInitializeValidators(uint256 _threshold, BGLS.G1[] _pairKeys, uint256[] _weights, uint256 epoch);
@@ -109,10 +109,19 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         if (startHeight == 0) {
             startHeight = headerHeight - epochSize;
         }
-        bool success = _verifyHeaderSig(bh, ist, aggPk);
+
+        uint256 epoch = _getEpochByNumber(bh.number);
+        uint256 id = _getEpochId(epoch);
+        //Epoch memory v = epochs[id];
+        Epoch memory v;
+        v.epoch = epochs[id].epoch;
+        v.threshold = epochs[id].threshold;
+        v.pairKeys = epochs[id].pairKeys;
+
+        bool success = _verifyHeaderSig(v, bh, ist, aggPk);
         require(success, "CheckSig error");
 
-        _updateValidators(bh.number, ist);
+        _updateValidators(v, ist);
 
         emit UpdateBlockHeader(msg.sender, bh.number);
     }
@@ -196,36 +205,35 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         for (uint256 i = 0; i < _pairKeys.length; i++) {
             v.pairKeys.push(_pairKeys[i].x);
             v.pairKeys.push(_pairKeys[i].y);
-            v.weights.push(_weights[i]);
+            // v.weights.push(_weights[i]);
         }
 
         v.threshold = _threshold;
         v.epoch = _epoch;
     }
 
-    function _updateValidators(uint256 _blockNumber, IVerifyTool.istanbulExtra memory _ist) internal {
+    function _updateValidators(Epoch memory _preEpoch, IVerifyTool.istanbulExtra memory _ist) internal {
         bytes memory bits = abi.encodePacked(_ist.removeList);
 
-        uint256 epoch = _getEpochByNumber(_blockNumber) + 1;
-        uint256 idPre = _getPreEpochId(epoch);
-        Epoch memory vPre = epochs[idPre];
+        uint256 epoch = _preEpoch.epoch + 1;
+        //uint256 idPre = _getPreEpochId(epoch);
+        //Epoch memory vPre = epochs[idPre];
         uint256 id = _getEpochId(epoch);
         Epoch storage v = epochs[id];
         v.epoch = epoch;
 
         if (v.pairKeys.length > 0) {
-            delete (v.weights);
             delete (v.pairKeys);
         }
 
         uint256 weight = 0;
-        uint256 keyLen = vPre.pairKeys.length / 2;
+        uint256 keyLen = _preEpoch.pairKeys.length / 2;
         for (uint256 i = 0; i < keyLen; i++) {
             if (!BGLS.chkBit(bits, i)) {
-                v.pairKeys.push(vPre.pairKeys[2 * i]);
-                v.pairKeys.push(vPre.pairKeys[2 * i + 1]);
-                v.weights.push(vPre.weights[i]);
-                weight = weight + vPre.weights[i];
+                v.pairKeys.push(_preEpoch.pairKeys[2 * i]);
+                v.pairKeys.push(_preEpoch.pairKeys[2 * i + 1]);
+                //v.weights.push(_preEpoch.weights[i]);
+                weight = weight + 1;
             }
         }
 
@@ -242,7 +250,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
                 v.pairKeys.push(uint256(x));
                 v.pairKeys.push(uint256(y));
-                v.weights.push(1);
+                //v.weights.push(1);
                 weight = weight + 1;
             }
         }
@@ -289,7 +297,15 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         if (!success) {
             return (success, message, "");
         }
-        success = _verifyHeaderSig(_receiptProof.header, _receiptProof.ist, _receiptProof.aggPk);
+
+        uint256 epoch = _getEpochByNumber(height);
+        uint256 id = _getEpochId(epoch);
+        //Epoch memory v = epochs[id];
+        Epoch memory v;
+        v.threshold = epochs[id].threshold;
+        v.pairKeys = epochs[id].pairKeys;
+
+        success = _verifyHeaderSig(v, _receiptProof.header, _receiptProof.ist, _receiptProof.aggPk);
         if (!success) {
             message = "VerifyHeaderSig failed";
             return (success, message, logsHash);
@@ -298,6 +314,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function _verifyHeaderSig(
+        Epoch memory _epoch,
         IVerifyTool.blockHeader memory _bh,
         IVerifyTool.istanbulExtra memory ist,
         BGLS.G2 memory _aggPk
@@ -316,27 +333,23 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         (success, ) = verifyTool.verifyHeader(_bh.coinbase, ist.seal, deleteSealAndAggHeaderBytes);
         if (!success) return success;
 
-        return checkSig(_bh.number, ist, _aggPk, deleteAggHeaderBytes);
+        return checkSig(_epoch, ist, _aggPk, deleteAggHeaderBytes);
     }
 
     // aggPk2, sig1 --> in contract: check aggPk2 is valid with bits by summing points in G2
     // how to check aggPk2 is valid --> via checkAggPk
     function checkSig(
-        uint256 _blockNumber,
+        Epoch memory _epoch,
         IVerifyTool.istanbulExtra memory _ist,
         BGLS.G2 memory _aggPk,
         bytes memory _headerWithoutAgg
     ) internal view returns (bool) {
-        uint256 epoch = _getEpochByNumber(_blockNumber);
         bytes memory message = getPrepareCommittedSeal(_headerWithoutAgg, _ist.aggregatedSeal.round);
         bytes memory bits = abi.encodePacked(_ist.aggregatedSeal.bitmap);
-        BGLS.G1 memory sig = BGLS.decodeG1(_ist.aggregatedSeal.signature);
 
-        uint256 id = _getEpochId(epoch);
-        Epoch memory v = epochs[id];
         return
-            BGLS.checkAggPk(bits, _aggPk, v.pairKeys, v.weights, v.threshold) &&
-            BGLS.checkSignature(message, sig, _aggPk);
+            BGLS.checkAggPk(bits, _aggPk, _epoch.pairKeys, _epoch.threshold) &&
+            BGLS.checkSignature(message, _ist.aggregatedSeal.signature, _aggPk);
     }
 
     function _getEpochId(uint256 epoch) internal view returns (uint256) {
@@ -350,14 +363,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         } else {
             return id - 1;
         }
-    }
-
-    function isQuorum(bytes memory bits, uint256[] memory weights, uint256 threshold) internal pure returns (bool) {
-        uint256 weight = 0;
-        for (uint256 i = 0; i < weights.length; i++) {
-            if (BGLS.chkBit(bits, i)) weight += weights[i];
-        }
-        return weight >= threshold;
     }
 
     function getPrepareCommittedSeal(

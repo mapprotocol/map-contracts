@@ -164,8 +164,7 @@ library BGLS {
 
     function sumPoints(
         uint256[] memory points,
-        bytes memory indices,
-        uint256[] memory weights
+        bytes memory indices
     ) internal view returns (G1 memory, uint256) {
         G1 memory acc = G1(0, 0);
         uint256 weight = 0;
@@ -174,7 +173,7 @@ library BGLS {
             if (chkBit(indices, i)) {
                 G1 memory point = G1(points[2 * i], points[2 * i + 1]);
                 acc = addPoints(acc, point);
-                weight += weights[i];
+                weight += 1;
             }
         }
         return (G1(acc.x, acc.y), weight);
@@ -184,13 +183,12 @@ library BGLS {
         bytes memory bits,
         G2 memory aggPk,
         uint256[] memory pairKeys,
-        uint256[] memory weights,
         uint256 threshold
     ) internal view returns (bool) {
         G1 memory g1 = G1(g1x, g1y);
         G2 memory g2 = G2(g2xr, g2xi, g2yr, g2yi);
 
-        (G1 memory sumPoint, uint256 weight) = sumPoints(pairKeys, bits, weights);
+        (G1 memory sumPoint, uint256 weight) = sumPoints(pairKeys, bits);
 
         if (weight < threshold) {
             return false;
@@ -233,7 +231,8 @@ library BGLS {
     //        return res;
     //    }
 
-    function checkSignature(bytes memory message, G1 memory sig, G2 memory aggKey) internal view returns (bool) {
+    function checkSignature(bytes memory message, bytes memory sigBytes, G2 memory aggKey) internal view returns (bool) {
+        G1 memory sig = decodeG1(sigBytes);
         G2 memory g2 = G2(g2xr, g2xi, g2yr, g2yi);
         return pairingCheck(sig, g2, hashToG1(message), aggKey);
     }
