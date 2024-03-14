@@ -244,6 +244,7 @@ task("node:setOracle", "set oracle address")
         if (chain == 0) {
             chain = Object.keys(d.networks[network.name].lightNodes)[0];
         }
+        console.log("light node chain id:", chain);
 
         let node = taskArgs.node;
         if (node === "node") {
@@ -270,6 +271,7 @@ task("node:setOracle", "set oracle address")
             }
             oracle = d.networks[network.name].oracle;
         }
+        console.log("oracle to be set:", oracle);
 
         if (network.name === "Tron" || network.name === "TronTest") {
             let lightNode = await getTronContractAt(hre.artifacts, "LightNode", node, network.name);
@@ -280,7 +282,7 @@ task("node:setOracle", "set oracle address")
             let old_oracle = await lightNode.oracle().call();
             console.log("old oracle address is :", old_oracle);
             let result = await lightNode.setOracle(oracle).send();
-            console.log(result);
+            console.log("setOracle result: ", result);
             let new_oracle = await lightNode.oracle().call();
             console.log("new oracle address is :", new_oracle);
         } else {

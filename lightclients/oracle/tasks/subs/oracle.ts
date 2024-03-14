@@ -81,6 +81,7 @@ task("oracle:setLightNode", "set light node address")
             }
             node = d.networks[network.name].lightNodes[chain].proxy;
         }
+        console.log("chain:", chain);
         console.log("light node:", node);
 
         let info;
@@ -93,10 +94,11 @@ task("oracle:setLightNode", "set light node address")
             );
             let n = node;
             if (!n.startsWith("0x")) {
-                n = toETHAddress(n, network.name);
+                n = await toETHAddress(n, network.name);
             }
+            console.log("light node:", n);
             let result = await oracle.setLightNode(chain, n).send();
-            console.log(result);
+            console.log("setLightNode result: ", result);
             info = await oracle.lightNodeInfo(chain).call();
         } else {
             console.log("wallet address is:", wallet.address);
