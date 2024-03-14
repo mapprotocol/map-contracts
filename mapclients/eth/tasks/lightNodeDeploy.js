@@ -2,6 +2,12 @@ const BigNumber = require("bignumber.js");
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR });
 const initializeData = require("../deploy/config");
 
+
+let IDeployFactory_abi = [
+    "function deploy(bytes32 salt, bytes memory creationCode, uint256 value) external",
+    "function getAddress(bytes32 salt) external view returns (address)",
+];
+
 module.exports = async (taskArgs, hre) => {
     const { deploy } = deployments;
     const accounts = await ethers.getSigners();
@@ -10,6 +16,20 @@ module.exports = async (taskArgs, hre) => {
     console.log("Deploying contracts with the account:", await deployer.getAddress());
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
+
+    let verifier = taskArgs.verify;
+    if (verifier === "") {
+        await deploy("VerifyTool", {
+            from: deployer.address,
+            args: [],
+            log: true,
+            contract: "VerifyTool",
+        });
+
+        let verifyTool = await deployments.get("VerifyTool");
+        verifier = verifyTool.address;
+    }
+    console.log("verify tool addr", verifier);
 
     await deploy("LightNode", {
         from: deployer.address,
@@ -47,7 +67,7 @@ module.exports = async (taskArgs, hre) => {
         weights,
         epoch,
         epochSize,
-        taskArgs.verify,
+        verifier
     ]);
     console.log("initialize success");
 
@@ -61,7 +81,8 @@ module.exports = async (taskArgs, hre) => {
 
     let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(taskArgs.salt));
 
-    let factory = await ethers.getContractAt("IDeployFactory", taskArgs.factory);
+    let factory = await ethers.getContractAt(IDeployFactory_abi, taskArgs.factory);
+    //let factory = await ethers.getContractAt("IDeployFactory", taskArgs.factory);
 
     console.log("deploy factory address:", factory.address);
 

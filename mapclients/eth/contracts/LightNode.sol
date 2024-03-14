@@ -115,8 +115,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         //Epoch memory v = epochs[id];
         Epoch memory v;
         v.epoch = epochs[id].epoch;
-        v.threshold = epochs[id].threshold;
+        // v.threshold = epochs[id].threshold;
         v.pairKeys = epochs[id].pairKeys;
+
+        uint256 weight = v.pairKeys.length / 2;
+        v.threshold = weight - weight / 3;
 
         bool success = _verifyHeaderSig(v, bh, ist, aggPk);
         require(success, "CheckSig error");
@@ -254,11 +257,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
                 weight = weight + 1;
             }
         }
-        if (weight % 3 == 0) {
-            v.threshold = weight - weight / 3 + 1;
-        } else {
-            v.threshold = weight - weight / 3;
-        }
+        v.threshold = weight - weight / 3;
 
         emit MapUpdateValidators(_ist.addedG1PubKey, epoch, bits);
     }
@@ -302,8 +301,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         uint256 id = _getEpochId(epoch);
         //Epoch memory v = epochs[id];
         Epoch memory v;
-        v.threshold = epochs[id].threshold;
+        // v.threshold = epochs[id].threshold;
         v.pairKeys = epochs[id].pairKeys;
+        uint256 weight = v.pairKeys.length / 2;
+        v.threshold = weight - weight / 3;
 
         success = _verifyHeaderSig(v, _receiptProof.header, _receiptProof.ist, _receiptProof.aggPk);
         if (!success) {
