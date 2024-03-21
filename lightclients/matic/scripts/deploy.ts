@@ -7,7 +7,7 @@ let uri: string = process.env.MATICURI || "";
 let minEpochBlockExtraDataLen = 137;
 let chainId = process.env.CHAIN_Id;
 let confirms = process.env.CONFIRMS || 10;
-let epochNum = 64;
+let epochNum = 16;
 
 async function main() {
     let [wallet] = await ethers.getSigners();
@@ -38,7 +38,7 @@ async function main() {
 
     let lastEpoch = currentBlock - (currentBlock % epochNum) - 1 - epochNum;
 
-    let lastHeader = await getBlock(34765823, provider);
+    let lastHeader = await getBlock(54875967, provider);
 
     console.log("init == ", lastHeader);
 
@@ -61,9 +61,17 @@ async function main() {
 
     await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
 
-    let txHash = "0xbf684bda3767bd3b756e03f441c1b36b68c09ef5795702af642eddf884053e29";
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
 
-    await verify(txHash, uri, LightNode.attach(lightNodeProxy.address));
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+
+    // let txHash = "0xbf684bda3767bd3b756e03f441c1b36b68c09ef5795702af642eddf884053e29";
+
+    // await verify(txHash, uri, LightNode.attach(lightNodeProxy.address));
 }
 
 async function updateHeader(wallet: SignerWithAddress, lightNode: Contract) {

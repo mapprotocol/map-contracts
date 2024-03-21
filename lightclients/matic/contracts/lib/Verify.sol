@@ -39,6 +39,8 @@ library Verify {
 
     uint256 constant MUMBAI_DELHI_BLOCK = 29638656;
 
+    uint256 constant MAINNET_CANCUN_BLOCK = 54876000;
+
     struct BlockHeader {
         bytes parentHash;
         bytes sha3Uncles;
@@ -298,7 +300,52 @@ library Verify {
         signature = _memoryToBytes(ptr, EXTRASEAL);
     }
 
-    function _getValidators(bytes memory _extraData) internal pure returns (bytes memory) {
+    function _getValidators(bytes memory _extraData,uint256 _blockNum) internal pure returns (bytes memory) {
+           if(afterCanCun(_blockNum)){
+              return _getValidatorsAfterCanCun(_extraData);
+           } else {
+              return _getValidatorsBeforeCanCun(_extraData);
+           }
+    }
+
+    function _getValidatorsAfterCanCun(bytes memory _extraData) internal pure returns (bytes memory) {
+        require(_extraData.length > (EXTRA_VANITY + EXTRASEAL), "invalid _extraData length");
+        uint256 ptr;
+        assembly {
+            ptr := _extraData
+        }
+        //skip EXTRA_VANITY + data length
+        ptr += 64;
+        bytes memory validatorBytes = _memoryToBytes(ptr, _extraData.length - EXTRASEAL).toRlpItem().toList()[0].toBytes();
+
+        assembly {
+            ptr := validatorBytes
+        }
+        //skip data length
+        ptr += 32;
+        uint256 length = (validatorBytes.length) / (ADDRESS_LENGTH + POWER_LENGTH);
+        bytes memory result;
+        for (uint256 i = 0; i < length; i++) {
+            bytes32 v;
+            uint256 tem = ptr + i * (ADDRESS_LENGTH + POWER_LENGTH);
+            assembly {
+                v := mload(tem)
+            }
+            result = abi.encodePacked(result, bytes20(v));
+        }
+
+        return result;
+    }
+
+    function afterCanCun(uint256 blockNum) internal pure returns(bool){
+          if(blockNum > MAINNET_CANCUN_BLOCK){
+             return true;
+          } else {
+            return false;
+          }
+    }
+
+    function _getValidatorsBeforeCanCun(bytes memory _extraData) internal pure returns (bytes memory) {
         require(_extraData.length > (EXTRA_VANITY + EXTRASEAL), "invalid _extraData length");
 
         require(
@@ -325,6 +372,7 @@ library Verify {
 
         return result;
     }
+
 
     function _containsValidator(bytes memory _validators, address _miner) internal pure returns (bool) {
         uint256 m = uint256(uint160(_miner));
