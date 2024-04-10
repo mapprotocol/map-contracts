@@ -95,6 +95,11 @@ module.exports = {
       chainId : 421613,
       accounts: accounts
     },
+    ArbitrumSepolia: {
+      chainId: 421614,
+      url: `https://arbitrum-sepolia.blockpi.network/v1/rpc/public`,
+      accounts: accounts
+    },
     Arbitrum: {
       url: `https://1rpc.io/arb`,
       chainId : 42161,
@@ -170,6 +175,11 @@ module.exports = {
       url: `https://base-mainnet.public.blastapi.io`,
       chainId : 8453,
       accounts: accounts
+    },
+    Blast: {
+      url: `https://rpc.blast.io`,
+      chainId : 81457,
+      accounts: accounts,
     },
 
     Okt: {
@@ -267,7 +277,8 @@ module.exports = {
     },
     Merlin: {
       url: `https://rpc.merlinchain.io`,
-      chainId : 4200,
+      chainId: 4200,
+      gasPrice: 50000000,
       accounts: accounts,
     },
     Bevm: {
@@ -275,6 +286,12 @@ module.exports = {
       chainId : 1501,
       accounts: accounts,
     },
+    Ainn: {
+      url: `https://mainnet-rpc.anvm.io`,
+      chainId : 2649,
+      gasPrice: 50000000,
+      accounts: accounts,
+    }
   },
   solidity: {
     compilers: [

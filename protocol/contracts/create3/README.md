@@ -29,7 +29,7 @@ interface IDeployFactory {
 -   Polygon (137), Mumbai Testnet (80001)
 -   MAP Relay Chain (22776), Makalu Testnet (212)
 -   Klaytn (8217), Klaytn Testnet (1001)
--   Arbitrum (42161), Arbitrum Goerli Testnet (421613)
+-   Arbitrum (42161), Arbitrum Goerli Testnet (421613), Arbitrum Sepolia Testnet (421614)
 -   Optimism (10)
 -   Avalanche (43114)
 -   Fantom (250)
@@ -60,6 +60,8 @@ interface IDeployFactory {
 -   Ethereum pow (10001)
 -   Kcc (321)
 -   ThunderCore (108)
+-   Merlin (4200)
+-   BEvm (1501)
 
 ## Will support
 
