@@ -145,6 +145,19 @@ module.exports = {
       accounts: accounts,
     },
 
+    Blast: {
+      url: `https://rpc.blast.io`,
+      chainId : 81457,
+      accounts: accounts,
+    },
+
+    Ainn: {
+      url: `https://mainnet-rpc.anvm.io`,
+      chainId : 2649,
+      gasPrice: 50000000,
+      accounts: accounts,
+    },
+
     Avax: {
       url: `https://rpc.ankr.com/avalanche`,
       chainId: 43114,
