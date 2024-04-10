@@ -30,11 +30,28 @@ const config: HardhatUserConfig ={
       url: `https://1rpc.io/arb`,
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    Blast: {
+      url: `https://rpc.blast.io`,
+      chainId : 81457,
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    Merlin: {
+      url: `https://rpc.merlinchain.io`,
+      chainId: 4200,
+      gasPrice: 50000000,
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
     Tron: {
-      url: `https://testnet-rpc.maplabs.io`,
-      chainId: 212, //728126428,
+      url: `https://api.trongrid.io/jsonrpc`,
+      chainId: 728126428,
       accounts:
           process.env.TRON_PRIVATE_KEY !== undefined ? [process.env.TRON_PRIVATE_KEY] : [],
+    },
+    Ainn: {
+      url: `https://mainnet-rpc.anvm.io`,
+      chainId : 2649,
+      gasPrice: 50000000,
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
 
     Makalu: {
@@ -50,8 +67,8 @@ const config: HardhatUserConfig ={
     },
 
     TronTest: {
-      url: `https://testnet-rpc.maplabs.io`,
-      chainId: 212,
+      url: `https://nile.trongrid.io/jsonrpc`,
+      chainId: 3448148188,
       accounts:
         process.env.TRON_PRIVATE_KEY !== undefined ? [process.env.TRON_PRIVATE_KEY] : [],
     },

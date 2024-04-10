@@ -13,6 +13,7 @@ task("node:deploy", "deploy oracle light node")
         const { deployments, network } = hre;
         const { deploy } = deployments;
         let [wallet] = await hre.ethers.getSigners();
+
         let salt = taskArgs.salt;
         let mpt = taskArgs.mpt;
         let LightNode = await hre.ethers.getContractFactory("LightNode");
@@ -289,9 +290,11 @@ task("node:setOracle", "set oracle address")
             console.log("wallet address is:", wallet.address);
             const LightNode = await hre.ethers.getContractFactory("LightNode");
             let proxy = LightNode.attach(node);
+
             let old_oracle = await proxy.oracle();
             console.log("old oracle address is :", old_oracle);
-            await (await proxy.setOracle(oracle)).wait();
+
+            await (await proxy.setOracle(oracle, {gasLimit: 100000})).wait();
             let new_oracle = await proxy.oracle();
             console.log("new oracle address is :", new_oracle);
         }
@@ -334,5 +337,64 @@ task("node:verifiable", "check the block is  verifiable")
             taskArgs.block,
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
-        console.log(`The block ${taskArgs.block} verifiable is ${isVerifiable}`);
+        let receiptHash = await proxy.receiptRoots(taskArgs.block);
+        console.log(`The block ${taskArgs.block} verifiable is ${isVerifiable}, receiptHash is ${receiptHash}`);
+    });
+
+task("node:removeRoot", "set mpt verify address")
+    .addOptionalParam("chain", "chainId", 0, types.int)
+    .addOptionalParam("node", "light node address", "node", types.string)
+    .addParam("block", "block number")
+    .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+        let [wallet] = await hre.ethers.getSigners();
+        console.log("wallet address is:", wallet.address);
+        const { network } = hre;
+
+        let d = await readFromFile(network.name);
+
+        let chain = taskArgs.chain;
+        if (chain == 0) {
+            chain = Object.keys(d.networks[network.name].lightNodes)[0];
+        }
+
+        console.log("chain id:", chain);
+
+        let node = taskArgs.node;
+        if (node === "node") {
+            if (d.networks[network.name].oracle === undefined || d.networks[network.name].oracle === "") {
+                throw "oracle not deploy";
+            }
+            if (!d.networks[network.name].lightNodes[chain]) {
+                throw "oracle light node not deploy";
+            }
+            if (
+                d.networks[network.name].lightNodes[chain].proxy === undefined ||
+                d.networks[network.name].lightNodes[chain].proxy === ""
+            ) {
+                throw "oracle light node not deploy";
+            }
+            node = d.networks[network.name].lightNodes[chain].proxy;
+        }
+
+        console.log("node address:", node);
+
+        if (network.name === "Tron" || network.name === "TronTest") {
+            let lightNode = await getTronContractAt(hre.artifacts, "LightNode", node, network.name);
+            let old_verify = await lightNode.mptVerify().call();
+            console.log("old mptVerify address is :", old_verify);
+            let mpt = taskArgs.mpt;
+            if (!mpt.startsWith("0x")) {
+                mpt = await toETHAddress(mpt, network.name);
+            }
+            let result = await lightNode.setMptVerify(mpt).send();
+            console.log(result);
+            let new_verify = await lightNode.mptVerify().call();
+            console.log("new mptVerify address is :", new_verify);
+        } else {
+            const LightNode = await hre.ethers.getContractFactory("LightNode");
+            let proxy = LightNode.attach(node);
+
+            await (await proxy.removeRoot(taskArgs.block)).wait();
+            console.log("remove block", taskArgs.block);
+        }
     });

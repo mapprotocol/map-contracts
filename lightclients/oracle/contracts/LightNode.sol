@@ -53,6 +53,10 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         _changeAdmin(_controller);
     }
 
+    function removeRoot(uint256 _blockNumber) external onlyOwner {
+        receiptRoots[_blockNumber] = bytes32("");
+    }
+
     function setMptVerify(address _verifier) external onlyOwner {
         require(_verifier != address(0), "LightNode: verifier is the zero address");
         mptVerify = _verifier;

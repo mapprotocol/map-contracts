@@ -34,7 +34,7 @@ task("oracle:deploy", "deploy oracle")
             let Oracle = await hre.ethers.getContractFactory("Oracle");
             let param = hre.ethers.utils.defaultAbiCoder.encode(["address"], [wallet.address]);
             let result = await create(salt, Oracle.bytecode, param, hre.ethers);
-            let oracle = result[0];
+            oracle = result[0];
         }
         console.log("oracle deploy to :", oracle);
         const verifyArgs = [wallet.address].map((arg) => (typeof arg == "string" ? `'${arg}'` : arg)).join(" ");
@@ -186,6 +186,45 @@ task("oracle:updateProposer", "update proposer address")
             await (await oracle.updateProposer(chain, proposers, taskArgs.flag)).wait();
         }
         console.log(`updateProposers ${proposers} status ${taskArgs.flag}`);
+    });
+
+task("oracle:recoverPropose", "recover proposal")
+    .addOptionalParam("chain", "chainId", 0, types.int)
+    .addParam("proposer", "proposer")
+    .addParam("block", "block number",)
+    .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+        let [wallet] = await hre.ethers.getSigners();
+        console.log("wallet address is:", wallet.address);
+        const { network } = hre;
+        let d = await readFromFile(network.name);
+        if (d.networks[network.name].oracle === undefined || d.networks[network.name].oracle === "") {
+            throw "oracle not deploy";
+        }
+        let chain = taskArgs.chain;
+        if (chain == 0) {
+            chain = Object.keys(d.networks[network.name].lightNodes)[0];
+        }
+        let proposer = taskArgs.proposer;
+        if (network.name === "Tron" || network.name === "TronTest") {
+            let oracle = await getTronContractAt(
+                hre.artifacts,
+                "Oracle",
+                d.networks[network.name].oracle,
+                network.name
+            );
+
+            if (!proposer.startsWith("0x")) {
+                proposer = await toETHAddress(proposer, network.name);
+            }
+
+            let result = await oracle.updateProposer(chain, proposer, taskArgs.block).send();
+            console.log(result);
+        } else {
+            const Oracle = await hre.ethers.getContractFactory("Oracle");
+            let oracle = Oracle.attach(d.networks[network.name].oracle);
+            await (await oracle.recoverPropose(chain, proposer, taskArgs.block)).wait();
+        }
+        console.log(`updateProposers ${proposer} status ${taskArgs.flag}`);
     });
 
 task("oracle:pause", "update proposer address").setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
