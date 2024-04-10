@@ -13,6 +13,8 @@ import "./interface/ILightNode.sol";
 contract LightClientManager is ILightClientManager, Initializable, UUPSUpgradeable {
     mapping(uint256 => address) public lightClientContract;
 
+    event LightClientRegister(uint256 indexed chainId, address indexed client);
+
     modifier checkAddress(address _address) {
         require(_address != address(0), "address is zero");
         _;
@@ -29,6 +31,7 @@ contract LightClientManager is ILightClientManager, Initializable, UUPSUpgradeab
 
     function register(uint256 _chainId, address _contract) external onlyOwner {
         lightClientContract[_chainId] = _contract;
+        emit LightClientRegister(_chainId, _contract);
     }
 
     function updateBlockHeader(uint256 _chainId, bytes memory _blockHeader) external override {
