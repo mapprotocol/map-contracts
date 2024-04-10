@@ -22,6 +22,8 @@
     "ethereum-waffle": "^3.4.4",
     "ethers": "^5.5.2",
     "hardhat": "^2.9.3",
+    "prettier": "^2.8.8",
+    "prettier-plugin-solidity": "^1.1.0",
     "hardhat-gas-reporter": "^1.0.8",
     "solidity-coverage": "^0.7.20",
     "ts-node": "^10.7.0",

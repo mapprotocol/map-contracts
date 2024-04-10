@@ -206,8 +206,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode, Ownable2Step {
         return 1;
     }
 
-    function notifyLightClient(bytes memory _data) external override {
-        emit NotifySend(msg.sender, block.number, _data);
+    function notifyLightClient(address _from, bytes memory _data) external override {
+        emit ClientNotifySend(_from, block.number, _data);
     }
 
     function getBytes(IKlaytn.ReceiptProofOriginal memory _proof) external pure returns (bytes memory) {

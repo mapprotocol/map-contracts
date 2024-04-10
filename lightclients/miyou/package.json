@@ -25,6 +25,8 @@
     "hardhat": "^2.9.3",
     "hardhat-gas-reporter": "^1.0.8",
     "solidity-coverage": "^0.7.20",
+    "prettier": "^2.8.8",
+    "prettier-plugin-solidity": "^1.1.0",
     "ts-node": "^10.7.0",
     "typescript": "^4.6.3"
   }

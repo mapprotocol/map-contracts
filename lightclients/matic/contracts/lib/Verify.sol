@@ -300,12 +300,12 @@ library Verify {
         signature = _memoryToBytes(ptr, EXTRASEAL);
     }
 
-    function _getValidators(bytes memory _extraData,uint256 _blockNum) internal pure returns (bytes memory) {
-           if(afterCanCun(_blockNum)){
-              return _getValidatorsAfterCanCun(_extraData);
-           } else {
-              return _getValidatorsBeforeCanCun(_extraData);
-           }
+    function _getValidators(bytes memory _extraData, uint256 _blockNum) internal pure returns (bytes memory) {
+        if (afterCanCun(_blockNum)) {
+            return _getValidatorsAfterCanCun(_extraData);
+        } else {
+            return _getValidatorsBeforeCanCun(_extraData);
+        }
     }
 
     function _getValidatorsAfterCanCun(bytes memory _extraData) internal pure returns (bytes memory) {
@@ -316,7 +316,9 @@ library Verify {
         }
         //skip EXTRA_VANITY + data length
         ptr += 64;
-        bytes memory validatorBytes = _memoryToBytes(ptr, _extraData.length - EXTRASEAL).toRlpItem().toList()[0].toBytes();
+        bytes memory validatorBytes = _memoryToBytes(ptr, _extraData.length - EXTRASEAL)
+        .toRlpItem()
+        .toList()[0].toBytes();
 
         assembly {
             ptr := validatorBytes
@@ -337,12 +339,12 @@ library Verify {
         return result;
     }
 
-    function afterCanCun(uint256 blockNum) internal pure returns(bool){
-          if(blockNum > MAINNET_CANCUN_BLOCK){
-             return true;
-          } else {
+    function afterCanCun(uint256 blockNum) internal pure returns (bool) {
+        if (blockNum > MAINNET_CANCUN_BLOCK) {
+            return true;
+        } else {
             return false;
-          }
+        }
     }
 
     function _getValidatorsBeforeCanCun(bytes memory _extraData) internal pure returns (bytes memory) {
@@ -372,7 +374,6 @@ library Verify {
 
         return result;
     }
-
 
     function _containsValidator(bytes memory _validators, address _miner) internal pure returns (bool) {
         uint256 m = uint256(uint160(_miner));
