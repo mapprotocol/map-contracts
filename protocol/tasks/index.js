@@ -23,13 +23,3 @@ task("MaintainerWhileListSet", "Deploy MaintainerManagerSet", require("./Maintai
     .addParam("add", "add:true remove:false")
     .addParam("address", "Maintainer address");
 
-task("getDeployAddress2", "Get contract address deployed by DeployFactory ", require("./getDeployAddress2"))
-    .addOptionalParam(
-        "factory",
-        "DeployFactory, default is 0x6258e4d2950757A749a4d4683A7342261ce12471",
-        "0x6258e4d2950757A749a4d4683A7342261ce12471",
-        types.string
-    )
-    .addOptionalParam("count", "salt count", 100, types.int)
-    .addParam("salt", "contract salt")
-    .addParam("match", "contract salt");

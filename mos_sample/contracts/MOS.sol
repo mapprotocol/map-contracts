@@ -24,6 +24,7 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, IMOSV2 {
     uint public immutable selfChainId = block.chainid;
     uint public nonce;
     ILightNode public lightNode;
+    address public targetAddr;
 
     event mapTransferExecute(address indexed from, uint256 indexed fromChain, uint256 indexed toChain);
 
@@ -52,17 +53,19 @@ contract MAPOmnichainServiceV2 is ReentrancyGuard, Initializable, IMOSV2 {
             IEvent.txLog memory log = logs[i];
             bytes32 topic = abi.decode(log.topics[0], (bytes32));
 
-            if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC) {
+            if (topic == EvmDecoder.MAP_TRANSFEROUT_TOPIC && log.addr == targetAddr) {
                 (, IEvent.transferOutEvent memory outEvent) = EvmDecoder.decodeTransferOutLog(log);
-                // there might be more than on events to multi-chains
-                // only process the event for this chain
-                    console.logBytes(outEvent.to);
 
-                   _transferIn(outEvent);
-                
+                address token = Utils.fromBytes(_outEvent.toChainToken);
+                address payable toAddress = payable(Utils.fromBytes(_outEvent.to));
+                uint256 amount = _outEvent.amount;
+                console.logUint(amount);
+
+                TransferHelper.safeTransfer(token, toAddress, amount);
+
+                emit mapTransferIn(token, _outEvent.from, _outEvent.orderId, _outEvent.fromChain, _outEvent.toChain, toAddress, amount);
             }
         }
-        emit mapTransferExecute(msg.sender, _chainId, selfChainId);
     }
 
     function _getOrderID(address _token, address _from, bytes memory _to, uint _amount, uint _toChain) internal returns (bytes32){

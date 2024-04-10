@@ -238,7 +238,7 @@ module.exports = async (taskArgs, hre) => {
         factoryData,
         taskArgs.saltnonce,
         {
-            gasLimit:"20000000"
+            gasLimit:"500000"
         }
     )).wait();
 
