@@ -66,10 +66,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         uint256[] memory _weights,
         uint256 _epoch,
         uint256 _epochSize,
-        address _verifyTool
+        address _verifyTool,
+        address _owner
     ) external initializer {
         require(_epoch > 1, "Error initializing epoch");
-        _changeAdmin(tx.origin);
+        _changeAdmin(_owner);
         maxEpochs = 1500000 / _epochSize;
         headerHeight = (_epoch - 1) * _epochSize;
         startHeight = headerHeight;

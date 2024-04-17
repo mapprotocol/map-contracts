@@ -8,6 +8,8 @@ require("@nomiclabs/hardhat-ethers");
 require("dotenv/config");
 require("@nomiclabs/hardhat-etherscan");
 require("solidity-coverage");
+require("@matterlabs/hardhat-zksync-deploy");
+require("@matterlabs/hardhat-zksync-solc");
 require("./tasks");
 
 const { PRIVATE_KEY, INFURA_KEY } = process.env;
@@ -227,6 +229,11 @@ module.exports = {
       chainId: 5000,
       accounts: accounts,
     },
+  },
+  zksolc: {
+    version: "1.3.10",
+    compilerSource: "binary",
+    settings: {},
   },
   solidity: {
     compilers: [

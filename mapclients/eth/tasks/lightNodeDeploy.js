@@ -2,47 +2,17 @@ const BigNumber = require("bignumber.js");
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR });
 const initializeData = require("../deploy/config");
 
+let {zkDeploy} = require("./utils/helper.js");
+
 
 let IDeployFactory_abi = [
     "function deploy(bytes32 salt, bytes memory creationCode, uint256 value) external",
     "function getAddress(bytes32 salt) external view returns (address)",
 ];
 
-module.exports = async (taskArgs, hre) => {
-    const { deploy } = deployments;
-    const accounts = await ethers.getSigners();
-    const deployer = accounts[0];
+async function getInitData(verifier, owner) {
+    let lightNode = await ethers.getContractFactory("LightNode");
 
-    console.log("Deploying contracts with the account:", await deployer.getAddress());
-
-    console.log("Account balance:", (await deployer.getBalance()).toString());
-
-    let verifier = taskArgs.verify;
-    if (verifier === "") {
-        await deploy("VerifyTool", {
-            from: deployer.address,
-            args: [],
-            log: true,
-            contract: "VerifyTool",
-        });
-
-        let verifyTool = await deployments.get("VerifyTool");
-        verifier = verifyTool.address;
-    }
-    console.log("verify tool addr", verifier);
-
-    await deploy("LightNode", {
-        from: deployer.address,
-        args: [],
-        log: true,
-        contract: "LightNode",
-    });
-
-    let LightNode = await deployments.get("LightNode");
-    let lightNode = await ethers.getContractAt("LightNode", LightNode.address);
-
-    console.log(lightNode.address);
-    //let validatorNum = initializeData.initData.validators;
     let validatorNum = initializeData.validators;
     let g1List = [];
     let addresss = [];
@@ -55,11 +25,8 @@ module.exports = async (taskArgs, hre) => {
     }
 
     let threshold = initializeData.threshold;
-
     let epoch = initializeData.epoch;
-
     let epochSize = initializeData.epoch_size;
-
     let data = lightNode.interface.encodeFunctionData("initialize", [
         threshold,
         addresss,
@@ -67,36 +34,96 @@ module.exports = async (taskArgs, hre) => {
         weights,
         epoch,
         epochSize,
-        verifier
+        verifier,
+        owner
     ]);
     console.log("initialize success");
 
-    let lightProxy = await ethers.getContractFactory("LightNodeProxy");
+    return data;
+}
 
-    let initData = await ethers.utils.defaultAbiCoder.encode(["address", "bytes"], [lightNode.address, data]);
+module.exports = async (taskArgs, hre) => {
+    const { deploy } = deployments;
+    const accounts = await ethers.getSigners();
+    const deployer = accounts[0];
 
-    let deployData = lightProxy.bytecode + initData.substring(2);
+    console.log("Deploying contracts with the account:", await deployer.getAddress());
 
+    console.log("Account balance:", (await deployer.getBalance()).toString());
+
+    let chainId = hre.network.config.chainId;
+
+    let verifier = taskArgs.verify;
+    if (verifier === "") {
+        if (chainId === 324 || chainId === 280) {
+            // zksync mainnet or testnet
+            verifier = await zkDeploy("VerifyTool", [], hre);
+        } else {
+            await deploy("VerifyTool", {
+                from: deployer.address,
+                args: [],
+                log: true,
+                contract: "VerifyTool",
+            });
+
+            let verifyTool = await deployments.get("VerifyTool");
+            verifier = verifyTool.address;
+        }
+    }
+    console.log("verify tool addr", verifier);
+
+    let lightNodeAddr;
+    if (chainId === 324 || chainId === 280) {
+        lightNodeAddr = await zkDeploy("LightNode", [], hre);
+    } else {
+        await deploy("LightNode", {
+            from: deployer.address,
+            args: [],
+            log: true,
+            contract: "LightNode",
+        });
+
+        let lightNode = await deployments.get("LightNode");
+        lightNodeAddr = lightNode.address;
+    }
+
+    console.log("light node address:", lightNodeAddr);
+    let data = await getInitData(verifier, deployer.address);
+
+    let lightProxyAddress;
     console.log("light node salt:", taskArgs.salt);
+    if (chainId === 324 || chainId === 280) {
+        lightProxyAddress = await zkDeploy("LightNodeProxy", [lightNode.address, data], hre);
+    } else if (taskArgs.salt === "") {
+        await deploy("LightNodeProxy", {
+            from: deployer.address,
+            args: [lightNode.address, data],
+            log: true,
+            contract: "LightNodeProxy",
+        });
 
-    let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(taskArgs.salt));
+        let lightProxy = await deployments.get("LightNodeProxy");
+        lightProxyAddress = lightProxy.address;
+    } else {
+        let initData = await ethers.utils.defaultAbiCoder.encode(["address", "bytes"], [lightNodeAddr, data]);
+        let LightProxy = await ethers.getContractFactory("LightNodeProxy");
+        let deployData = LightProxy.bytecode + initData.substring(2);
 
-    let factory = await ethers.getContractAt(IDeployFactory_abi, taskArgs.factory);
-    //let factory = await ethers.getContractAt("IDeployFactory", taskArgs.factory);
+        let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(taskArgs.salt));
 
-    console.log("deploy factory address:", factory.address);
+        let factory = await ethers.getContractAt(IDeployFactory_abi, taskArgs.factory);
+        //let factory = await ethers.getContractAt("IDeployFactory", taskArgs.factory);
 
-    await (await factory.connect(deployer).deploy(hash, deployData, 0)).wait();
+        console.log("deploy factory address:", factory.address);
 
-    let lightProxyAddress = await factory.connect(deployer).getAddress(hash);
+        await (await factory.connect(deployer).deploy(hash, deployData, 0)).wait();
 
+        lightProxyAddress = await factory.connect(deployer).getAddress(hash);
+    }
     console.log("deployed light node proxy address:", lightProxyAddress);
 
     let proxy = await ethers.getContractAt("LightNode", lightProxyAddress);
 
     let owner = await proxy.connect(deployer).getAdmin();
-
-    console.log(
-        `LightNode Proxy contract address is ${lightProxyAddress}, init admin address is ${owner}, deploy contract salt is ${hash}`
-    );
+    console.log(`LightNode Proxy contract address is ${lightProxyAddress}, init admin address is ${owner}`);
 };
