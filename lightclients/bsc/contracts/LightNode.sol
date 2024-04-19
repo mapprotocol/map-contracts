@@ -206,8 +206,6 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
         uint256 preGasLimt = _blockHeaders[0].gasLimit;
 
-        bytes32 preBlockHash;
-
         uint256 preBlockTime;
 
         bytes memory vals;
@@ -221,13 +219,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
                 if (_blockHeaders[i].timestamp <= preBlockTime) {
                     return (false, "invalid block time");
                 }
-
-                if (_blockHeaders[i].parentHash.length != 32 || bytes32(_blockHeaders[i].parentHash) != preBlockHash) {
-                    return (false, "invalid parentHash");
-                }
             }
-
-            preBlockHash = Verify._getBlockHash(_blockHeaders[i], chainId);
 
             preBlockTime = _blockHeaders[i].timestamp;
 
