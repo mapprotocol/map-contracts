@@ -1,4 +1,5 @@
-import { BigNumber } from "ethers";
+import { BigNumber ,Contract} from "ethers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ethers } from "hardhat";
 import { BlockHeader, getBlock } from "../utils/Util";
 
@@ -22,7 +23,7 @@ async function main() {
 
     const LightNode = await ethers.getContractFactory("LightNode");
 
-    const lightNode = await LightNode.deploy(chainId, minEpochBlockExtraDataLen, wallet.address, mPTVerify.address);
+    const lightNode = await LightNode.deploy();
 
     await lightNode.connect(wallet).deployed();
 
@@ -31,23 +32,13 @@ async function main() {
     const LightNodeProxy = await ethers.getContractFactory("LightNodeProxy");
 
     const provider = new ethers.providers.JsonRpcProvider(uri);
-
-    let currentBlock = await provider.getBlockNumber();
-
-    let lastEpoch = currentBlock - (currentBlock % epochNum) - epochNum;
-
+    let currentBlock = 39539137 //await provider.getBlockNumber();
+    let lastEpoch = currentBlock - (currentBlock % epochNum) - epochNum - epochNum - epochNum;
     let lastHeader = await getBlock(lastEpoch, provider);
-
-    console.log(lastHeader);
-
     let second = await getBlock(lastEpoch - epochNum, provider);
-
     let initHeaders: Array<BlockHeader> = new Array<BlockHeader>();
-
     initHeaders.push(second);
-
     initHeaders.push(lastHeader);
-
     let initData = LightNode.interface.encodeFunctionData("initialize", [
         chainId,
         minEpochBlockExtraDataLen,
@@ -55,12 +46,37 @@ async function main() {
         mPTVerify.address,
         initHeaders,
     ]);
-
     const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
 
     await lightNodeProxy.connect(wallet).deployed();
 
     console.log("lightNode proxy deployed on:", lightNodeProxy.address);
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+    await updateHeader(wallet, LightNode.attach(lightNodeProxy.address));
+}
+
+async function updateHeader(wallet: SignerWithAddress, lightNode: Contract) {
+    const provider = new ethers.providers.JsonRpcProvider(uri);
+
+    let last: BigNumber = await lightNode.headerHeight();
+
+    let headers: Array<BlockHeader> = new Array<BlockHeader>();
+
+    for (let i = 0; i < 9; i++) {
+        let lastHeader = await getBlock(last.toNumber() + epochNum + i, provider);
+        headers.push(lastHeader);
+    }
+
+    await (await lightNode.updateBlockHeader(await lightNode.getHeadersBytes(headers))).wait();
+
+    console.log(await lightNode.headerHeight());
 }
 
 // We recommend this pattern to be able to use async/await everywhere

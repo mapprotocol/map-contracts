@@ -56,7 +56,6 @@ library Verify {
         bytes extraData;
         bytes mixHash;
         bytes nonce;
-        uint256 baseFeePerGas;
     }
 
     struct ReceiptProof {
@@ -157,19 +156,6 @@ library Verify {
         bytes[] memory list = new bytes[](16);
         list[0] = RLPEncode.encodeUint(_chainId);
         _headerToList(_header, _extraData, list, 1);
-        return keccak256(RLPEncode.encodeList(list));
-    }
-
-    function _getBlockHash(BlockHeader memory _header, uint256 _chainId) internal pure returns (bytes32) {
-        bytes[] memory list;
-        if (_isAfterLondonFork(_chainId, _header.number)) {
-            list = new bytes[](16);
-            _headerToList(_header, _header.extraData, list, 0);
-            list[15] = RLPEncode.encodeUint(_header.baseFeePerGas);
-        } else {
-            list = new bytes[](15);
-            _headerToList(_header, _header.extraData, list, 0);
-        }
         return keccak256(RLPEncode.encodeList(list));
     }
 
