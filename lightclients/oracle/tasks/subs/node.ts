@@ -1,7 +1,7 @@
 import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 // import { DeployFunction } from "hardhat-deploy/types";
-import { create, readFromFile, writeToFile, verify } from "../../utils/helper";
+import {create, readFromFile, writeToFile, verify, zksyncDeploy} from "../../utils/helper";
 let { deploy_contract, getTronContractAt, getDeployerAddress, toETHAddress } = require("../../utils/tron.js");
 
 task("node:deploy", "deploy oracle light node")
@@ -9,6 +9,7 @@ task("node:deploy", "deploy oracle light node")
     .addParam("chain", "chain id")
     .addOptionalParam("nodeType", "node type", 3, types.int)
     .addOptionalParam("mpt", "mpt address", process.env.MPT_VERIFY, types.string)
+    .addOptionalParam("impl", "impl address", "", types.string)
     .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
         const { deployments, network } = hre;
         const { deploy } = deployments;
@@ -16,17 +17,19 @@ task("node:deploy", "deploy oracle light node")
 
         let salt = taskArgs.salt;
         let mpt = taskArgs.mpt;
+        let impl = taskArgs.impl;
         let LightNode = await hre.ethers.getContractFactory("LightNode");
 
         let node;
-        let impl = "";
         if (network.name === "Tron" || network.name === "TronTest") {
             if (mpt === undefined || mpt === "") {
                 let result = await deploy_contract(hre.artifacts, "MPTVerify", [], network.name);
                 mpt = result[1];
             }
-            let impl_deploy = await deploy_contract(hre.artifacts, "LightNode", [], network.name);
-            impl = impl_deploy[0];
+            if (impl === "") {
+                let impl_deploy = await deploy_contract(hre.artifacts, "LightNode", [], network.name);
+                impl = impl_deploy[0];
+            }
             let impl_param = LightNode.interface.encodeFunctionData("initialize", [
                 taskArgs.chain,
                 await getDeployerAddress(network.name),
@@ -36,10 +39,31 @@ task("node:deploy", "deploy oracle light node")
             let proxy_deploy = await deploy_contract(
                 hre.artifacts,
                 "LightNodeProxy",
-                [impl_deploy[1], impl_param],
+                [impl, impl_param],
                 network.name
             );
             node = proxy_deploy[0];
+        }
+        else if (network.config.chainId === 324 || network.config.chainId === 280) {
+            if (mpt === undefined || mpt === "") {
+                mpt = await zksyncDeploy("MPTVerify", [], hre);
+            }
+            if (impl === "") {
+                impl = await zksyncDeploy("LightNode", [], hre);
+            }
+
+            let impl_param = LightNode.interface.encodeFunctionData("initialize", [
+                taskArgs.chain,
+                wallet.address,
+                mpt,
+                taskArgs.nodeType,
+            ]);
+            let proxy_deploy = await zksyncDeploy(
+                "LightNodeProxy",
+                [impl, impl_param],
+                hre
+            );
+            node = proxy_deploy;
         } else {
             console.log("wallet address is:", wallet.address);
             if (mpt === undefined || mpt === "") {
@@ -294,7 +318,7 @@ task("node:setOracle", "set oracle address")
             let old_oracle = await proxy.oracle();
             console.log("old oracle address is :", old_oracle);
 
-            await (await proxy.setOracle(oracle, {gasLimit: 100000})).wait();
+            await (await proxy.setOracle(oracle, {gasLimit: 300000})).wait();
             let new_oracle = await proxy.oracle();
             console.log("new oracle address is :", new_oracle);
         }

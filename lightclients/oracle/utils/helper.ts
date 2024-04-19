@@ -1,5 +1,8 @@
 let fs = require("fs");
 let path = require("path");
+
+let { Wallet } = require("zksync-web3");
+let { Deployer } = require("@matterlabs/hardhat-zksync-deploy");
 // import { ethers,run } from "hardhat";
 
 let DEPLOY_FACTORY = "0x6258e4d2950757A749a4d4683A7342261ce12471";
@@ -20,6 +23,17 @@ export interface NetworkInfo {
 
 export interface DeployInfo {
     networks: Record<string, NetworkInfo>;
+}
+
+
+export async function zksyncDeploy(contractName: string, args: any[], hre: any) {
+    const wallet = new Wallet(process.env.PRIVATE_KEY);
+    const deployer = new Deployer(hre, wallet);
+    const c_artifact = await deployer.loadArtifact(contractName);
+    const c = await deployer.deploy(c_artifact, args);
+
+    console.log(`deployed ${contractName} to ${c.address}`);
+    return c.address;
 }
 
 export async function create(salt: string, bytecode: string, param: string, ethers: any) {

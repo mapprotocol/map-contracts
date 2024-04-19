@@ -6,14 +6,23 @@ import 'hardhat-deploy';
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 
+import "@matterlabs/hardhat-zksync-deploy";
+import "@matterlabs/hardhat-zksync-solc";
+import "@matterlabs/hardhat-zksync-verify";
+
 require("./tasks");
 
 dotenv.config();
 
 const config: HardhatUserConfig ={
+  zksolc: {
+    version: "1.4.0",
+    compilerSource: "binary",
+    settings: {},
+  },
   solidity: {
 		compilers: [
-			{ version: "0.8.7", settings: { optimizer: { enabled: true, runs: 200 } } },
+			{ version: "0.8.20", settings: { "evmVersion": "london" } },
 		],
 	},
   namedAccounts: {
@@ -23,6 +32,11 @@ const config: HardhatUserConfig ={
     Mapo : {
       chainId: 22776,
       url:"https://rpc.maplabs.io",
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    Eth: {
+      chainId: 1,
+      url: `https://1rpc.io/eth`,
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     Arbitrum: {
@@ -51,6 +65,13 @@ const config: HardhatUserConfig ={
       url: `https://mainnet-rpc.anvm.io`,
       chainId : 2649,
       gasPrice: 50000000,
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    zkSync: {
+      url: `https://mainnet.era.zksync.io`,
+      chainId: 324,
+      zksync: true,
+      ethNetwork: "Eth",
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
 
