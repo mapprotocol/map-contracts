@@ -1,4 +1,4 @@
-import { BigNumber } from "ethers";
+import { BigNumber, BigNumber } from "ethers";
 import { JsonRpcProvider } from "@ethersproject/providers";
 const Rpc = require("isomorphic-rpc");
 const { encode, toBuffer } = require("eth-util-lite");
@@ -104,19 +104,22 @@ export class TxReceipt {
     }
 }
 
-//   struct ReceiptProof {
-//     TxReceipt txReceipt;
+// struct ReceiptProof {
+//     bytes txReceipt;
+//     uint256 receiptType;
 //     bytes keyIndex;
 //     bytes[] proof;
 // }
 
 export class ReceiptProof {
-    public txReceipt?: TxReceipt;
+    public txReceipt?: string;
+    public receiptType?: BigNumber;
     public keyIndex?: string;
     public proof?: Array<string>;
 
-    constructor(txReceipt: TxReceipt, keyIndex: string, proof: Array<string>) {
+    constructor(txReceipt: string, receiptType : BigNumber,keyIndex: string, proof: Array<string>) {
         this.txReceipt = txReceipt;
+        this.receiptType = receiptType;
         this.keyIndex = keyIndex;
         this.proof = proof;
     }
@@ -129,6 +132,18 @@ export class ProofData {
     constructor(blockNum: BigNumber, receiptProof: ReceiptProof) {
         this.blockNum = blockNum;
         this.receiptProof = receiptProof;
+    }
+}
+
+
+export class ProofStruct {
+    public blockNum?: BigNumber;
+    public receiptProof?:ReceiptProof;
+    public txReceipt?:TxReceipt;
+    constructor(blockNum: BigNumber, receiptProof: ReceiptProof,txReceipt: TxReceipt) {
+        this.blockNum = blockNum;
+        this.receiptProof = receiptProof;
+        this.txReceipt = txReceipt;
     }
 }
 
@@ -157,7 +172,7 @@ export async function getProof(txHash: string, rpc: string) {
 
     let r = await provider.getTransactionReceipt(txHash);
 
-    console.log(r.blockNumber);
+    console.log("block =====",r);
 
     let logs: TxLog[] = new Array<TxLog>();
 
@@ -166,7 +181,6 @@ export async function getProof(txHash: string, rpc: string) {
 
         logs.push(log);
     }
-
     let txReceipt = new TxReceipt(
         BigNumber.from(r.type),
         BigNumber.from(r.status || r.root).toHexString(),
@@ -176,16 +190,17 @@ export async function getProof(txHash: string, rpc: string) {
     );
 
     let proof = await getReceipt(txHash, rpc);
-
+    let key = r.transactionIndex === 0 ? "0x0800" : index2key(BigNumber.from(r.transactionIndex).toNumber(), proof.proof.length);
     let receiptProof = new ReceiptProof(
-        txReceipt,
-        index2key(BigNumber.from(r.transactionIndex).toNumber(), proof.proof.length),
+        "",
+        BigNumber.from(r.type),
+        key,
         proof.proof
     );
 
-    let proofData = new ProofData(BigNumber.from(r.blockNumber), receiptProof);
+    let proofStruct = new ProofStruct(BigNumber.from(r.blockNumber), receiptProof,txReceipt);
 
-    return proofData;
+    return proofStruct;
 }
 
 async function getReceipt(txHash: string, uri?: string) {
