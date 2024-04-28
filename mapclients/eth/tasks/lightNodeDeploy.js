@@ -93,7 +93,7 @@ module.exports = async (taskArgs, hre) => {
     let lightProxyAddress;
     console.log("light node salt:", taskArgs.salt);
     if (chainId === 324 || chainId === 280) {
-        lightProxyAddress = await zkDeploy("LightNodeProxy", [lightNode.address, data], hre);
+        lightProxyAddress = await zkDeploy("LightNodeProxy", [lightNodeAddr, data], hre);
     } else if (taskArgs.salt === "") {
         await deploy("LightNodeProxy", {
             from: deployer.address,

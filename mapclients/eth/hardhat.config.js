@@ -24,11 +24,6 @@ module.exports = {
     enabled: false,
     //    currency: 'CNY',
   },
-  abiExporter: {
-    path: "./abi",
-    clear: false,
-    flat: true,
-  },
   networks: {
     hardhat: {
       forking: {
@@ -152,11 +147,16 @@ module.exports = {
       chainId : 81457,
       accounts: accounts,
     },
-
     Ainn: {
       url: `https://mainnet-rpc.anvm.io`,
       chainId : 2649,
       gasPrice: 50000000,
+      accounts: accounts,
+    },
+    B2: {
+      url: `https://rpc.bsquared.network`,
+      chainId : 223,
+      gasPrice: 10000,
       accounts: accounts,
     },
 
@@ -231,30 +231,19 @@ module.exports = {
     },
   },
   zksolc: {
-    version: "1.3.10",
+    version: "1.4.0",
     compilerSource: "binary",
     settings: {},
   },
   solidity: {
     compilers: [
       {
-        version: "0.8.7",
+        version: "0.8.20",
         settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
+          "evmVersion": "london"
         },
       },
-      {
-        version: "0.4.22",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
-      },
+
     ],
   },
   spdxLicenseIdentifier: {
