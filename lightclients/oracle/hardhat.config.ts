@@ -74,6 +74,12 @@ const config: HardhatUserConfig ={
       ethNetwork: "Eth",
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    B2: {
+      url: `https://rpc.bsquared.network`,
+      chainId : 223,
+      gasPrice: 10000,
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
 
     Makalu: {
       chainId: 212,

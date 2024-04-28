@@ -291,7 +291,13 @@ module.exports = {
       chainId : 2649,
       gasPrice: 50000000,
       accounts: accounts,
-    }
+    },
+    B2: {
+      url: `https://rpc.bsquared.network`,
+      chainId : 223,
+      gasPrice: 10000,
+      accounts: accounts,
+    },
   },
   solidity: {
     compilers: [

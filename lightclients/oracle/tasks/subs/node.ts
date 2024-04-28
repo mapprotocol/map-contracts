@@ -331,6 +331,8 @@ task("node:verifiable", "check the block is  verifiable")
         let [wallet] = await hre.ethers.getSigners();
         const { network } = hre;
 
+        console.log("wallet address is:", wallet.address);
+
         let d = await readFromFile(network.name);
         let chain = taskArgs.chain;
         if (chain == 0) {
@@ -354,9 +356,13 @@ task("node:verifiable", "check the block is  verifiable")
             node = d.networks[network.name].lightNodes[chain].proxy;
         }
         console.log("light node address:", node);
-        console.log("wallet address is:", wallet.address);
+
         const LightNode = await hre.ethers.getContractFactory("LightNode");
         let proxy = LightNode.attach(node);
+
+        let oracleAddr = await proxy.oracle();
+        console.log("oracle address:", oracleAddr);
+
         let isVerifiable = await proxy.isVerifiable(
             taskArgs.block,
             "0x0000000000000000000000000000000000000000000000000000000000000000"

@@ -19,7 +19,9 @@ module.exports = async (taskArgs, hre) => {
 
     let range = await manager.verifiableHeaderRange(taskArgs.chain);
 
+    let nodeType = await manager.nodeType(taskArgs.chain);
+
     console.log(
-        `chain ${taskArgs.chain} address(${lightnode}) height(${header}) verifiable header min(${range[0]}), max(${range[1]})`
+        `chain ${taskArgs.chain} address(${lightnode}) nodeType(${nodeType}) height(${header}) verifiable header min(${range[0]}), max(${range[1]})`
     );
 };
