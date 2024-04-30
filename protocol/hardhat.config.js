@@ -298,6 +298,11 @@ module.exports = {
       gasPrice: 10000,
       accounts: accounts,
     },
+    Scroll: {
+      url: `https://rpc.scroll.io`,
+      chainId: 534352,
+      accounts: accounts,
+    },
   },
   solidity: {
     compilers: [

@@ -3,6 +3,7 @@ BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR });
 const initializeData = require("../deploy/config");
 
 let {zkDeploy} = require("./utils/helper.js");
+let { verify } = require("./utils/verify.js");
 
 
 let IDeployFactory_abi = [
@@ -55,6 +56,7 @@ module.exports = async (taskArgs, hre) => {
 
     let verifier = taskArgs.verify;
     if (verifier === "") {
+        console.log("deploy verify tool ...");
         if (chainId === 324 || chainId === 280) {
             // zksync mainnet or testnet
             verifier = await zkDeploy("VerifyTool", [], hre);
@@ -68,25 +70,31 @@ module.exports = async (taskArgs, hre) => {
 
             let verifyTool = await deployments.get("VerifyTool");
             verifier = verifyTool.address;
+
+            await verify(verifier, [], "contracts/VerifyTool.sol:VerifyTool", chainId, true);
         }
     }
     console.log("verify tool addr", verifier);
 
-    let lightNodeAddr;
-    if (chainId === 324 || chainId === 280) {
-        lightNodeAddr = await zkDeploy("LightNode", [], hre);
-    } else {
-        await deploy("LightNode", {
-            from: deployer.address,
-            args: [],
-            log: true,
-            contract: "LightNode",
-        });
+    let lightNodeAddr = taskArgs.impl;
+    if (lightNodeAddr === "") {
+        console.log("deploy light node ...");
+        if (chainId === 324 || chainId === 280) {
+            lightNodeAddr = await zkDeploy("LightNode", [], hre);
+        } else {
+            await deploy("LightNode", {
+                from: deployer.address,
+                args: [],
+                log: true,
+                contract: "LightNode",
+            });
 
-        let lightNode = await deployments.get("LightNode");
-        lightNodeAddr = lightNode.address;
+            let lightNode = await deployments.get("LightNode");
+            lightNodeAddr = lightNode.address;
+        }
+
+        await verify(lightNodeAddr, [], "contracts/LightNode.sol:LightNode", chainId, true);
     }
-
     console.log("light node address:", lightNodeAddr);
     let data = await getInitData(verifier, deployer.address);
 
@@ -97,7 +105,7 @@ module.exports = async (taskArgs, hre) => {
     } else if (taskArgs.salt === "") {
         await deploy("LightNodeProxy", {
             from: deployer.address,
-            args: [lightNode.address, data],
+            args: [lightNodeAddr, data],
             log: true,
             contract: "LightNodeProxy",
         });
@@ -112,7 +120,6 @@ module.exports = async (taskArgs, hre) => {
         let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(taskArgs.salt));
 
         let factory = await ethers.getContractAt(IDeployFactory_abi, taskArgs.factory);
-        //let factory = await ethers.getContractAt("IDeployFactory", taskArgs.factory);
 
         console.log("deploy factory address:", factory.address);
 
@@ -121,6 +128,8 @@ module.exports = async (taskArgs, hre) => {
         lightProxyAddress = await factory.connect(deployer).getAddress(hash);
     }
     console.log("deployed light node proxy address:", lightProxyAddress);
+
+    await verify(lightProxyAddress, [lightNodeAddr, data], "contracts/LightNodeProxy.sol:LightNodeProxy", chainId, true);
 
     let proxy = await ethers.getContractAt("LightNode", lightProxyAddress);
 

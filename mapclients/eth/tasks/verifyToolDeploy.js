@@ -1,3 +1,6 @@
+const {zkDeploy, create} = require("./utils/helper");
+
+let { verify } = require("./utils/verify.js");
 
 let IDeployFactory_abi = [
     "function deploy(bytes32 salt, bytes memory creationCode, uint256 value) external",
@@ -5,28 +8,41 @@ let IDeployFactory_abi = [
 ];
 
 module.exports = async (taskArgs, hre) => {
-    const { deploy } = hre.deployments;
+    const {deploy} = hre.deployments;
     const accounts = await ethers.getSigners();
     const deployer = accounts[0];
 
     console.log("deployer address:", deployer.address);
 
-    let VerifyTool = await ethers.getContractFactory("VerifyTool");
+    let chainId = hre.network.config.chainId;
 
-    let deployData = VerifyTool.bytecode;
 
-    console.log("verifyTool salt:", taskArgs.salt);
+    let verifierAddr;
 
-    let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(taskArgs.salt));
+    if (chainId === 324 || chainId === 280) {
+        // zksync mainnet or testnet
+        verifierAddr = await zkDeploy("VerifyTool", [], hre);
+    } else if (taskArgs.salt === "")  {
+        await deploy("VerifyTool", {
+            from: deployer.address,
+            args: [],
+            log: true,
+            contract: "VerifyTool",
+        });
 
-    // let factory = await ethers.getContractAt("IDeployFactory", taskArgs.factory);
-    let factory = await ethers.getContractAt(IDeployFactory_abi, taskArgs.factory);
+        let verifyTool = await deployments.get("VerifyTool");
+        verifierAddr = verifyTool.address;
+    } else {
+        console.log("verifyTool salt:", taskArgs.salt);
+        let VerifyTool = await ethers.getContractFactory("VerifyTool");
+        let createResult = await create(taskArgs.salt, VerifyTool.bytecode, "");
+        if (!createResult[1]) {
+            return;
+        }
+        verifierAddr = createResult[0];
+    }
 
-    console.log("deploy factory address:", factory.address);
+    await verify(verifierAddr, [], "contracts/VerifyTool.sol:VerifyTool", chainId, true);
 
-    await (await factory.connect(deployer).deploy(hash, deployData, 0)).wait();
-
-    let verifyToolAddress = await factory.connect(deployer).getAddress(hash);
-
-    console.log(`VerifyTool  contract address is ${verifyToolAddress}`);
+    console.log(`VerifyTool  contract address is ${verifierAddr}`);
 };

@@ -240,6 +240,10 @@ module.exports = {
       {
         version: "0.8.20",
         settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          },
           "evmVersion": "london"
         },
       },
@@ -254,6 +258,117 @@ module.exports = {
     timeout: 2000000,
   },
   etherscan: {
-    apiKey: process.env.BSC_SCAN_KEY,
+    apiKey: {
+      Bttc: process.env.API_KEY_BTTC,
+      Eth:  process.env.API_KEY_ETH,
+      Bsc:  process.env.API_KEY_BSC,
+      polygon: process.env.API_KEY_MATIC,
+      Blast: process.env.API_KEY_BLAST,
+      Base: process.env.API_KEY_BASE,
+      zkSync: process.env.API_KEY_ZKSYNC,
+      Optimism: process.env.API_KEY_OP,
+      Arbitrum: process.env.API_KEY_ARBITRUM,
+      Linea: process.env.API_KEY_LINEA,
+      Scroll: process.env.API_KEY_SCROLL,
+      Mantle: process.env.API_KEY_MANTLE
+    },
+    customChains: [
+      {
+        network: "Bttc",
+        chainId: 199,
+        urls: {
+          apiURL: "https://api.bttcscan.com/api",
+          browserURL: "https://bttcscan.com/",
+        },
+      },
+      {
+        network: "Eth",
+        chainId: 1,
+        urls: {
+          apiURL: "https://api.etherscan.io/api",
+          browserURL: "https://etherscan.com/",
+        },
+      },
+      {
+        network: "Bsc",
+        chainId: 56,
+        urls: {
+          apiURL: "https://api.bscscan.com/api",
+          browserURL: "https://bscscan.com/",
+        },
+      },
+      {
+        network: "Matic",
+        chainId: 237,
+        urls: {
+          apiURL: "https://api.polygonscan.com/api",
+          browserURL: "https://polygonscan.com/",
+        },
+      },
+      {
+        network: "Blast",
+        chainId: 81457,
+        urls: {
+          apiURL: "https://api.blastscan.io/api",
+          browserURL: "https://blastscan.io/",
+        },
+      },
+      {
+        network: "Base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org/",
+        },
+      },
+      {
+        network: "zkSync",
+        chainId: 324,
+        urls: {
+          apiURL: "https://api-era.zksync.network/api",
+          browserURL: "https://era.zksync.network/",
+        },
+      },
+      {
+        network: "Optimism",
+        chainId: 10,
+        urls: {
+          apiURL: "https://api-optimistic.etherscan.io/api",
+          browserURL: "https://optimistic.etherscan.io/",
+        },
+      },
+      {
+        network: "Arbitrum",
+        chainId: 42161,
+        urls: {
+          apiURL: "https://api.arbiscan.io/api",
+          browserURL: "https://arbiscan.io/",
+        },
+      },
+      {
+        network: "Linea",
+        chainId: 59144,
+        urls: {
+          apiURL: "https://api.lineascan.build/api",
+          browserURL: "https://lineascan.build",
+        },
+      },
+      {
+        network: "Scroll",
+        chainId: 534352,
+        urls: {
+          apiURL: "https://api.scrollscan.com/api",
+          browserURL: "https://scrollscan.com/",
+        },
+      },
+      {
+        network: "Mantle",
+        chainId: 5000,
+        urls: {
+          apiURL: "https://api.mantlescan.xyz/api",
+          browserURL: "https://mantlescan.xyz/",
+        },
+      }
+    ],
   },
 };

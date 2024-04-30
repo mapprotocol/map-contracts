@@ -7,6 +7,7 @@ task("initializeData", "Write initialization data required by LightNode", requir
 
 task("lightNodeDeploy", "Write initialization data required by LightNode", require("./lightNodeDeploy"))
     .addOptionalParam("verify", "verify tool address", "", types.string)
+    .addOptionalParam("impl", "verify tool address", "", types.string)
     .addOptionalParam("salt", "deploy contract salt", LIGHTNODE_SALT, types.string)
     .addOptionalParam("factory", "mos contract address", DEPLOY_FACTORY, types.string);
 
