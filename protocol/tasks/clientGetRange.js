@@ -13,6 +13,8 @@ module.exports = async (taskArgs, hre) => {
     console.log("light client manager address:", managerAddress);
     let manager = await ethers.getContractAt("LightClientManager", managerAddress);
 
+    console.log("owner: ", await manager.getAdmin());
+
     let lightnode = await manager.lightClientContract(taskArgs.chain);
 
     let header = await manager.headerHeight(taskArgs.chain);

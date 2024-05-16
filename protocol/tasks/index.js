@@ -10,6 +10,9 @@ task("clientGetRange", "Get light client verifiable range", require("./clientGet
     .addOptionalParam("manager", "light client manager address", "")
     .addParam("chain", "light client chain id");
 
+task("changeOwner", "Change owner", require("./changeOwner"))
+    .addParam("owner", "new owner");
+
 task("getDeployAddress", "Get contract address deployed by DeployFactory ", require("./getDeployAddress"))
     .addOptionalParam(
         "factory",
