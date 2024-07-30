@@ -119,6 +119,43 @@ library RLPReader {
         return result;
     }
 
+     /*
+     * @param get the RLP item by index. save gas.
+     */
+    function getItemByIndex(RLPItem memory item, uint idx) internal pure returns (RLPItem memory) {
+        require(isList(item), "is list fail");
+
+        uint memPtr = item.memPtr + _payloadOffset(item.memPtr);
+        uint dataLen;
+        for (uint i = 0; i < idx; i++) {
+            dataLen = _itemLength(memPtr);
+            memPtr = memPtr + dataLen;
+        }
+        dataLen = _itemLength(memPtr);
+        return RLPItem(dataLen, memPtr);
+    }
+
+
+    /*
+     * @param get the RLP item by index. save gas.
+     */
+    function safeGetItemByIndex(RLPItem memory item, uint idx) internal pure returns (RLPItem memory) {
+        require(isList(item), "is list fail");
+
+        uint endPtr = item.memPtr + item.len;
+
+        uint memPtr = item.memPtr + _payloadOffset(item.memPtr);
+        uint dataLen;
+        for (uint i = 0; i < idx; i++) {
+            dataLen = _itemLength(memPtr);
+            memPtr = memPtr + dataLen;
+        }
+        dataLen = _itemLength(memPtr);
+
+        require(memPtr + dataLen <= endPtr, "RLP item overflow");
+        return RLPItem(dataLen, memPtr);
+    }
+
     // @return indicator whether encoded payload is a list. negate this function call for isData.
     function isList(RLPItem memory item) internal pure returns (bool) {
         if (item.len == 0) return false;
