@@ -119,7 +119,7 @@ library RLPReader {
         return result;
     }
 
-     /*
+    /*
      * @param get the RLP item by index. save gas.
      */
     function getItemByIndex(RLPItem memory item, uint idx) internal pure returns (RLPItem memory) {
@@ -134,7 +134,6 @@ library RLPReader {
         dataLen = _itemLength(memPtr);
         return RLPItem(dataLen, memPtr);
     }
-
 
     /*
      * @param get the RLP item by index. save gas.

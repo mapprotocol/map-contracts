@@ -22,6 +22,7 @@ module.exports = {
   defaultNetwork: 'hardhat',
   abiExporter: {
     path: './abi',
+    only: [":ILight*", ":*MPT*", ":RLP*", ":*Deploy*"],
     clear: false,
     flat: true,
   },
@@ -54,9 +55,9 @@ module.exports = {
       chainId : 137,
       accounts: accounts
     },
-    MaticTest: {
-      url: `https://rpc-mumbai.maticvigil.com/`,
-      chainId : 80001,
+    Amoy: {
+      url: `https://rpc-amoy.polygon.technology/`,
+      chainId : 80002,
       accounts: accounts
     },
     Bsc: {
@@ -85,14 +86,10 @@ module.exports = {
       chainId : 1,
       accounts: accounts
     },
-    Goerli: {
-      url: `https://goerli.infura.io/v3/` + INFURA_KEY,
-      chainId : 5,
-      accounts: accounts
-    },
-    ArbitrumGoerli: {
-      url: `https://arbitrum-goerli.infura.io/v3/` + INFURA_KEY,
-      chainId : 421613,
+    Sepolia: {
+      url: `https://sepolia.drpc.org`,
+      chainId: 11155111,
+      gasPrice: 50000000000,
       accounts: accounts
     },
     ArbitrumSepolia: {
@@ -108,6 +105,11 @@ module.exports = {
     Op: {
       url: `https://1rpc.io/op`,
       chainId : 10,
+      accounts: accounts
+    },
+    OpSepolia: {
+      url: `https://sepolia.optimism.io`,
+      chainId : 11155420,
       accounts: accounts
     },
     Avax: {
@@ -302,6 +304,11 @@ module.exports = {
       url: `https://rpc.scroll.io`,
       chainId: 534352,
       accounts: accounts,
+    },
+    DodoTest: {
+      url: `https://dodochain-testnet.alt.technology`,
+      chainId : 53457,
+      accounts: accounts
     },
   },
   solidity: {

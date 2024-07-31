@@ -11,7 +11,10 @@ module.exports = async (taskArgs, hre) => {
 
     let manager = await ethers.getContractAt("LightClientManager", proxy.address);
 
-    await manager.register(taskArgs.chain, taskArgs.contract, { gasLimit: 100000 });
+    let admin = await manager.getAdmin();
+    console.log(`change admin: ${admin} -> ${taskArgs.owner} `);
 
-    console.log(`Register ${taskArgs.chain} light client ${taskArgs.contract} successfully`);
+    await manager.changeAdmin(taskArgs.owner, { gasLimit: 100000 });
+
+    console.log(`Change owner ${taskArgs.owner} successfully`);
 };
