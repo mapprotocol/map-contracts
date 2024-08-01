@@ -34,6 +34,6 @@ library Verify {
             _receipt.proof,
             expectedValue
         );
-        if (success) logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
+        if (success) logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).toRlpBytes(); // list length must be 4
     }
 }
