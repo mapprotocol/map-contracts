@@ -33,6 +33,10 @@ contract OracleV2 is ECDSAMultisig, Ownable, Pausable, ReentrancyGuard {
     event RecoverProposal(uint256 chainId,uint256 blockNum,address signer,uint256 index);
     event Proposal(address signer,uint256 chainId,uint256 blockNum,bytes32 rootHash,bytes signature);
 
+    constructor(address _owner) {
+        _transferOwnership(_owner);
+    }
+
     function togglePause() external onlyOwner {
         paused() ? _unpause() : _pause();
     }
@@ -100,7 +104,7 @@ contract OracleV2 is ECDSAMultisig, Ownable, Pausable, ReentrancyGuard {
         uint256 blockNum,
         address signer,
         uint256 index
-    )external onlyOwner {
+    ) external {
 
         if(msg.sender != signer && msg.sender != owner()) revert only_signer_or_owner();
         bytes32 version = _version();
