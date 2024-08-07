@@ -7,7 +7,7 @@ import { getSigInfo, compare, Multisig} from "../MultsigUtils"
 task("nodeV2:deploy", "deploy oracle light node")
     .addOptionalParam("salt", "oracle salt", "", types.string)
     .addParam("chain", "chain id")
-    .addOptionalParam("nodeType", "node type", 3, types.int)
+    .addOptionalParam("nodeType", "node type", 4, types.int)
     .addOptionalParam("mpt", "mpt address", process.env.MPT_VERIFY, types.string)
     .addOptionalParam("impl", "impl address", "", types.string)
     .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
@@ -304,7 +304,7 @@ task("nodeV2:updateMultisg", "set oracle address")
             const LightNode = await hre.ethers.getContractFactory("LightNodeV2");
             let proxy = LightNode.attach(node);
 
-            let old_info = await proxy.multisigInfo().call();
+            let old_info = await proxy.multisigInfo();
             console.log("old_info :", old_info);
             let sig = getSigInfo();
             let d = await compare(old_info.version,sig);
