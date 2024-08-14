@@ -2,8 +2,7 @@
 
 pragma solidity 0.8.20;
 
-import { EnumerableSet } from '../lib/EnumerableSet.sol';
-
+import {EnumerableSet} from "../lib/EnumerableSet.sol";
 
 /**
  * @title ECDSAMultisig Storage
@@ -16,8 +15,7 @@ library ECDSAMultisigStorage {
         EnumerableSet.AddressSet signers;
     }
 
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256('map.contracts.storage.ECDSAMultisig');
+    bytes32 internal constant STORAGE_SLOT = keccak256("map.contracts.storage.ECDSAMultisig");
 
     function layout() internal pure returns (Layout storage l) {
         bytes32 slot = STORAGE_SLOT;

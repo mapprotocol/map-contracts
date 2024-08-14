@@ -7,9 +7,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
 import "./abstract/ECDSAMultisig.sol";
 
-
 contract OracleV2 is ECDSAMultisig, Ownable, Pausable, ReentrancyGuard {
-
     struct LightNodeInfo {
         // uint256(hash(version,blockNum)) => receiptRoot => signature
         mapping(uint256 => mapping(bytes32 => bytes[])) proposals;
@@ -19,7 +17,7 @@ contract OracleV2 is ECDSAMultisig, Ownable, Pausable, ReentrancyGuard {
     // chainId => LightNodeInfo
     mapping(uint256 => LightNodeInfo) private infos;
 
-    error aready_meet();
+    error already_meet();
     error only_signer();
     error not_proposal();
     error already_proposal();
@@ -28,10 +26,10 @@ contract OracleV2 is ECDSAMultisig, Ownable, Pausable, ReentrancyGuard {
     error singer_mismatching();
     error invalid_proposal_param();
 
-    event UpdateMultisg(bytes32 version,uint256 quorum,address[] signers);
-    event Meet(uint256 chainId,uint256 blockNum,bytes32 rootHash,bytes[] signature);
-    event RecoverProposal(uint256 chainId,uint256 blockNum,address signer,uint256 index);
-    event Proposal(address signer,uint256 chainId,uint256 blockNum,bytes32 rootHash,bytes signature);
+    event UpdateMultisig(bytes32 version, uint256 quorum, address[] signers);
+    event Meet(uint256 chainId, uint256 blockNum, bytes32 rootHash, bytes[] signature);
+    event RecoverProposal(uint256 chainId, uint256 blockNum, address signer, uint256 index);
+    event Proposal(address signer, uint256 chainId, uint256 blockNum, bytes32 rootHash, bytes signature);
 
     constructor(address _owner) {
         _transferOwnership(_owner);
@@ -40,138 +38,124 @@ contract OracleV2 is ECDSAMultisig, Ownable, Pausable, ReentrancyGuard {
     function togglePause() external onlyOwner {
         paused() ? _unpause() : _pause();
     }
-    
-    function updateMultisg(
-        uint256 quorum,
-        address[] calldata signers
-    ) external onlyOwner {
 
+    function updateMultisig(uint256 quorum, address[] calldata signers) external onlyOwner {
         _setQuorum(0);
         address[] memory preSigners = _signers();
         uint256 preLen = preSigners.length;
         for (uint i = 0; i < preLen; i++) {
             _removeSigner(preSigners[i]);
         }
-        
+
         uint256 len = signers.length;
         for (uint i = 0; i < len; i++) {
             _addSigner(signers[i]);
         }
         _setQuorum(quorum);
-        bytes32 version = keccak256(abi.encodePacked(quorum,signers));
+        bytes32 version = keccak256(abi.encodePacked(quorum, signers));
         _setVersion(version);
-        emit UpdateMultisg(version,quorum,signers);
+        emit UpdateMultisig(version, quorum, signers);
     }
 
-    function proposal(
+    function propose(
         uint256 chainId,
         uint256 blockNum,
         bytes32 rootHash,
         bytes calldata signature
     ) external whenNotPaused nonReentrant {
-        
-        if(chainId == 0 || blockNum == 0 || rootHash == bytes32("")) revert invalid_proposal_param();
-        address signer = _verifySignature(rootHash,blockNum,chainId,signature);
-        if(msg.sender != signer) revert only_signer();
+        if (chainId == 0 || blockNum == 0 || rootHash == bytes32("")) revert invalid_proposal_param();
+        address signer = _verifySignature(rootHash, blockNum, chainId, signature);
+        if (msg.sender != signer) revert only_signer();
 
         bytes32 version = _version();
-        uint256 key = _getKey(version,blockNum);
+        uint256 key = _getKey(version, blockNum);
         LightNodeInfo storage info = infos[chainId];
         uint256 len = info.proposals[key][rootHash].length;
         uint256 quorum = _quorum();
-        if(len == quorum) revert aready_meet();
+        if (len == quorum) revert already_meet();
 
         bytes32 beforeProposal = info.records[key][signer];
-        if(beforeProposal != bytes32("")) revert already_proposal();
-        info.proposals[key][rootHash].push(abi.encode(signer,signature));
-        len ++;
+        if (beforeProposal != bytes32("")) revert already_proposal();
+        info.proposals[key][rootHash].push(abi.encode(signer, signature));
+        len++;
         info.records[key][signer] = rootHash;
-        emit Proposal(signer,chainId,blockNum,rootHash,signature);
+        emit Proposal(signer, chainId, blockNum, rootHash, signature);
 
-        if(len == quorum) {
+        if (len == quorum) {
             bytes[] memory signatures = new bytes[](len);
             for (uint i = 0; i < len; i++) {
-                (,bytes memory s) = _split(info.proposals[key][rootHash][i]);
+                (, bytes memory s) = _split(info.proposals[key][rootHash][i]);
                 signatures[i] = s;
             }
             // delete info.proposals[key][rootHash];
-            emit Meet(chainId,blockNum,rootHash,signatures);
+            emit Meet(chainId, blockNum, rootHash, signatures);
         }
     }
 
-    function recoverProposal(
-        uint256 chainId,
-        uint256 blockNum,
-        address signer,
-        uint256 index
-    ) external {
-
-        if(msg.sender != signer && msg.sender != owner()) revert only_signer_or_owner();
+    function recoverProposal(uint256 chainId, uint256 blockNum, address signer, uint256 index) external {
+        if (msg.sender != signer && msg.sender != owner()) revert only_signer_or_owner();
         bytes32 version = _version();
-        uint256 key = _getKey(version,blockNum);
+        uint256 key = _getKey(version, blockNum);
         LightNodeInfo storage info = infos[chainId];
         bytes32 beforeProposal = info.records[key][signer];
-        if(beforeProposal == bytes32("")) revert not_proposal();
+        if (beforeProposal == bytes32("")) revert not_proposal();
         info.records[key][signer] = bytes32("");
-        _deleteSignature(info.proposals[key][beforeProposal],signer, index);
-        emit RecoverProposal(chainId,blockNum,signer,index);
+        _deleteSignature(info.proposals[key][beforeProposal], signer, index);
+        emit RecoverProposal(chainId, blockNum, signer, index);
     }
-
 
     function proposalInfo(
         uint256 chainId,
         uint256 blockNum,
         bytes32 rootHash,
         bytes32 version
-    ) external view returns(address[] memory singers,bytes[] memory signatures,bool canVerify){
-        
-        if(version == bytes32("")) version = _version();
-        uint256 key = _getKey(version,blockNum);
+    ) external view returns (address[] memory singers, bytes[] memory signatures, bool canVerify) {
+        if (version == bytes32("")) version = _version();
+        uint256 key = _getKey(version, blockNum);
         LightNodeInfo storage info = infos[chainId];
         uint256 len = info.proposals[key][rootHash].length;
         singers = new address[](len);
         signatures = new bytes[](len);
         for (uint i = 0; i < len; i++) {
-           address signer;
-           bytes memory  signature;
-           (signer,signature) = _split(info.proposals[key][rootHash][i]);
-           singers[i] = signer;
-           signatures[i] = signature;
+            address signer;
+            bytes memory signature;
+            (signer, signature) = _split(info.proposals[key][rootHash][i]);
+            singers[i] = signer;
+            signatures[i] = signature;
         }
         canVerify = (len >= _quorum());
     }
 
-    function isProposaled(
+    function isProposed(
         uint256 chainId,
         bytes32 version,
         uint256 blockNum,
         address signer
-    ) external view returns(bytes32){
-        
-        uint256 key = _getKey(version,blockNum);
+    ) external view returns (bytes32) {
+        uint256 key = _getKey(version, blockNum);
         LightNodeInfo storage info = infos[chainId];
         return info.records[key][signer];
     }
 
-    function multisigInfo() external view returns(bytes32 version,uint256 quorum,address[] memory singers){
+    function multisigInfo() external view returns (bytes32 version, uint256 quorum, address[] memory singers) {
         return _multisigInfo();
     }
 
-    function _deleteSignature(bytes[] storage signatures,address singer,uint256 index) private {
+    function _deleteSignature(bytes[] storage signatures, address singer, uint256 index) private {
         uint256 len = signatures.length;
-        if(len <= index) revert signatures_out_bond();
-        (address s,) = _split(signatures[index]);
-        if(s != singer) revert singer_mismatching();
+        if (len <= index) revert signatures_out_bond();
+        (address s, ) = _split(signatures[index]);
+        if (s != singer) revert singer_mismatching();
         bytes memory last = signatures[len - 1];
         signatures[index] = last;
         signatures.pop();
     }
 
-    function _split(bytes memory data) private pure returns(address signer,bytes memory signature){
-        (signer,signature) = abi.decode(data,(address,bytes));
+    function _split(bytes memory data) private pure returns (address signer, bytes memory signature) {
+        (signer, signature) = abi.decode(data, (address, bytes));
     }
 
-    function _getKey(bytes32 version,uint256 blockNum) private pure returns(uint256){
-        return uint256(keccak256(abi.encodePacked(version,blockNum)));
+    function _getKey(bytes32 version, uint256 blockNum) private pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(version, blockNum)));
     }
 }

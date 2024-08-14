@@ -1,6 +1,6 @@
 import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { getSigInfo, compare, Multisig} from "../MultsigUtils"
+import { getSigInfo, compare, Multisig } from "../MultsigUtils";
 import { create, readFromFile, writeToFile, zksyncDeploy, verify } from "../../utils/helper";
 let { deploy_contract, getTronContractAt, getDeployerAddress, toETHAddress } = require("../../utils/tron.js");
 
@@ -24,7 +24,7 @@ task("oracleV2:deploy", "deploy oracle")
         await writeToFile(d);
     });
 
-task("OracleV2:updateMultisg", "set light node address")
+task("oracleV2:updateMultisig", "set light node address")
     .addOptionalParam("oracle", "oracle address", "", types.string)
     .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
         let [wallet] = await hre.ethers.getSigners();
@@ -45,12 +45,10 @@ task("OracleV2:updateMultisg", "set light node address")
         let old_info = await oracle.multisigInfo();
         console.log("old_info :", old_info);
         let sig = getSigInfo();
-        let c = await compare(old_info.version,sig);
-        if(c) {
+        let c = await compare(old_info.version, sig);
+        if (c) {
             console.log("Multisg already set");
         } else {
-            await(await oracle.updateMultisg(sig.quorum,sig.signers)).wait();
+            await (await oracle.updateMultisig(sig.quorum, sig.signers)).wait();
         }
-
     });
-

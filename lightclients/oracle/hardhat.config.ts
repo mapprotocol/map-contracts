@@ -36,7 +36,7 @@ const config: HardhatUserConfig ={
     },
     Eth: {
       chainId: 1,
-      url: `https://1rpc.io/eth`,
+      url: `https://eth-mainnet.public.blastapi.io`,
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     Arbitrum: {
@@ -74,22 +74,74 @@ const config: HardhatUserConfig ={
       ethNetwork: "Eth",
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    zkLink: {
+      url: `https://rpc.zklink.io`,
+      chainId : 810180,
+      zksync: true,
+      ethNetwork: "Eth",
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
     B2: {
       url: `https://rpc.bsquared.network`,
       chainId : 223,
       gasPrice: 10000,
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    Optimism: {
+      url: `https://mainnet.optimism.io`,
+      chainId : 10,
+      accounts:
+          process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    Linea: {
+      url: `https://rpc.linea.build`,
+      chainId : 59144,
+      accounts:
+          process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    Scroll: {
+      url: `https://rpc.scroll.io`,
+      chainId : 534352,
+      accounts:
+          process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    Mantle: {
+      url: `https://rpc.mantle.xyz`,
+      chainId : 5000,
+      accounts:
+          process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+
 
     Makalu: {
       chainId: 212,
       url:"https://testnet-rpc.maplabs.io",
       accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
-
+    Sepolia: {
+      url: `https://eth-sepolia.public.blastapi.io`,
+      chainId: 11155111,
+      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
+    },
     ArbitrumSepolia: {
       chainId: 421614,
       url: `https://arbitrum-sepolia.blockpi.network/v1/rpc/public`,
+      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
+    },
+    OpSepolia: {
+      url: `https://sepolia.optimism.io`,
+      chainId : 11155420,
+      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
+    },
+    Amoy: {
+      url: `https://rpc-amoy.polygon.technology/`,
+      chainId : 80002,
+      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
+    },
+
+    DodoTest: {
+      url: `https://dodochain-testnet.alt.technology`,
+      chainId : 53457,
       accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
 

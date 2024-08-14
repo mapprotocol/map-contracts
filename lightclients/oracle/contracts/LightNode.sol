@@ -96,7 +96,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
     function verifyProofDataWithCache(
         bytes memory _receiptProof
-    ) external view override returns (bool success, string memory message, bytes memory logs) {
+    ) external override returns (bool success, string memory message, bytes memory logs) {
         return _verifyProofData(_receiptProof);
     }
 

@@ -4,12 +4,12 @@ pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-// import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
 import "./abstract/ECDSAMultisig.sol";
 import "./lib/Verify.sol";
 
-contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, ILightNode {
+contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable, ILightNode {
     address public mptVerify;
 
     uint256 public chainId;
@@ -19,10 +19,9 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, ILightNod
     uint256 private _nodeType;
 
     event SetMptVerify(address newMptVerify);
-    event UpdateMultisg(bytes32 version,uint256 quorum,address[] signers);
+    event UpdateMultisig(bytes32 version, uint256 quorum, address[] signers);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
-
 
     struct ProofData {
         uint256 blockNum;
@@ -38,13 +37,7 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, ILightNod
 
     constructor() {}
 
-    function initialize(
-        uint256 _chainId, 
-        address _controller, 
-        address _mptVerify, 
-        uint256 _node
-    ) external initializer {
-
+    function initialize(uint256 _chainId, address _controller, address _mptVerify, uint256 _node) external initializer {
         require(_chainId > 0, "invalid _chainId");
         require(_controller != address(0), "_controller zero address");
         require(_mptVerify != address(0), "_mptVerify zero address");
@@ -54,30 +47,24 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, ILightNod
         _changeAdmin(_controller);
     }
 
-
-    function updateMultisg(
-        uint256 quorum,
-        address[] calldata signers
-    ) external onlyOwner {
-
+    function updateMultisig(uint256 quorum, address[] calldata signers) external onlyOwner {
         _setQuorum(0);
         address[] memory preSigners = _signers();
         uint256 preLen = preSigners.length;
         for (uint i = 0; i < preLen; i++) {
             _removeSigner(preSigners[i]);
         }
-        
+
         uint256 len = signers.length;
         for (uint i = 0; i < len; i++) {
             _addSigner(signers[i]);
         }
         _setQuorum(quorum);
 
-        bytes32 version = keccak256(abi.encodePacked(quorum,signers));
+        bytes32 version = keccak256(abi.encodePacked(quorum, signers));
         _setVersion(version);
-        emit UpdateMultisg(version,quorum,signers);
+        emit UpdateMultisig(version, quorum, signers);
     }
-
 
     function setMptVerify(address _verifier) external onlyOwner {
         require(_verifier != address(0), "LightNode: verifier is the zero address");
@@ -85,21 +72,21 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, ILightNod
         emit SetMptVerify(_verifier);
     }
 
-    // function togglePause() external onlyOwner {
-    //     paused() ? _unpause() : _pause();
-    // }
+    function togglePause() external onlyOwner {
+         paused() ? _unpause() : _pause();
+    }
 
     function updateBlockHeader(bytes memory _blockHeader) external override {}
 
     function verifyProofData(
         bytes memory _receiptProof
-    ) external view override returns (bool success, string memory message, bytes memory logs) {
+    ) external view override whenNotPaused returns (bool success, string memory message, bytes memory logs) {
         return _verifyProofData(_receiptProof);
     }
 
     function verifyProofDataWithCache(
         bytes memory _receiptProof
-    ) external view override returns (bool success, string memory message, bytes memory logs) {
+    ) external view override whenNotPaused returns (bool success, string memory message, bytes memory logs) {
         return _verifyProofData(_receiptProof);
     }
 
@@ -107,14 +94,14 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, ILightNod
         bytes memory _receiptProof
     ) private view returns (bool success, string memory message, bytes memory logs) {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
-        _verifySignatures(proof.receiptRoot,proof.blockNum,chainId,proof.signatures);
+        _verifySignatures(proof.receiptRoot, proof.blockNum, chainId, proof.signatures);
         (success, logs) = Verify._validateProof(proof.receiptRoot, proof.receiptProof, mptVerify);
         if (!success) {
             message = "mpt verification failed";
         }
     }
 
-    function multisigInfo() external view returns(bytes32 version,uint256 quorum,address[] memory singers){
+    function multisigInfo() external view returns (bytes32 version, uint256 quorum, address[] memory singers) {
         return _multisigInfo();
     }
 

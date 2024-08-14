@@ -32,7 +32,7 @@ describe("LightNode", function () {
             chainId,
             wallet.address,
             mPTVerify.address,
-            1
+            1,
         ]);
 
         const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);

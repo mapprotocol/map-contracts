@@ -1,8 +1,8 @@
 import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import {create, readFromFile, writeToFile, verify, zksyncDeploy} from "../../utils/helper";
+import { create, readFromFile, writeToFile, verify, zksyncDeploy } from "../../utils/helper";
 let { deploy_contract, getTronContractAt, getDeployerAddress, toETHAddress } = require("../../utils/tron.js");
-import { getSigInfo, compare, Multisig} from "../MultsigUtils"
+import { getSigInfo, compare, Multisig } from "../MultsigUtils";
 
 task("nodeV2:deploy", "deploy oracle light node")
     .addOptionalParam("salt", "oracle salt", "", types.string)
@@ -26,25 +26,25 @@ task("nodeV2:deploy", "deploy oracle light node")
                 let result = await deploy_contract(hre.artifacts, "MPTVerify", [], network.name);
                 mpt = result[1];
             }
+            mpt = await toETHAddress(mpt, network.name);
+            console.log("MPT address", mpt);
             if (impl === "") {
                 let impl_deploy = await deploy_contract(hre.artifacts, "LightNodeV2", [], network.name);
                 impl = impl_deploy[0];
             }
+            impl = await toETHAddress(impl, network.name);
+            console.log("impl address", impl);
+
             let impl_param = LightNode.interface.encodeFunctionData("initialize", [
                 taskArgs.chain,
                 await getDeployerAddress(network.name),
                 mpt,
                 taskArgs.nodeType,
             ]);
-            let proxy_deploy = await deploy_contract(
-                hre.artifacts,
-                "LightNodeProxy",
-                [impl, impl_param],
-                network.name
-            );
+            let proxy_deploy = await deploy_contract(hre.artifacts, "LightNodeProxy", [impl, impl_param], network.name);
+
             node = proxy_deploy[0];
-        }
-        else if (network.config.chainId === 324 || network.config.chainId === 280) {
+        } else if (network.config.chainId === 324 || network.config.chainId === 280) {
             if (mpt === undefined || mpt === "") {
                 mpt = await zksyncDeploy("MPTVerify", [], hre);
             }
@@ -58,11 +58,7 @@ task("nodeV2:deploy", "deploy oracle light node")
                 mpt,
                 taskArgs.nodeType,
             ]);
-            let proxy_deploy = await zksyncDeploy(
-                "LightNodeProxy",
-                [impl, impl_param],
-                hre
-            );
+            let proxy_deploy = await zksyncDeploy("LightNodeProxy", [impl, impl_param], hre);
             node = proxy_deploy;
         } else {
             console.log("wallet address is:", wallet.address);
@@ -256,7 +252,7 @@ task("nodeV2:setMptVerify", "set mpt verify address")
         }
     });
 
-task("nodeV2:updateMultisg", "set oracle address")
+task("nodeV2:updateMultisig", "update multi sign address")
     .addOptionalParam("chain", "chainId", 0, types.int)
     .addOptionalParam("node", "light node address", "node", types.string)
     .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
@@ -289,15 +285,15 @@ task("nodeV2:updateMultisg", "set oracle address")
 
             let old_info = await lightNode.multisigInfo().call();
             console.log("old_info :", old_info);
-            
+
             let sig = getSigInfo();
 
-            let d = await compare(old_info.version,sig);
-            if(d) {
+            let d = await compare(old_info.version, sig);
+            if (d) {
                 console.log("Multisg already set");
             } else {
-                let result = await lightNode.updateMultisg(sig.quorum,sig.signers).send();
-                console.log("updateMultisg: ", result); 
+                let result = await lightNode.updateMultisig(sig.quorum, sig.signers).send();
+                console.log("updateMultisg: ", result);
             }
         } else {
             console.log("wallet address is:", wallet.address);
@@ -307,13 +303,11 @@ task("nodeV2:updateMultisg", "set oracle address")
             let old_info = await proxy.multisigInfo();
             console.log("old_info :", old_info);
             let sig = getSigInfo();
-            let d = await compare(old_info.version,sig);
-            if(d) {
+            let d = await compare(old_info.version, sig);
+            if (d) {
                 console.log("Multisg already set");
             } else {
-                await(await proxy.updateMultisg(sig.quorum,sig.signers)).wait();
+                await (await proxy.updateMultisig(sig.quorum, sig.signers)).wait();
             }
         }
     });
-
-

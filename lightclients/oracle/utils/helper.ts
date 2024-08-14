@@ -25,8 +25,8 @@ export interface DeployInfo {
     networks: Record<string, NetworkInfo>;
 }
 
-
 export async function zksyncDeploy(contractName: string, args: any[], hre: any) {
+    console.log(`zksync deploy ${contractName} ...`);
     const wallet = new Wallet(process.env.PRIVATE_KEY);
     const deployer = new Deployer(hre, wallet);
     const c_artifact = await deployer.loadArtifact(contractName);

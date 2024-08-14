@@ -117,7 +117,7 @@ export class ReceiptProof {
     public keyIndex?: string;
     public proof?: Array<string>;
 
-    constructor(txReceipt: string, receiptType : BigNumber,keyIndex: string, proof: Array<string>) {
+    constructor(txReceipt: string, receiptType: BigNumber, keyIndex: string, proof: Array<string>) {
         this.txReceipt = txReceipt;
         this.receiptType = receiptType;
         this.keyIndex = keyIndex;
@@ -135,12 +135,11 @@ export class ProofData {
     }
 }
 
-
 export class ProofStruct {
     public blockNum?: BigNumber;
-    public receiptProof?:ReceiptProof;
-    public txReceipt?:TxReceipt;
-    constructor(blockNum: BigNumber, receiptProof: ReceiptProof,txReceipt: TxReceipt) {
+    public receiptProof?: ReceiptProof;
+    public txReceipt?: TxReceipt;
+    constructor(blockNum: BigNumber, receiptProof: ReceiptProof, txReceipt: TxReceipt) {
         this.blockNum = blockNum;
         this.receiptProof = receiptProof;
         this.txReceipt = txReceipt;
@@ -172,7 +171,7 @@ export async function getProof(txHash: string, rpc: string) {
 
     let r = await provider.getTransactionReceipt(txHash);
 
-    console.log("block =====",r);
+    console.log("block =====", r);
 
     let logs: TxLog[] = new Array<TxLog>();
 
@@ -190,15 +189,13 @@ export async function getProof(txHash: string, rpc: string) {
     );
 
     let proof = await getReceipt(txHash, rpc);
-    let key = r.transactionIndex === 0 ? "0x0800" : index2key(BigNumber.from(r.transactionIndex).toNumber(), proof.proof.length);
-    let receiptProof = new ReceiptProof(
-        "",
-        BigNumber.from(r.type),
-        key,
-        proof.proof
-    );
+    let key =
+        r.transactionIndex === 0
+            ? "0x0800"
+            : index2key(BigNumber.from(r.transactionIndex).toNumber(), proof.proof.length);
+    let receiptProof = new ReceiptProof("", BigNumber.from(r.type), key, proof.proof);
 
-    let proofStruct = new ProofStruct(BigNumber.from(r.blockNumber), receiptProof,txReceipt);
+    let proofStruct = new ProofStruct(BigNumber.from(r.blockNumber), receiptProof, txReceipt);
 
     return proofStruct;
 }

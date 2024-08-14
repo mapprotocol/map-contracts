@@ -21,7 +21,7 @@ task("oracle:deploy", "deploy oracle")
             );
             console.log(deploy_result);
             oracle = deploy_result[0];
-        } else if (network.config.chainId === 324 || network.config.chainId === 280) {
+        } else if (hre.network.zksync === true) {
             oracle = await zksyncDeploy("Oracle", [wallet.address], hre);
         } else if (salt === "") {
             let result = await deploy("Oracle", {
@@ -94,12 +94,7 @@ task("oracle:setLightNode", "set light node address")
 
         let info;
         if (network.name === "Tron" || network.name === "TronTest") {
-            let oracle = await getTronContractAt(
-                hre.artifacts,
-                "Oracle",
-                oracleAddr,
-                network.name
-            );
+            let oracle = await getTronContractAt(hre.artifacts, "Oracle", oracleAddr, network.name);
             let n = node;
             if (!n.startsWith("0x")) {
                 n = await toETHAddress(n, network.name);
@@ -143,12 +138,7 @@ task("oracle:setQuorum", "set mpt verify address")
 
         let info;
         if (network.name === "Tron" || network.name === "TronTest") {
-            let oracle = await getTronContractAt(
-                hre.artifacts,
-                "Oracle",
-                oracleAddr,
-                network.name
-            );
+            let oracle = await getTronContractAt(hre.artifacts, "Oracle", oracleAddr, network.name);
             let result = await oracle.setQuorum(chain, taskArgs.quorum).send();
             console.log(result);
             info = await oracle.lightNodeInfo(chain).call();
@@ -190,12 +180,7 @@ task("oracle:updateProposer", "update proposer address")
 
         let proposers = taskArgs.proposers.split(",");
         if (network.name === "Tron" || network.name === "TronTest") {
-            let oracle = await getTronContractAt(
-                hre.artifacts,
-                "Oracle",
-                oracleAddr,
-                network.name
-            );
+            let oracle = await getTronContractAt(hre.artifacts, "Oracle", oracleAddr, network.name);
             let p: Array<string> = new Array(proposers.length);
             for (let i = 0; i < proposers.length; i++) {
                 if (!proposers[i].startsWith("0x")) {
@@ -204,6 +189,7 @@ task("oracle:updateProposer", "update proposer address")
                     p[i] = proposers[i];
                 }
             }
+            console.log("proposers:", p);
             let result = await oracle.updateProposer(chain, p, taskArgs.flag).send();
             console.log("update proposer tx:", result);
         } else {
@@ -218,7 +204,7 @@ task("oracle:recoverPropose", "recover proposal")
     .addOptionalParam("oracle", "oracle address", "", types.string)
     .addOptionalParam("chain", "chainId", 0, types.int)
     .addParam("proposer", "proposer")
-    .addParam("block", "block number",)
+    .addParam("block", "block number")
     .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
         let [wallet] = await hre.ethers.getSigners();
         console.log("wallet address is:", wallet.address);
@@ -240,12 +226,7 @@ task("oracle:recoverPropose", "recover proposal")
 
         let proposer = taskArgs.proposer;
         if (network.name === "Tron" || network.name === "TronTest") {
-            let oracle = await getTronContractAt(
-                hre.artifacts,
-                "Oracle",
-                oracleAddr,
-                network.name
-            );
+            let oracle = await getTronContractAt(hre.artifacts, "Oracle", oracleAddr, network.name);
 
             if (!proposer.startsWith("0x")) {
                 proposer = await toETHAddress(proposer, network.name);
@@ -264,10 +245,10 @@ task("oracle:recoverPropose", "recover proposal")
 task("oracle:pause", "update proposer address")
     .addOptionalParam("oracle", "oracle address", "", types.string)
     .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
-    let [wallet] = await hre.ethers.getSigners();
-    console.log("wallet address is:", wallet.address);
-    const { network } = hre;
-    let d = await readFromFile(network.name);
+        let [wallet] = await hre.ethers.getSigners();
+        console.log("wallet address is:", wallet.address);
+        const { network } = hre;
+        let d = await readFromFile(network.name);
 
         let oracleAddr = taskArgs.oracle;
         if (oracleAddr === "") {
@@ -278,25 +259,25 @@ task("oracle:pause", "update proposer address")
         }
         console.log("oracle manager address:", oracleAddr);
 
-    if (network.name === "Tron" || network.name === "TronTest") {
-        let oracle = await getTronContractAt(hre.artifacts, "Oracle", oracleAddr, network.name);
-        let result = await oracle.togglePause(true).send();
-        console.log(result);
-    } else {
-        const Oracle = await hre.ethers.getContractFactory("Oracle");
-        let oracle = Oracle.attach(oracleAddr);
-        await (await oracle.togglePause(true)).wait();
-    }
-    console.log(`oracle pause`);
-});
+        if (network.name === "Tron" || network.name === "TronTest") {
+            let oracle = await getTronContractAt(hre.artifacts, "Oracle", oracleAddr, network.name);
+            let result = await oracle.togglePause(true).send();
+            console.log(result);
+        } else {
+            const Oracle = await hre.ethers.getContractFactory("Oracle");
+            let oracle = Oracle.attach(oracleAddr);
+            await (await oracle.togglePause(true)).wait();
+        }
+        console.log(`oracle pause`);
+    });
 
 task("oracle:unpause", "update proposer address")
     .addOptionalParam("oracle", "oracle address", "", types.string)
     .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
-    let [wallet] = await hre.ethers.getSigners();
-    console.log("wallet address is:", wallet.address);
-    const { network } = hre;
-    let d = await readFromFile(network.name);
+        let [wallet] = await hre.ethers.getSigners();
+        console.log("wallet address is:", wallet.address);
+        const { network } = hre;
+        let d = await readFromFile(network.name);
 
         let oracleAddr = taskArgs.oracle;
         if (oracleAddr === "") {
@@ -307,18 +288,17 @@ task("oracle:unpause", "update proposer address")
         }
         console.log("oracle manager address:", oracleAddr);
 
-    if (network.name === "Tron" || network.name === "TronTest") {
-        let oracle = await getTronContractAt(hre.artifacts, "Oracle", oracleAddr, network.name);
-        let result = await oracle.togglePause(false).send();
-        console.log(result);
-    } else {
-        const Oracle = await hre.ethers.getContractFactory("Oracle");
-        let oracle = Oracle.attach(oracleAddr);
-        await (await oracle.togglePause(false)).wait();
-    }
-    console.log(`oracle unpause`);
-});
-
+        if (network.name === "Tron" || network.name === "TronTest") {
+            let oracle = await getTronContractAt(hre.artifacts, "Oracle", oracleAddr, network.name);
+            let result = await oracle.togglePause(false).send();
+            console.log(result);
+        } else {
+            const Oracle = await hre.ethers.getContractFactory("Oracle");
+            let oracle = Oracle.attach(oracleAddr);
+            await (await oracle.togglePause(false)).wait();
+        }
+        console.log(`oracle unpause`);
+    });
 
 task("oracle:updateHeader", "update block header")
     .addOptionalParam("oracle", "oracle address", "", types.string)
@@ -345,7 +325,6 @@ task("oracle:updateHeader", "update block header")
             chain = Object.keys(d.networks[network.name].lightNodes)[0];
         }
         console.log("node id:", chain);
-
 
         const Oracle = await hre.ethers.getContractFactory("Oracle");
         let oracle = Oracle.attach(oracleAddr);
@@ -377,6 +356,41 @@ task("oracle:getNode", "get light node info")
         }
         console.log("oracle manager address:", oracleAddr);
 
+        let chain = taskArgs.chain;
+        if (chain == 0) {
+            chain = Object.keys(d.networks[network.name].lightNodes)[0];
+        }
+
+        let info;
+        if (network.name === "Tron" || network.name === "TronTest") {
+            let oracle = await getTronContractAt(hre.artifacts, "Oracle", oracleAddr, network.name);
+            info = await oracle.lightNodeInfo(chain).call();
+        } else {
+            const Oracle = await hre.ethers.getContractFactory("Oracle");
+            let oracle = Oracle.attach(oracleAddr);
+            info = await oracle.lightNodeInfo(chain);
+        }
+        console.log(`node ${chain} ${info.lightNode} quorum: ${info.quorum}, proposers: ${info.proposerCount}`);
+    });
+
+task("oracle:proposer", "get light node info")
+    .addOptionalParam("oracle", "oracle address", "", types.string)
+    .addOptionalParam("chain", "chainId", 0, types.int)
+    .addParam("address", "address")
+    .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+        let [wallet] = await hre.ethers.getSigners();
+        console.log("wallet address is:", wallet.address);
+        const { network } = hre;
+        let d = await readFromFile(network.name);
+
+        let oracleAddr = taskArgs.oracle;
+        if (oracleAddr === "") {
+            if (d.networks[network.name].oracle === undefined || d.networks[network.name].oracle === "") {
+                throw "oracle not deploy";
+            }
+            oracleAddr = d.networks[network.name].oracle;
+        }
+        console.log("oracle manager address:", oracleAddr);
 
         let chain = taskArgs.chain;
         if (chain == 0) {
@@ -385,17 +399,12 @@ task("oracle:getNode", "get light node info")
 
         let info;
         if (network.name === "Tron" || network.name === "TronTest") {
-            let oracle = await getTronContractAt(
-                hre.artifacts,
-                "Oracle",
-                oracleAddr,
-                network.name
-            );
-            info = await oracle.lightNodeInfo(chain).call();
+            let oracle = await getTronContractAt(hre.artifacts, "Oracle", oracleAddr, network.name);
+            info = await oracle.isProposer(chain, taskArgs.address).call();
         } else {
             const Oracle = await hre.ethers.getContractFactory("Oracle");
             let oracle = Oracle.attach(oracleAddr);
-            info = await oracle.lightNodeInfo(chain);
+            info = await oracle.isProposer(chain, taskArgs.address);
         }
-        console.log(`node ${chain} ${info.lightNode} quorum: ${info.quorum}, proposers: ${info.proposerCount}`);
+        console.log(`node ${chain} proposer: ${taskArgs.address}: ${info}`);
     });

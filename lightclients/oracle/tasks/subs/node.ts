@@ -1,7 +1,7 @@
 import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 // import { DeployFunction } from "hardhat-deploy/types";
-import {create, readFromFile, writeToFile, verify, zksyncDeploy} from "../../utils/helper";
+import { create, readFromFile, writeToFile, verify, zksyncDeploy } from "../../utils/helper";
 let { deploy_contract, getTronContractAt, getDeployerAddress, toETHAddress } = require("../../utils/tron.js");
 
 task("node:deploy", "deploy oracle light node")
@@ -14,6 +14,8 @@ task("node:deploy", "deploy oracle light node")
         const { deployments, network } = hre;
         const { deploy } = deployments;
         let [wallet] = await hre.ethers.getSigners();
+
+        console.log("deployer: ", wallet.address);
 
         let salt = taskArgs.salt;
         let mpt = taskArgs.mpt;
@@ -36,15 +38,9 @@ task("node:deploy", "deploy oracle light node")
                 mpt,
                 taskArgs.nodeType,
             ]);
-            let proxy_deploy = await deploy_contract(
-                hre.artifacts,
-                "LightNodeProxy",
-                [impl, impl_param],
-                network.name
-            );
+            let proxy_deploy = await deploy_contract(hre.artifacts, "LightNodeProxy", [impl, impl_param], network.name);
             node = proxy_deploy[0];
-        }
-        else if (network.config.chainId === 324 || network.config.chainId === 280) {
+        } else if (hre.network.zksync === true) {
             if (mpt === undefined || mpt === "") {
                 mpt = await zksyncDeploy("MPTVerify", [], hre);
             }
@@ -58,11 +54,7 @@ task("node:deploy", "deploy oracle light node")
                 mpt,
                 taskArgs.nodeType,
             ]);
-            let proxy_deploy = await zksyncDeploy(
-                "LightNodeProxy",
-                [impl, impl_param],
-                hre
-            );
+            let proxy_deploy = await zksyncDeploy("LightNodeProxy", [impl, impl_param], hre);
             node = proxy_deploy;
         } else {
             console.log("wallet address is:", wallet.address);
@@ -181,13 +173,17 @@ task("node:upgrade", "deploy oracle light node")
             console.log("new impl :", await lightNode.getImplementation().call());
         } else {
             if (impl === "impl") {
-                let l = await deploy("LightNode", {
-                    from: wallet.address,
-                    args: [],
-                    log: true,
-                    contract: "LightNode",
-                });
-                impl = l.address;
+                if (hre.network.zksync === true) {
+                    impl = await zksyncDeploy("LightNode", [], hre);
+                } else {
+                    let l = await deploy("LightNode", {
+                        from: wallet.address,
+                        args: [],
+                        log: true,
+                        contract: "LightNode",
+                    });
+                    impl = l.address;
+                }
             }
             const LightNode = await hre.ethers.getContractFactory("LightNode");
             let proxy = LightNode.attach(node);
@@ -318,7 +314,7 @@ task("node:setOracle", "set oracle address")
             let old_oracle = await proxy.oracle();
             console.log("old oracle address is :", old_oracle);
 
-            await (await proxy.setOracle(oracle, {gasLimit: 300000})).wait();
+            await (await proxy.setOracle(oracle)).wait();
             let new_oracle = await proxy.oracle();
             console.log("new oracle address is :", new_oracle);
         }
