@@ -93,7 +93,53 @@ module.exports = {
       url: `https://rpc.sepolia.org`,
       chainId : 11155111,
       accounts: accounts
-    }
+    },
+    Optimism: {
+      url: `https://mainnet.optimism.io`,
+      chainId : 10,
+      accounts: accounts,
+    },
+    Arbitrum: {
+      url: `https://arb1.arbitrum.io/rpc`,
+      chainId : 42161,
+      accounts: accounts,
+    },
+    Linea: {
+      url: `https://rpc.linea.build`,
+      chainId : 59144,
+      accounts: accounts,
+    },
+    Scroll: {
+      url: `https://rpc.scroll.io`,
+      chainId : 534352,
+      accounts: accounts,
+    },
+    Mantle: {
+      url: `https://rpc.mantle.xyz`,
+      chainId : 5000,
+      accounts: accounts,
+    },
+    Blast: {
+      url: `https://rpc.blast.io`,
+      chainId : 81457,
+      accounts: accounts,
+    },
+    Base: {
+      url: `https://mainnet.base.org`,
+      chainId: 8453,
+      accounts: accounts,
+    },
+    Conflux: {
+      url: `https://evm.confluxrpc.com`,
+      chainId: 1030,
+      accounts: accounts,
+    },
+    Merlin: {
+      url: `https://rpc.merlinchain.io/`,
+      chainId: 4200,
+      gasPrice: 50000000,
+      accounts: accounts,
+    },
   },
   solidity: {
     compilers: [

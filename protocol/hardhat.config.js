@@ -87,9 +87,8 @@ module.exports = {
       accounts: accounts
     },
     Sepolia: {
-      url: `https://sepolia.drpc.org`,
+      url: `https://eth-sepolia.public.blastapi.io`,
       chainId: 11155111,
-      gasPrice: 50000000000,
       accounts: accounts
     },
     ArbitrumSepolia: {

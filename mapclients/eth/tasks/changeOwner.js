@@ -7,13 +7,11 @@ module.exports = async (taskArgs, hre) => {
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
-    // let LightNodeProxy = await deployments.get("LightNodeProxy");
-
     let proxy = await ethers.getContractAt("LightNode", taskArgs.node);
-    console.log("light node proxy:", proxy.address);
-    console.log("light node admin:", await proxy.getAdmin());
 
-    await (await proxy.connect(deployer).setVerifyTool(taskArgs.tool)).wait();
+    console.log("pre admin:", await proxy.connect(deployer).getAdmin());
 
-    console.log(`LightNode setVerifyTool is : ${taskArgs.tool} `);
+    await (await proxy.connect(deployer).setPendingAdmin(taskArgs.owner)).wait();
+
+    console.log(`LightNode set pending admin : ${taskArgs.owner} `);
 };
