@@ -149,8 +149,10 @@ contract VerifyTool is IVerifyTool {
     }
 
     function decodeTxReceipt(bytes memory _receiptRlp) external pure override returns (bytes memory logHash) {
-        RLPReader.RLPItem[] memory ls = _receiptRlp.toRlpItem().toList();
-        logHash = RLPReader.toRlpBytes(ls[3]);
+        // RLPReader.RLPItem[] memory ls = _receiptRlp.toRlpItem().toList();
+        // logHash = RLPReader.toRlpBytes(ls[3]);
+
+        return _receiptRlp.toRlpItem().safeGetItemByIndex(3).toRlpBytes();
     }
 
     function verifyHeader(

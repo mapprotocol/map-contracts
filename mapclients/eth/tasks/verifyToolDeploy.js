@@ -35,7 +35,8 @@ module.exports = async (taskArgs, hre) => {
     } else {
         console.log("verifyTool salt:", taskArgs.salt);
         let VerifyTool = await ethers.getContractFactory("VerifyTool");
-        let createResult = await create(taskArgs.salt, VerifyTool.bytecode, "");
+        let params = ethers.utils.defaultAbiCoder.encode([], []);
+        let createResult = await create(taskArgs.salt, VerifyTool.bytecode, params);
         if (!createResult[1]) {
             return;
         }

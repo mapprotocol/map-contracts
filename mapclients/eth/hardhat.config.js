@@ -89,9 +89,9 @@ module.exports = {
       chainId: 1,
       accounts: accounts,
     },
-    Goerli: {
-      url: `https://goerli.infura.io/v3/` + INFURA_KEY,
-      chainId: 5,
+    Sepolia: {
+      url: `https://sepolia.drpc.org`,
+      chainId: 11155111,
       accounts: accounts,
     },
 
@@ -131,8 +131,9 @@ module.exports = {
     },
 
     Merlin: {
-      url: `https://rpc.merlinchain.io`,
-      chainId : 4200,
+      url: `https://rpc.merlinchain.io/`,
+      chainId: 4200,
+      gasPrice: 50000000,
       accounts: accounts,
     },
 
@@ -172,7 +173,7 @@ module.exports = {
     },
 
     Arbitrum: {
-      url: `https://1rpc.io/arb`,
+      url: `https://arb1.arbitrum.io/rpc`,
       chainId: 42161,
       accounts: accounts,
     },

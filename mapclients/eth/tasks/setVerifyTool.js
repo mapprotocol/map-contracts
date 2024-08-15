@@ -7,9 +7,9 @@ module.exports = async (taskArgs, hre) => {
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
-    let LightNodeProxy = await deployments.get("LightNodeProxy");
+    // let LightNodeProxy = await deployments.get("LightNodeProxy");
 
-    let proxy = await ethers.getContractAt("LightNode", LightNodeProxy.address);
+    let proxy = await ethers.getContractAt("LightNode", taskArgs.node);
 
     await (await proxy.connect(deployer).setVerifyTool(taskArgs.tool)).wait();
 

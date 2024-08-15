@@ -15,7 +15,7 @@ async function create(salt, bytecode, param) {
     console.log("deploy factory address:", factory.address);
     console.log("deploy salt:", salt);
     let addr = await factory.getAddress(salt_hash);
-    console.log("deployed to :", addr);
+    console.log(`deploy to ${addr} ...`);
 
     let code = await ethers.provider.getCode(addr);
     let redeploy = false;

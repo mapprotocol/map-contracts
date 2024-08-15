@@ -135,8 +135,9 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     ) external override returns (bool success, string memory message, bytes memory logsHash) {
         ReceiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProof));
 
-        if (cachedReceiptRoot[_receiptProof.header.number] != bytes32("")) {
-            return _verifyMptProof(cachedReceiptRoot[_receiptProof.header.number], _receiptProof);
+        bytes32 receiptRoot = cachedReceiptRoot[_receiptProof.header.number];
+        if (receiptRoot != bytes32("")) {
+            return _verifyMptProof(receiptRoot, _receiptProof);
         } else {
             (success, message, logsHash) = _verifyProofData(_receiptProof);
             if (success) {
@@ -174,19 +175,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function verifiableHeaderRange() public view override returns (uint256, uint256) {
-        uint256 start;
-        if (headerHeight > maxEpochs * epochSize) {
-            start = headerHeight - (maxEpochs * epochSize);
-        }
-
-        if (startHeight > 0 && startHeight > start) {
-            start = startHeight;
-        }
-        return (start, headerHeight + epochSize);
+        return _verifiableHeaderRange(startHeight, headerHeight, maxEpochs, epochSize);
     }
 
     function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool) {
-        (uint256 start, uint256 end) = verifiableHeaderRange();
+        (uint256 start, uint256 end) = _verifiableHeaderRange(startHeight, headerHeight, maxEpochs, epochSize);
         return start <= _blockHeight && _blockHeight <= end;
     }
 
@@ -195,6 +188,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     /** internal *********************************************************/
+
+
 
     function setStateInternal(
         uint256 _threshold,
@@ -265,11 +260,22 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
     /** internal view *********************************************************/
 
+    function _verifiableHeaderRange(uint256 _startHeight, uint256 _headerHeight, uint256 _maxEpoch, uint256 _epochSize) internal pure returns (uint256, uint256) {
+        uint256 start;
+        if (_headerHeight > _maxEpoch * _epochSize) {
+            start = _headerHeight - (_maxEpoch * _epochSize);
+        }
+
+        if (_startHeight > 0 && _startHeight > start) {
+            start = _startHeight;
+        }
+        return (start, _headerHeight + _epochSize);
+    }
+
     function _verifyMptProof(
         bytes32 receiptHash,
         ReceiptProof memory _receiptProof
     ) internal view returns (bool success, string memory message, bytes memory logsHash) {
-        logsHash = verifyTool.decodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
         (success, message) = verifyTool.getVerifyTrieProof(
             receiptHash,
             _receiptProof.keyIndex,
@@ -281,12 +287,13 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             message = "Mpt verification failed";
             return (success, message, "");
         }
+        logsHash = verifyTool.decodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
     }
 
     function _verifyProofData(
         ReceiptProof memory _receiptProof
     ) internal view returns (bool success, string memory message, bytes memory logsHash) {
-        (uint256 min, uint256 max) = verifiableHeaderRange();
+        (uint256 min, uint256 max) = _verifiableHeaderRange(startHeight, headerHeight, maxEpochs, epochSize);
         uint256 height = _receiptProof.header.number;
         if (height <= min || height >= max) {
             message = "Out of verify range";
@@ -393,10 +400,11 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function _getEpochByNumber(uint256 blockNumber) internal view returns (uint256) {
-        if (blockNumber % epochSize == 0) {
-            return blockNumber / epochSize;
+        uint256 epochLen = epochSize;
+        if (blockNumber % epochLen == 0) {
+            return blockNumber / epochLen;
         }
-        return blockNumber / epochSize + 1;
+        return blockNumber / epochLen + 1;
     }
 
     /** UUPS *********************************************************/

@@ -71,6 +71,8 @@ module.exports = async (taskArgs, hre) => {
             let verifyTool = await deployments.get("VerifyTool");
             verifier = verifyTool.address;
 
+            console.log("verify tool address:", verifier);
+
             await verify(verifier, [], "contracts/VerifyTool.sol:VerifyTool", chainId, true);
         }
     }
