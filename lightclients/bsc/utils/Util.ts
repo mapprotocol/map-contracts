@@ -37,7 +37,11 @@ export class BlockHeader {
     public extraData: string;
     public mixHash?: string;
     public nonce?: string;
-
+    public baseFeePerGas?:BigNumber;
+    public withdrawalsRoot?:string;
+    public blobGasUsed?:BigNumber;
+    public excessBlobGas?:BigNumber;
+    public parentBeaconBlockRoot?:string
     constructor(
         parentHash: string,
         sha3Uncles: string,
@@ -53,7 +57,12 @@ export class BlockHeader {
         timestamp: BigNumber,
         extraData: string,
         mixHash: string,
-        nonce: string
+        nonce: string,
+        baseFeePerGas:BigNumber,
+        withdrawalsRoot:string,
+        blobGasUsed:BigNumber,
+        excessBlobGas:BigNumber,
+        parentBeaconBlockRoot:string,
     ) {
         this.parentHash = parentHash;
         this.sha3Uncles = sha3Uncles;
@@ -68,6 +77,11 @@ export class BlockHeader {
         this.extraData = extraData;
         this.mixHash = mixHash;
         this.nonce = nonce;
+        this.baseFeePerGas = baseFeePerGas;
+        this.withdrawalsRoot = withdrawalsRoot;
+        this.blobGasUsed = blobGasUsed;
+        this.excessBlobGas = excessBlobGas;
+        this.parentBeaconBlockRoot = parentBeaconBlockRoot;
     }
 }
 // struct TxLog {
@@ -164,6 +178,14 @@ export async function getBlock(blockNumber: number, provider: JsonRpcProvider) {
 
     let rpcHeader = await provider.perform("getBlock", params);
 
+    // console.log("rpcHeader ===",rpcHeader)
+
+    let baseFeePerGas = rpcHeader.baseFeePerGas ? BigNumber.from(rpcHeader.baseFeePerGas) : BigNumber.from("0");
+    let withdrawalsRoot = rpcHeader.withdrawalsRoot ? rpcHeader.withdrawalsRoot : "0x4d70e34eec6489ea53ae44cd64ef1f4071d7cd3b62d368b57362313d64baae9e";
+    let blobGasUsed = rpcHeader.blobGasUsed ? BigNumber.from(rpcHeader.blobGasUsed) : BigNumber.from("0");
+    let excessBlobGas = rpcHeader.excessBlobGas ? BigNumber.from(rpcHeader.excessBlobGas) : BigNumber.from("0");
+    let parentBeaconBlockRoot = rpcHeader.parentBeaconBlockRoot ? rpcHeader.parentBeaconBlockRoot : "0x4d70e34eec6489ea53ae44cd64ef1f4071d7cd3b62d368b57362313d64baae9e";
+
     let blockHeader = new BlockHeader(
         rpcHeader.parentHash,
         rpcHeader.sha3Uncles,
@@ -179,8 +201,14 @@ export async function getBlock(blockNumber: number, provider: JsonRpcProvider) {
         BigNumber.from(rpcHeader.timestamp),
         rpcHeader.extraData,
         rpcHeader.mixHash,
-        rpcHeader.nonce
+        rpcHeader.nonce,
+        baseFeePerGas,
+        withdrawalsRoot,
+        blobGasUsed,
+        excessBlobGas,
+        parentBeaconBlockRoot
     );
+    // console.log("blockHeader ===",blockHeader)
 
     return blockHeader;
 }
