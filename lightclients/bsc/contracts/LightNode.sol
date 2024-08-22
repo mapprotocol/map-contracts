@@ -200,7 +200,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         Verify.BlockHeader[] memory _blockHeaders,
         uint256 _min
     ) internal view returns (bool, string memory) {
-        address[] memory miners = new address[](_blockHeaders.length);
+        // address[] memory miners = new address[](_blockHeaders.length);
 
         uint256 start = _blockHeaders[0].number;
 
@@ -250,14 +250,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             if (!Verify._verifyHeaderSignature(_blockHeaders[i], chainId)) {
                 return (false, "invalid Signature");
             }
-
-            if (i > 0) {
-                if (_isRepeat(miners, _blockHeaders[i].miner, i)) {
-                    return (false, "miner repeat");
-                }
-            }
-
-            miners[i] = _blockHeaders[i].miner;
+            // if (i > 0) {
+            //     if (_isRepeat(miners, _blockHeaders[i].miner, i)) {
+            //         return (false, "miner repeat");
+            //     }
+            // }
+            // miners[i] = _blockHeaders[i].miner;
         }
 
         return (true, "");
