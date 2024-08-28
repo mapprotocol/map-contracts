@@ -22,7 +22,7 @@ module.exports = {
   defaultNetwork: 'hardhat',
   abiExporter: {
     path: './abi',
-    only: [":ILight*", ":*MPT*", ":RLP*", ":*Deploy*"],
+    only: [":ILight*", ":*MPT*", ":*RLP*", ":*Deploy*"],
     clear: false,
     flat: true,
   },

@@ -16,12 +16,12 @@ contract LightClientManager is ILightClientManager, Initializable, UUPSUpgradeab
     event LightClientRegister(uint256 indexed chainId, address indexed client);
 
     modifier checkAddress(address _address) {
-        require(_address != address(0), "address is zero");
+        require(_address != address(0), "manager: address is zero");
         _;
     }
 
     modifier onlyOwner() {
-        require(msg.sender == _getAdmin(), " only owner");
+        require(msg.sender == _getAdmin(), "manager: only owner");
         _;
     }
 
@@ -35,21 +35,21 @@ contract LightClientManager is ILightClientManager, Initializable, UUPSUpgradeab
     }
 
     function updateBlockHeader(uint256 _chainId, bytes memory _blockHeader) external override {
-        require(lightClientContract[_chainId] != address(0), "not register");
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         lightNode.updateBlockHeader(_blockHeader);
     }
 
     function updateLightClient(uint256 _chainId, bytes memory _data) external override {
-        require(lightClientContract[_chainId] != address(0), "not register");
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         lightNode.updateLightClient(_data);
     }
 
     function notifyLightClient(uint256 _chainId, address _from, bytes memory _data) external override {
-        require(lightClientContract[_chainId] != address(0), "not register");
-        ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
-        lightNode.notifyLightClient(_from, _data);
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
+        // ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
+        // lightNode.notifyLightClient(_from, _data);
 
         emit ManagerNotifySend(_chainId, _from, block.number, _data);
     }
@@ -58,7 +58,7 @@ contract LightClientManager is ILightClientManager, Initializable, UUPSUpgradeab
         uint256 _chainId,
         bytes memory _receiptProof
     ) external override returns (bool success, string memory message, bytes memory logs) {
-        require(lightClientContract[_chainId] != address(0), "not register");
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.verifyProofDataWithCache(_receiptProof);
     }
@@ -67,46 +67,46 @@ contract LightClientManager is ILightClientManager, Initializable, UUPSUpgradeab
         uint256 _chainId,
         bytes memory _receiptProof
     ) external view override returns (bool success, string memory message, bytes memory logs) {
-        require(lightClientContract[_chainId] != address(0), "not register");
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.verifyProofData(_receiptProof);
     }
 
     function clientState(uint256 _chainId) external view override returns (bytes memory) {
-        require(lightClientContract[_chainId] != address(0), "not register");
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
 
         return lightNode.clientState();
     }
 
     function headerHeight(uint256 _chainId) external view override returns (uint256) {
-        require(lightClientContract[_chainId] != address(0), "not register");
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
 
         return lightNode.headerHeight();
     }
 
     function verifiableHeaderRange(uint256 _chainId) external view override returns (uint256, uint256) {
-        require(lightClientContract[_chainId] != address(0), "not register");
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         (uint256 min, uint256 max) = lightNode.verifiableHeaderRange();
         return (min, max);
     }
 
     function finalizedState(uint256 _chainId, bytes memory _data) external view override returns (bytes memory) {
-        require(lightClientContract[_chainId] != address(0), "not register");
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.finalizedState(_data);
     }
 
     function isVerifiable(uint256 _chainId, uint256 _blockHeight, bytes32 _hash) external view override returns (bool) {
-        require(lightClientContract[_chainId] != address(0), "not register");
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.isVerifiable(_blockHeight, _hash);
     }
 
     function nodeType(uint256 _chainId) external view override returns (uint256) {
-        require(lightClientContract[_chainId] != address(0), "not register");
+        require(lightClientContract[_chainId] != address(0), "manager: not register");
         ILightNode lightNode = ILightNode(lightClientContract[_chainId]);
         return lightNode.nodeType();
     }
