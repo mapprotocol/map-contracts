@@ -181,10 +181,10 @@ export async function getBlock(blockNumber: number, provider: JsonRpcProvider) {
     // console.log("rpcHeader ===",rpcHeader)
 
     let baseFeePerGas = rpcHeader.baseFeePerGas ? BigNumber.from(rpcHeader.baseFeePerGas) : BigNumber.from("0");
-    let withdrawalsRoot = rpcHeader.withdrawalsRoot ? rpcHeader.withdrawalsRoot : "0x4d70e34eec6489ea53ae44cd64ef1f4071d7cd3b62d368b57362313d64baae9e";
+    let withdrawalsRoot = rpcHeader.withdrawalsRoot ? rpcHeader.withdrawalsRoot : "0x0000000000000000000000000000000000000000000000000000000000000001";
     let blobGasUsed = rpcHeader.blobGasUsed ? BigNumber.from(rpcHeader.blobGasUsed) : BigNumber.from("0");
     let excessBlobGas = rpcHeader.excessBlobGas ? BigNumber.from(rpcHeader.excessBlobGas) : BigNumber.from("0");
-    let parentBeaconBlockRoot = rpcHeader.parentBeaconBlockRoot ? rpcHeader.parentBeaconBlockRoot : "0x4d70e34eec6489ea53ae44cd64ef1f4071d7cd3b62d368b57362313d64baae9e";
+    let parentBeaconBlockRoot = rpcHeader.parentBeaconBlockRoot ? rpcHeader.parentBeaconBlockRoot : "0x0000000000000000000000000000000000000000000000000000000000000001";
 
     let blockHeader = new BlockHeader(
         rpcHeader.parentHash,
