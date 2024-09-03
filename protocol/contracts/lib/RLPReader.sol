@@ -286,6 +286,53 @@ library RLPReader {
         return result;
     }
 
+    function toBytes32(RLPItem memory item) internal pure returns (bytes32) {
+        // one byte prefix
+        require(item.len == 33, "item is not bytes32");
+
+        bytes32 result;
+        uint256 memPtr = item.memPtr + 1;
+        assembly {
+            result := mload(memPtr)
+        }
+
+        return result;
+    }
+
+    /*
+     * @dev A cheaper version of toRlpBytes(item) that avoids copying memory.
+     *      This will destroy the original data.
+     * @return RLP encoded bytes.
+     */
+    function unsafeToRlpBytes(RLPItem memory item) internal pure returns (bytes memory result) {
+        if (item.len == 0) return result;
+
+        uint256 len = item.len;
+        uint256 memPtr = item.memPtr;
+
+        assembly {
+            result := sub(memPtr, 0x20)
+            mstore(result, len)
+        }
+        return result;
+    }
+
+    /*
+     * @dev A cheaper version of toBytes(item) that avoids copying memory.
+     *      This will destroy the original data.
+     * @return RLP encoded bytes.
+     */
+    function unsafeToBytes(RLPItem memory item) internal pure returns (bytes memory result) {
+        if (item.len == 0) return result;
+
+        (uint256 memPtr, uint256 len) = payloadLocation(item);
+        assembly {
+            result := sub(memPtr, 0x20)
+            mstore(result, len)
+        }
+        return result;
+    }
+
     /*
      * Private Helpers
      */
