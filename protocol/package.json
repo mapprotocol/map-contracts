@@ -1,6 +1,6 @@
 {
   "name": "@mapprotocol/protocol",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "MAP Protocol management and utils contracts",
   "files": [
     "abi",
