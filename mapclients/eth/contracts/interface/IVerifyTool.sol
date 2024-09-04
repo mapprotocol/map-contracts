@@ -79,11 +79,7 @@ interface IVerifyTool {
 
     function manageAgg(
         istanbulExtra memory ist
-    ) external pure returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes);
-
-    function encodeTxLog(txLog[] memory _txLogs) external view returns (bytes memory output);
-
-    function decodeTxLog(bytes memory logsHash) external view returns (txLog[] memory _txLogs);
+    ) external view returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes);
 
     function decodeTxReceipt(bytes memory receiptRlp) external pure returns (bytes memory logHash);
 
