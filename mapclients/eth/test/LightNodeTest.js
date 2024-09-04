@@ -107,7 +107,8 @@ describe("LightNode start test", function () {
             _weights,
             _epoch,
             _epochSize,
-            verifyToolContractAddress
+            verifyToolContractAddress,
+            owner.address
         );
         datInit = data.data;
     });
@@ -236,7 +237,8 @@ describe("LightNode start test", function () {
             _weights,
             _epoch,
             _epochSize,
-            verifyToolContractAddress
+            verifyToolContractAddress,
+            owner.address
         );
 
         await lightClientDelete.updateBlockHeader(proofs.header217000, proofs.ist217000, proofs.aggpk217000);

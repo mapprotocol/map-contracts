@@ -3,8 +3,8 @@
 pragma solidity 0.8.20;
 
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
-import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
 import "@mapprotocol/protocol/contracts/lib/MPT.sol";
+import "@mapprotocol/protocol/contracts/lib/LibRLP.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./interface/IVerifyTool.sol";
 
@@ -13,9 +13,6 @@ contract VerifyTool is IVerifyTool {
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
     using RLPReader for RLPReader.Iterator;
-
-    uint8 constant STRING_SHORT_START = 0x80;
-    uint8 constant STRING_SHORT_ARRAY_START = 0xc3;
 
     function getVerifyTrieProof(
         bytes32 _receiptHash,
@@ -57,96 +54,119 @@ contract VerifyTool is IVerifyTool {
         blockHeader memory _bh,
         bytes memory _deleteAggBytes,
         bytes memory _deleteSealAndAggBytes
-    ) external pure override returns (bytes memory deleteAggHeaderBytes, bytes memory deleteSealAndAggHeaderBytes) {
-        bytes[] memory list = new bytes[](14);
-        list[0] = RLPEncode.encodeBytes(_bh.parentHash);
-        list[1] = RLPEncode.encodeAddress(_bh.coinbase);
-        list[2] = RLPEncode.encodeBytes(_bh.root);
-        list[3] = RLPEncode.encodeBytes(_bh.txHash);
-        list[4] = RLPEncode.encodeBytes(_bh.receiptHash);
-        list[5] = RLPEncode.encodeBytes(_bh.bloom);
-        list[6] = RLPEncode.encodeUint(_bh.number);
-        list[7] = RLPEncode.encodeUint(_bh.gasLimit);
-        list[8] = RLPEncode.encodeUint(_bh.gasUsed);
-        list[9] = RLPEncode.encodeUint(_bh.time);
-        list[10] = RLPEncode.encodeBytes(_deleteAggBytes);
-        list[11] = RLPEncode.encodeBytes(_bh.mixDigest);
-        list[12] = RLPEncode.encodeBytes(_bh.nonce);
-        list[13] = RLPEncode.encodeUint(_bh.baseFee);
-        deleteAggHeaderBytes = RLPEncode.encodeList(list);
-        list[10] = RLPEncode.encodeBytes(_deleteSealAndAggBytes);
-        deleteSealAndAggHeaderBytes = RLPEncode.encodeList(list);
+    ) external view returns (bytes memory deleteAggHeaderBytes, bytes memory deleteSealAndAggHeaderBytes) {
+        LibRLP.List memory list = LibRLP.l();
+        LibRLP.p(list,_bh.parentHash);
+        LibRLP.p(list,_bh.coinbase);
+        LibRLP.p(list,_bh.root);
+        LibRLP.p(list,_bh.txHash);
+        LibRLP.p(list,_bh.receiptHash);
+        LibRLP.p(list,_bh.bloom);
+        LibRLP.p(list,_bh.number);
+        LibRLP.p(list,_bh.gasLimit);
+        LibRLP.p(list,_bh.gasUsed);
+        LibRLP.p(list,_bh.time);
+        LibRLP.p(list,_deleteAggBytes);
+        LibRLP.p(list,_bh.mixDigest);
+        LibRLP.p(list,_bh.nonce);
+        LibRLP.p(list,_bh.baseFee);
+        deleteAggHeaderBytes = LibRLP.encode(list);
+
+        deleteSealAndAggHeaderBytes = _getDeleteSealAndAggHeaderBytes(_bh,_deleteSealAndAggBytes);
     }
 
-    function manageAgg(
-        istanbulExtra memory ist
-    ) external pure override returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes) {
-        bytes[] memory list1 = new bytes[](ist.validators.length);
-        bytes[] memory list2 = new bytes[](ist.addedPubKey.length);
-        bytes[] memory list3 = new bytes[](ist.addedG1PubKey.length);
+    function _getDeleteSealAndAggHeaderBytes(blockHeader memory _bh,bytes memory _deleteSealAndAggBytes)
+    internal
+    view
+    returns (bytes memory deleteSealAndAggHeaderBytes)
+    {
+        LibRLP.List memory list = LibRLP.l();
+        LibRLP.p(list,_bh.parentHash);
+        LibRLP.p(list,_bh.coinbase);
+        LibRLP.p(list,_bh.root);
+        LibRLP.p(list,_bh.txHash);
+        LibRLP.p(list,_bh.receiptHash);
+        LibRLP.p(list,_bh.bloom);
+        LibRLP.p(list,_bh.number);
+        LibRLP.p(list,_bh.gasLimit);
+        LibRLP.p(list,_bh.gasUsed);
+        LibRLP.p(list,_bh.time);
+        LibRLP.p(list,_deleteSealAndAggBytes);
+        LibRLP.p(list,_bh.mixDigest);
+        LibRLP.p(list,_bh.nonce);
+        LibRLP.p(list,_bh.baseFee);
+        deleteSealAndAggHeaderBytes = LibRLP.encode(list);
+    }
+
+    function manageAgg(istanbulExtra memory ist)
+    external
+    view
+    returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes)
+    {
+        LibRLP.List memory list1 = LibRLP.l();
+        LibRLP.List memory list2 = LibRLP.l();
+        LibRLP.List memory list3 = LibRLP.l();
+
         for (uint256 i = 0; i < ist.validators.length; i++) {
-            list1[i] = RLPEncode.encodeAddress(ist.validators[i]);
+            LibRLP.p(list1,ist.validators[i]);
         }
         for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
-            list2[i] = RLPEncode.encodeBytes(ist.addedPubKey[i]);
+            LibRLP.p(list2,ist.addedPubKey[i]);
         }
         for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
-            list3[i] = RLPEncode.encodeBytes(ist.addedG1PubKey[i]);
+            LibRLP.p(list3,ist.addedG1PubKey[i]);
         }
-        bytes[] memory manageList = new bytes[](7);
-        manageList[0] = RLPEncode.encodeList(list1);
-        manageList[1] = RLPEncode.encodeList(list2);
-        manageList[2] = RLPEncode.encodeList(list3);
-        manageList[3] = RLPEncode.encodeUint(ist.removeList);
-        manageList[4] = RLPEncode.encodeBytes(ist.seal);
-        manageList[5] = new bytes(4);
-        manageList[5][0] = bytes1(STRING_SHORT_ARRAY_START);
-        manageList[5][1] = bytes1(STRING_SHORT_START);
-        manageList[5][2] = bytes1(STRING_SHORT_START);
-        manageList[5][3] = bytes1(STRING_SHORT_START);
-        manageList[6] = encodeAggregatedSeal(
-            ist.parentAggregatedSeal.bitmap,
-            ist.parentAggregatedSeal.signature,
-            ist.parentAggregatedSeal.round
-        );
-        deleteAggBytes = RLPEncode.encodeList(manageList);
 
-        manageList[4] = new bytes(1);
-        manageList[4][0] = bytes1(STRING_SHORT_START);
+        LibRLP.List memory manageList = LibRLP.l();
+        LibRLP.p(manageList,list1);
+        LibRLP.p(manageList,list2);
+        LibRLP.p(manageList,list3);
+        LibRLP.p(manageList,ist.removeList);
+        LibRLP.p(manageList,ist.seal);
+        LibRLP.List memory list5 = LibRLP.l();
+        LibRLP.p(list5,bytes(""));
+        LibRLP.p(list5,bytes(""));
+        LibRLP.p(list5,bytes(""));
+        LibRLP.p(manageList,list5);
+        LibRLP.List memory list6 = LibRLP.l();
+        LibRLP.p(manageList,encodeAggregatedSeal(ist.parentAggregatedSeal.bitmap,ist.parentAggregatedSeal.signature,ist.parentAggregatedSeal.round));
+        deleteAggBytes = LibRLP.encode(manageList);
 
-        deleteSealAndAggBytes = RLPEncode.encodeList(manageList);
+        deleteSealAndAggBytes = getDeleteSealAndAggBytes(ist);
+
     }
 
-    function encodeTxLog(txLog[] memory _txLogs) external pure override returns (bytes memory output) {
-        bytes[] memory listLog = new bytes[](_txLogs.length);
-        bytes[] memory loglist = new bytes[](3);
-        for (uint256 j = 0; j < _txLogs.length; j++) {
-            loglist[0] = RLPEncode.encodeAddress(_txLogs[j].addr);
-            bytes[] memory loglist1 = new bytes[](_txLogs[j].topics.length);
-            for (uint256 i = 0; i < _txLogs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(_txLogs[j].topics[i]);
-            }
-            loglist[1] = RLPEncode.encodeList(loglist1);
-            loglist[2] = RLPEncode.encodeBytes(_txLogs[j].data);
-            bytes memory logBytes = RLPEncode.encodeList(loglist);
-            listLog[j] = logBytes;
+
+    function getDeleteSealAndAggBytes(istanbulExtra memory ist) internal view returns(bytes memory deleteSealAndAggBytes){
+        LibRLP.List memory list1 = LibRLP.l();
+        LibRLP.List memory list2 = LibRLP.l();
+        LibRLP.List memory list3 = LibRLP.l();
+
+        for (uint256 i = 0; i < ist.validators.length; i++) {
+            LibRLP.p(list1,ist.validators[i]);
         }
-        output = RLPEncode.encodeList(listLog);
+        for (uint256 i = 0; i < ist.addedPubKey.length; i++) {
+            LibRLP.p(list2,ist.addedPubKey[i]);
+        }
+        for (uint256 i = 0; i < ist.addedG1PubKey.length; i++) {
+            LibRLP.p(list3,ist.addedG1PubKey[i]);
+        }
+
+        LibRLP.List memory manageList = LibRLP.l();
+        LibRLP.p(manageList,list1);
+        LibRLP.p(manageList,list2);
+        LibRLP.p(manageList,list3);
+        LibRLP.p(manageList,ist.removeList);
+        LibRLP.p(manageList,bytes(""));
+        LibRLP.List memory list5 = LibRLP.l();
+        LibRLP.p(list5,bytes(""));
+        LibRLP.p(list5,bytes(""));
+        LibRLP.p(list5,bytes(""));
+        LibRLP.p(manageList,list5);
+        LibRLP.p(manageList,encodeAggregatedSeal(ist.parentAggregatedSeal.bitmap,ist.parentAggregatedSeal.signature,ist.parentAggregatedSeal.round));
+        deleteSealAndAggBytes = LibRLP.encode(manageList);
     }
 
-    function decodeTxLog(bytes memory logsHash) external pure override returns (txLog[] memory _txLogs) {
-        RLPReader.RLPItem[] memory ls = logsHash.toRlpItem().toList();
-        _txLogs = new txLog[](ls.length);
-        for (uint256 i = 0; i < ls.length; i++) {
-            RLPReader.RLPItem[] memory item = ls[i].toList();
-            RLPReader.RLPItem[] memory firstItemList = item[1].toList();
-            bytes[] memory topic = new bytes[](firstItemList.length);
-            for (uint256 j = 0; j < firstItemList.length; j++) {
-                topic[j] = firstItemList[j].toBytes();
-            }
-            _txLogs[i] = txLog({addr: item[0].toAddress(), topics: topic, data: item[2].toBytes()});
-        }
-    }
 
     function decodeTxReceipt(bytes memory _receiptRlp) external pure override returns (bytes memory logHash) {
         // RLPReader.RLPItem[] memory ls = _receiptRlp.toRlpItem().toList();
@@ -192,18 +212,17 @@ contract VerifyTool is IVerifyTool {
         uint256 bitmap,
         bytes memory signature,
         uint256 round
-    ) internal pure returns (bytes memory output) {
-        bytes memory output1 = RLPEncode.encodeUint(bitmap);
-        bytes memory output2 = RLPEncode.encodeBytes(signature);
-        bytes memory output3 = RLPEncode.encodeUint(round);
-        bytes[] memory list = new bytes[](3);
-        list[0] = output1;
-        list[1] = output2;
-        list[2] = output3;
-        output = RLPEncode.encodeList(list);
+    ) internal pure returns (LibRLP.List memory list) {
+        LibRLP.p(list,bitmap);
+        LibRLP.p(list,signature);
+        LibRLP.p(list,round);
     }
 
-    function verifySign(bytes memory seal, bytes32 hash, address coinbase) internal pure returns (bool) {
+    function verifySign(
+        bytes memory seal,
+        bytes32 hash,
+        address coinbase
+    ) internal pure returns (bool) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(seal);
         if (v <= 1) {
             v = v + 27;
