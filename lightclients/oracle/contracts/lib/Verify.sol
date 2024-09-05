@@ -30,6 +30,9 @@ library Verify {
             expectedValue = abi.encodePacked(bytes1(uint8(_receipt.receiptType)), expectedValue);
         }
         success = MPT.verify(expectedValue, _receipt.keyIndex, _receipt.proof, _receiptsRoot);
-        if (success) logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).toRlpBytes(); // list length must be 4
+        if (success)
+        {
+            logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).unsafeToRlpBytes();
+        }
     }
 }

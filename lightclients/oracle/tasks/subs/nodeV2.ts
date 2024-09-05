@@ -177,14 +177,19 @@ task("nodeV2:upgrade", "deploy oracle light node")
             console.log("new impl :", await lightNode.getImplementation().call());
         } else {
             if (impl === "impl") {
-                let l = await deploy("LightNodeV2", {
-                    from: wallet.address,
-                    args: [],
-                    log: true,
-                    contract: "LightNodeV2",
-                });
-                impl = l.address;
+                if (network.config.chainId === 324 || network.config.chainId === 280) {
+                    impl = await zksyncDeploy("LightNodeV2", [], hre);
+                } else {
+                    let l = await deploy("LightNodeV2", {
+                        from: wallet.address,
+                        args: [],
+                        log: true,
+                        contract: "LightNodeV2",
+                    });
+                    impl = l.address;
+                }
             }
+
             const LightNode = await hre.ethers.getContractFactory("LightNodeV2");
             let proxy = LightNode.attach(node);
             console.log("old impl :", await proxy.getImplementation());
