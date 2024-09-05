@@ -287,7 +287,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             message = "Mpt verification failed";
             return (success, message, "");
         }
-        logsHash = verifyTool.decodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
+        logsHash = verifyTool.unsafeDecodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
     }
 
     function _verifyProofData(

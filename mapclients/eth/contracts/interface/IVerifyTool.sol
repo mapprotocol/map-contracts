@@ -83,6 +83,8 @@ interface IVerifyTool {
 
     function decodeTxReceipt(bytes memory receiptRlp) external pure returns (bytes memory logHash);
 
+    function unsafeDecodeTxReceipt(bytes memory _receiptRlp) external pure returns (bytes memory logHash);
+
     function verifyHeader(
         address _coinbase,
         bytes memory _seal,
