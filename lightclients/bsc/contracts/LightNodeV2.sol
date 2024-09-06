@@ -11,8 +11,6 @@ import { Helper } from "./lib/Helper.sol";
 import {
     BlockHeader,
     ReceiptProof,
-    TxReceipt,
-    TxLog,
     VoteData,
     VoteAttestation,
     UpdateHeader,

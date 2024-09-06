@@ -8,17 +8,15 @@ import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 import {
     BlockHeader,
     ReceiptProof,
-    TxReceipt,
-    TxLog,
     VoteData,
     VoteAttestation,
     UpdateHeader
 } from "./Types.sol";
 
-import { BLS } from "./bls/BLS.sol";
+import { BLS, Bytes } from "./bls/BLS.sol";
 
 library Helper { 
-
+    using Bytes for bytes;
     using RLPReader for bytes;
     using RLPReader for uint256;
     using RLPReader for RLPReader.RLPItem;
@@ -43,10 +41,11 @@ library Helper {
         ReceiptProof memory _receipt,
         address _mptVerify
     ) internal pure returns (bool success, bytes memory logs) {
-        bytes memory bytesReceipt = _encodeReceipt(_receipt.txReceipt);
+
+        bytes memory bytesReceipt = _receipt.txReceipt;
         bytes memory expectedValue = bytesReceipt;
-        if (_receipt.txReceipt.receiptType > 0) {
-            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.txReceipt.receiptType)), bytesReceipt);
+        if (_receipt.receiptType > 0) {
+            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.receiptType)), expectedValue);
         }
 
         success = IMPTVerify(_mptVerify).verifyTrieProof(
@@ -84,34 +83,31 @@ library Helper {
         uint256 len = _BLSPublicKeys.length;
         require(len != 0, "empty BLSPublicKeys");
         uint64 voteAddressSet = _vote.VoteAddressSet;
-        uint64 mask = 1;
-        uint256 count;
-        for (uint256 i = 0; i < len; i++) {
-            if((voteAddressSet & mask) != 0){
-                count ++;
-            }
-            mask << 1;
-        }
-        uint256 threshold = _BLSPublicKeys.length * 2 / 3;
+
+        bytes[] memory uncompressPublicKeys = _vote.uncompressPublicKeys;
+        uint256 count = uncompressPublicKeys.length;
+        uint256 total = _BLSPublicKeys.length;
+        uint256 threshold = total * 2 / 3;
         require(count >= threshold,"not enough voted");
-        bytes[] memory sigedKeys = new bytes[](count);
-        mask = 1;
+        uint64 mask = 1;
         uint256 index;
-        for (uint256 i = 0; i < count; i++) {
+        for (uint256 i = 0; i < total; i++) {
+             
             if((voteAddressSet & mask) != 0){
-                sigedKeys[index] = _BLSPublicKeys[i];
+                bytes memory compress = BLS.g1_compress(uncompressPublicKeys[index]);
+                require(compress.equals(_BLSPublicKeys[i]),"invalid uncompressPublicKey");
                 index ++;
             }
-            mask << 1;
+            mask = mask << 1;
         }
+        require(count == index, "uncompressPublicKeys number does not match");
         bytes32 voteDataRlpHash = _getVoteDataRlpHash(_vote.Data);
-        _fastAggregateVerify(sigedKeys, _vote.Signature, voteDataRlpHash);
+        
+        _fastAggregateVerify(uncompressPublicKeys, _vote.Signature, voteDataRlpHash);
     }
 
 
     function _fastAggregateVerify(bytes[] memory _BLSPublicKeys, bytes memory _signature, bytes32 _voteDataRlpHash) internal view {
-        // todo _BLSPublicKeys -> uncompress
-        // todo _signature -> uncompress
         BLS.fast_aggregate_verify(_BLSPublicKeys, _voteDataRlpHash, _signature);
     }
 
@@ -123,30 +119,6 @@ library Helper {
         _list[2] = RLPEncode.encodeUint(_data.TargetNumber);
         _list[3] = RLPEncode.encodeBytes(_toBytes(_data.TargetHash));
         return keccak256(RLPEncode.encodeList(_list));
-    }
-
-
-    function _encodeReceipt(TxReceipt memory _txReceipt) internal pure returns (bytes memory output) {
-        bytes[] memory list = new bytes[](4);
-        list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
-        list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
-        list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
-        bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
-        bytes[] memory loglist = new bytes[](3);
-        for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
-            loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
-
-            for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
-            }
-            loglist[1] = RLPEncode.encodeList(loglist1);
-            loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
-            bytes memory logBytes = RLPEncode.encodeList(loglist);
-            listLog[j] = logBytes;
-        }
-        list[3] = RLPEncode.encodeList(listLog);
-        output = RLPEncode.encodeList(list);
     }
 
     function _getBlockHash(BlockHeader memory _header) internal pure returns (bytes32) {

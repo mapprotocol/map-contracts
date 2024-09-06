@@ -26,24 +26,25 @@ pragma solidity 0.8.17;
     }
 
     struct ReceiptProof {
-        TxReceipt txReceipt;
+        bytes txReceipt;
+        uint256 receiptType;
         bytes keyIndex;
         bytes[] proof;
     }
 
-    struct TxReceipt {
-        uint256 receiptType;
-        bytes postStateOrStatus;
-        uint256 cumulativeGasUsed;
-        bytes bloom;
-        TxLog[] logs;
-    }
+    // struct TxReceipt {
+    //     uint256 receiptType;
+    //     bytes postStateOrStatus;
+    //     uint256 cumulativeGasUsed;
+    //     bytes bloom;
+    //     TxLog[] logs;
+    // }
 
-    struct TxLog {
-        address addr;
-        bytes[] topics;
-        bytes data;
-    }
+    // struct TxLog {
+    //     address addr;
+    //     bytes[] topics;
+    //     bytes data;
+    // }
 
     struct VoteData  {
         uint256  SourceNumber;  // The source block number should be the latest justified block number.
@@ -53,7 +54,8 @@ pragma solidity 0.8.17;
     }
     struct VoteAttestation  {
         uint64    VoteAddressSet; // The bitset marks the voted validators.
-        bytes     Signature;     // The aggregated BLS signature of the voted validators' signatures.
+        bytes[]   uncompressPublicKeys; 
+        bytes     Signature;     // The aggregated BLS signature of the voted validators' signatures. -> uncompress
         VoteData  Data;          // The vote data for fast finality.   
     }
 
