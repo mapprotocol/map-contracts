@@ -13,8 +13,8 @@ Read [this](https://github.com/mapprotocol/map-contracts/blob/main/protocol/cont
 ### MPT verifier
 The contract deployed on the MAP Relay Chain is responsible for MPT proof verify.
 Deployed address: 
- - MAPO mainnet: `0x4b1EE84A72b44B78346e069D1c66509940827E22`
- - Makalu testnet: `0x4b1EE84A72b44B78346e069D1c66509940827E22`
+ - MAPO mainnet: `0x81D26E2387059CF43ADA1c11c12D5d6627184fA1`
+ - Makalu testnet: `0x81D26E2387059CF43ADA1c11c12D5d6627184fA1`
 
 ```solidity
 interface IMPTVerify {

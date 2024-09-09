@@ -7,21 +7,31 @@ module.exports = async (taskArgs, hre) => {
 
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
-    let factory = await ethers.getContractAt("IDeployFactory", taskArgs.factory);
+    let mptAddress;
+    if (taskArgs.salt === "") {
+        await deploy("MPTVerify", {
+            from: deployer.address,
+            args: [],
+            log: true,
+            contract: "MPTVerify",
+            deterministicDeployment: false,
+        });
 
-    console.log("deploy factory address:", factory.address);
+        let verifier = await ethers.getContract("MPTVerify");
+        mptAddress = verifier.address;
+    } else {
+        let factory = await ethers.getContractAt("IDeployFactory", taskArgs.factory);
+        console.log("deploy factory address:", factory.address);
+        console.log("mpt salt:", taskArgs.salt);
 
-    console.log("mpt salt:", taskArgs.salt);
+        let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(taskArgs.salt));
+        let mpt = await ethers.getContractFactory("MPTVerify");
+        let deployData = mpt.bytecode;
 
-    let hash = await ethers.utils.keccak256(await ethers.utils.toUtf8Bytes(taskArgs.salt));
+        await (await factory.connect(deployer).deploy(hash, deployData, 0)).wait();
 
-    let mpt = await ethers.getContractFactory("MPTVerify");
-
-    let deployData = mpt.bytecode;
-
-    await (await factory.connect(deployer).deploy(hash, deployData, 0)).wait();
-
-    let mptAddress = await factory.connect(deployer).getAddress(hash);
+        mptAddress = await factory.connect(deployer).getAddress(hash);
+    }
 
     console.log("deployed mpt address:", mptAddress);
 };
