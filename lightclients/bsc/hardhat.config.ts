@@ -21,6 +21,10 @@ const config: HardhatUserConfig ={
     deployer: 0,
   },
   networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true
+    },
+
     makalu: {
       chainId: 212,
       url:"https://testnet-rpc.maplabs.io",

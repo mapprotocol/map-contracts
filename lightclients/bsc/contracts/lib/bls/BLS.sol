@@ -50,6 +50,10 @@ library BLS {
         return bls_pairing_check(agg_key, msg_point, sign_point);
     }
 
+    function g1_compress(bytes memory uncompressed_pubkey) internal pure returns (bytes memory r) {
+          return  G1.serialize(G1.deserialize(uncompressed_pubkey));
+    }
+
     // e(PK, H) * e(-G1, S) == 1
     function bls_pairing_check(G1Point memory pk, G2Point memory h, G2Point memory s) internal view returns (bool) {
         G1Point memory ng1 = G1.negativeP1();
