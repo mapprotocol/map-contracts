@@ -21,29 +21,27 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     using Helper for BlockHeader;
 
     uint256 internal constant EPOCH_NUM = 200;
-    uint256 internal constant MAX_SAVED_EPOCH_NUM = 12960;
     uint256 internal constant ADDRESS_LENGTH = 20;
+    uint256 internal constant MAX_SAVED_EPOCH_NUM = 12960;
 
     address public mptVerify;
     uint256 public chainId;
     uint256 public minValidBlocknum;
-    uint256 internal _lastSyncedBlock;
-    address private _pendingAdmin;
 
-    mapping(uint256 => bytes[]) public BLSPublicKeys;
+    address private _pendingAdmin;
+    uint256 private _lastSyncedBlock;
+    mapping(uint256 => bytes) private BLSPublicKeys;
     mapping(uint256 => bytes32) private cachedReceiptRoot;
 
-    event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event SetMptVerify(address newMptVerify);
-
     event AdminTransferred(address indexed previous, address indexed newAdmin);
+    event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
 
     modifier onlyOwner() {
         require(msg.sender == _getAdmin(), "lightnode :: only admin");
         _;
     }
     
-
     constructor() {}
 
     function initialize(
@@ -102,14 +100,10 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         bytes memory _receiptProof
     ) external override returns (bool success, string memory message, bytes memory logs) {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
-        uint256 headerLen = proof.updateHeader.headers.length;
-        uint256 verifyBlockNum = proof.updateHeader.headers[headerLen - 1].number;
+        uint256 verifyBlockNum = proof.updateHeader.headers[0].number;
         bytes32 receiptRoot = cachedReceiptRoot[verifyBlockNum];
-        if (cachedReceiptRoot[verifyBlockNum] != bytes32("")) {
-            (success, logs) = Helper._validateProof(receiptRoot, proof.receiptProof, mptVerify);
-            if (!success) {
-                message = "mpt verification failed";
-            }
+        if (receiptRoot != bytes32("")) {
+            (success, message, logs) = _verifyProofData(proof.receiptProof, receiptRoot);
         } else {
             BlockHeader memory header = _checkUpdateHeader(proof.updateHeader);
             (success, message, logs) = _verifyProofData(proof.receiptProof, header.receiptsRoot);
@@ -122,31 +116,26 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         bytes32 root
     ) private view returns (bool success, string memory message, bytes memory logs) { 
         (success, logs) = Helper._validateProof(root, receiptProof, mptVerify);
-        if (!success) {
-            message = "mpt verification failed";
-        }
+        if (!success) message = "mpt verification failed";
     }
 
 
     function _checkUpdateHeader(UpdateHeader memory _updateHeader) internal view returns(BlockHeader memory header){
         BlockHeader[] memory headers = _updateHeader.headers;
-        uint256 headerLen = headers.length;
-        header = headers[headerLen - 1];
+        header = headers[0];
         Helper._checkUpdateHeader(_updateHeader);
         VoteAttestation[2] memory voteAttestations = _updateHeader.voteAttestations;
         for (uint i = 0; i < 2; i++) {
-            bytes[] memory _BLSPublicKeys = _getBLSPublicKeysByNumber(voteAttestations[i].Data.TargetNumber);
+            bytes memory _BLSPublicKeys = getBLSPublicKeysByNumber(voteAttestations[i].Data.TargetNumber);
             Helper._verifyVoteAttestation(voteAttestations[i], _BLSPublicKeys);
         }
     }
 
     function _initBlock(BlockHeader[2] calldata _headers) internal {
         require(_lastSyncedBlock == 0, "already init");
-
         require(_headers[0].number + EPOCH_NUM == _headers[1].number);
-
+        require(_headers[0].number % EPOCH_NUM == 0, "invalid init block number");
         for (uint256 i = 0; i < 2; i++) {
-            require(_headers[i].number % EPOCH_NUM == 0, "invalid init block number");
             uint256 index = _headers[i].number / EPOCH_NUM;
             BLSPublicKeys[index] = Helper._getBLSPublicKey(_headers[i].extraData);
         }
@@ -154,7 +143,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         _lastSyncedBlock = _headers[1].number;
     }
 
-    function _getBLSPublicKeysByNumber(uint256 _blockNum) internal view returns(bytes[] memory){
+    function getBLSPublicKeysByNumber(uint256 _blockNum) public view returns(bytes memory){
         uint256 index = (_blockNum / EPOCH_NUM) - 1;
         return BLSPublicKeys[index];
     }

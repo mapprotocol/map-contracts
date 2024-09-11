@@ -64,10 +64,6 @@ library FP {
         return abi.encodePacked(uint128(x.a), x.b);
     }
 
-    // function deserialize(bytes memory xf) internal pure returns (Fp memory x) {
-    //     x = Fp(xf.slice_to_uint(0, 16), xf.slice_to_uint(16, 48));
-    // }
-
     function norm(Fp memory base) internal view returns (Fp memory) {
         uint[8] memory input;
         input[0] = 0x40;

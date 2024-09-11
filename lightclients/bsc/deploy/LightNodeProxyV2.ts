@@ -14,7 +14,9 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     const { deployer } = await getNamedAccounts();
 
-    let mPTVerify = await deployments.get("MPTVerify");
+    // let mPTVerify = await deployments.get("MPTVerify");
+
+    let mpt_addr = "0x81D26E2387059CF43ADA1c11c12D5d6627184fA1";
 
     let lightNode = await deployments.get("LightNodeV2");
 
@@ -44,7 +46,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     let initData = LightNode.interface.encodeFunctionData("initialize", [
         chainId,
         deployer,
-        mPTVerify.address,
+        mpt_addr,
         initHeaders,
     ]);
 

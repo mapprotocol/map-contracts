@@ -3,7 +3,7 @@
 pragma solidity 0.8.17;
 
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
-import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
+import "@mapprotocol/protocol/contracts/lib/LibRLP.sol";
 import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
 import {
     BlockHeader,
@@ -13,9 +13,10 @@ import {
     UpdateHeader
 } from "./Types.sol";
 
-import { BLS, Bytes } from "./bls/BLS.sol";
+import { BLS, Bytes, Memory } from "./bls/BLS.sol";
 
 library Helper { 
+    using Memory for bytes32;
     using Bytes for bytes;
     using RLPReader for bytes;
     using RLPReader for uint256;
@@ -54,8 +55,7 @@ library Helper {
             _receipt.proof,
             expectedValue
         );
-
-        if (success) logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
+        if (success) logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).unsafeToRlpBytes(); // list length must be 4
     }
 
 
@@ -64,38 +64,37 @@ library Helper {
         BlockHeader[] memory headers = _updateHeader.headers;
         uint256 len = headers.length;
         for (uint i = 0; i < len; i++) {
-            if(i != 0){
+            if(i != 0) {
                 require(headers[i].parentHash == hash,"invalid parent hash");
             }
             hash = _getBlockHash(headers[i]);
         }
         VoteAttestation[2] memory votes = _updateHeader.voteAttestations;
         require(
-            votes[0].Data.SourceNumber < votes[0].Data.TargetNumber &&
-            votes[1].Data.SourceNumber < votes[1].Data.TargetNumber &&
-            votes[0].Data.TargetNumber == votes[1].Data.SourceNumber,
-            "invalid VoteAttestation"
+                votes[0].Data.SourceNumber < votes[0].Data.TargetNumber &&
+                votes[1].Data.SourceNumber < votes[1].Data.TargetNumber &&
+                votes[0].Data.TargetNumber == votes[1].Data.SourceNumber,
+                "invalid VoteAttestation"
             );
-        require(hash == votes[0].Data.SourceHash || hash == votes[0].Data.TargetHash,"invalid headers");
+        require(hash == votes[0].Data.SourceHash || hash == votes[0].Data.TargetHash, "invalid headers");
     }
 
-    function _verifyVoteAttestation(VoteAttestation memory _vote, bytes[] memory _BLSPublicKeys) internal view {
-        uint256 len = _BLSPublicKeys.length;
+    function _verifyVoteAttestation(VoteAttestation memory _vote, bytes memory _BLSPublicKeys) internal view {
+        uint256 len = _getBLSPublicKeyCount(_BLSPublicKeys);
         require(len != 0, "empty BLSPublicKeys");
         uint64 voteAddressSet = _vote.VoteAddressSet;
 
         bytes[] memory uncompressPublicKeys = _vote.uncompressPublicKeys;
         uint256 count = uncompressPublicKeys.length;
-        uint256 total = _BLSPublicKeys.length;
-        uint256 threshold = total * 2 / 3;
-        require(count >= threshold,"not enough voted");
+        uint256 threshold = len * 2 / 3;
+        require(count >= threshold, "not enough voted");
         uint64 mask = 1;
         uint256 index;
-        for (uint256 i = 0; i < total; i++) {
+        for (uint256 i = 0; i < len; i++) {
              
             if((voteAddressSet & mask) != 0){
-                bytes memory compress = BLS.g1_compress(uncompressPublicKeys[index]);
-                require(compress.equals(_BLSPublicKeys[i]),"invalid uncompressPublicKey");
+                bytes memory compressed = BLS.g1_compress(uncompressPublicKeys[index]);
+                require(compressed.equals(_getBLSPublicKeyByIndex(_BLSPublicKeys, i)), "invalid uncompressPublicKey");
                 index ++;
             }
             mask = mask << 1;
@@ -108,49 +107,44 @@ library Helper {
 
 
     function _fastAggregateVerify(bytes[] memory _BLSPublicKeys, bytes memory _signature, bytes32 _voteDataRlpHash) internal view {
-        BLS.fast_aggregate_verify(_BLSPublicKeys, _voteDataRlpHash, _signature);
+        require(BLS.fast_aggregate_verify(_BLSPublicKeys, _voteDataRlpHash, _signature), "bls pairing failed");
     }
 
 
     function _getVoteDataRlpHash(VoteData memory _data) internal pure returns(bytes32) {
-        bytes[] memory _list  = new bytes[](4);
-        _list[0] = RLPEncode.encodeUint(_data.SourceNumber);
-        _list[1] = RLPEncode.encodeBytes(_toBytes(_data.SourceHash));
-        _list[2] = RLPEncode.encodeUint(_data.TargetNumber);
-        _list[3] = RLPEncode.encodeBytes(_toBytes(_data.TargetHash));
-        return keccak256(RLPEncode.encodeList(_list));
+        LibRLP.List memory list = LibRLP.l();
+        LibRLP.p(list, _data.SourceNumber);
+        LibRLP.p(list, _data.SourceHash.toBytes());
+        LibRLP.p(list, _data.TargetNumber);
+        LibRLP.p(list, _data.TargetHash.toBytes());
+        return keccak256(LibRLP.encode(list));
     }
 
     function _getBlockHash(BlockHeader memory _header) internal pure returns (bytes32) {
-        bytes[] memory _list;
-        if(_header.parentBeaconBlockRoot == nilParentBeaconBlockRoot){
-           _list = new bytes[](19);
-        } else {
-           _list = new bytes[](20);
+        LibRLP.List memory list = LibRLP.l();
+        LibRLP.p(list, _header.parentHash.toBytes());
+        LibRLP.p(list, _header.sha3Uncles.toBytes());
+        LibRLP.p(list, _header.miner);
+        LibRLP.p(list, _header.stateRoot.toBytes());
+        LibRLP.p(list, _header.transactionsRoot.toBytes());
+        LibRLP.p(list, _header.receiptsRoot.toBytes());
+        LibRLP.p(list, _header.logsBloom);
+        LibRLP.p(list, _header.difficulty);
+        LibRLP.p(list, _header.number);
+        LibRLP.p(list, _header.gasLimit);
+        LibRLP.p(list, _header.gasUsed);
+        LibRLP.p(list, _header.timestamp);
+        LibRLP.p(list, _header.extraData);
+        LibRLP.p(list, _header.mixHash.toBytes());
+        LibRLP.p(list, _header.nonce);
+        LibRLP.p(list, _header.baseFeePerGas);
+        LibRLP.p(list, _header.withdrawalsRoot.toBytes());
+        LibRLP.p(list, _header.blobGasUsed);
+        LibRLP.p(list, _header.excessBlobGas);
+        if( _header.parentBeaconBlockRoot != nilParentBeaconBlockRoot ) {
+            LibRLP.p(list, _header.parentBeaconBlockRoot.toBytes());
         }
-        _list[0] = RLPEncode.encodeBytes(_toBytes(_header.parentHash));
-        _list[1] = RLPEncode.encodeBytes(_toBytes(_header.sha3Uncles));
-        _list[2] = RLPEncode.encodeAddress(_header.miner);
-        _list[3] = RLPEncode.encodeBytes(_toBytes(_header.stateRoot));
-        _list[4] = RLPEncode.encodeBytes(_toBytes(_header.transactionsRoot));
-        _list[5] = RLPEncode.encodeBytes(_toBytes(_header.receiptsRoot));
-        _list[6] = RLPEncode.encodeBytes(_header.logsBloom);
-        _list[7] = RLPEncode.encodeUint(_header.difficulty);
-        _list[8] = RLPEncode.encodeUint(_header.number);
-        _list[9] = RLPEncode.encodeUint(_header.gasLimit);
-        _list[10] = RLPEncode.encodeUint(_header.gasUsed);
-        _list[11] = RLPEncode.encodeUint(_header.timestamp);
-        _list[12] = RLPEncode.encodeBytes(_header.extraData);
-        _list[13] = RLPEncode.encodeBytes(_toBytes(_header.mixHash));
-        _list[14] = RLPEncode.encodeBytes(_header.nonce);
-        _list[15] = RLPEncode.encodeUint(_header.baseFeePerGas);
-        _list[16] = RLPEncode.encodeBytes(_toBytes(_header.withdrawalsRoot));
-        _list[17] = RLPEncode.encodeUint(_header.blobGasUsed);
-        _list[18] = RLPEncode.encodeUint(_header.excessBlobGas);
-        if( _list.length != 19 ) {
-            _list[19] = RLPEncode.encodeBytes(_toBytes(_header.parentBeaconBlockRoot));
-        }
-        return keccak256(RLPEncode.encodeList(_list));
+        return keccak256(LibRLP.encode(list));
     }
 
 
@@ -160,11 +154,11 @@ library Helper {
     // Before luban fork: |---Extra Vanity---|---Validators Bytes (or Empty)---|---Extra Seal---|
     // After luban fork:  |---Extra Vanity---|---Validators Number and Validators Bytes (or Empty)---|---Vote Attestation (or Empty)---|---Extra Seal---|
     // After bohr fork:   |---Extra Vanity---|---Validators Number and Validators Bytes (or Empty)---|---Turn Length (or Empty)---|---Vote Attestation (or Empty)---|---Extra Seal---|
-    function _getBLSPublicKey(bytes memory _extraData) internal pure returns (bytes[] memory res) {
+    function _getBLSPublicKey(bytes memory _extraData) internal pure returns (bytes memory res) {
         // 1 byte for validators num
         uint256 prefix = EXTRA_VANITY + EXTRASEAL + 1;
         uint256 keyLenght = ADDRESS_LENGTH + BLS_PUBLICKEY_LENGTH;
-        require(_extraData.length > prefix, "invalid _extraData length");
+        require(_extraData.length > prefix, "invalid extraData length");
         uint256 num;
         uint256 point;
         assembly {
@@ -173,44 +167,21 @@ library Helper {
             // 1 byte for validators num
             num := shr(248, mload(point))
         }
-        require(_extraData.length >= (prefix + keyLenght * num), "invalid _extraData length");
-        res = new bytes[](num);
+        require(_extraData.length >= (prefix + keyLenght * num), "invalid extraData length");
         point += 1;
         for (uint i = 0; i < num; i++) {
-          point += ADDRESS_LENGTH;
-          res[i] = _memoryToBytes(point,BLS_PUBLICKEY_LENGTH);  
-          point += BLS_PUBLICKEY_LENGTH;
+            point += ADDRESS_LENGTH;
+            res = res.concat(Memory.toBytes(point, BLS_PUBLICKEY_LENGTH));  
+            point += BLS_PUBLICKEY_LENGTH;
         }
     }
 
-    function _memoryToBytes(uint _ptr, uint _length) internal pure returns (bytes memory res) {
-        if (_length != 0) {
-            assembly {
-                // 0x40 is the address of free memory pointer.
-                res := mload(0x40)
-                let end := add(
-                    res,
-                    and(add(_length, 63), 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0)
-                )
-                // end = res + 32 + 32 * ceil(length / 32).
-                mstore(0x40, end)
-                mstore(res, _length)
-                let destPtr := add(res, 32)
-                // prettier-ignore
-                for { } 1 { } {
-                    mstore(destPtr, mload(_ptr))
-                    destPtr := add(destPtr, 32)
-                    if eq(destPtr, end) {
-                        break
-                    }
-                    _ptr := add(_ptr, 32)
-                }
-            }
-        }
+    function _getBLSPublicKeyCount(bytes memory _keys) internal pure returns (uint256 res) {
+        res = _keys.length / BLS_PUBLICKEY_LENGTH;
     }
 
-    function _toBytes(bytes32 _b) internal pure returns(bytes memory) {
-         return abi.encodePacked(_b);
+    function _getBLSPublicKeyByIndex(bytes memory _keys, uint256 _index) internal pure returns (bytes memory res) {
+        res = _keys.substr((_index * BLS_PUBLICKEY_LENGTH), BLS_PUBLICKEY_LENGTH);
     }
 
 }
