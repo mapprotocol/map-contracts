@@ -15,8 +15,7 @@ interface IVerifyTool {
         uint256 gasLimit;
         uint256 gasUsed;
         uint256 time;
-        //extraData: Expand the information field to store information suchas committee member changes and voting.
-        bytes extraData;
+        bytes extraData; // Expand the field to store information such as committee member changes and voting
         bytes mixDigest;
         bytes nonce;
         uint256 baseFee;

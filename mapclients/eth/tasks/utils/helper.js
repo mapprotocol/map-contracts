@@ -1,7 +1,7 @@
 let fs = require("fs");
 let path = require("path");
-const {Wallet} = require("zksync-web3");
-const {Deployer} = require("@matterlabs/hardhat-zksync-deploy");
+const { Wallet } = require("zksync-web3");
+const { Deployer } = require("@matterlabs/hardhat-zksync-deploy");
 
 DEPLOY_FACTORY = "0x6258e4d2950757A749a4d4683A7342261ce12471";
 let IDeployFactory_abi = [
@@ -46,5 +46,5 @@ async function zkDeploy(contractName, args, hre) {
 
 module.exports = {
     create,
-    zkDeploy
+    zkDeploy,
 };

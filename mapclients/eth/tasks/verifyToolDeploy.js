@@ -1,4 +1,4 @@
-const {zkDeploy, create} = require("./utils/helper");
+const { zkDeploy, create } = require("./utils/helper");
 
 let { verify } = require("./utils/verify.js");
 
@@ -8,7 +8,7 @@ let IDeployFactory_abi = [
 ];
 
 module.exports = async (taskArgs, hre) => {
-    const {deploy} = hre.deployments;
+    const { deploy } = hre.deployments;
     const accounts = await ethers.getSigners();
     const deployer = accounts[0];
 
@@ -16,13 +16,12 @@ module.exports = async (taskArgs, hre) => {
 
     let chainId = hre.network.config.chainId;
 
-
     let verifierAddr;
 
     if (chainId === 324 || chainId === 280) {
         // zksync mainnet or testnet
         verifierAddr = await zkDeploy("VerifyTool", [], hre);
-    } else if (taskArgs.salt === "")  {
+    } else if (taskArgs.salt === "") {
         await deploy("VerifyTool", {
             from: deployer.address,
             args: [],

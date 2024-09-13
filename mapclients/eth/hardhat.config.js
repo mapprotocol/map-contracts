@@ -54,7 +54,7 @@ module.exports = {
       accounts: accounts,
     },
     Matic: {
-      url: `https://rpc-mainnet.maticvigil.com`,
+      url: `https://polygon-mainnet.public.blastapi.io`,
       chainId: 137,
       accounts: accounts,
     },
@@ -211,7 +211,7 @@ module.exports = {
       accounts: accounts,
     },
     Scroll: {
-      url: `https://rpc.scroll.io`,
+      url: `https://1rpc.io/scroll`,
       chainId: 534352,
       accounts: accounts,
     },

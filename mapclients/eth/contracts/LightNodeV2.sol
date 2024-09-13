@@ -14,8 +14,8 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     uint256 public maxEpochs; // max epoch number
     uint256 public epochSize; // every epoch block number
 
-    uint256 public startHeight;     // init epoch start block number
-    uint256 public headerHeight;    // last update block number
+    uint256 public startHeight; // init epoch start block number
+    uint256 public headerHeight; // last update block number
     IVerifyTool public verifyTool;
     // address[] public validatorAddress;
     //Epoch[] public epochs;
@@ -41,7 +41,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     struct Epoch {
         uint256 epoch;
         uint256 threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
-        uint256[2] aggKey;  // agg G1 key, not used now
+        uint256[2] aggKey; // agg G1 key, not used now
         bytes32 pairKeyHash; // <-- validators, pubkey G1,   (s, s * g2)   s * g1
         uint256[] weights; // voting power, not used now
     }
@@ -106,12 +106,12 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         //Epoch memory v;
         //v.epoch = epochs[id].epoch;
         //epochs[id].epoch = epoch;
-        require(keccak256(abi.encode(pairKeys)) == epochs[id].pairKeyHash,"pair key hash error");
+        require(keccak256(abi.encode(pairKeys)) == epochs[id].pairKeyHash, "pair key hash error");
 
         bool success = _verifyHeaderSig(epochs[id], pairKeys, bh, ist, aggPk);
         require(success, "CheckSig error");
 
-        _updateValidators(epochs[id],pairKeys,ist);
+        _updateValidators(epochs[id], pairKeys, ist);
 
         emit UpdateBlockHeader(msg.sender, bh.number);
     }
@@ -175,18 +175,18 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
 
     /** internal *********************************************************/
 
-    function setStateInternal(
-        uint256 _threshold,
-        uint256[] memory _pairKeys,
-        uint256 _epoch
-    ) internal {
+    function setStateInternal(uint256 _threshold, uint256[] memory _pairKeys, uint256 _epoch) internal {
         uint256 id = _getEpochId(_epoch);
         epochs[id].threshold = _threshold;
         epochs[id].epoch = _epoch;
         epochs[id].pairKeyHash = keccak256(abi.encode(_pairKeys));
     }
 
-    function _updateValidators(Epoch memory _preEpoch, uint256[] memory _pairKeys, IVerifyTool.istanbulExtra memory _ist) internal {
+    function _updateValidators(
+        Epoch memory _preEpoch,
+        uint256[] memory _pairKeys,
+        IVerifyTool.istanbulExtra memory _ist
+    ) internal {
         bytes memory bits = abi.encodePacked(_ist.removeList);
 
         uint256 epoch = _preEpoch.epoch + 1;
@@ -238,7 +238,12 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
 
     /** internal view *********************************************************/
 
-    function _verifiableHeaderRange(uint256 _startHeight, uint256 _headerHeight, uint256 _maxEpoch, uint256 _epochSize) internal pure returns (uint256, uint256) {
+    function _verifiableHeaderRange(
+        uint256 _startHeight,
+        uint256 _headerHeight,
+        uint256 _maxEpoch,
+        uint256 _epochSize
+    ) internal pure returns (uint256, uint256) {
         uint256 start;
         if (_headerHeight > _maxEpoch * _epochSize) {
             start = _headerHeight - (_maxEpoch * _epochSize);
@@ -286,12 +291,18 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         uint256 epoch = _getEpochByNumber(height);
         uint256 id = _getEpochId(epoch);
         //Epoch memory v = epochs[id];
-//        Epoch memory v;
-        if(keccak256(abi.encode(_receiptProof.pairKeys)) != epochs[id].pairKeyHash){
-            return (false,message,bytes("pair key hash error"));
+        //        Epoch memory v;
+        if (keccak256(abi.encode(_receiptProof.pairKeys)) != epochs[id].pairKeyHash) {
+            return (false, message, bytes("pair key hash error"));
         }
 
-        success = _verifyHeaderSig(epochs[id], _receiptProof.pairKeys,_receiptProof.header, _receiptProof.ist, _receiptProof.aggPk);
+        success = _verifyHeaderSig(
+            epochs[id],
+            _receiptProof.pairKeys,
+            _receiptProof.header,
+            _receiptProof.ist,
+            _receiptProof.aggPk
+        );
         if (!success) {
             message = "VerifyHeaderSig failed";
             return (success, message, logsHash);

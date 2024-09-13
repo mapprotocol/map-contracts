@@ -26,7 +26,6 @@ module.exports = async function ({ ethers, deployments }) {
 
     await (await lightNodeProxy.upgradeTo(lightNode.address)).wait();
 
-
     let verifyAddr = await lightNodeProxy.verifyTool();
     console.log("pre verify tool addr", verifyAddr);
 

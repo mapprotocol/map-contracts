@@ -162,10 +162,7 @@ library BGLS {
         return uint256(uint8(b[31 - x / 8])) & (uint256(1) << (x % 8)) != 0;
     }
 
-    function sumPoints(
-        uint256[] memory points,
-        bytes memory indices
-    ) internal view returns (G1 memory, uint256) {
+    function sumPoints(uint256[] memory points, bytes memory indices) internal view returns (G1 memory, uint256) {
         G1 memory acc = G1(0, 0);
         uint256 weight = 0;
         uint256 pointLen = points.length / 2;
@@ -231,7 +228,11 @@ library BGLS {
     //        return res;
     //    }
 
-    function checkSignature(bytes memory message, bytes memory sigBytes, G2 memory aggKey) internal view returns (bool) {
+    function checkSignature(
+        bytes memory message,
+        bytes memory sigBytes,
+        G2 memory aggKey
+    ) internal view returns (bool) {
         G1 memory sig = decodeG1(sigBytes);
         G2 memory g2 = G2(g2xr, g2xi, g2yr, g2yi);
         return pairingCheck(sig, g2, hashToG1(message), aggKey);

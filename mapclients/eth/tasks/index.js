@@ -13,7 +13,7 @@ task("lightNodeDeploy", "Write initialization data required by LightNode", requi
 
 task("lightNodeUpgrade", "Write initialization data required by LightNode", require("./lightNodeUpgrade"))
     .addOptionalParam("node", "light node address", "0x0001805c0b57dbd48b5c5c26e237a135ddc678ae", types.string)
-    .addOptionalParam("impl", "verify tool address", "", types.string)
+    .addOptionalParam("impl", "verify tool address", "", types.string);
 
 task("verifyToolDeploy", "Write initialization data required by LightNode", require("./verifyToolDeploy"))
     .addOptionalParam("salt", "deploy contract salt", VERIFYTOOL_SALT, types.string)

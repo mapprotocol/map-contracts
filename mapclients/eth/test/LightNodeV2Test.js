@@ -84,19 +84,18 @@ describe("LightNode start test", function () {
         ];
 
         //g1List = [g0, g1, g2, g3, g4];
-        g1List =
-            [
-                "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
-                "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
-                "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
-                "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
-                "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
-                "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
-                "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
-                "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
-                "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
-                "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"
-            ];
+        g1List = [
+            "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
+            "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
+            "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
+            "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
+            "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
+            "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
+            "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
+            "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
+            "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
+            "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
+        ];
 
         let addresss = [
             "0x053af2b1ccbacba47c659b977e93571c89c49654",
@@ -134,7 +133,7 @@ describe("LightNode start test", function () {
     });
 
     it("updateBlockHeader and verifyProofData", async function () {
-        await proxy.updateBlockHeader(proofs.header203000, proofs.ist203000, proofs.aggpk203000,g1List);
+        await proxy.updateBlockHeader(proofs.header203000, proofs.ist203000, proofs.aggpk203000, g1List);
         // console.log(await proxy.newPairKeys(0))
         // console.log(await proxy.newPairKeys(2))
         // console.log(await proxy.newPairKeys(4))
@@ -148,17 +147,17 @@ describe("LightNode start test", function () {
             "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
             "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
             "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
-            "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37"
-        ]
-        await proxy.updateBlockHeader(proofs.header204000, proofs.ist204000, proofs.aggpk204000,g1List);
-        await proxy.updateBlockHeader(proofs.header205000, proofs.ist205000, proofs.aggpk205000,g1List);
+            "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
+        ];
+        await proxy.updateBlockHeader(proofs.header204000, proofs.ist204000, proofs.aggpk204000, g1List);
+        await proxy.updateBlockHeader(proofs.header205000, proofs.ist205000, proofs.aggpk205000, g1List);
         //console.log(await proxy.newPairKeys())
         let data205030 = await proxy.callStatic.verifyProofData(await proxy.getBytes(proofs.provedataV2205030));
         expect(data205030.success).to.equal(true);
     });
 
     it("add validator", async function () {
-        await proxy.updateBlockHeader(proofs.header206000, proofs.ist206000, proofs.aggpk206000,g1List);
+        await proxy.updateBlockHeader(proofs.header206000, proofs.ist206000, proofs.aggpk206000, g1List);
         let data206460 = await proxy.callStatic.verifyProofData(await proxy.getBytes(proofs.provedataV2206460));
         expect(data206460.success).to.equal(true);
     });
@@ -187,9 +186,9 @@ describe("LightNode start test", function () {
             "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
             "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
             "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
-            "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"
-        ]
-        await proxy.updateBlockHeader(proofs.header207000, proofs.ist207000, proofs.aggpk207000,g1List);
+            "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
+        ];
+        await proxy.updateBlockHeader(proofs.header207000, proofs.ist207000, proofs.aggpk207000, g1List);
 
         expect(await proxy.headerHeight()).to.equal("207000");
     });
@@ -215,7 +214,6 @@ describe("LightNode start test", function () {
             "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
         ];
 
-
         const g0 = [
             "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
             "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
@@ -237,19 +235,18 @@ describe("LightNode start test", function () {
             "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
         ];
 
-        let g1ListDelete =
-            [
-                "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
-                "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
-                "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
-                "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
-                "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
-                "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
-                "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
-                "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
-                "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
-                "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"
-            ];
+        let g1ListDelete = [
+            "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
+            "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
+            "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
+            "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
+            "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
+            "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
+            "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
+            "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
+            "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
+            "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
+        ];
 
         let addresss = [
             "0x053af2b1ccbacba47c659b977e93571c89c49654",
@@ -276,29 +273,48 @@ describe("LightNode start test", function () {
             owner.address
         );
 
-        await lightClientDelete.updateBlockHeader(proofs.header217000, proofs.ist217000, proofs.aggpk217000,g1ListDelete);
-        await lightClientDelete.updateBlockHeader(proofs.header218000, proofs.ist218000, proofs.aggpk218000,g1ListDelete);
-        g1ListDelete =
-            [
-                "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
-                "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
-                "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
-                "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
-                "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
-                "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
-                "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
-                "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
-                //"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
-                //"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"
-            ];
-        await lightClientDelete.updateBlockHeader(proofs.header219000, proofs.ist219000, proofs.aggpk219000,g1ListDelete);
+        await lightClientDelete.updateBlockHeader(
+            proofs.header217000,
+            proofs.ist217000,
+            proofs.aggpk217000,
+            g1ListDelete
+        );
+        await lightClientDelete.updateBlockHeader(
+            proofs.header218000,
+            proofs.ist218000,
+            proofs.aggpk218000,
+            g1ListDelete
+        );
+        g1ListDelete = [
+            "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
+            "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
+            "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
+            "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
+            "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
+            "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
+            "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
+            "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
+            //"0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
+            //"0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116"
+        ];
+        await lightClientDelete.updateBlockHeader(
+            proofs.header219000,
+            proofs.ist219000,
+            proofs.aggpk219000,
+            g1ListDelete
+        );
 
         let data220558 = await lightClientDelete.callStatic.verifyProofData(
             await lightClientDelete.getBytes(proofs.provedataV2220559)
         );
         expect(data220558.success).to.equal(false);
         expect(data220558.message).to.equal("Out of verify range");
-        await lightClientDelete.updateBlockHeader(proofs.header220000, proofs.ist220000, proofs.aggpk220000,g1ListDelete);
+        await lightClientDelete.updateBlockHeader(
+            proofs.header220000,
+            proofs.ist220000,
+            proofs.aggpk220000,
+            g1ListDelete
+        );
 
         let dataErr = await lightClientDelete.callStatic.verifyProofData(
             await lightClientDelete.getBytes(proofs.provedataHeaderErrorV2)

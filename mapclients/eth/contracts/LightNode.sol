@@ -14,8 +14,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     uint256 public maxEpochs; // max epoch number
     uint256 public epochSize; // every epoch block number
 
-    uint256 public startHeight;     // init epoch start block number
-    uint256 public headerHeight;    // last update block number
+    uint256 public startHeight; // init epoch start block number
+    uint256 public headerHeight; // last update block number
     // address[] public validatorAddress;
     Epoch[] public epochs;
     IVerifyTool public verifyTool;
@@ -39,7 +39,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     struct Epoch {
         uint256 epoch;
         uint256 threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
-        uint256[2] aggKey;  // agg G1 key, not used now
+        uint256[2] aggKey; // agg G1 key, not used now
         uint256[] pairKeys; // <-- validators, pubkey G1,   (s, s * g2)   s * g1
         uint256[] weights; // voting power, not used now
     }
@@ -189,8 +189,6 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
     /** internal *********************************************************/
 
-
-
     function setStateInternal(
         uint256 _threshold,
         BGLS.G1[] memory _pairKeys,
@@ -260,7 +258,12 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
     /** internal view *********************************************************/
 
-    function _verifiableHeaderRange(uint256 _startHeight, uint256 _headerHeight, uint256 _maxEpoch, uint256 _epochSize) internal pure returns (uint256, uint256) {
+    function _verifiableHeaderRange(
+        uint256 _startHeight,
+        uint256 _headerHeight,
+        uint256 _maxEpoch,
+        uint256 _epochSize
+    ) internal pure returns (uint256, uint256) {
         uint256 start;
         if (_headerHeight > _maxEpoch * _epochSize) {
             start = _headerHeight - (_maxEpoch * _epochSize);

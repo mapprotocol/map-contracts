@@ -2,9 +2,8 @@ const BigNumber = require("bignumber.js");
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR });
 const initializeData = require("../deploy/config");
 
-let {zkDeploy} = require("./utils/helper.js");
+let { zkDeploy } = require("./utils/helper.js");
 let { verify } = require("./utils/verify.js");
-
 
 let IDeployFactory_abi = [
     "function deploy(bytes32 salt, bytes memory creationCode, uint256 value) external",
@@ -36,7 +35,7 @@ async function getInitData(verifier, owner) {
         epoch,
         epochSize,
         verifier,
-        owner
+        owner,
     ]);
     console.log("initialize success");
 
@@ -131,7 +130,13 @@ module.exports = async (taskArgs, hre) => {
     }
     console.log("deployed light node proxy address:", lightProxyAddress);
 
-    await verify(lightProxyAddress, [lightNodeAddr, data], "contracts/LightNodeProxy.sol:LightNodeProxy", chainId, true);
+    await verify(
+        lightProxyAddress,
+        [lightNodeAddr, data],
+        "contracts/LightNodeProxy.sol:LightNodeProxy",
+        chainId,
+        true
+    );
 
     let proxy = await ethers.getContractAt("LightNode", lightProxyAddress);
 

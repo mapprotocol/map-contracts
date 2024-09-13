@@ -2,9 +2,8 @@ const BigNumber = require("bignumber.js");
 BigNumber.config({ ROUNDING_MODE: BigNumber.ROUND_FLOOR });
 const initializeData = require("../deploy/config");
 
-let {zkDeploy} = require("./utils/helper.js");
+let { zkDeploy } = require("./utils/helper.js");
 let { verify } = require("./utils/verify.js");
-
 
 let IDeployFactory_abi = [
     "function deploy(bytes32 salt, bytes memory creationCode, uint256 value) external",
@@ -47,7 +46,6 @@ module.exports = async (taskArgs, hre) => {
         await verify(lightNodeAddr, [], "contracts/LightNode.sol:LightNode", chainId, true);
     }
     console.log("deployed light node address:", lightNodeAddr);
-
 
     await (await proxy.upgradeTo(lightNodeAddr)).wait();
 
