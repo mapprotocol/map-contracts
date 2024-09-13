@@ -3,7 +3,7 @@ const proofs = require("./data");
 const { expect } = require("chai");
 require("solidity-coverage");
 
-describe("LightNode start test", function () {
+describe("LightNode V2 start test", function () {
     let owner;
     let addr1;
 
@@ -20,9 +20,6 @@ describe("LightNode start test", function () {
     let LightProxyClient;
     let lightProxyClient;
     let proxy;
-
-    let blsCode;
-    let bc;
 
     let g1List;
 
@@ -105,11 +102,8 @@ describe("LightNode start test", function () {
             "0x98efa292822eb7b3045c491e8ae4e82b3b1ac005",
         ];
         let _weights = [1, 1, 1, 1, 1];
-
         let _threshold = 3;
-
         let _epoch = 203;
-
         let _epochSize = 1000;
 
         let data = await lightClient.initialize(
@@ -133,6 +127,7 @@ describe("LightNode start test", function () {
     });
 
     it("updateBlockHeader and verifyProofData", async function () {
+        console.log("update header 203000 remove g4");
         await proxy.updateBlockHeader(proofs.header203000, proofs.ist203000, proofs.aggpk203000, g1List);
         // console.log(await proxy.newPairKeys(0))
         // console.log(await proxy.newPairKeys(2))
@@ -149,7 +144,10 @@ describe("LightNode start test", function () {
             "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
             "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
         ];
+        console.log("update header 204000 no update");
         await proxy.updateBlockHeader(proofs.header204000, proofs.ist204000, proofs.aggpk204000, g1List);
+
+        console.log("update header 205000 np update");
         await proxy.updateBlockHeader(proofs.header205000, proofs.ist205000, proofs.aggpk205000, g1List);
         //console.log(await proxy.newPairKeys())
         let data205030 = await proxy.callStatic.verifyProofData(await proxy.getBytes(proofs.provedataV2205030));

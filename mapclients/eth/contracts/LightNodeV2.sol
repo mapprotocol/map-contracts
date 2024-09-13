@@ -16,12 +16,12 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
 
     uint256 public startHeight; // init epoch start block number
     uint256 public headerHeight; // last update block number
+
     IVerifyTool public verifyTool;
     // address[] public validatorAddress;
     //Epoch[] public epochs;
     mapping(uint256 => Epoch) public epochs;
     mapping(uint256 => bytes32) private cachedReceiptRoot;
-    uint256[] public currentPairKeys;
 
     struct TxReceiptRlp {
         uint256 receiptType;
@@ -43,11 +43,10 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         uint256 threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
         uint256[2] aggKey; // agg G1 key, not used now
         bytes32 pairKeyHash; // <-- validators, pubkey G1,   (s, s * g2)   s * g1
-        uint256[] weights; // voting power, not used now
     }
 
     event MapInitializeValidators(uint256 _threshold, uint256[] _pairKeys, uint256[] _weights, uint256 epoch);
-    event MapUpdateValidators(bytes[] _pairKeysAdd, uint256 epoch, bytes bits);
+    event UpdateValidators(uint256 epoch, uint256 removeBits, bytes[] _pairKeysAdd);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
     event NewVerifyTool(address newVerifyTool);
@@ -102,11 +101,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
 
         uint256 epoch = _getEpochByNumber(bh.number);
         uint256 id = _getEpochId(epoch);
-        //Epoch memory v = epochs[id];
-        //Epoch memory v;
-        //v.epoch = epochs[id].epoch;
-        //epochs[id].epoch = epoch;
-        require(keccak256(abi.encode(pairKeys)) == epochs[id].pairKeyHash, "pair key hash error");
+        require(_getKeyHash(pairKeys, pairKeys.length) == epochs[id].pairKeyHash, "pair key hash error");
 
         bool success = _verifyHeaderSig(epochs[id], pairKeys, bh, ist, aggPk);
         require(success, "CheckSig error");
@@ -152,9 +147,10 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         return _receiptProof;
     }
 
+    /*
     function getCurrentPairKeys() public view returns (uint256[] memory) {
         return currentPairKeys;
-    }
+    }*/
 
     function getBytes(ReceiptProof memory _receiptProof) public pure returns (bytes memory) {
         return abi.encode(_receiptProof);
@@ -179,7 +175,8 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         uint256 id = _getEpochId(_epoch);
         epochs[id].threshold = _threshold;
         epochs[id].epoch = _epoch;
-        epochs[id].pairKeyHash = keccak256(abi.encode(_pairKeys));
+        // epochs[id].pairKeyHash = keccak256(abi.encode(_pairKeys));
+        epochs[id].pairKeyHash = _getKeyHash(_pairKeys, _pairKeys.length);
     }
 
     function _updateValidators(
@@ -187,56 +184,74 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         uint256[] memory _pairKeys,
         IVerifyTool.istanbulExtra memory _ist
     ) internal {
-        bytes memory bits = abi.encodePacked(_ist.removeList);
-
         uint256 epoch = _preEpoch.epoch + 1;
-        //uint256 idPre = _getPreEpochId(epoch);
-        //Epoch memory vPre = epochs[idPre];
         uint256 id = _getEpochId(epoch);
-        //Epoch storage v = epochs[id];
-        //v.epoch = epoch;
         epochs[id].epoch = epoch;
 
-        if (currentPairKeys.length > 0) {
-            delete (currentPairKeys);
+        if (_ist.removeList == 0x00 && _ist.addedG1PubKey.length == 0) {
+            epochs[id].threshold = _preEpoch.threshold;
+            epochs[id].pairKeyHash = _preEpoch.pairKeyHash;
+
+            emit UpdateValidators(epoch, _ist.removeList, _ist.addedG1PubKey);
+            return;
         }
-        //uint256[] storage newPairKeys;
+
+        uint256[] memory keys = new uint256[](_pairKeys.length + _ist.addedG1PubKey.length * 2);
+        //uint256[] memory keys;
+        uint256 keyLength;
+
+        bytes memory bits = abi.encodePacked(_ist.removeList);
         uint256 weight = 0;
         uint256 keyLen = _pairKeys.length / 2;
         for (uint256 i = 0; i < keyLen; i++) {
             if (!BGLS.chkBit(bits, i)) {
-                currentPairKeys.push(_pairKeys[2 * i]);
-                currentPairKeys.push(_pairKeys[2 * i + 1]);
-                //v.weights.push(_preEpoch.weights[i]);
+                keys[keyLength] = _pairKeys[2 * i];
+                keys[keyLength + 1] = _pairKeys[2 * i + 1];
+
+                keyLength += 2;
                 weight = weight + 1;
             }
         }
 
         keyLen = _ist.addedG1PubKey.length;
-        if (keyLen > 0) {
+        for (uint256 i = 0; i < keyLen; i++) {
+            bytes memory g1 = _ist.addedG1PubKey[i];
+
             bytes32 x;
             bytes32 y;
-            for (uint256 i = 0; i < keyLen; i++) {
-                bytes memory g1 = _ist.addedG1PubKey[i];
-                assembly {
-                    x := mload(add(g1, 32))
-                    y := mload(add(g1, 64))
-                }
-
-                currentPairKeys.push(uint256(x));
-                currentPairKeys.push(uint256(y));
-                //v.weights.push(1);
-                weight = weight + 1;
+            assembly {
+                x := mload(add(g1, 32))
+                y := mload(add(g1, 64))
             }
+
+            keys[keyLength] = uint256(x);
+            keys[keyLength + 1] = uint256(y);
+            keyLength += 2;
+            weight = weight + 1;
         }
 
-        epochs[id].threshold = weight - weight / 3;
-        epochs[id].pairKeyHash = keccak256(abi.encode(currentPairKeys));
+        bytes32 result = _getKeyHash(keys, keyLength);
 
-        emit MapUpdateValidators(_ist.addedG1PubKey, epoch, bits);
+        epochs[id].pairKeyHash = result;
+        epochs[id].threshold = weight - weight / 3;
+
+        emit UpdateValidators(epoch, _ist.removeList, _ist.addedG1PubKey);
     }
 
     /** internal view *********************************************************/
+
+    function _getKeyHash(
+        uint256[] memory _pairKeys,
+        uint256 keyLen
+    ) internal pure returns (bytes32 result) {
+        uint256 len = 0x20 * keyLen;
+        uint256 ptr;
+        assembly {
+            // skip the array length
+            ptr := add(0x20, _pairKeys)
+            result := keccak256(ptr, len)
+        }
+    }
 
     function _verifiableHeaderRange(
         uint256 _startHeight,
@@ -283,16 +298,11 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
             return (false, message, logsHash);
         }
 
-        (success, message, logsHash) = _verifyMptProof(bytes32(_receiptProof.header.receiptHash), _receiptProof);
-        if (!success) {
-            return (success, message, "");
-        }
-
         uint256 epoch = _getEpochByNumber(height);
         uint256 id = _getEpochId(epoch);
         //Epoch memory v = epochs[id];
         //        Epoch memory v;
-        if (keccak256(abi.encode(_receiptProof.pairKeys)) != epochs[id].pairKeyHash) {
+        if (_getKeyHash(_receiptProof.pairKeys, _receiptProof.pairKeys.length) != epochs[id].pairKeyHash) {
             return (false, message, bytes("pair key hash error"));
         }
 
@@ -307,6 +317,12 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
             message = "VerifyHeaderSig failed";
             return (success, message, logsHash);
         }
+
+        (success, message, logsHash) = _verifyMptProof(bytes32(_receiptProof.header.receiptHash), _receiptProof);
+        if (!success) {
+            return (success, message, "");
+        }
+
         return (success, message, logsHash);
     }
 
