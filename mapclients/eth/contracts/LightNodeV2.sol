@@ -11,11 +11,13 @@ import "hardhat/console.sol";
 contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     address private _pendingAdmin;
 
-    uint256 public maxEpochs; // max epoch number
-    uint256 public epochSize; // every epoch block number
+    // uint256 public maxEpochs; // max epoch number
+    // uint256 public epochSize; // every epoch block number
+    // uint256 public startHeight; // init epoch start block number
+    // uint256 public headerHeight; // last update block number
 
-    uint256 public startHeight; // init epoch start block number
-    uint256 public headerHeight; // last update block number
+    // startHeight (8bytes) | headerHeight (8bytes) | maxEpochs (4bytes) | epochSize (4bytes)
+    uint256 private stateSlot;
 
     IVerifyTool public verifyTool;
     // address[] public validatorAddress;
@@ -39,10 +41,11 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     struct Epoch {
-        uint256 epoch;
-        uint256 threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
-        uint256[2] aggKey; // agg G1 key, not used now
+        uint128 epoch;
+        uint64  validatorNumber;
+        uint64  threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
         bytes32 pairKeyHash; // <-- validators, pubkey G1,   (s, s * g2)   s * g1
+        uint256[2] aggKey; // agg G1 key, not used now
     }
 
     event MapInitializeValidators(uint256 _threshold, uint256[] _pairKeys, uint256[] _weights, uint256 epoch);
@@ -70,12 +73,15 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         address _owner
     ) external initializer {
         require(_epoch > 1, "Error initializing epoch");
+        require(_threshold < 1000, "invalid threshold");
+
         _changeAdmin(_owner);
-        maxEpochs = 1500000 / _epochSize;
-        headerHeight = (_epoch - 1) * _epochSize;
-        startHeight = headerHeight;
-        epochSize = _epochSize;
-        setStateInternal(_threshold, _pairKeys, _epoch);
+        uint256 maxEpochs = 1500000 / _epochSize;
+        uint256 headerHeight = (_epoch - 1) * _epochSize;
+        //startHeight = headerHeight;
+        //epochSize = _epochSize;
+        _setNodeState(headerHeight, headerHeight, maxEpochs, _epochSize);
+        _setStateInternal(_threshold, _pairKeys, _epoch, maxEpochs);
         verifyTool = IVerifyTool(_verifyTool);
 
         emit MapInitializeValidators(_threshold, _pairKeys, _weights, _epoch);
@@ -92,6 +98,8 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         BGLS.G2 memory aggPk,
         uint256[] memory pairKeys
     ) external {
+        (uint256 startHeight, uint256 headerHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+
         require(bh.number % epochSize == 0, "Header number is error");
         require(bh.number - epochSize == headerHeight, "Header is have");
         headerHeight = bh.number;
@@ -99,14 +107,17 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
             startHeight = headerHeight - epochSize;
         }
 
-        uint256 epoch = _getEpochByNumber(bh.number);
-        uint256 id = _getEpochId(epoch);
-        require(_getKeyHash(pairKeys, pairKeys.length) == epochs[id].pairKeyHash, "pair key hash error");
+        _setNodeState(startHeight, headerHeight, maxEpoch, epochSize);
 
-        bool success = _verifyHeaderSig(epochs[id], pairKeys, bh, ist, aggPk);
+        uint256 epochId = _getEpochByNumber(bh.number, epochSize);
+        uint256 index = _getEpochIndex(epochId, maxEpoch);
+        Epoch memory epoch = epochs[index];
+        require(_getKeyHash(pairKeys, pairKeys.length) == epoch.pairKeyHash, "pair key hash error");
+
+        bool success = _verifyHeaderSig(epoch, pairKeys, bh, ist, aggPk);
         require(success, "CheckSig error");
 
-        _updateValidators(epochs[id], pairKeys, ist);
+        _updateValidators(maxEpoch, epoch, pairKeys, ist);
 
         emit UpdateBlockHeader(msg.sender, bh.number);
     }
@@ -147,21 +158,24 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         return _receiptProof;
     }
 
-    /*
-    function getCurrentPairKeys() public view returns (uint256[] memory) {
-        return currentPairKeys;
-    }*/
-
     function getBytes(ReceiptProof memory _receiptProof) public pure returns (bytes memory) {
         return abi.encode(_receiptProof);
     }
 
+    function headerHeight() external view returns (uint256) {
+        (uint256 startHeight, uint256 headerHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+        return headerHeight;
+    }
+
     function verifiableHeaderRange() public view override returns (uint256, uint256) {
-        return _verifiableHeaderRange(startHeight, headerHeight, maxEpochs, epochSize);
+        (uint256 startHeight, uint256 headerHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+        return _verifiableHeaderRange(startHeight, headerHeight, maxEpoch, epochSize);
     }
 
     function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool) {
-        (uint256 start, uint256 end) = _verifiableHeaderRange(startHeight, headerHeight, maxEpochs, epochSize);
+        (uint256 startHeight, uint256 headerHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+
+        (uint256 start, uint256 end) = _verifiableHeaderRange(startHeight, headerHeight, maxEpoch, epochSize);
         return start <= _blockHeight && _blockHeight <= end;
     }
 
@@ -171,26 +185,29 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
 
     /** internal *********************************************************/
 
-    function setStateInternal(uint256 _threshold, uint256[] memory _pairKeys, uint256 _epoch) internal {
-        uint256 id = _getEpochId(_epoch);
-        epochs[id].threshold = _threshold;
-        epochs[id].epoch = _epoch;
+    function _setStateInternal(uint256 _threshold, uint256[] memory _pairKeys, uint256 _epoch, uint256 _maxEpochs) internal {
+        uint256 index = _getEpochIndex(_epoch, _maxEpochs);
+        epochs[index].threshold = uint64(_threshold);
+        epochs[index].epoch = uint128(_epoch);
         // epochs[id].pairKeyHash = keccak256(abi.encode(_pairKeys));
-        epochs[id].pairKeyHash = _getKeyHash(_pairKeys, _pairKeys.length);
+        epochs[index].pairKeyHash = _getKeyHash(_pairKeys, _pairKeys.length);
+
+        // todo: update agg key
     }
 
     function _updateValidators(
+        uint256 _maxEpochs,
         Epoch memory _preEpoch,
         uint256[] memory _pairKeys,
         IVerifyTool.istanbulExtra memory _ist
     ) internal {
         uint256 epoch = _preEpoch.epoch + 1;
-        uint256 id = _getEpochId(epoch);
-        epochs[id].epoch = epoch;
+        uint256 index = _getEpochIndex(epoch, _maxEpochs);
 
+        epochs[index].epoch = uint128(epoch);
         if (_ist.removeList == 0x00 && _ist.addedG1PubKey.length == 0) {
-            epochs[id].threshold = _preEpoch.threshold;
-            epochs[id].pairKeyHash = _preEpoch.pairKeyHash;
+            epochs[index].threshold = _preEpoch.threshold;
+            epochs[index].pairKeyHash = _preEpoch.pairKeyHash;
 
             emit UpdateValidators(epoch, _ist.removeList, _ist.addedG1PubKey);
             return;
@@ -230,11 +247,8 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
             weight = weight + 1;
         }
 
-        bytes32 result = _getKeyHash(keys, keyLength);
-
-        epochs[id].pairKeyHash = result;
-        epochs[id].threshold = weight - weight / 3;
-
+        epochs[index].pairKeyHash = _getKeyHash(keys, keyLength);
+        epochs[index].threshold = uint64(weight - weight / 3);
         emit UpdateValidators(epoch, _ist.removeList, _ist.addedG1PubKey);
     }
 
@@ -251,6 +265,18 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
             ptr := add(0x20, _pairKeys)
             result := keccak256(ptr, len)
         }
+    }
+
+    function _getNodeState() internal view returns (uint256 start, uint256 end, uint256 maxEpoch, uint256 epochSize) {
+        uint256 nodeSlot = stateSlot;
+        start = nodeSlot >> 192;
+        end = (nodeSlot >> 128) & 0xFFFFFFFF;
+        maxEpoch = (nodeSlot >> 32) & 0xFFFFFFFF;
+        epochSize = nodeSlot & 0xFFFFFFFF;
+    }
+
+    function _setNodeState(uint256 start, uint256 end, uint256 maxEpoch, uint256 epochSize) internal {
+        stateSlot = (start << 192) | (end << 128) | (maxEpoch << 32) | epochSize;
     }
 
     function _verifiableHeaderRange(
@@ -291,23 +317,33 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     function _verifyProofData(
         ReceiptProof memory _receiptProof
     ) internal view returns (bool success, string memory message, bytes memory logsHash) {
-        (uint256 min, uint256 max) = _verifiableHeaderRange(startHeight, headerHeight, maxEpochs, epochSize);
-        uint256 height = _receiptProof.header.number;
-        if (height <= min || height >= max) {
-            message = "Out of verify range";
-            return (false, message, logsHash);
+        (uint256 startHeight, uint256 headerHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+        console.logUint(startHeight);
+        console.logUint(headerHeight);
+        console.logUint(maxEpoch);
+        console.logUint(epochSize);
+
+        {
+            (uint256 min, uint256 max) = _verifiableHeaderRange(startHeight, headerHeight, maxEpoch, epochSize);
+            // uint256 height = _receiptProof.header.number;
+            if (_receiptProof.header.number <= min || _receiptProof.header.number >= max) {
+                message = "Out of verify range";
+                return (false, message, logsHash);
+            }
         }
 
-        uint256 epoch = _getEpochByNumber(height);
-        uint256 id = _getEpochId(epoch);
-        //Epoch memory v = epochs[id];
-        //        Epoch memory v;
-        if (_getKeyHash(_receiptProof.pairKeys, _receiptProof.pairKeys.length) != epochs[id].pairKeyHash) {
+        Epoch memory epoch;
+        {
+            uint256 epochId = _getEpochByNumber(_receiptProof.header.number, epochSize);
+            uint256 index = _getEpochIndex(epochId, maxEpoch);
+            epoch = epochs[index];
+        }
+        if (_getKeyHash(_receiptProof.pairKeys, _receiptProof.pairKeys.length) != epoch.pairKeyHash) {
             return (false, message, bytes("pair key hash error"));
         }
 
         success = _verifyHeaderSig(
-            epochs[id],
+            epoch,
             _receiptProof.pairKeys,
             _receiptProof.header,
             _receiptProof.ist,
@@ -367,10 +403,11 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
             BGLS.checkSignature(message, _ist.aggregatedSeal.signature, _aggPk);
     }
 
-    function _getEpochId(uint256 epoch) internal view returns (uint256) {
+    function _getEpochIndex(uint256 epoch, uint256 maxEpochs) internal view returns (uint256) {
         return epoch % maxEpochs;
     }
 
+    /*
     function _getPreEpochId(uint256 epoch) internal view returns (uint256) {
         uint256 id = _getEpochId(epoch);
         if (id == 0) {
@@ -378,7 +415,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         } else {
             return id - 1;
         }
-    }
+    }*/
 
     function getPrepareCommittedSeal(
         bytes memory _headerWithoutAgg,
@@ -405,7 +442,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         return result;
     }
 
-    function _getEpochByNumber(uint256 blockNumber) internal view returns (uint256) {
+    function _getEpochByNumber(uint256 blockNumber, uint256 epochSize) internal view returns (uint256) {
         uint256 epochLen = epochSize;
         if (blockNumber % epochLen == 0) {
             return blockNumber / epochLen;
