@@ -135,14 +135,21 @@ library BGLS {
     }
 
     // kP
-    function scalarMultiply(G1 memory point, uint256 scalar) internal returns (G1 memory) {
+    function scalarMultiply(G1 memory point, uint256 scalar) internal view returns (G1 memory) {
         uint256[3] memory input = [point.x, point.y, scalar];
         uint256[2] memory result;
+        bool success = false;
+        /*
         assembly {
             if iszero(call(not(0), 0x07, 0, input, 0x60, result, 0x40)) {
                 revert(0, 0)
             }
+        }*/
+        assembly {
+            success := staticcall(gas(), 0x07, input, 0x60, result, 0x40)
         }
+        require(success, "scalar points fail");
+
         return G1(result[0], result[1]);
     }
 

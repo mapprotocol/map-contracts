@@ -77,10 +77,10 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
 
         _changeAdmin(_owner);
         uint256 maxEpochs = 1500000 / _epochSize;
-        uint256 headerHeight = (_epoch - 1) * _epochSize;
+        uint256 lastHeight = (_epoch - 1) * _epochSize;
         //startHeight = headerHeight;
         //epochSize = _epochSize;
-        _setNodeState(headerHeight, headerHeight, maxEpochs, _epochSize);
+        _setNodeState(lastHeight, lastHeight, maxEpochs, _epochSize);
         _setStateInternal(_threshold, _pairKeys, _epoch, maxEpochs);
         verifyTool = IVerifyTool(_verifyTool);
 
@@ -98,16 +98,16 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         BGLS.G2 memory aggPk,
         uint256[] memory pairKeys
     ) external {
-        (uint256 startHeight, uint256 headerHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
 
         require(bh.number % epochSize == 0, "Header number is error");
-        require(bh.number - epochSize == headerHeight, "Header is have");
-        headerHeight = bh.number;
+        require(bh.number - epochSize == lastHeight, "Header is have");
+        lastHeight = bh.number;
         if (startHeight == 0) {
-            startHeight = headerHeight - epochSize;
+            startHeight = lastHeight - epochSize;
         }
 
-        _setNodeState(startHeight, headerHeight, maxEpoch, epochSize);
+        _setNodeState(startHeight, lastHeight, maxEpoch, epochSize);
 
         uint256 epochId = _getEpochByNumber(bh.number, epochSize);
         uint256 index = _getEpochIndex(epochId, maxEpoch);
@@ -152,7 +152,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         return _verifyProofData(_receiptProof);
     }
 
-    function getData(bytes memory _receiptProofBytes) external view returns (ReceiptProof memory) {
+    function getData(bytes memory _receiptProofBytes) external pure returns (ReceiptProof memory) {
         ReceiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProof));
 
         return _receiptProof;
@@ -162,20 +162,19 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         return abi.encode(_receiptProof);
     }
 
-    function headerHeight() external view returns (uint256) {
-        (uint256 startHeight, uint256 headerHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
-        return headerHeight;
+    function headerHeight() external view returns (uint256 lastHeight) {
+        (, lastHeight, , ) = _getNodeState();
     }
 
     function verifiableHeaderRange() public view override returns (uint256, uint256) {
-        (uint256 startHeight, uint256 headerHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
-        return _verifiableHeaderRange(startHeight, headerHeight, maxEpoch, epochSize);
+        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+        return _verifiableHeaderRange(startHeight, lastHeight, maxEpoch, epochSize);
     }
 
     function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool) {
-        (uint256 startHeight, uint256 headerHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
 
-        (uint256 start, uint256 end) = _verifiableHeaderRange(startHeight, headerHeight, maxEpoch, epochSize);
+        (uint256 start, uint256 end) = _verifiableHeaderRange(startHeight, lastHeight, maxEpoch, epochSize);
         return start <= _blockHeight && _blockHeight <= end;
     }
 
@@ -193,6 +192,9 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         epochs[index].pairKeyHash = _getKeyHash(_pairKeys, _pairKeys.length);
 
         // todo: update agg key
+        //(epochs[index].aggKey[0], epochs[index].aggKey[1]) = BGLS.sumAllPoints(_pairKeys);
+        //console.logUint(epochs[index].aggKey[0]);
+        //console.logUint(epochs[index].aggKey[1]);
     }
 
     function _updateValidators(
@@ -208,6 +210,9 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         if (_ist.removeList == 0x00 && _ist.addedG1PubKey.length == 0) {
             epochs[index].threshold = _preEpoch.threshold;
             epochs[index].pairKeyHash = _preEpoch.pairKeyHash;
+
+            //epochs[index].aggKey[0] = _preEpoch.aggKey[0];
+            //epochs[index].aggKey[1] = _preEpoch.aggKey[1];
 
             emit UpdateValidators(epoch, _ist.removeList, _ist.addedG1PubKey);
             return;
@@ -249,6 +254,9 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
 
         epochs[index].pairKeyHash = _getKeyHash(keys, keyLength);
         epochs[index].threshold = uint64(weight - weight / 3);
+
+        //(epochs[index].aggKey[0], epochs[index].aggKey[1]) = BGLS.sumAllPoints(_pairKeys);
+
         emit UpdateValidators(epoch, _ist.removeList, _ist.addedG1PubKey);
     }
 
@@ -317,14 +325,9 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     function _verifyProofData(
         ReceiptProof memory _receiptProof
     ) internal view returns (bool success, string memory message, bytes memory logsHash) {
-        (uint256 startHeight, uint256 headerHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
-        console.logUint(startHeight);
-        console.logUint(headerHeight);
-        console.logUint(maxEpoch);
-        console.logUint(epochSize);
-
+        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
         {
-            (uint256 min, uint256 max) = _verifiableHeaderRange(startHeight, headerHeight, maxEpoch, epochSize);
+            (uint256 min, uint256 max) = _verifiableHeaderRange(startHeight, lastHeight, maxEpoch, epochSize);
             // uint256 height = _receiptProof.header.number;
             if (_receiptProof.header.number <= min || _receiptProof.header.number >= max) {
                 message = "Out of verify range";
@@ -403,7 +406,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
             BGLS.checkSignature(message, _ist.aggregatedSeal.signature, _aggPk);
     }
 
-    function _getEpochIndex(uint256 epoch, uint256 maxEpochs) internal view returns (uint256) {
+    function _getEpochIndex(uint256 epoch, uint256 maxEpochs) internal pure returns (uint256) {
         return epoch % maxEpochs;
     }
 
@@ -442,7 +445,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         return result;
     }
 
-    function _getEpochByNumber(uint256 blockNumber, uint256 epochSize) internal view returns (uint256) {
+    function _getEpochByNumber(uint256 blockNumber, uint256 epochSize) internal pure returns (uint256) {
         uint256 epochLen = epochSize;
         if (blockNumber % epochLen == 0) {
             return blockNumber / epochLen;
