@@ -112,7 +112,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         uint256 epochId = _getEpochByNumber(bh.number, epochSize);
         uint256 index = _getEpochIndex(epochId, maxEpoch);
         Epoch memory epoch = epochs[index];
-        require(_getKeyHash(pairKeys, pairKeys.length) == epoch.pairKeyHash, "pair key hash error");
+        require(_getKeyHash(pairKeys, pairKeys.length) == epoch.pairKeyHash, "keys hash error");
 
         bool success = _verifyHeaderSig(epoch, pairKeys, bh, ist, aggPk);
         require(success, "CheckSig error");
@@ -192,9 +192,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         epochs[index].pairKeyHash = _getKeyHash(_pairKeys, _pairKeys.length);
 
         // todo: update agg key
-        //(epochs[index].aggKey[0], epochs[index].aggKey[1]) = BGLS.sumAllPoints(_pairKeys);
-        //console.logUint(epochs[index].aggKey[0]);
-        //console.logUint(epochs[index].aggKey[1]);
+        (epochs[index].aggKey[0], epochs[index].aggKey[1]) = BGLS.sumAllPoints(_pairKeys, _pairKeys.length / 2);
     }
 
     function _updateValidators(
@@ -211,27 +209,29 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
             epochs[index].threshold = _preEpoch.threshold;
             epochs[index].pairKeyHash = _preEpoch.pairKeyHash;
 
-            //epochs[index].aggKey[0] = _preEpoch.aggKey[0];
-            //epochs[index].aggKey[1] = _preEpoch.aggKey[1];
+            epochs[index].aggKey[0] = _preEpoch.aggKey[0];
+            epochs[index].aggKey[1] = _preEpoch.aggKey[1];
 
             emit UpdateValidators(epoch, _ist.removeList, _ist.addedG1PubKey);
             return;
         }
 
         uint256[] memory keys = new uint256[](_pairKeys.length + _ist.addedG1PubKey.length * 2);
-        //uint256[] memory keys;
         uint256 keyLength;
-
-        bytes memory bits = abi.encodePacked(_ist.removeList);
         uint256 weight = 0;
-        uint256 keyLen = _pairKeys.length / 2;
-        for (uint256 i = 0; i < keyLen; i++) {
-            if (!BGLS.chkBit(bits, i)) {
-                keys[keyLength] = _pairKeys[2 * i];
-                keys[keyLength + 1] = _pairKeys[2 * i + 1];
 
-                keyLength += 2;
-                weight = weight + 1;
+        uint256 keyLen = _pairKeys.length / 2;
+        // if (_ist.removeList > 0x00)
+        {
+            for (uint256 i = 0; i < keyLen; i++) {
+                //if (!BGLS.chkBit(bits, i)) {
+                if (!BGLS.chkBitmap(_ist.removeList, i)) {
+                    keys[keyLength] = _pairKeys[2 * i];
+                    keys[keyLength + 1] = _pairKeys[2 * i + 1];
+
+                    keyLength += 2;
+                    weight = weight + 1;
+                }
             }
         }
 
@@ -255,7 +255,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         epochs[index].pairKeyHash = _getKeyHash(keys, keyLength);
         epochs[index].threshold = uint64(weight - weight / 3);
 
-        //(epochs[index].aggKey[0], epochs[index].aggKey[1]) = BGLS.sumAllPoints(_pairKeys);
+        (epochs[index].aggKey[0], epochs[index].aggKey[1]) = BGLS.sumAllPoints(keys, keyLength / 2);
 
         emit UpdateValidators(epoch, _ist.removeList, _ist.addedG1PubKey);
     }
@@ -342,7 +342,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
             epoch = epochs[index];
         }
         if (_getKeyHash(_receiptProof.pairKeys, _receiptProof.pairKeys.length) != epoch.pairKeyHash) {
-            return (false, message, bytes("pair key hash error"));
+            return (false, message, bytes("keys hash error"));
         }
 
         success = _verifyHeaderSig(
@@ -399,11 +399,15 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         bytes memory _headerWithoutAgg
     ) internal view returns (bool) {
         bytes memory message = getPrepareCommittedSeal(_headerWithoutAgg, _ist.aggregatedSeal.round);
-        bytes memory bits = abi.encodePacked(_ist.aggregatedSeal.bitmap);
+        // bytes memory bits = abi.encodePacked(_ist.aggregatedSeal.bitmap);
 
         return
-            BGLS.checkAggPk(bits, _aggPk, _pairKeys, _epoch.threshold) &&
+            BGLS.checkAggPk2(_epoch.aggKey, _ist.aggregatedSeal.bitmap, _aggPk, _pairKeys, _epoch.threshold) &&
             BGLS.checkSignature(message, _ist.aggregatedSeal.signature, _aggPk);
+
+        //return
+        //    BGLS.checkAggPk(bits, _aggPk, _pairKeys, _epoch.threshold) &&
+        //    BGLS.checkSignature(message, _ist.aggregatedSeal.signature, _aggPk);
     }
 
     function _getEpochIndex(uint256 epoch, uint256 maxEpochs) internal pure returns (uint256) {

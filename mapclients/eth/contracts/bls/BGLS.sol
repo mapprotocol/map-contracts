@@ -165,9 +165,63 @@ library BGLS {
         return result[0] == 1;
     }
 
+    function removePoint(G1 memory a, G1 memory b) internal view returns (G1 memory) {
+        G1 memory mb = G1(b.x, neg(b.y));
+        return addPoints(a, mb);
+    }
+
     function chkBit(bytes memory b, uint256 x) internal pure returns (bool) {
         return uint256(uint8(b[31 - x / 8])) & (uint256(1) << (x % 8)) != 0;
     }
+
+    function chkBitmap(uint256 b, uint256 x) internal pure returns (bool) {
+        return ((b & (0x01 << x)) != 0x00);
+    }
+
+    function aggPoints(G1 memory aggPoint, uint256[] memory points, uint256 bitmap) internal view returns (G1 memory, uint256) {
+        G1 memory acc = G1(0, 0);
+        uint256 weight = 0;
+        uint256 pointLen = points.length / 2;
+        for (uint256 i = 0; i < pointLen; i++) {
+            if (chkBitmap(bitmap, i)) {
+                weight += 1;
+            } else {
+                G1 memory point = G1(points[2 * i], points[2 * i + 1]);
+                acc = addPoints(acc, point);
+            }
+        }
+        return (removePoint(aggPoint, acc), weight);
+    }
+
+    function sumAllPoints(uint256[] memory points, uint256 keyLen) internal view returns (uint256, uint256) {
+        G1 memory acc = G1(0, 0);
+        for (uint256 i = 0; i < keyLen; i++) {
+            G1 memory point = G1(points[2 * i], points[2 * i + 1]);
+            acc = addPoints(acc, point);
+        }
+        return (acc.x, acc.y);
+    }
+
+    function checkAggPk2(
+        uint256[2] memory agg,
+        uint256 bitmap,
+        G2 memory aggPk,
+        uint256[] memory pairKeys,
+        uint256 threshold
+    ) internal view returns (bool) {
+        G1 memory g1 = G1(g1x, g1y);
+        G2 memory g2 = G2(g2xr, g2xi, g2yr, g2yi);
+
+        G1 memory aggG1 = G1(agg[0], agg[1]);
+        (G1 memory sumPoint, uint256 weight) = aggPoints(aggG1, pairKeys, bitmap);
+
+        if (weight < threshold) {
+            return false;
+        }
+
+        return pairingCheck(sumPoint, g2, g1, aggPk);
+    }
+
 
     function sumPoints(uint256[] memory points, bytes memory indices) internal view returns (G1 memory, uint256) {
         G1 memory acc = G1(0, 0);

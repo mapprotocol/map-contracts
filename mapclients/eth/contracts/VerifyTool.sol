@@ -54,7 +54,7 @@ contract VerifyTool is IVerifyTool {
         blockHeader memory _bh,
         bytes memory _deleteAggBytes,
         bytes memory _deleteSealAndAggBytes
-    ) external view returns (bytes memory deleteAggHeaderBytes, bytes memory deleteSealAndAggHeaderBytes) {
+    ) external pure returns (bytes memory deleteAggHeaderBytes, bytes memory deleteSealAndAggHeaderBytes) {
         LibRLP.List memory list = LibRLP.l();
         LibRLP.p(list, _bh.parentHash);
         LibRLP.p(list, _bh.coinbase);
@@ -78,7 +78,7 @@ contract VerifyTool is IVerifyTool {
     function _getDeleteSealAndAggHeaderBytes(
         blockHeader memory _bh,
         bytes memory _deleteSealAndAggBytes
-    ) internal view returns (bytes memory deleteSealAndAggHeaderBytes) {
+    ) internal pure returns (bytes memory deleteSealAndAggHeaderBytes) {
         LibRLP.List memory list = LibRLP.l();
         LibRLP.p(list, _bh.parentHash);
         LibRLP.p(list, _bh.coinbase);
@@ -99,7 +99,7 @@ contract VerifyTool is IVerifyTool {
 
     function manageAgg(
         istanbulExtra memory ist
-    ) external view returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes) {
+    ) external pure returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes) {
         LibRLP.List memory list1 = LibRLP.l();
         LibRLP.List memory list2 = LibRLP.l();
         LibRLP.List memory list3 = LibRLP.l();
@@ -125,7 +125,7 @@ contract VerifyTool is IVerifyTool {
         LibRLP.p(list5, bytes(""));
         LibRLP.p(list5, bytes(""));
         LibRLP.p(manageList, list5);
-        LibRLP.List memory list6 = LibRLP.l();
+        // LibRLP.List memory list6 = LibRLP.l();
         LibRLP.p(
             manageList,
             encodeAggregatedSeal(
@@ -141,7 +141,7 @@ contract VerifyTool is IVerifyTool {
 
     function getDeleteSealAndAggBytes(
         istanbulExtra memory ist
-    ) internal view returns (bytes memory deleteSealAndAggBytes) {
+    ) internal pure returns (bytes memory deleteSealAndAggBytes) {
         LibRLP.List memory list1 = LibRLP.l();
         LibRLP.List memory list2 = LibRLP.l();
         LibRLP.List memory list3 = LibRLP.l();
