@@ -95,7 +95,7 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     ) private view returns (bool success, string memory message, bytes memory logs) {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
         _verifySignatures(proof.receiptRoot, proof.blockNum, chainId, proof.signatures);
-        (success, logs) = Verify._validateProof(proof.receiptRoot, proof.receiptProof, mptVerify);
+        (success, logs) = Verify._validateProof(proof.receiptRoot, proof.receiptProof, address(0x0));
         if (!success) {
             message = "mpt verification failed";
         }
