@@ -8,6 +8,8 @@ import "./interface/ILightNode.sol";
 import "./bls/BGLS.sol";
 import "./interface/IVerifyTool.sol";
 
+import "hardhat/console.sol";
+
 contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     address private _pendingAdmin;
 
@@ -44,8 +46,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         uint256[] weights; // voting power, not used now
     }
 
+    struct LoadEpoch {
+        uint256 validatorLen;
+        uint256 threshold; // bft, > 2/3,  if  \sum weights = 100, threshold = 67
+        uint256[2] aggKey; // agg G1 key, not used now
+        uint256 keyLen;     // load key length
+        uint256[] pairKeys; // <-- validators, pubkey G1,   (s, s * g2)   s * g1
+    }
+
     event MapInitializeValidators(uint256 _threshold, BGLS.G1[] _pairKeys, uint256[] _weights, uint256 epoch);
-    event MapUpdateValidators(bytes[] _pairKeysAdd, uint256 epoch, bytes bits);
+    event MapUpdateValidators(bytes[] _pairKeysAdd, uint256 epoch, uint256 bits);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
     event NewVerifyTool(address newVerifyTool);
@@ -113,19 +123,19 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
         uint256 epoch = _getEpochByNumber(bh.number);
         uint256 id = _getEpochId(epoch);
-        //Epoch memory v = epochs[id];
-        Epoch memory v;
-        v.epoch = epochs[id].epoch;
-        // v.threshold = epochs[id].threshold;
-        v.pairKeys = epochs[id].pairKeys;
 
-        uint256 weight = v.pairKeys.length / 2;
-        v.threshold = weight - weight / 3;
-
+        LoadEpoch memory v = _getPairKeys(id, ist.aggregatedSeal.bitmap);
         bool success = _verifyHeaderSig(v, bh, ist, aggPk);
         require(success, "CheckSig error");
 
-        _updateValidators(v, ist);
+        Epoch memory e;
+        e.epoch = epochs[id].epoch;
+        e.aggKey = epochs[id].aggKey;
+        e.pairKeys = epochs[id].pairKeys;
+
+        e.threshold = v.threshold;
+
+        _updateValidators(e, ist);
 
         emit UpdateBlockHeader(msg.sender, bh.number);
     }
@@ -160,7 +170,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         return _verifyProofData(_receiptProof);
     }
 
-    function getData(bytes memory _receiptProofBytes) external view returns (ReceiptProof memory) {
+    function getData(bytes memory _receiptProofBytes) external pure returns (ReceiptProof memory) {
         ReceiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProof));
 
         return _receiptProof;
@@ -187,6 +197,10 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         return 1;
     }
 
+    function getEpoch(uint256 id) external view returns (uint256 epoch, uint256 length, uint256 aggX, uint256 aggY) {
+        return (epochs[id].epoch, epochs[id].pairKeys.length / 2, epochs[id].aggKey[0], epochs[id].aggKey[1]);
+    }
+
     /** internal *********************************************************/
 
     function setStateInternal(
@@ -199,22 +213,26 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         uint256 id = _getEpochId(_epoch);
         Epoch storage v = epochs[id];
 
+        uint256[] memory keyArray = new uint256[](_pairKeys.length * 2);
+
         for (uint256 i = 0; i < _pairKeys.length; i++) {
             v.pairKeys.push(_pairKeys[i].x);
             v.pairKeys.push(_pairKeys[i].y);
             // v.weights.push(_weights[i]);
+
+            keyArray[2 * i] = _pairKeys[i].x;
+            keyArray[2 * i + 1] = _pairKeys[i].y;
         }
+
+        (v.aggKey[0], v.aggKey[1]) = BGLS.sumAllPoints(keyArray, _pairKeys.length);
 
         v.threshold = _threshold;
         v.epoch = _epoch;
     }
 
     function _updateValidators(Epoch memory _preEpoch, IVerifyTool.istanbulExtra memory _ist) internal {
-        bytes memory bits = abi.encodePacked(_ist.removeList);
-
+        // bytes memory bits = abi.encodePacked(_ist.removeList);
         uint256 epoch = _preEpoch.epoch + 1;
-        //uint256 idPre = _getPreEpochId(epoch);
-        //Epoch memory vPre = epochs[idPre];
         uint256 id = _getEpochId(epoch);
         Epoch storage v = epochs[id];
         v.epoch = epoch;
@@ -226,7 +244,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         uint256 weight = 0;
         uint256 keyLen = _preEpoch.pairKeys.length / 2;
         for (uint256 i = 0; i < keyLen; i++) {
-            if (!BGLS.chkBit(bits, i)) {
+            if (!BGLS.chkBitmap(_ist.removeList, i)) {
                 v.pairKeys.push(_preEpoch.pairKeys[2 * i]);
                 v.pairKeys.push(_preEpoch.pairKeys[2 * i + 1]);
                 //v.weights.push(_preEpoch.weights[i]);
@@ -253,10 +271,46 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         }
         v.threshold = weight - weight / 3;
 
-        emit MapUpdateValidators(_ist.addedG1PubKey, epoch, bits);
+        if (_ist.removeList == 0x00 && keyLen == 0 && _preEpoch.aggKey[0] != 0x00 && _preEpoch.aggKey[1] != 0x00) {
+            v.aggKey = _preEpoch.aggKey;
+        } else {
+            (v.aggKey[0], v.aggKey[1]) = BGLS.sumAllPoints(v.pairKeys, v.pairKeys.length / 2);
+        }
+
+        emit MapUpdateValidators(_ist.addedG1PubKey, epoch, _ist.removeList);
     }
 
     /** internal view *********************************************************/
+    function _getPairKeys(uint256 id, uint256 bitmap) internal view returns (LoadEpoch memory v) {
+        v.aggKey = epochs[id].aggKey;
+
+        v.validatorLen = epochs[id].pairKeys.length / 2;
+        v.threshold = v.validatorLen - v.validatorLen / 3;
+
+        v.pairKeys = new uint256[](v.validatorLen * 2);
+        uint256 keyLen = 0;
+        if (v.aggKey[0] == 0x00 || v.aggKey[1] == 0x00) {
+            // no agg key, get selected keys
+            for (uint256 i = 0; i < v.validatorLen; i++) {
+                if (BGLS.chkBitmap(bitmap, i)) {
+                    v.pairKeys[keyLen] = epochs[id].pairKeys[2 * i];
+                    v.pairKeys[keyLen + 1] = epochs[id].pairKeys[2 * i + 1];
+
+                    keyLen += 2;
+                }
+            }
+        } else {
+            for (uint256 i = 0; i < v.validatorLen; i++) {
+                if (!BGLS.chkBitmap(bitmap, i)) {
+                    v.pairKeys[keyLen] = epochs[id].pairKeys[2 * i];
+                    v.pairKeys[keyLen + 1] = epochs[id].pairKeys[2 * i + 1];
+
+                    keyLen += 2;
+                }
+            }
+        }
+        v.keyLen = keyLen;
+    }
 
     function _verifiableHeaderRange(
         uint256 _startHeight,
@@ -310,12 +364,15 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
 
         uint256 epoch = _getEpochByNumber(height);
         uint256 id = _getEpochId(epoch);
-        //Epoch memory v = epochs[id];
+        /*
         Epoch memory v;
         // v.threshold = epochs[id].threshold;
         v.pairKeys = epochs[id].pairKeys;
         uint256 weight = v.pairKeys.length / 2;
         v.threshold = weight - weight / 3;
+        */
+
+        LoadEpoch memory v = _getPairKeys(id, _receiptProof.ist.aggregatedSeal.bitmap);
 
         success = _verifyHeaderSig(v, _receiptProof.header, _receiptProof.ist, _receiptProof.aggPk);
         if (!success) {
@@ -326,7 +383,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function _verifyHeaderSig(
-        Epoch memory _epoch,
+        LoadEpoch memory _epoch,
         IVerifyTool.blockHeader memory _bh,
         IVerifyTool.istanbulExtra memory ist,
         BGLS.G2 memory _aggPk
@@ -351,16 +408,16 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     // aggPk2, sig1 --> in contract: check aggPk2 is valid with bits by summing points in G2
     // how to check aggPk2 is valid --> via checkAggPk
     function checkSig(
-        Epoch memory _epoch,
+        LoadEpoch memory _epoch,
         IVerifyTool.istanbulExtra memory _ist,
         BGLS.G2 memory _aggPk,
         bytes memory _headerWithoutAgg
     ) internal view returns (bool) {
         bytes memory message = getPrepareCommittedSeal(_headerWithoutAgg, _ist.aggregatedSeal.round);
-        bytes memory bits = abi.encodePacked(_ist.aggregatedSeal.bitmap);
+        // bytes memory bits = abi.encodePacked(_ist.aggregatedSeal.bitmap);
 
         return
-            BGLS.checkAggPk(bits, _aggPk, _epoch.pairKeys, _epoch.threshold) &&
+            BGLS.checkAggPk(_epoch.aggKey, _aggPk, _epoch.pairKeys, _epoch.keyLen, _epoch.threshold) &&
             BGLS.checkSignature(message, _ist.aggregatedSeal.signature, _aggPk);
     }
 

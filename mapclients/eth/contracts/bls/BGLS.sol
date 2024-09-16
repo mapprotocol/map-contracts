@@ -26,16 +26,6 @@ library BGLS {
         bytes32 yi;
     }
 
-    /* give the constant value for library
-    G1 constant g1 = G1(1, 2);
-    G2 constant g2 =
-        G2(
-            0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed,
-            0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2,
-            0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa,
-            0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b
-        );
-    */
     uint256 constant g1x = 1;
     uint256 constant g1y = 2;
     uint256 constant g2xr = 0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed;
@@ -94,8 +84,6 @@ library BGLS {
     function encodeG2(G2 memory _g2) internal pure returns (bytes memory) {
         return abi.encodePacked(_g2.xi, _g2.xr, _g2.yi, _g2.yr);
     }
-
-    //
 
     function expMod(uint256 base, uint256 e, uint256 m) private view returns (uint256 result) {
         bool success;
@@ -222,36 +210,48 @@ library BGLS {
         return pairingCheck(sumPoint, g2, g1, aggPk);
     }
 
-
-    function sumPoints(uint256[] memory points, bytes memory indices) internal view returns (G1 memory, uint256) {
-        G1 memory acc = G1(0, 0);
-        uint256 weight = 0;
-        uint256 pointLen = points.length / 2;
-        for (uint256 i = 0; i < pointLen; i++) {
-            if (chkBit(indices, i)) {
-                G1 memory point = G1(points[2 * i], points[2 * i + 1]);
-                acc = addPoints(acc, point);
-                weight += 1;
-            }
-        }
-        return (G1(acc.x, acc.y), weight);
-    }
+//    function sumPoints(uint256[] memory points, uint256 bitmap) internal view returns (G1 memory, uint256) {
+//        G1 memory acc = G1(0, 0);
+//        uint256 weight = 0;
+//        uint256 pointLen = points.length / 2;
+//        for (uint256 i = 0; i < pointLen; i++) {
+//            if (chkBitmap(bitmap, i)) {
+//                G1 memory point = G1(points[2 * i], points[2 * i + 1]);
+//                acc = addPoints(acc, point);
+//                weight += 1;
+//            }
+//        }
+//        return (G1(acc.x, acc.y), weight);
+//    }
 
     function checkAggPk(
-        bytes memory bits,
+        uint256[2] memory aggKey,
         G2 memory aggPk,
         uint256[] memory pairKeys,
+        uint256 keyLen,
         uint256 threshold
     ) internal view returns (bool) {
         G1 memory g1 = G1(g1x, g1y);
         G2 memory g2 = G2(g2xr, g2xi, g2yr, g2yi);
 
-        (G1 memory sumPoint, uint256 weight) = sumPoints(pairKeys, bits);
+        G1 memory acc = G1(0, 0);
+        (acc.x, acc.y) = sumAllPoints(pairKeys, keyLen / 2);
 
-        if (weight < threshold) {
-            return false;
+        G1 memory sumPoint;
+        if (aggKey[0] != 0x00 && aggKey[1] != 0x00) {
+            if (pairKeys.length / 2 - keyLen / 2 < threshold) {
+                return false;
+            }
+            G1 memory agg = G1(aggKey[0], aggKey[1]);
+            sumPoint = removePoint(agg, acc);
+        } else {
+            if (keyLen / 2 < threshold) {
+                return false;
+            }
+            sumPoint = acc;
         }
 
+        // (G1 memory sumPoint, uint256 weight) = sumPoints(pairKeys, bitmap);
         return pairingCheck(sumPoint, g2, g1, aggPk);
     }
 

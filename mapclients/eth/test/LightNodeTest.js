@@ -122,8 +122,11 @@ describe("LightNode start test", function () {
     });
 
     it("updateBlockHeader and verifyProofData", async function () {
+        console.log("update header 203000 ...");
         await proxy.updateBlockHeader(proofs.header203000, proofs.ist203000, proofs.aggpk203000);
+        console.log("update header 204000 ...");
         await proxy.updateBlockHeader(proofs.header204000, proofs.ist204000, proofs.aggpk204000);
+        console.log("update header 205000 ...");
         await proxy.updateBlockHeader(proofs.header205000, proofs.ist205000, proofs.aggpk205000);
         //console.log(await proxy.getValidators(205))
         let data205030 = await proxy.callStatic.verifyProofData(await proxy.getBytes(proofs.provedata205030));

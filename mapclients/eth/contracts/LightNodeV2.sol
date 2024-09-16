@@ -22,7 +22,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     IVerifyTool public verifyTool;
     // address[] public validatorAddress;
     //Epoch[] public epochs;
-    mapping(uint256 => Epoch) public epochs;
+    mapping(uint256 => Epoch) private epochs;
     mapping(uint256 => bytes32) private cachedReceiptRoot;
 
     struct TxReceiptRlp {
@@ -188,10 +188,8 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         uint256 index = _getEpochIndex(_epoch, _maxEpochs);
         epochs[index].threshold = uint64(_threshold);
         epochs[index].epoch = uint128(_epoch);
-        // epochs[id].pairKeyHash = keccak256(abi.encode(_pairKeys));
         epochs[index].pairKeyHash = _getKeyHash(_pairKeys, _pairKeys.length);
 
-        // todo: update agg key
         (epochs[index].aggKey[0], epochs[index].aggKey[1]) = BGLS.sumAllPoints(_pairKeys, _pairKeys.length / 2);
     }
 
@@ -224,7 +222,6 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         // if (_ist.removeList > 0x00)
         {
             for (uint256 i = 0; i < keyLen; i++) {
-                //if (!BGLS.chkBit(bits, i)) {
                 if (!BGLS.chkBitmap(_ist.removeList, i)) {
                     keys[keyLength] = _pairKeys[2 * i];
                     keys[keyLength + 1] = _pairKeys[2 * i + 1];

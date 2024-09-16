@@ -22,7 +22,6 @@ module.exports = {
   defaultNetwork: "hardhat",
   gasReporter: {
     enabled: false,
-    //    currency: 'CNY',
   },
   networks: {
     hardhat: {

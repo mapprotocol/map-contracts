@@ -33,3 +33,7 @@ task("factorySetVerifyTool", "LightNode set the verifyTool contract address", re
     .addOptionalParam("factory", "mos contract address", DEPLOY_FACTORY, types.string);
 
 task("tronDeploy", "Write initialization data required by LightNode", require("./tronDeploy"));
+
+task("lightNodeInfo", "get LightNode", require("./lightNodeInfo"))
+    .addOptionalParam("node", "light node address", "0x0001805c0b57dbd48b5c5c26e237a135ddc678ae", types.string)
+    .addOptionalParam("id", "epoch id", "0", types.string);
