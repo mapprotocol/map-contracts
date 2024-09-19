@@ -8,8 +8,6 @@ import "./interface/ILightNode.sol";
 import "./bls/BGLS.sol";
 import "./interface/IVerifyTool.sol";
 
-import "hardhat/console.sol";
-
 contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     address private _pendingAdmin;
 
@@ -148,12 +146,41 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         bytes32 receiptRoot = cachedReceiptRoot[_receiptProof.header.number];
         if (receiptRoot != bytes32("")) {
             return _verifyMptProof(receiptRoot, _receiptProof);
-        } else {
-            (success, message, logsHash) = _verifyProofData(_receiptProof);
-            if (success) {
-                cachedReceiptRoot[_receiptProof.header.number] = bytes32(_receiptProof.header.receiptHash);
+        }
+        (success, message) = _verifyHeaderProof(_receiptProof);
+        if (!success) {
+            return (success, message, logsHash);
+        }
+        receiptRoot = bytes32(_receiptProof.header.receiptHash);
+        cachedReceiptRoot[_receiptProof.header.number] = receiptRoot;
+
+        return _verifyMptProof(receiptRoot, _receiptProof);
+    }
+
+    function verifyProofDataWithCache(
+        bool _cache,
+        uint256 _logIndex,
+        bytes memory _receiptProofBytes
+    ) external returns (bool success, string memory message, txLog memory log) {
+        ReceiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProof));
+
+        bytes32 receiptRoot;
+        if (_cache) {
+            receiptRoot = cachedReceiptRoot[_receiptProof.header.number];
+            if (receiptRoot != bytes32("")) {
+                return _verifyMptProofWithLog(_logIndex, receiptRoot, _receiptProof);
             }
         }
+        (success, message) = _verifyHeaderProof(_receiptProof);
+        if (!success) {
+            return (success, message, log);
+        }
+        receiptRoot = bytes32(_receiptProof.header.receiptHash);
+        if (_cache) {
+            cachedReceiptRoot[_receiptProof.header.number] = receiptRoot;
+        }
+
+        return _verifyMptProofWithLog(_logIndex, receiptRoot, _receiptProof);
     }
 
     function notifyLightClient(address _from, bytes memory _data) external override {
@@ -167,7 +194,12 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
     ) external view override returns (bool success, string memory message, bytes memory logsHash) {
         ReceiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProof));
 
-        return _verifyProofData(_receiptProof);
+        (success, message) = _verifyHeaderProof(_receiptProof);
+        if (!success) {
+            return (success, message, logsHash);
+        }
+
+        return _verifyMptProof(bytes32(_receiptProof.header.receiptHash), _receiptProof);
     }
 
     function getData(bytes memory _receiptProofBytes) external pure returns (ReceiptProof memory) {
@@ -329,57 +361,61 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         return (start, _headerHeight + _epochSize);
     }
 
+    function _verifyMptProofWithLog(
+        uint256 _logIndex,
+        bytes32 _receiptHash,
+        ReceiptProof memory _receiptProof
+    ) internal view returns (bool success, string memory message, txLog memory log) {
+        (success, log) = verifyTool.verifyTrieProofWithLog(_logIndex,
+            _receiptHash,
+            _receiptProof.keyIndex,
+            _receiptProof.proof,
+            _receiptProof.txReceiptRlp.receiptRlp,
+            _receiptProof.txReceiptRlp.receiptType);
+
+        if (!success) {
+            return (success, "MPT verification failed", log);
+        }
+
+        return (success, "", log);
+    }
+
     function _verifyMptProof(
         bytes32 receiptHash,
         ReceiptProof memory _receiptProof
     ) internal view returns (bool success, string memory message, bytes memory logsHash) {
-        (success, message) = verifyTool.getVerifyTrieProof(
-            receiptHash,
+        (success, logsHash) = verifyTool.verifyTrieProof(receiptHash,
             _receiptProof.keyIndex,
             _receiptProof.proof,
             _receiptProof.txReceiptRlp.receiptRlp,
-            _receiptProof.txReceiptRlp.receiptType
-        );
+            _receiptProof.txReceiptRlp.receiptType);
+
         if (!success) {
-            message = "Mpt verification failed";
-            return (success, message, "");
+            return (success, "MPT verification failed", logsHash);
         }
-        logsHash = verifyTool.unsafeDecodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
+
+        return (success, "", logsHash);
     }
 
-    function _verifyProofData(
+    function _verifyHeaderProof(
         ReceiptProof memory _receiptProof
-    ) internal view returns (bool success, string memory message, bytes memory logsHash) {
+    ) internal view returns (bool success, string memory message) {
         (uint256 min, uint256 max) = _verifiableHeaderRange(startHeight, headerHeight, maxEpochs, epochSize);
         uint256 height = _receiptProof.header.number;
         if (height <= min || height >= max) {
-            message = "Out of verify range";
-            return (false, message, logsHash);
-        }
-
-        (success, message, logsHash) = _verifyMptProof(bytes32(_receiptProof.header.receiptHash), _receiptProof);
-        if (!success) {
-            return (success, message, "");
+            return (false, "Out of verify range");
         }
 
         uint256 epoch = _getEpochByNumber(height);
         uint256 id = _getEpochId(epoch);
-        /*
-        Epoch memory v;
-        // v.threshold = epochs[id].threshold;
-        v.pairKeys = epochs[id].pairKeys;
-        uint256 weight = v.pairKeys.length / 2;
-        v.threshold = weight - weight / 3;
-        */
 
         LoadEpoch memory v = _getPairKeys(id, _receiptProof.ist.aggregatedSeal.bitmap);
 
         success = _verifyHeaderSig(v, _receiptProof.header, _receiptProof.ist, _receiptProof.aggPk);
         if (!success) {
-            message = "VerifyHeaderSig failed";
-            return (success, message, logsHash);
+            return (success, "VerifyHeaderSig failed");
         }
-        return (success, message, logsHash);
+        return (success, "");
     }
 
     function _verifyHeaderSig(
@@ -399,7 +435,9 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
             deleteSealAndAggBytes
         );
 
-        (success, ) = verifyTool.verifyHeader(_bh.coinbase, ist.seal, deleteSealAndAggHeaderBytes);
+        bytes32 headerBytesHash = keccak256(deleteSealAndAggHeaderBytes);
+        (success, ) = verifyTool.verifyHeaderHash(_bh.coinbase, ist.seal, headerBytesHash);
+        // (success, ) = verifyTool.verifyHeader(_bh.coinbase, ist.seal, deleteSealAndAggHeaderBytes);
         if (!success) return success;
 
         return checkSig(_epoch, ist, _aggPk, deleteAggHeaderBytes);

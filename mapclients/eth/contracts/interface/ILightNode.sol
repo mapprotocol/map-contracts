@@ -2,12 +2,23 @@
 
 pragma solidity ^0.8.0;
 
-import "./IVerifyTool.sol";
-
 interface ILightNode {
+
+    struct txLog {
+        address addr;
+        bytes32[] topics;
+        bytes data;
+    }
+
     event UpdateBlockHeader(address indexed account, uint256 indexed blockHeight);
 
     event ClientNotifySend(address indexed sender, uint256 indexed blockHeight, bytes notifyData);
+
+    function verifyProofDataWithCache(
+        bool _cache,
+        uint256 _logIndex,
+        bytes memory _receiptProofBytes
+    ) external returns (bool success, string memory message, txLog memory log);
 
     function verifyProofDataWithCache(
         bytes memory _receiptProofBytes

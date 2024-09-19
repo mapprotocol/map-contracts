@@ -53,7 +53,7 @@ module.exports = {
       accounts: accounts,
     },
     Matic: {
-      url: `https://polygon-mainnet.public.blastapi.io`,
+      url: `https://polygon-rpc.com/`,
       chainId: 137,
       accounts: accounts,
     },

@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import "./ILightNode.sol";
+
 interface IVerifyTool {
     //Map chain block header
     struct blockHeader {
@@ -28,11 +30,7 @@ interface IVerifyTool {
         bytes logRlp;
     }
 
-    struct txLog {
-        address addr;
-        bytes[] topics;
-        bytes data;
-    }
+
 
     struct istanbulAggregatedSeal {
         uint256 bitmap;
@@ -68,6 +66,26 @@ interface IVerifyTool {
         uint256 _receiptType
     ) external pure returns (bool success, string memory message);
 
+
+    // verify mpt proof and return the receipt logs
+    function verifyTrieProof(
+        bytes32 _receiptHash,
+        bytes memory _keyIndex,
+        bytes[] memory _proof,
+        bytes memory _receiptRlp,
+        uint256 _receiptType
+    ) external pure returns (bool success, bytes memory logs);
+
+    // verify mpt proof and return the _logIndex log
+    function verifyTrieProofWithLog(
+        uint256 _logIndex,
+        bytes32 _receiptHash,
+        bytes memory _keyIndex,
+        bytes[] memory _proof,
+        bytes memory _receiptRlp,
+        uint256 _receiptType
+    ) external pure returns (bool success, ILightNode.txLog memory log);
+
     function decodeHeader(bytes memory rlpBytes) external view returns (blockHeader memory bh);
 
     function encodeHeader(
@@ -88,5 +106,11 @@ interface IVerifyTool {
         address _coinbase,
         bytes memory _seal,
         bytes memory _headerWithoutSealAndAgg
-    ) external view returns (bool ret, bytes32 headerHash);
+    ) external pure returns (bool ret, bytes32 headerHash);
+
+    function verifyHeaderHash(
+        address _coinbase,
+        bytes memory _seal,
+        bytes32 headerBytesHash
+    ) external pure returns (bool ret, bytes32 headerHash);
 }

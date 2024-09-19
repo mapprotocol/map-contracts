@@ -203,9 +203,7 @@ library BGLS {
         G1 memory aggG1 = G1(agg[0], agg[1]);
         (G1 memory sumPoint, uint256 weight) = aggPoints(aggG1, pairKeys, bitmap);
 
-        if (weight < threshold) {
-            return false;
-        }
+        require(weight >= threshold, "Verifier: under threshold");
 
         return pairingCheck(sumPoint, g2, g1, aggPk);
     }
