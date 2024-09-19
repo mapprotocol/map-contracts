@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interface/ILightNode.sol";
 import "./bls/BGLS.sol";
-import "./interface/IVerifyTool.sol";
+import "./VerifyToolV2.sol";
 import "hardhat/console.sol";
 
 contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
@@ -19,23 +19,24 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     // startHeight (8bytes) | headerHeight (8bytes) | maxEpochs (4bytes) | epochSize (4bytes)
     uint256 private stateSlot;
 
-    IVerifyTool public verifyTool;
+    IVerifyToolV2 public verifyTool;
     // address[] public validatorAddress;
     //Epoch[] public epochs;
     mapping(uint256 => Epoch) private epochs;
     mapping(uint256 => bytes32) private cachedReceiptRoot;
 
-    struct TxReceiptRlp {
+
+    struct ReceiptProofV2 {
+        uint256 blockNumber;
+
+        bytes aggHeader;    // RLP header for aggregator sign, remove aggsigns
+        bytes signHeader;   // rlp header for proposer sign, remove seal and agg signs
+        IVerifyToolV2.istanbulExtra ist;
+        uint256[] pairKeys; // all validator G1 pk + G2 agg pk
+        BGLS.G2 aggPk;
+
         uint256 receiptType;
         bytes receiptRlp;
-    }
-
-    struct ReceiptProof {
-        IVerifyTool.blockHeader header;
-        IVerifyTool.istanbulExtra ist;
-        BGLS.G2 aggPk;
-        TxReceiptRlp txReceiptRlp;
-        uint256[] pairKeys;
         bytes keyIndex;
         bytes[] proof;
     }
@@ -78,64 +79,87 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         _changeAdmin(_owner);
         uint256 maxEpochs = 1500000 / _epochSize;
         uint256 lastHeight = (_epoch - 1) * _epochSize;
-        //startHeight = headerHeight;
-        //epochSize = _epochSize;
         _setNodeState(lastHeight, lastHeight, maxEpochs, _epochSize);
-        _setStateInternal(_threshold, _pairKeys, _epoch, maxEpochs);
-        verifyTool = IVerifyTool(_verifyTool);
+
+        uint256 index = _getEpochIndex(_epoch, maxEpochs);
+        epochs[index].threshold = uint64(_threshold);
+        epochs[index].epoch = uint128(_epoch);
+        epochs[index].pairKeyHash = _getKeyHash(_pairKeys, _pairKeys.length);
+
+        (epochs[index].aggKey[0], epochs[index].aggKey[1]) = BGLS.sumAllPoints(_pairKeys, _pairKeys.length / 2);
+
+        // _setStateInternal(_threshold, _pairKeys, _epoch, maxEpochs);
+        verifyTool = IVerifyToolV2(_verifyTool);
 
         emit MapInitializeValidators(_threshold, _pairKeys, _weights, _epoch);
     }
 
     function setVerifyTool(address _verifyTool) external onlyOwner {
-        verifyTool = IVerifyTool(_verifyTool);
+        verifyTool = IVerifyToolV2(_verifyTool);
         emit NewVerifyTool(_verifyTool);
     }
 
     function updateBlockHeader(
-        IVerifyTool.blockHeader memory bh,
-        IVerifyTool.istanbulExtra memory ist,
-        BGLS.G2 memory aggPk,
-        uint256[] memory pairKeys
+        uint256 blockNumber,
+        bytes memory aggHeader,
+        bytes memory signHeader,
+        IVerifyToolV2.istanbulExtra memory ist,
+        uint256[] memory pairKeys,
+        BGLS.G2 memory aggPk
     ) external {
-        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+        require(aggHeader.length > 500, "Invalid block header");
+        require(signHeader.length > 500, "Invalid block header");
 
-        require(bh.number % epochSize == 0, "Header number is error");
-        require(bh.number - epochSize == lastHeight, "Header is have");
-        lastHeight = bh.number;
-        if (startHeight == 0) {
-            startHeight = lastHeight - epochSize;
+        uint256 index = _checkBlockNumber(blockNumber, true);
+        Epoch memory epoch = epochs[index];
+
+        require(_getKeyHash(pairKeys, pairKeys.length - 4) == epoch.pairKeyHash, "keys hash error");
+
+        (bool success, string memory message, address coinbase, ) = verifyTool.checkHeader(blockNumber, aggHeader, signHeader, ist, true, false);
+        require(success, message);
+
+        _verifyHeaderSig(epoch, aggHeader, signHeader, coinbase, pairKeys, ist, aggPk);
+
+        _updateValidators(blockNumber, epoch, pairKeys, ist);
+
+        emit UpdateBlockHeader(msg.sender, blockNumber);
+    }
+
+    function verifyProofDataWithCache(
+        bool _cache,
+        uint256 _logIndex,
+        bytes memory _receiptProofBytes
+    ) external override returns (bool success, string memory message, txLog memory log) {
+        ReceiptProofV2 memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProofV2));
+
+        bytes32 receiptRoot;
+        if (_cache) {
+            receiptRoot = cachedReceiptRoot[_receiptProof.blockNumber];
+            if (receiptRoot != bytes32("")) {
+                return _verifyMptProofWithLog(_logIndex, receiptRoot, _receiptProof);
+            }
+        }
+        receiptRoot = _verifyHeaderProof(_receiptProof);
+        if (_cache) {
+            cachedReceiptRoot[_receiptProof.blockNumber] = receiptRoot;
         }
 
-        _setNodeState(startHeight, lastHeight, maxEpoch, epochSize);
-
-        uint256 epochId = _getEpochByNumber(bh.number, epochSize);
-        uint256 index = _getEpochIndex(epochId, maxEpoch);
-        Epoch memory epoch = epochs[index];
-        require(_getKeyHash(pairKeys, pairKeys.length) == epoch.pairKeyHash, "keys hash error");
-
-        bool success = _verifyHeaderSig(epoch, pairKeys, bh, ist, aggPk);
-        require(success, "CheckSig error");
-
-        _updateValidators(maxEpoch, epoch, pairKeys, ist);
-
-        emit UpdateBlockHeader(msg.sender, bh.number);
+        return _verifyMptProofWithLog(_logIndex, receiptRoot, _receiptProof);
     }
 
     function verifyProofDataWithCache(
         bytes memory _receiptProofBytes
     ) external override returns (bool success, string memory message, bytes memory logsHash) {
-        ReceiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProof));
+        ReceiptProofV2 memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProofV2));
 
-        bytes32 receiptRoot = cachedReceiptRoot[_receiptProof.header.number];
+        bytes32 receiptRoot = cachedReceiptRoot[_receiptProof.blockNumber];
         if (receiptRoot != bytes32("")) {
             return _verifyMptProof(receiptRoot, _receiptProof);
-        } else {
-            (success, message, logsHash) = _verifyProofData(_receiptProof);
-            if (success) {
-                cachedReceiptRoot[_receiptProof.header.number] = bytes32(_receiptProof.header.receiptHash);
-            }
         }
+        receiptRoot = _verifyHeaderProof(_receiptProof);
+        cachedReceiptRoot[_receiptProof.blockNumber] = receiptRoot;
+
+        return _verifyMptProof(receiptRoot, _receiptProof);
     }
 
     function notifyLightClient(address _from, bytes memory _data) external override {
@@ -147,18 +171,20 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     function verifyProofData(
         bytes memory _receiptProofBytes
     ) external view override returns (bool success, string memory message, bytes memory logsHash) {
-        ReceiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProof));
+        ReceiptProofV2 memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProofV2));
 
-        return _verifyProofData(_receiptProof);
+        bytes32 receiptRoot = _verifyHeaderProof(_receiptProof);
+
+        return _verifyMptProof(receiptRoot, _receiptProof);
     }
 
-    function getData(bytes memory _receiptProofBytes) external pure returns (ReceiptProof memory) {
-        ReceiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProof));
+    function getData(bytes memory _receiptProofBytes) external pure returns (ReceiptProofV2 memory) {
+        ReceiptProofV2 memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProofV2));
 
         return _receiptProof;
     }
 
-    function getBytes(ReceiptProof memory _receiptProof) public pure returns (bytes memory) {
+    function getBytes(ReceiptProofV2 memory _receiptProof) public pure returns (bytes memory) {
         return abi.encode(_receiptProof);
     }
 
@@ -167,15 +193,17 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function verifiableHeaderRange() public view override returns (uint256, uint256) {
-        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
-        return _verifiableHeaderRange(startHeight, lastHeight, maxEpoch, epochSize);
+        return _verifiableHeaderRange();
     }
 
     function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool) {
-        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
-
-        (uint256 start, uint256 end) = _verifiableHeaderRange(startHeight, lastHeight, maxEpoch, epochSize);
+        (uint256 start, uint256 end) = _verifiableHeaderRange();
         return start <= _blockHeight && _blockHeight <= end;
+    }
+
+    function _verifiableHeaderRange() internal view returns (uint256, uint256) {
+        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+        return _verifiableHeaderRange(startHeight, lastHeight, maxEpoch, epochSize);
     }
 
     function nodeType() external view override returns (uint256) {
@@ -183,24 +211,21 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     /** internal *********************************************************/
-
-    function _setStateInternal(uint256 _threshold, uint256[] memory _pairKeys, uint256 _epoch, uint256 _maxEpochs) internal {
-        uint256 index = _getEpochIndex(_epoch, _maxEpochs);
-        epochs[index].threshold = uint64(_threshold);
-        epochs[index].epoch = uint128(_epoch);
-        epochs[index].pairKeyHash = _getKeyHash(_pairKeys, _pairKeys.length);
-
-        (epochs[index].aggKey[0], epochs[index].aggKey[1]) = BGLS.sumAllPoints(_pairKeys, _pairKeys.length / 2);
-    }
-
     function _updateValidators(
-        uint256 _maxEpochs,
+        uint256 blockNumber,
         Epoch memory _preEpoch,
         uint256[] memory _pairKeys,
-        IVerifyTool.istanbulExtra memory _ist
+        IVerifyToolV2.istanbulExtra memory _ist
     ) internal {
+        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+        lastHeight = blockNumber;
+        if (startHeight == 0) {
+            startHeight = lastHeight - epochSize;
+        }
+        _setNodeState(startHeight, lastHeight, maxEpoch, epochSize);
+
         uint256 epoch = _preEpoch.epoch + 1;
-        uint256 index = _getEpochIndex(epoch, _maxEpochs);
+        uint256 index = _getEpochIndex(epoch, maxEpoch);
 
         epochs[index].epoch = uint128(epoch);
         if (_ist.removeList == 0x00 && _ist.addedG1PubKey.length == 0) {
@@ -266,7 +291,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         uint256 len = 0x20 * keyLen;
         uint256 ptr;
         assembly {
-            // skip the array length
+        // skip the array length
             ptr := add(0x20, _pairKeys)
             result := keccak256(ptr, len)
         }
@@ -303,129 +328,108 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
 
     function _verifyMptProof(
         bytes32 receiptHash,
-        ReceiptProof memory _receiptProof
+        ReceiptProofV2 memory _receiptProof
     ) internal view returns (bool success, string memory message, bytes memory logsHash) {
-        (success, message) = verifyTool.getVerifyTrieProof(
+        (success, logsHash) = verifyTool.verifyTrieProof(
             receiptHash,
             _receiptProof.keyIndex,
             _receiptProof.proof,
-            _receiptProof.txReceiptRlp.receiptRlp,
-            _receiptProof.txReceiptRlp.receiptType
+            _receiptProof.receiptRlp,
+            _receiptProof.receiptType
         );
         if (!success) {
-            message = "Mpt verification failed";
-            return (success, message, "");
+            return (success, "MPT verification failed", logsHash);
         }
-        logsHash = verifyTool.unsafeDecodeTxReceipt(_receiptProof.txReceiptRlp.receiptRlp);
+        return (success, "", logsHash);
     }
 
-    function _verifyProofData(
-        ReceiptProof memory _receiptProof
-    ) internal view returns (bool success, string memory message, bytes memory logsHash) {
-        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
-        {
-            (uint256 min, uint256 max) = _verifiableHeaderRange(startHeight, lastHeight, maxEpoch, epochSize);
-            // uint256 height = _receiptProof.header.number;
-            if (_receiptProof.header.number <= min || _receiptProof.header.number >= max) {
-                message = "Out of verify range";
-                return (false, message, logsHash);
-            }
+    function _verifyMptProofWithLog(
+        uint256 _logIndex,
+        bytes32 _receiptHash,
+        ReceiptProofV2 memory _receiptProof
+    ) internal view returns (bool success, string memory message, txLog memory log) {
+        (success, log) = verifyTool.verifyTrieProofWithLog(_logIndex,
+            _receiptHash,
+            _receiptProof.keyIndex,
+            _receiptProof.proof,
+            _receiptProof.receiptRlp,
+            _receiptProof.receiptType);
+
+        if (!success) {
+            return (success, "MPT verification failed", log);
         }
 
-        Epoch memory epoch;
-        {
-            uint256 epochId = _getEpochByNumber(_receiptProof.header.number, epochSize);
-            uint256 index = _getEpochIndex(epochId, maxEpoch);
-            epoch = epochs[index];
-        }
-        if (_getKeyHash(_receiptProof.pairKeys, _receiptProof.pairKeys.length) != epoch.pairKeyHash) {
-            return (false, message, bytes("keys hash error"));
-        }
+        return (success, "", log);
+    }
 
-        success = _verifyHeaderSig(
-            epoch,
-            _receiptProof.pairKeys,
-            _receiptProof.header,
+    function _verifyHeaderProof(
+        ReceiptProofV2 memory _receiptProof
+    ) internal view returns (bytes32) {
+        uint256 index = _checkBlockNumber(_receiptProof.blockNumber, false);
+        Epoch memory epoch = epochs[index];
+        require((_getKeyHash(_receiptProof.pairKeys, _receiptProof.pairKeys.length) == epoch.pairKeyHash),
+            "keys hash error");
+
+        (bool success, string memory message, address coinbase, bytes32 receiptRoot) = verifyTool.checkHeader(
+            _receiptProof.blockNumber,
+            _receiptProof.aggHeader,
+            _receiptProof.signHeader,
             _receiptProof.ist,
-            _receiptProof.aggPk
+            false,
+            true
         );
-        if (!success) {
-            message = "VerifyHeaderSig failed";
-            return (success, message, logsHash);
-        }
+        require(success, message);
 
-        (success, message, logsHash) = _verifyMptProof(bytes32(_receiptProof.header.receiptHash), _receiptProof);
-        if (!success) {
-            return (success, message, "");
-        }
+        _verifyHeaderSig(epoch,
+            _receiptProof.aggHeader,
+            _receiptProof.signHeader,
+            coinbase,
+            _receiptProof.pairKeys,
+            _receiptProof.ist,
+            _receiptProof.aggPk);
 
-        return (success, message, logsHash);
+        return receiptRoot;
     }
 
     function _verifyHeaderSig(
         Epoch memory _epoch,
+        bytes memory _header,
+        bytes memory _signHeader,
+        address _coinbase,
         uint256[] memory _pairKeys,
-        IVerifyTool.blockHeader memory _bh,
-        IVerifyTool.istanbulExtra memory ist,
+        IVerifyToolV2.istanbulExtra memory ist,
         BGLS.G2 memory _aggPk
     ) internal view returns (bool success) {
-        bytes32 extraDataPre = bytes32(_bh.extraData);
-        (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes) = verifyTool.manageAgg(ist);
-        deleteAggBytes = abi.encodePacked(extraDataPre, deleteAggBytes);
-        deleteSealAndAggBytes = abi.encodePacked(extraDataPre, deleteSealAndAggBytes);
+        bytes32 headerHash = keccak256(_header);
+        success = verifyTool.verifyHeaderHash(_coinbase, ist.seal, headerHash);
+        require(success, "Invalid header hash");
 
-        (bytes memory deleteAggHeaderBytes, bytes memory deleteSealAndAggHeaderBytes) = verifyTool.encodeHeader(
-            _bh,
-            deleteAggBytes,
-            deleteSealAndAggBytes
-        );
+        headerHash = keccak256(_signHeader);
 
-        (success, ) = verifyTool.verifyHeader(_bh.coinbase, ist.seal, deleteSealAndAggHeaderBytes);
-        if (!success) return success;
-
-        return checkSig(_epoch, _pairKeys, ist, _aggPk, deleteAggHeaderBytes);
+        return checkSig(headerHash, _epoch, _aggPk, _pairKeys, ist);
     }
 
     // aggPk2, sig1 --> in contract: check aggPk2 is valid with bits by summing points in G2
     // how to check aggPk2 is valid --> via checkAggPk
     function checkSig(
+        bytes32 _headerHash,
         Epoch memory _epoch,
-        uint256[] memory _pairKeys,
-        IVerifyTool.istanbulExtra memory _ist,
         BGLS.G2 memory _aggPk,
-        bytes memory _headerWithoutAgg
+        uint256[] memory _pairKeys,
+        IVerifyToolV2.istanbulExtra memory _ist
     ) internal view returns (bool) {
-        bytes memory message = getPrepareCommittedSeal(_headerWithoutAgg, _ist.aggregatedSeal.round);
-        // bytes memory bits = abi.encodePacked(_ist.aggregatedSeal.bitmap);
+        bytes memory message = getPrepareCommittedSeal(_headerHash, _ist.aggregatedSeal.round);
 
         return
             BGLS.checkAggPk2(_epoch.aggKey, _ist.aggregatedSeal.bitmap, _aggPk, _pairKeys, _epoch.threshold) &&
             BGLS.checkSignature(message, _ist.aggregatedSeal.signature, _aggPk);
-
-        //return
-        //    BGLS.checkAggPk(bits, _aggPk, _pairKeys, _epoch.threshold) &&
-        //    BGLS.checkSignature(message, _ist.aggregatedSeal.signature, _aggPk);
     }
-
-    function _getEpochIndex(uint256 epoch, uint256 maxEpochs) internal pure returns (uint256) {
-        return epoch % maxEpochs;
-    }
-
-    /*
-    function _getPreEpochId(uint256 epoch) internal view returns (uint256) {
-        uint256 id = _getEpochId(epoch);
-        if (id == 0) {
-            return maxEpochs - 1;
-        } else {
-            return id - 1;
-        }
-    }*/
 
     function getPrepareCommittedSeal(
-        bytes memory _headerWithoutAgg,
+        bytes32 hash,
         uint256 _round
     ) internal pure returns (bytes memory result) {
-        bytes32 hash = keccak256(_headerWithoutAgg);
+        // bytes32 hash = keccak256(_headerWithoutAgg);
         if (_round == 0) {
             result = abi.encodePacked(hash, uint8(2));
         } else {
@@ -453,6 +457,28 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         }
         return blockNumber / epochLen + 1;
     }
+
+    function _getEpochIndex(uint256 epoch, uint256 maxEpochs) internal pure returns (uint256) {
+        return epoch % maxEpochs;
+    }
+
+    function _checkBlockNumber(uint256 _blockNumber, bool _updateHeader) internal view returns (uint256) {
+        (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
+
+        (uint256 min, uint256 max) = _verifiableHeaderRange(startHeight, lastHeight, maxEpoch, epochSize);
+        require(_blockNumber <= min || _blockNumber >= max, "Out of verify range");
+
+        if (_updateHeader) {
+            require(_blockNumber % epochSize == 0, "Header number is error");
+            require(_blockNumber - epochSize == lastHeight, "Header is have");
+        }
+
+        uint256 epochId = _getEpochByNumber(_blockNumber, epochSize);
+
+        return _getEpochIndex(epochId, maxEpoch);
+    }
+
+
 
     /** UUPS *********************************************************/
     function _authorizeUpgrade(address) internal view override {
