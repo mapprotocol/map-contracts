@@ -21,7 +21,7 @@ library MPT {
      * @return The boolean validity of the proof.
      */
     function verify(
-        bytes memory value,
+        bytes32 value,
         bytes memory encodedPath,
         bytes[] memory rlpParentNodes,
         bytes32 root
@@ -53,7 +53,7 @@ library MPT {
             if (currentNodeList.length == 17) {
                 if (pathPtr == path.length) {
                     //if (keccak256(RLPReader.toBytes(currentNodeList[16])) == keccak256(value)) {
-                    if (RLPReader.payloadKeccak256(currentNodeList[16]) == keccak256(value)) {
+                    if (RLPReader.payloadKeccak256(currentNodeList[16]) == value) {
                         return true;
                     } else {
                         return false;
@@ -71,7 +71,7 @@ library MPT {
                 if (pathPtr + traversed == path.length) {
                     //leaf node
                     //if (keccak256(RLPReader.toBytes(currentNodeList[1])) == keccak256(value)) {
-                    if (RLPReader.payloadKeccak256(currentNodeList[1]) == keccak256(value)) {
+                    if (RLPReader.payloadKeccak256(currentNodeList[1]) == value) {
                         return true;
                     } else {
                         return false;

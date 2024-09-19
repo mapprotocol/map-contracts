@@ -9,4 +9,11 @@ interface IMPTVerify {
         bytes[] memory _proof,
         bytes memory _node
     ) external pure returns (bool);
+
+    function verifyTrieProof(
+        bytes32 _root,
+        bytes32 _value,
+        bytes memory _key,
+        bytes[] memory _proof
+    ) external pure returns (bool);
 }
