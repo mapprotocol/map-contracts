@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 interface ILightClientManager {
+
     event ManagerNotifySend(
         uint256 indexed chainId,
         address indexed sender,
