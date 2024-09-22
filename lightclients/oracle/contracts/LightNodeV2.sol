@@ -66,11 +66,12 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
         emit UpdateMultisig(version, quorum, signers);
     }
 
+    /*
     function setMptVerify(address _verifier) external onlyOwner {
         require(_verifier != address(0), "LightNode: verifier is the zero address");
         mptVerify = _verifier;
         emit SetMptVerify(_verifier);
-    }
+    }*/
 
     function togglePause() external onlyOwner {
          paused() ? _unpause() : _pause();
@@ -84,11 +85,28 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
         return _verifyProofData(_receiptProof);
     }
 
+    function verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, ILightVerifier.txLog memory log) {
+        return _verifyProofData(_logIndex, _receiptProof);
+    }
+
     function verifyProofDataWithCache(
         bytes memory _receiptProof
-    ) external view override whenNotPaused returns (bool success, string memory message, bytes memory logs) {
+    ) external override whenNotPaused returns (bool success, string memory message, bytes memory logs) {
         return _verifyProofData(_receiptProof);
     }
+
+
+    function verifyProofDataWithCache(
+        bool _cache,
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, ILightVerifier.txLog memory log) {
+        return _verifyProofData(_logIndex, _receiptProof);
+    }
+
 
     function _verifyProofData(
         bytes memory _receiptProof
@@ -96,16 +114,25 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
         _verifySignatures(proof.receiptRoot, proof.blockNum, chainId, proof.signatures);
         (success, logs) = Verify._validateProof(proof.receiptRoot, proof.receiptProof, address(0x0));
-        if (!success) {
-            message = "mpt verification failed";
-        }
+        require(success, "mpt verification failed");
+    }
+
+    function _verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) private view returns (bool success, string memory message, ILightVerifier.txLog memory log) {
+        ProofData memory proof = abi.decode(_receiptProof, (ProofData));
+        _verifySignatures(proof.receiptRoot, proof.blockNum, chainId, proof.signatures);
+        (success, log) = Verify._validateProofWithLog(_logIndex, proof.receiptRoot, proof.receiptProof);
+
+        require(success, "mpt verification failed");
     }
 
     function multisigInfo() external view returns (bytes32 version, uint256 quorum, address[] memory singers) {
         return _multisigInfo();
     }
 
-    function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool) {
+    function isVerifiable(uint256, bytes32) external view override returns (bool) {
         return true;
     }
 
@@ -125,9 +152,10 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
         return abi.encode(_proof);
     }
 
+    /*
     function getHeadersBytes(uint256 blockNum, bytes32 receiptRoot) external pure returns (bytes memory) {
         return abi.encode(blockNum, receiptRoot);
-    }
+    }*/
 
     function headerHeight() external view override returns (uint256) {
         return 0;

@@ -52,3 +52,30 @@ task("oracleV2:updateMultisig", "set light node address")
             await (await oracle.updateMultisig(sig.quorum, sig.signers)).wait();
         }
     });
+
+
+task("oracleV2:removeProposal", "set light node address")
+    .addOptionalParam("oracle", "oracle address", "", types.string)
+    .addOptionalParam("chainid", "oracle address", "", types.string)
+    .addOptionalParam("block", "oracle address", "", types.string)
+    .addOptionalParam("signer", "oracle address", "", types.string)
+    .addOptionalParam("index", "oracle address", "", types.string)
+    .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+        let [wallet] = await hre.ethers.getSigners();
+        const { network } = hre;
+        let d = await readFromFile(network.name);
+
+        let oracleAddr = taskArgs.oracle;
+        if (oracleAddr === "") {
+            if (d.networks[network.name].oracle === undefined || d.networks[network.name].oracle === "") {
+                throw "oracle not deploy";
+            }
+            oracleAddr = d.networks[network.name].oracle;
+        }
+        console.log("oracle manager address:", oracleAddr);
+        console.log("wallet address is:", wallet.address);
+        const Oracle = await hre.ethers.getContractFactory("OracleV2");
+        let oracle = Oracle.attach(oracleAddr);
+        let rst = await oracle.recoverProposal(taskArgs.chainid, taskArgs.block, taskArgs.signer, taskArgs.index);
+    });
+

@@ -100,6 +100,21 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return _verifyProofData(_receiptProof);
     }
 
+    function verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, ILightVerifier.txLog memory log) {
+        return _verifyProofData(_logIndex, _receiptProof);
+    }
+
+    function verifyProofDataWithCache(
+        bool _cache,
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, ILightVerifier.txLog memory log) {
+        return _verifyProofData(_logIndex, _receiptProof);
+    }
+
     function _verifyProofData(
         bytes memory _receiptProof
     ) private view returns (bool success, string memory message, bytes memory logs) {
@@ -107,6 +122,19 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         bytes32 rootHash = receiptRoots[proof.blockNum];
         require(rootHash != bytes32(""), "LightNode: receipt root not update");
         (success, logs) = Verify._validateProof(rootHash, proof.receiptProof, mptVerify);
+        if (!success) {
+            message = "mpt verification failed";
+        }
+    }
+
+    function _verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) private view returns (bool success, string memory message, ILightVerifier.txLog memory log) {
+        ProofData memory proof = abi.decode(_receiptProof, (ProofData));
+        bytes32 rootHash = receiptRoots[proof.blockNum];
+        require(rootHash != bytes32(""), "LightNode: receipt root not update");
+        (success, log) = Verify._validateProofWithLog(_logIndex, rootHash, proof.receiptProof);
         if (!success) {
             message = "mpt verification failed";
         }
