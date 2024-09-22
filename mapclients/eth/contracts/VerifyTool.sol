@@ -5,6 +5,7 @@ pragma solidity 0.8.20;
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 import "@mapprotocol/protocol/contracts/lib/MPT.sol";
 import "@mapprotocol/protocol/contracts/lib/LibRLP.sol";
+import "@mapprotocol/protocol/contracts/lib/LogDecode.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./interface/IVerifyTool.sol";
 
@@ -54,27 +55,16 @@ contract VerifyTool is IVerifyTool {
         bytes[] memory _proof,
         bytes memory _receiptRlp,
         uint256 _receiptType
-    ) external pure override returns (bool success, ILightNode.txLog memory log) {
+    ) external pure override returns (bool success, ILightVerifier.txLog memory log) {
         bytes memory expectedValue = getVerifyExpectedValueHash(_receiptType, _receiptRlp);
         bytes32 expectedHash = keccak256(expectedValue);
         success = MPT.verify(expectedHash, _keyIndex, _proof, _receiptHash);
         if (success) {
-            RLPReader.RLPItem memory logs = _receiptRlp.toRlpItem().safeGetItemByIndex(3);
-            log = _decodeTxLog(logs.safeGetItemByIndex(_logIndex));
+            log = LogDecode.decodeTxLog(_receiptRlp, _logIndex);
         }
         return (success, log);
     }
 
-    function _decodeTxLog(RLPReader.RLPItem memory item) private pure returns (ILightNode.txLog memory _txLog) {
-        RLPReader.RLPItem[] memory items = item.toList();
-        require(items.length >= 3, "log length to low");
-        RLPReader.RLPItem[] memory firstItemList = items[1].toList();
-        bytes32[] memory topic = new bytes32[](firstItemList.length);
-        for (uint256 j = 0; j < firstItemList.length; j++) {
-            topic[j] = firstItemList[j].toBytes32();
-        }
-        _txLog = ILightNode.txLog({addr: items[0].toAddress(), topics: topic, data: items[2].unsafeToBytes()});
-    }
 
     function decodeHeader(bytes memory rlpBytes) external pure override returns (blockHeader memory bh) {
         RLPReader.RLPItem[] memory ls = rlpBytes.toRlpItem().toList();

@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./ILightNode.sol";
+import "@mapprotocol/protocol/contracts/interface/ILightVerifier.sol";
 
 interface IVerifyTool {
     //Map chain block header
@@ -84,7 +84,7 @@ interface IVerifyTool {
         bytes[] memory _proof,
         bytes memory _receiptRlp,
         uint256 _receiptType
-    ) external pure returns (bool success, ILightNode.txLog memory log);
+    ) external pure returns (bool success, ILightVerifier.txLog memory log);
 
     function decodeHeader(bytes memory rlpBytes) external view returns (blockHeader memory bh);
 
@@ -97,6 +97,7 @@ interface IVerifyTool {
     function manageAgg(
         istanbulExtra memory ist
     ) external view returns (bytes memory deleteAggBytes, bytes memory deleteSealAndAggBytes);
+
 
     function decodeTxReceipt(bytes memory receiptRlp) external pure returns (bytes memory logHash);
 

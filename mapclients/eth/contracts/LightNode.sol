@@ -4,11 +4,10 @@ pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "./interface/ILightNode.sol";
 import "./bls/BGLS.sol";
 import "./interface/IVerifyTool.sol";
 
-contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
+contract LightNode is UUPSUpgradeable, Initializable, ILightVerifier {
     address private _pendingAdmin;
 
     uint256 public maxEpochs; // max epoch number
@@ -51,6 +50,8 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         uint256 keyLen;     // load key length
         uint256[] pairKeys; // <-- validators, pubkey G1,   (s, s * g2)   s * g1
     }
+
+    event UpdateBlockHeader(address indexed account, uint256 indexed blockHeight);
 
     event MapInitializeValidators(uint256 _threshold, BGLS.G1[] _pairKeys, uint256[] _weights, uint256 epoch);
     event MapUpdateValidators(bytes[] _pairKeysAdd, uint256 epoch, uint256 bits);
@@ -200,6 +201,21 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightNode {
         }
 
         return _verifyMptProof(bytes32(_receiptProof.header.receiptHash), _receiptProof);
+    }
+
+    function verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProofBytes
+    ) external view override returns (bool success, string memory message, txLog memory log) {
+        ReceiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProof));
+
+        (success, message) = _verifyHeaderProof(_receiptProof);
+        if (!success) {
+            return (success, message, log);
+        }
+        bytes32 receiptRoot = bytes32(_receiptProof.header.receiptHash);
+
+        return _verifyMptProofWithLog(_logIndex, receiptRoot, _receiptProof);
     }
 
     function getData(bytes memory _receiptProofBytes) external pure returns (ReceiptProof memory) {
