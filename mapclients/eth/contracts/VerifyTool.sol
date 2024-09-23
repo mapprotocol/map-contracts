@@ -43,7 +43,7 @@ contract VerifyTool is IVerifyTool {
         bytes32 expectedHash = keccak256(expectedValue);
         success = MPT.verify(expectedHash, _keyIndex, _proof, _receiptHash);
         if (success) {
-            logs = _receiptRlp.toRlpItem().safeGetItemByIndex(3).unsafeToRlpBytes();
+            logs = LogDecode.getLogsFromReceipt(_receiptRlp);
         }
         return (success, logs);
     }
@@ -60,7 +60,7 @@ contract VerifyTool is IVerifyTool {
         bytes32 expectedHash = keccak256(expectedValue);
         success = MPT.verify(expectedHash, _keyIndex, _proof, _receiptHash);
         if (success) {
-            log = LogDecode.decodeTxLog(_receiptRlp, _logIndex);
+            log = LogDecode.decodeTxLogFromReceipt(_logIndex, _receiptRlp);
         }
         return (success, log);
     }
