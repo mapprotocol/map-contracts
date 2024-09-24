@@ -162,7 +162,7 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightVerifier {
         bool _cache,
         uint256 _logIndex,
         bytes memory _receiptProofBytes
-    ) external returns (bool success, string memory message, txLog memory log) {
+    ) external  returns (bool success, string memory message, txLog memory log) {
         ReceiptProof memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProof));
 
         bytes32 receiptRoot;
@@ -247,6 +247,15 @@ contract LightNode is UUPSUpgradeable, Initializable, ILightVerifier {
 
     function getEpoch(uint256 id) external view returns (uint256 epoch, uint256 length, uint256 aggX, uint256 aggY) {
         return (epochs[id].epoch, epochs[id].pairKeys.length / 2, epochs[id].aggKey[0], epochs[id].aggKey[1]);
+    }
+
+    function isCachedReceiptRoot(uint256 _blockHeight) external view returns (bool) {
+
+        if (cachedReceiptRoot[_blockHeight] != bytes32("")) {
+            return true;
+        }else{
+            return false;
+        }
     }
 
     /** internal *********************************************************/

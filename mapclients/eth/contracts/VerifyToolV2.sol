@@ -31,7 +31,7 @@ contract VerifyToolV2 is IVerifyToolV2 {
     33 bytes: nonce;
     1-9 bytes: baseFee;
     */
-    uint256 internal constant COINBASE_OFFSET = 35;
+    uint256 internal constant COINBASE_OFFSET = 36;
     uint256 internal constant RECEIPT_ROOT_OFFSET = 123;
     uint256 internal constant BLOCK_NUMBER_OFFSET = 415;
 
@@ -106,7 +106,7 @@ contract VerifyToolV2 is IVerifyToolV2 {
         }
 
         // check before ext
-        if (!checkBeforeExt(_header, _signHeader, offset)) {
+        if (!checkBeforeExt(_header, _signHeader, offset - 3)) {
             return (false, "Invalid header", coinbase, receiptRoot);
         }
 
@@ -118,7 +118,12 @@ contract VerifyToolV2 is IVerifyToolV2 {
             return (false, "Invalid extra len", coinbase, receiptRoot);
         }
         // skip 32 bytes extra data and the istanbulExtra rlp header
-        RLPReader.RLPItem memory istItem = _header.toRlpItem(offset + 2 + 0x20);
+        RLPReader.RLPItem memory istItem;
+        if(ist.validators.length > 0){
+            istItem = _header.toRlpItem(offset + 3 + 0x20);
+        }else{
+            istItem = _header.toRlpItem(offset + 2 + 0x20);
+        }
         if (checkValidator) {
             if (!checkIst(istItem, ist))
             {
@@ -168,10 +173,10 @@ contract VerifyToolV2 is IVerifyToolV2 {
         uint256 ist32;
         uint256 memPtr = ext.memPtr;
         assembly {
-            ist32 := mload(memPtr)
+            ist32 := mload(add(memPtr,0x02))
         }
 
-        if ((ist32 >> 28) != 0xc0c0c000) {
+        if ((ist32 >> 28 * 8) != 0xc0c0c080) {
             return false;
         }
 
@@ -180,9 +185,9 @@ contract VerifyToolV2 is IVerifyToolV2 {
         if (removeList != ist.removeList) {
             return false;
         }
-        if (removeItem.memPtr - ext.memPtr != 4) {
-            return false;
-        }
+//        if (removeItem.memPtr - ext.memPtr != 4) {
+//            return false;
+//        }
 
         return true;
     }
@@ -205,9 +210,9 @@ contract VerifyToolV2 is IVerifyToolV2 {
         }
 
         LibRLP.List[3] memory list;
-        for (uint256 i = 0; i < 3; i++) {
-            list[i] = LibRLP.l();
-        }
+//        for (uint256 i = 0; i < 3; i++) {
+//            list[i] = LibRLP.l();
+//        }
 
         for (uint256 i = 0; i < ist.validators.length; i++) {
             LibRLP.p(list[0], ist.validators[i]);
