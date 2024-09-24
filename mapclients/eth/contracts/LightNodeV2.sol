@@ -4,9 +4,8 @@ pragma solidity 0.8.20;
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interface/ILightNode.sol";
+import "./interface/IVerifyToolV2.sol";
 import "./bls/BGLS.sol";
-import "./VerifyToolV2.sol";
-import "hardhat/console.sol";
 
 contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     address private _pendingAdmin;
@@ -104,8 +103,8 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         bytes memory aggHeader,
         bytes memory signHeader,
         IVerifyToolV2.istanbulExtra memory ist,
-        uint256[] memory pairKeys,
-        BGLS.G2 memory aggPk
+        BGLS.G2 memory aggPk,
+        uint256[] memory pairKeys
     ) external {
         require(aggHeader.length > 500, "Invalid block header");
         require(signHeader.length > 500, "Invalid block header");
@@ -113,7 +112,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         uint256 index = _checkBlockNumber(blockNumber, true);
         Epoch memory epoch = epochs[index];
 
-        require(_getKeyHash(pairKeys, pairKeys.length - 4) == epoch.pairKeyHash, "keys hash error");
+        require(_getKeyHash(pairKeys, pairKeys.length) == epoch.pairKeyHash, "keys hash error");
 
         (bool success, string memory message, address coinbase, ) = verifyTool.checkHeader(blockNumber, aggHeader, signHeader, ist, true, false);
         require(success, message);
@@ -178,6 +177,16 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         return _verifyMptProof(receiptRoot, _receiptProof);
     }
 
+    function verifyProofDataTest(
+        bytes memory _receiptProofBytes
+    ) external returns (bool success, string memory message, bytes memory logsHash) {
+        ReceiptProofV2 memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProofV2));
+
+        bytes32 receiptRoot = _verifyHeaderProof(_receiptProof);
+
+        return _verifyMptProof(receiptRoot, _receiptProof);
+    }
+
     function getData(bytes memory _receiptProofBytes) external pure returns (ReceiptProofV2 memory) {
         ReceiptProofV2 memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProofV2));
 
@@ -208,6 +217,15 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
 
     function nodeType() external view override returns (uint256) {
         return 1;
+    }
+
+    function isCachedReceiptRoot(uint256 _blockHeight) external view returns (bool) {
+
+        if (cachedReceiptRoot[_blockHeight] != bytes32("")) {
+            return true;
+        }else{
+            return false;
+        }
     }
 
     /** internal *********************************************************/
@@ -400,7 +418,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         IVerifyToolV2.istanbulExtra memory ist,
         BGLS.G2 memory _aggPk
     ) internal view returns (bool success) {
-        bytes32 headerHash = keccak256(_header);
+        bytes32 headerHash = keccak256(_signHeader);
         success = verifyTool.verifyHeaderHash(_coinbase, ist.seal, headerHash);
         require(success, "Invalid header hash");
 
@@ -466,7 +484,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         (uint256 startHeight, uint256 lastHeight, uint256 maxEpoch, uint256 epochSize) = _getNodeState();
 
         (uint256 min, uint256 max) = _verifiableHeaderRange(startHeight, lastHeight, maxEpoch, epochSize);
-        require(_blockNumber <= min || _blockNumber >= max, "Out of verify range");
+        require(_blockNumber >= min && _blockNumber <= max, "Out of verify range");
 
         if (_updateHeader) {
             require(_blockNumber % epochSize == 0, "Header number is error");

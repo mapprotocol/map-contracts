@@ -21,12 +21,9 @@ describe("LightNode start test", function () {
     let lightProxyClient;
     let proxy;
 
-    let blsCode;
-    let bc;
-
     let g1List;
 
-    let datInit;
+    let dataInit;
 
     beforeEach(async function () {
         [owner, addr1] = await ethers.getSigners();
@@ -44,46 +41,8 @@ describe("LightNode start test", function () {
     });
 
     it("initialize ", async function () {
-        let g1Hex = [
-            "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c12b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
-            "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a692685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
-            "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
-            "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
-            "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
-        ];
 
-        //blsCode = await ethers.getContractFactory("BlsCode");
-        //bc = await blsCode.deploy();
-        //await bc.deployed();
-
-        //const g0 = await bc.decodeG1(g1Hex[0]);
-        //const g1 = await bc.decodeG1(g1Hex[1]);
-        //const g2 = await bc.decodeG1(g1Hex[2]);
-        //const g3 = await bc.decodeG1(g1Hex[3]);
-        //const g4 = await bc.decodeG1(g1Hex[4]);
-
-        const g0 = [
-            "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
-            "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
-        ];
-        const g1 = [
-            "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
-            "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
-        ];
-        const g2 = [
-            "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
-            "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
-        ];
-        const g3 = [
-            "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
-            "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
-        ];
-        const g4 = [
-            "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
-            "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
-        ];
-
-        g1List = [g0, g1, g2, g3, g4];
+        g1List = proofs.g1Init;
 
         let addresss = [
             "0x053af2b1ccbacba47c659b977e93571c89c49654",
@@ -110,12 +69,12 @@ describe("LightNode start test", function () {
             verifyToolContractAddress,
             owner.address
         );
-        datInit = data.data;
+        dataInit = data.data;
     });
 
     it("deploy LightNodeProxy", async function () {
         LightProxyClient = await ethers.getContractFactory("LightNodeProxy");
-        lightProxyClient = await LightProxyClient.deploy(lightNodeContractAddress, datInit);
+        lightProxyClient = await LightProxyClient.deploy(lightNodeContractAddress, dataInit);
         await lightProxyClient.deployed();
 
         proxy = LightClient.attach(lightProxyClient.address);
@@ -128,16 +87,31 @@ describe("LightNode start test", function () {
         await proxy.updateBlockHeader(proofs.header204000, proofs.ist204000, proofs.aggpk204000);
         console.log("update header 205000 ...");
         await proxy.updateBlockHeader(proofs.header205000, proofs.ist205000, proofs.aggpk205000);
+
+        console.log(await proxy.headerHeight());
+
+        await proxy["verifyProofDataWithCache(bytes)"](await proxy.getBytes(proofs.provedata205030));
+
         //console.log(await proxy.getValidators(205))
-        let data205030 = await proxy.callStatic.verifyProofData(await proxy.getBytes(proofs.provedata205030));
+        let data205030 = await proxy["verifyProofData(bytes)"](await proxy.getBytes(proofs.provedata205030));
         expect(data205030.success).to.equal(true);
+
+        expect(await proxy.isCachedReceiptRoot(205030)).to.be.equal(true)
     });
 
     it("add validator", async function () {
         await proxy.updateBlockHeader(proofs.header206000, proofs.ist206000, proofs.aggpk206000);
 
-        let data206460 = await proxy.callStatic.verifyProofData(await proxy.getBytes(proofs.provedata206460));
+        let provedata206460Bytes = await proxy.getBytes(proofs.provedata206460);
+        //console.log(provedata206460Bytes)
+        //await proxy.verifyProofDataWithCache(provedata206460Bytes)
+        await proxy["verifyProofDataWithCache(bool,uint256,bytes)"](true,0,provedata206460Bytes)
+
+        let data206460 = await proxy["verifyProofData(bytes)"](await proxy.getBytes(proofs.provedata206460));
         expect(data206460.success).to.equal(true);
+
+        expect(await proxy.isCachedReceiptRoot(206460)).to.be.equal(true)
+
     });
 
     it("authorizeUpgrade test ", async function () {
@@ -150,8 +124,6 @@ describe("LightNode start test", function () {
         expect(await proxy.getImplementation()).to.equal(lightClientP1.address);
 
         await proxy.setPendingAdmin(addr1.address);
-        // console.log(addr1.address);
-        // console.log(await proxy.pendingAdmin());
 
         await (await proxy.connect(addr1)).changeAdmin();
 
@@ -167,56 +139,16 @@ describe("LightNode start test", function () {
     let lightNodeContractDelete;
     let lightNodeContractDeleteAddress;
 
-    //let blsCodeDelete;
-    //let bcDelete;
-
     it("delete deploy", async function () {
         LightClientDelete = await ethers.getContractFactory("LightNode");
         lightClientDelete = await LightClientDelete.deploy();
         lightNodeContractDelete = await lightClientDelete.deployed();
         lightNodeContractDeleteAddress = lightNodeContractDelete.address;
-        //blsCodeDelete = await ethers.getContractFactory("BlsCode");
-        //bcDelete = await blsCodeDelete.deploy();
-        //await bcDelete.deployed();
     });
 
     it("verifyProofData error test ", async function () {
-        let g1Hex = [
-            "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c12b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
-            "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a692685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
-            "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
-            "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
-            "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
-        ];
 
-        //const g0 = await bcDelete.decodeG1(g1Hex[0]);
-        //const g1 = await bcDelete.decodeG1(g1Hex[1]);
-        //const g2 = await bcDelete.decodeG1(g1Hex[2]);
-        //const g3 = await bcDelete.decodeG1(g1Hex[3]);
-        //const g4 = await bcDelete.decodeG1(g1Hex[4]);
-
-        const g0 = [
-            "0x25480e726faeaecdba3d09bd8079c17153a99914400ee7c68d6754d29d7832c1",
-            "0x2b9804718e2cb3f65221781647a8c3455cf3090519b15a34ef43b1dde7e3c287",
-        ];
-        const g1 = [
-            "0x120bf5a2d293b4d444448304d5d04775bfff199676180111112ec0db7f8a6a69",
-            "0x2685ac2dc25dc5dd06a6b4777d542d4f4afdf92847b9b7c98f5ecaf4d908f6d7",
-        ];
-        const g2 = [
-            "0x03dda4ec969ff7950903131caf2cc0df1d91c569be382cab67df539e94a45835",
-            "0x156b522a45ed4a625a7b5906d64046dce1c112a1dddb72972ecb670145a16042",
-        ];
-        const g3 = [
-            "0x28681fcac6825e2a6711b2ef0d3a22eae527c41ecccdeb4e69dfff4002219d8b",
-            "0x131f98eaf9323bf171e947401f0e6b1951f4c8f8aa525b677f1c811c88358e37",
-        ];
-        const g4 = [
-            "0x2b8a812d2e9ac7d6799b3ebad52a27402a31e89eb3f383be96314f3f3f0ead3a",
-            "0x028250eedb4307d62696f8a1b235dc376682780fb69eb1b7c9403ee6608ad116",
-        ];
-
-        let g1ListDelete = [g0, g1, g2, g3, g4];
+        let g1ListDelete = proofs.g1Init;
 
         let addresss = [
             "0x053af2b1ccbacba47c659b977e93571c89c49654",
@@ -248,18 +180,17 @@ describe("LightNode start test", function () {
         await lightClientDelete.updateBlockHeader(proofs.header218000, proofs.ist218000, proofs.aggpk218000);
         await lightClientDelete.updateBlockHeader(proofs.header219000, proofs.ist219000, proofs.aggpk219000);
 
-        let data220558 = await lightClientDelete.callStatic.verifyProofData(
+        let data220558 = await lightClientDelete["verifyProofData(bytes)"](
             await lightClientDelete.getBytes(proofs.provedata220559)
         );
         expect(data220558.success).to.equal(false);
         expect(data220558.message).to.equal("Out of verify range");
         await lightClientDelete.updateBlockHeader(proofs.header220000, proofs.ist220000, proofs.aggpk220000);
 
-        // let data220559 =  await lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedata220559));
-        // expect(data220559.success).to.equal(true);
-        // await  expect( lightClientDelete.callStatic.verifyProofData( await lightClientDelete.getBytes(proofs.provedataProofError))).to.be.revertedWith("verifyTrieProof root node hash invalid");
-        //expect(dataProofError.message).to.equal("bls error");
-        let dataErr = await lightClientDelete.callStatic.verifyProofData(
+        let data220559 =  await lightClientDelete["verifyProofData(bytes)"]( await lightClientDelete.getBytes(proofs.provedata220559));
+        expect(data220559.success).to.equal(true);
+
+        let dataErr = await lightClientDelete["verifyProofData(bytes)"](
             await lightClientDelete.getBytes(proofs.provedataHeaderError)
         );
         expect(dataErr.message).to.equal("VerifyHeaderSig failed");
