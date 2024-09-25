@@ -28,12 +28,25 @@ contract VerifyToolV2 is IVerifyToolV2 {
     1-9 bytes: time;
     n bytes:   extraData;
     33 bytes: mixDigest;
-    33 bytes: nonce;
+    9 bytes: nonce;
     1-9 bytes: baseFee;
     */
     uint256 internal constant COINBASE_OFFSET = 36;
     uint256 internal constant RECEIPT_ROOT_OFFSET = 123;
     uint256 internal constant BLOCK_NUMBER_OFFSET = 415;
+
+    /*
+    32 bytes: extra data;
+    2/3 bytes: istanbulExtra RLP header;
+    1-n bytes: added validators;
+    1-n bytes: added public key;
+    1-n bytes: added G1 key;
+    1-33 bytes: remove list;
+    1/67 bytes: seal;
+    4 bytes: empty aggregated seal;
+    70-132 bytes: parent aggregated seal;
+    */
+    uint256 internal constant MIN_EXTRA_LENGTH = 113;
 
     function verifyTrieProof(
         bytes32 _receiptHash,
@@ -59,7 +72,7 @@ contract VerifyToolV2 is IVerifyToolV2 {
         bytes[] memory _proof,
         bytes memory _receiptRlp,
         uint256 _receiptType
-    ) external pure override returns (bool success, ILightNode.txLog memory log) {
+    ) external pure override returns (bool success, ILightVerifier.txLog memory log) {
         bytes32 expectedHash = keccak256(_receiptRlp);
         success = MPT.verify(expectedHash, _keyIndex, _proof, _receiptHash);
         if (success) {
@@ -71,7 +84,7 @@ contract VerifyToolV2 is IVerifyToolV2 {
         return (success, log);
     }
 
-    function _decodeTxLog(RLPReader.RLPItem memory item) private pure returns (ILightNode.txLog memory _txLog) {
+    function _decodeTxLog(RLPReader.RLPItem memory item) private pure returns (ILightVerifier.txLog memory _txLog) {
         RLPReader.RLPItem[] memory items = item.toList();
         require(items.length >= 3, "log length to low");
         RLPReader.RLPItem[] memory firstItemList = items[1].toList();
@@ -79,7 +92,7 @@ contract VerifyToolV2 is IVerifyToolV2 {
         for (uint256 j = 0; j < firstItemList.length; j++) {
             topic[j] = firstItemList[j].toBytes32();
         }
-        _txLog = ILightNode.txLog({addr: items[0].toAddress(), topics: topic, data: items[2].unsafeToBytes()});
+        _txLog = ILightVerifier.txLog({addr: items[0].toAddress(), topics: topic, data: items[2].unsafeToBytes()});
     }
 
     function checkHeader(
@@ -91,50 +104,24 @@ contract VerifyToolV2 is IVerifyToolV2 {
         bool getReceiptRoot
     ) external override pure returns (bool success, string memory message, address coinbase, bytes32 receiptRoot) {
         // check block number
-        RLPReader.RLPItem memory numberItem = _header.toRlpItem(BLOCK_NUMBER_OFFSET);
-        uint256 number = numberItem.toUint();
+        RLPReader.RLPItem memory item = _header.toRlpItem(BLOCK_NUMBER_OFFSET);
+        uint256 number = item.toUint();
         if (_blockNumber != number) {
             return (false, "Invalid block number", coinbase, receiptRoot);
         }
 
-        // get extra item
-        uint256 offset = BLOCK_NUMBER_OFFSET;
-        RLPReader.RLPItem memory item = numberItem;
-        for (uint256 i = 0; i < 4; i++) {
-            offset += item.len;
-            item = _header.toRlpItem(offset);
+        uint256 offset;
+        (success, message, offset) = checkExtraData(checkValidator, _header, item, ist);
+        if (!success) {
+            return (success, message, coinbase, receiptRoot);
         }
 
-        // check before ext
+        // check bytes before extra data
         if (!checkBeforeExt(_header, _signHeader, offset - 3)) {
             return (false, "Invalid header", coinbase, receiptRoot);
         }
 
         // todo: check after ext
-
-        // check extra data
-        if (item.len < 113) {
-            // min istanbul extra data
-            return (false, "Invalid extra len", coinbase, receiptRoot);
-        }
-        // skip 32 bytes extra data and the istanbulExtra rlp header
-        RLPReader.RLPItem memory istItem;
-        if(ist.validators.length > 0){
-            istItem = _header.toRlpItem(offset + 3 + 0x20);
-        }else{
-            istItem = _header.toRlpItem(offset + 2 + 0x20);
-        }
-        if (checkValidator) {
-            if (!checkIst(istItem, ist))
-            {
-                return (false, "Invalid istExt", coinbase, receiptRoot);
-            }
-        } else {
-            RLPReader.RLPItem memory sealItem = istItem.safeGetItemByIndex(4);
-            if (RLPReader.payloadKeccak256(sealItem) != keccak256(ist.seal)) {
-                return (false, "Invalid seal", coinbase, receiptRoot);
-            }
-        }
 
         item = _header.toRlpItem(COINBASE_OFFSET);
         coinbase = item.toAddress();
@@ -150,70 +137,90 @@ contract VerifyToolV2 is IVerifyToolV2 {
     function checkBeforeExt(
         bytes memory _header,
         bytes memory _signHeader,
-        uint256 offset
+        uint256 lengthBeforeExtra
     ) internal pure returns (bool) {
         uint256 memPtr;
         bytes32 result1;
         bytes32 result2;
         assembly {
             memPtr := add(_header, 0x23)
-            result1 := keccak256(memPtr, offset)
+            result1 := keccak256(memPtr, lengthBeforeExtra)
             memPtr := add(_signHeader, 0x23)
-            result2 := keccak256(memPtr, offset)
+            result2 := keccak256(memPtr, lengthBeforeExtra)
         }
 
         return (result1 == result2);
     }
 
-
-    function checkEmptyIst(
-        RLPReader.RLPItem memory ext,
+    function checkExtraData(
+        bool checkValidator,
+        bytes memory _header,
+        RLPReader.RLPItem memory numberItem,
         istanbulExtra memory ist
-    ) internal pure returns (bool) {
-        uint256 ist32;
-        uint256 memPtr = ext.memPtr;
-        assembly {
-            ist32 := mload(add(memPtr,0x02))
+    ) internal pure returns (bool success, string memory message, uint256 extraOffset) {
+        // get extra item
+        RLPReader.RLPItem memory item = numberItem;
+        uint256 offset = BLOCK_NUMBER_OFFSET;
+        // skip blockNumber, gasLimit, gasUsed and timestamp
+        for (uint256 i = 0; i < 4; i++) {
+            offset += item.len;
+            item = _header.toRlpItem(offset);
         }
 
+        // check extra data
+        if (item.len < MIN_EXTRA_LENGTH) {
+            // min istanbul extra data
+            return (false, "Invalid extra len", 0);
+        }
+        // skip 32 bytes extra data and the istanbulExtra rlp header
+        uint256 istOffset = (item.len > 0xFF) ? (3 + 0x20) : (2 + 0x20);
+        RLPReader.RLPItem memory istItem = _header.toRlpItem(istOffset + offset);
+        if (checkValidator) {
+            if (!checkIst(istItem, ist))
+            {
+                return (false, "Invalid istExt", 0);
+            }
+        } else {
+            RLPReader.RLPItem memory sealItem = istItem.safeGetItemByIndex(4);
+            if (sealItem.payloadKeccak256() != keccak256(ist.seal)) {
+                return (false, "Invalid seal", 0);
+            }
+        }
+
+        return (true, "", offset);
+    }
+
+
+    // no added and removed validators
+    // the istanbulExtra payload start with 0xC0C0C080
+    function checkEmptyIst(
+        RLPReader.RLPItem memory istItem
+    ) internal pure returns (bool) {
+        uint256 ist32;
+        (uint256 memPtr, ) = istItem.payloadLocation();
+        assembly {
+            ist32 := mload(memPtr)
+        }
         if ((ist32 >> 28 * 8) != 0xc0c0c080) {
             return false;
         }
-
-        RLPReader.RLPItem memory removeItem = ext.safeGetItemByIndex(3);
-        uint256 removeList = removeItem.toUint();
-        if (removeList != ist.removeList) {
-            return false;
-        }
-//        if (removeItem.memPtr - ext.memPtr != 4) {
-//            return false;
-//        }
 
         return true;
     }
 
 
     function checkIst(
-        RLPReader.RLPItem memory ext,
+        RLPReader.RLPItem memory istItem,
         istanbulExtra memory ist
     ) internal pure returns (bool) {
         if (ist.validators.length == 0 && ist.removeList == 0) {
             //
-            return checkEmptyIst(ext, ist);
+            return checkEmptyIst(istItem);
         }
 
-        RLPReader.RLPItem[] memory istList = ext.toList();
-
-        uint256 removeList = istList[3].toUint();
-        if (removeList != ist.removeList) {
-            return false;
-        }
+        RLPReader.RLPItem[] memory istList = istItem.toList();
 
         LibRLP.List[3] memory list;
-//        for (uint256 i = 0; i < 3; i++) {
-//            list[i] = LibRLP.l();
-//        }
-
         for (uint256 i = 0; i < ist.validators.length; i++) {
             LibRLP.p(list[0], ist.validators[i]);
             LibRLP.p(list[1], ist.addedPubKey[i]);
@@ -224,6 +231,15 @@ contract VerifyToolV2 is IVerifyToolV2 {
             if (RLPReader.rlpBytesKeccak256(istList[i]) != keccak256(listBytes)) {
                 return false;
             }
+        }
+
+        uint256 removeList = istList[3].toUint();
+        if (removeList != ist.removeList) {
+            return false;
+        }
+
+        if (istList[4].payloadKeccak256() != keccak256(ist.seal)) {
+            return false;
         }
 
         return true;

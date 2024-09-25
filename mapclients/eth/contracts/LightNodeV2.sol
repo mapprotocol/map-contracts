@@ -3,33 +3,29 @@ pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "./interface/ILightNode.sol";
 import "./interface/IVerifyToolV2.sol";
 import "./bls/BGLS.sol";
 
-contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
-    address private _pendingAdmin;
+contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightVerifier {
 
-    // uint256 public maxEpochs; // max epoch number
-    // uint256 public epochSize; // every epoch block number
-    // uint256 public startHeight; // init epoch start block number
-    // uint256 public headerHeight; // last update block number
+    uint256 internal constant MIN_HEADER_LENGTH = 577;
+    uint256 internal constant MAX_VERIFIABLE_BLOCK_NUMBER = 1500000;
+
+    address private _pendingAdmin;
 
     // startHeight (8bytes) | headerHeight (8bytes) | maxEpochs (4bytes) | epochSize (4bytes)
     uint256 private stateSlot;
 
     IVerifyToolV2 public verifyTool;
-    // address[] public validatorAddress;
-    //Epoch[] public epochs;
+
     mapping(uint256 => Epoch) private epochs;
     mapping(uint256 => bytes32) private cachedReceiptRoot;
-
 
     struct ReceiptProofV2 {
         uint256 blockNumber;
 
-        bytes aggHeader;    // RLP header for aggregator sign, remove aggsigns
-        bytes signHeader;   // rlp header for proposer sign, remove seal and agg signs
+        bytes aggHeader;    // RLP header for aggregated sign, remove agg signs
+        bytes signHeader;   // RLP header for proposer sign, remove seal and agg signs
         IVerifyToolV2.istanbulExtra ist;
         uint256[] pairKeys; // all validator G1 pk + G2 agg pk
         BGLS.G2 aggPk;
@@ -48,7 +44,9 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         uint256[2] aggKey; // agg G1 key, not used now
     }
 
-    event MapInitializeValidators(uint256 _threshold, uint256[] _pairKeys, uint256[] _weights, uint256 epoch);
+    event UpdateBlockHeader(address indexed maintainer, uint256 indexed blockHeight);
+
+    event InitializeValidators(uint256 _threshold, uint256[] _pairKeys, uint256[] _weights, uint256 epoch);
     event UpdateValidators(uint256 epoch, uint256 removeBits, bytes[] _pairKeysAdd);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
@@ -76,21 +74,22 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         require(_threshold < 1000, "invalid threshold");
 
         _changeAdmin(_owner);
-        uint256 maxEpochs = 1500000 / _epochSize;
+        uint256 maxEpochs = MAX_VERIFIABLE_BLOCK_NUMBER / _epochSize;
         uint256 lastHeight = (_epoch - 1) * _epochSize;
         _setNodeState(lastHeight, lastHeight, maxEpochs, _epochSize);
 
         uint256 index = _getEpochIndex(_epoch, maxEpochs);
-        epochs[index].threshold = uint64(_threshold);
-        epochs[index].epoch = uint128(_epoch);
-        epochs[index].pairKeyHash = _getKeyHash(_pairKeys, _pairKeys.length);
 
-        (epochs[index].aggKey[0], epochs[index].aggKey[1]) = BGLS.sumAllPoints(_pairKeys, _pairKeys.length / 2);
+        Epoch storage epoch = epochs[index];
+        epoch.threshold = uint64(_threshold);
+        epoch.epoch = uint128(_epoch);
+        epoch.pairKeyHash = _getKeyHash(_pairKeys, _pairKeys.length);
 
-        // _setStateInternal(_threshold, _pairKeys, _epoch, maxEpochs);
+        (epoch.aggKey[0], epoch.aggKey[1]) = BGLS.sumAllPoints(_pairKeys, _pairKeys.length / 2);
+
         verifyTool = IVerifyToolV2(_verifyTool);
 
-        emit MapInitializeValidators(_threshold, _pairKeys, _weights, _epoch);
+        emit InitializeValidators(_threshold, _pairKeys, _weights, _epoch);
     }
 
     function setVerifyTool(address _verifyTool) external onlyOwner {
@@ -101,13 +100,13 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     function updateBlockHeader(
         uint256 blockNumber,
         bytes memory aggHeader,
-        bytes memory signHeader,
+        bytes calldata signHeader,
         IVerifyToolV2.istanbulExtra memory ist,
         BGLS.G2 memory aggPk,
         uint256[] memory pairKeys
     ) external {
-        require(aggHeader.length > 500, "Invalid block header");
-        require(signHeader.length > 500, "Invalid block header");
+        require(aggHeader.length > MIN_HEADER_LENGTH, "Invalid agg header");
+        require(signHeader.length > MIN_HEADER_LENGTH, "Invalid sign header");
 
         uint256 index = _checkBlockNumber(blockNumber, true);
         Epoch memory epoch = epochs[index];
@@ -177,14 +176,14 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         return _verifyMptProof(receiptRoot, _receiptProof);
     }
 
-    function verifyProofDataTest(
-        bytes memory _receiptProofBytes
-    ) external returns (bool success, string memory message, bytes memory logsHash) {
-        ReceiptProofV2 memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProofV2));
+    function verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, txLog memory log) {
+        ReceiptProofV2 memory receiptProof = abi.decode(_receiptProof, (ReceiptProofV2));
 
-        bytes32 receiptRoot = _verifyHeaderProof(_receiptProof);
-
-        return _verifyMptProof(receiptRoot, _receiptProof);
+        bytes32 receiptRoot = _verifyHeaderProof(receiptProof);
+        return _verifyMptProofWithLog(_logIndex, receiptRoot, receiptProof);
     }
 
     function getData(bytes memory _receiptProofBytes) external pure returns (ReceiptProofV2 memory) {
@@ -220,12 +219,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
     }
 
     function isCachedReceiptRoot(uint256 _blockHeight) external view returns (bool) {
-
-        if (cachedReceiptRoot[_blockHeight] != bytes32("")) {
-            return true;
-        }else{
-            return false;
-        }
+        return (cachedReceiptRoot[_blockHeight] != bytes32(""));
     }
 
     /** internal *********************************************************/
@@ -422,9 +416,11 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightNode {
         success = verifyTool.verifyHeaderHash(_coinbase, ist.seal, headerHash);
         require(success, "Invalid header hash");
 
-        headerHash = keccak256(_signHeader);
+        headerHash = keccak256(_header);
+        success = checkSig(headerHash, _epoch, _aggPk, _pairKeys, ist);
+        require(success, "check sig failed");
 
-        return checkSig(headerHash, _epoch, _aggPk, _pairKeys, ist);
+        return success;
     }
 
     // aggPk2, sig1 --> in contract: check aggPk2 is valid with bits by summing points in G2

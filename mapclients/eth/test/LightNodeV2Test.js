@@ -50,7 +50,7 @@ describe("LightNode V2 start test", function () {
 
         let data = await lightClient.initialize(
             _threshold,
-            g1List,
+            proofs.g1InitV2,
             _weights,
             _epoch,
             _epochSize,
@@ -76,7 +76,7 @@ describe("LightNode V2 start test", function () {
             proofs.deleteSealAndAggHeaderBytes203000,
             proofs.ist203000,
             proofs.aggpk203000,
-            g1List
+            proofs.g1InitV2
         );
         g1List = proofs.g1ListV2;
         console.log("update header 204000 no update");
@@ -86,25 +86,27 @@ describe("LightNode V2 start test", function () {
             proofs.deleteSealAndAggHeaderBytes204000,
             proofs.ist204000,
             proofs.aggpk204000,
-            g1List
+            proofs.g1ListV2
         );
 
-        console.log("update header 205000 np update");
+        console.log("update header 205000 no update");
         await proxy.updateBlockHeader(
             "205000",
             proofs.deleteAggHeaderBytes205000,
             proofs.deleteSealAndAggHeaderBytes205000,
             proofs.ist205000,
             proofs.aggpk205000,
-            g1List
+            proofs.g1ListV2
         );
 
-        await proxy["verifyProofDataWithCache(bytes)"](await proxy.getBytes(proofs.provedataV2205030));
+        let proofBytes = await proxy.getBytes(proofs.provedataV2205030);
 
-        //console.log(await proxy.newPairKeys())
-        let data205030 = await proxy.verifyProofData(await proxy.getBytes(proofs.provedataV2205030));
-        expect(data205030.success).to.equal(true);
+        await proxy["verifyProofDataWithCache(bool,uint256,bytes)"](false, 0, proofBytes);
 
+        let rst = await proxy["verifyProofData(bytes)"](proofBytes);
+        expect(rst.success).to.equal(true);
+
+        await proxy["verifyProofDataWithCache(bool,uint256,bytes)"](true, 0, proofBytes)
         expect(await proxy.isCachedReceiptRoot(205030)).to.be.equal(true)
     });
 
@@ -118,15 +120,15 @@ describe("LightNode V2 start test", function () {
             g1List
         );
 
-        let provedata206460Bytes = await proxy.getBytes(proofs.provedataV2206460);
-        console.log(provedata206460Bytes)
+        let proofBytes = await proxy.getBytes(proofs.provedataV2206460);
 
-        await proxy["verifyProofDataWithCache(bool,uint256,bytes)"](true,0,provedata206460Bytes)
+        await proxy["verifyProofDataWithCache(bool,uint256,bytes)"](false,0,proofBytes);
 
-        let data206460 = await proxy.verifyProofData(await proxy.getBytes(proofs.provedataV2206460));
+        let data206460 = await proxy["verifyProofData(bytes)"](proofBytes);
         expect(data206460.success).to.equal(true);
 
-        expect(await proxy.isCachedReceiptRoot(206460)).to.be.equal(true)
+        await proxy["verifyProofDataWithCache(bool,uint256,bytes)"](true,0,proofBytes);
+        expect(await proxy.isCachedReceiptRoot(206460)).to.be.equal(true);
     });
 
     it("authorizeUpgrade test ", async function () {
@@ -150,22 +152,22 @@ describe("LightNode V2 start test", function () {
             proofs.deleteSealAndAggHeaderBytes207000,
             proofs.ist207000,
             proofs.aggpk207000,
-            g1List
+            proofs.g1InitV2
         );
 
         expect(await proxy.headerHeight()).to.equal("207000");
     });
 
-    let LightClientDelete;
+    //let LightClientDelete;
     let lightClientDelete;
-    let lightNodeContractDelete;
+    //let lightNodeContractDelete;
     let lightNodeContractDeleteAddress;
 
     it("delete deploy", async function () {
-        LightClientDelete = await ethers.getContractFactory("LightNodeV2");
+        let LightClientDelete = await ethers.getContractFactory("LightNodeV2");
         lightClientDelete = await LightClientDelete.deploy();
-        lightNodeContractDelete = await lightClientDelete.deployed();
-        lightNodeContractDeleteAddress = lightNodeContractDelete.address;
+        await lightClientDelete.deployed();
+        lightNodeContractDeleteAddress = lightClientDelete.address;
     });
 
     it("verifyProofData error test ", async function () {
@@ -216,7 +218,7 @@ describe("LightNode V2 start test", function () {
             g1ListDelete
         );
 
-        await expect(lightClientDelete.verifyProofData(await lightClientDelete.getBytes(proofs.provedataV2220559)))
+        await expect(lightClientDelete["verifyProofData(bytes)"](await lightClientDelete.getBytes(proofs.provedataV2220559)))
             .to.be.revertedWith("Out of verify range")
 
         await lightClientDelete.updateBlockHeader(
@@ -228,7 +230,7 @@ describe("LightNode V2 start test", function () {
             g1ListDelete
         );
 
-        await expect(lightClientDelete.verifyProofData(await lightClientDelete.getBytes(proofs.provedataHeaderErrorV2)))
+        await expect(lightClientDelete["verifyProofData(bytes)"](await lightClientDelete.getBytes(proofs.provedataHeaderErrorV2)))
             .to.be.revertedWith("keys hash error");
     });
 });

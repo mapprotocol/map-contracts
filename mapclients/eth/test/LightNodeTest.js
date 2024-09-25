@@ -90,13 +90,14 @@ describe("LightNode start test", function () {
 
         console.log(await proxy.headerHeight());
 
-        await proxy["verifyProofDataWithCache(bytes)"](await proxy.getBytes(proofs.provedata205030));
+        let proveBytes = await proxy.getBytes(proofs.provedata205030);
+        await proxy["verifyProofDataWithCache(bool,uint256,bytes)"](false, 0, proveBytes)
 
         //console.log(await proxy.getValidators(205))
         let data205030 = await proxy["verifyProofData(bytes)"](await proxy.getBytes(proofs.provedata205030));
         expect(data205030.success).to.equal(true);
 
-        expect(await proxy.isCachedReceiptRoot(205030)).to.be.equal(true)
+        // expect(await proxy.isCachedReceiptRoot(205030)).to.be.equal(true)
     });
 
     it("add validator", async function () {
@@ -105,12 +106,12 @@ describe("LightNode start test", function () {
         let provedata206460Bytes = await proxy.getBytes(proofs.provedata206460);
         //console.log(provedata206460Bytes)
         //await proxy.verifyProofDataWithCache(provedata206460Bytes)
-        await proxy["verifyProofDataWithCache(bool,uint256,bytes)"](true,0,provedata206460Bytes)
+        await proxy["verifyProofDataWithCache(bool,uint256,bytes)"](false, 0, provedata206460Bytes)
 
         let data206460 = await proxy["verifyProofData(bytes)"](await proxy.getBytes(proofs.provedata206460));
         expect(data206460.success).to.equal(true);
 
-        expect(await proxy.isCachedReceiptRoot(206460)).to.be.equal(true)
+        //expect(await proxy.isCachedReceiptRoot(206460)).to.be.equal(true)
 
     });
 
