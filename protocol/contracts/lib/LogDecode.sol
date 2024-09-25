@@ -15,6 +15,12 @@ library LogDecode {
         return receiptRlpBytes.toRlpItem().safeGetItemByIndex(3).unsafeToRlpBytes();
     }
 
+    function getLogsFromTypedReceipt(uint256 receiptType, bytes memory receiptRlpBytes) internal pure returns (bytes memory logs) {
+        uint256 offset = (receiptType == 0) ? 0 : 1;
+        RLPReader.RLPItem memory receipt = receiptRlpBytes.toRlpItem(offset);
+        return receipt.safeGetItemByIndex(3).unsafeToRlpBytes();
+    }
+
     function decodeTxLogs(bytes memory logsRlp) internal pure returns (ILightVerifier.txLog[] memory _txLogs) {
         RLPReader.RLPItem[] memory ls = logsRlp.toRlpItem().toList();
         _txLogs = new ILightVerifier.txLog[](ls.length);

@@ -13,16 +13,16 @@ Read [this](https://github.com/mapprotocol/map-contracts/blob/main/protocol/cont
 ### MPT verifier
 The contract deployed on the MAP Relay Chain is responsible for MPT proof verify.
 Deployed address: 
- - MAPO mainnet: `0x81D26E2387059CF43ADA1c11c12D5d6627184fA1`
- - Makalu testnet: `0x81D26E2387059CF43ADA1c11c12D5d6627184fA1`
+ - MAPO mainnet: `0xC68a029cFfCF3eAa42Dad4bf6c0200Ad5fA4b161`
+ - Makalu testnet: `0xC68a029cFfCF3eAa42Dad4bf6c0200Ad5fA4b161`
 
 ```solidity
 interface IMPTVerify {
     function verifyTrieProof(
         bytes32 _root,
+        bytes32 _value,
         bytes memory _key,
-        bytes[] memory _proof,
-        bytes memory _node
+        bytes[] memory _proof
     ) external pure returns (bool);
 }
 ```
@@ -37,15 +37,6 @@ Deployed address:
 - MAPO mainnet: `0x624E6F327c4F91F1Fa6285711245c215de264d49`
 - Makalu testnet: `0xDD3A69f8f59d892476B0be0260932b4f8d8268Ff`
 
-### Maintainer manager
-The contract deployed on the MAP Relay Chain is responsible for managing maintainers, it helps:
-- staking
-- reward distribution
-- work address binding.
-
-Deployed address:
-- MAPO mainnet: `0x2ef591cAac00d21F16d25988678856244205c56E`
-- Makalu testnet: `0xd0A42e4836A8827cB9b8A3e13f07abdC5610aC33`
 
 ## Compile
 
