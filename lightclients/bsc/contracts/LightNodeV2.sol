@@ -96,6 +96,16 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return _verifyProofData(proof.receiptProof, header.receiptsRoot);
     }
 
+    function verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, txLog memory log) {
+        ProofData memory proof = abi.decode(_receiptProof, (ProofData));
+        BlockHeader memory header = _checkUpdateHeader(proof.updateHeader);
+
+        return _verifyProofData(_logIndex, proof.receiptProof, header.receiptsRoot);
+    }
+
     function verifyProofDataWithCache(
         bytes memory _receiptProof
     ) external override returns (bool success, string memory message, bytes memory logs) {
@@ -111,11 +121,37 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         }
     }
 
+    function verifyProofDataWithCache(
+        bool _cache,
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, txLog memory log) {
+        ProofData memory proof = abi.decode(_receiptProof, (ProofData));
+        uint256 verifyBlockNum = proof.updateHeader.headers[0].number;
+        bytes32 receiptRoot = cachedReceiptRoot[verifyBlockNum];
+        if (receiptRoot != bytes32("")) {
+            (success, message, log) = _verifyProofData(_logIndex, proof.receiptProof, receiptRoot);
+        } else {
+            BlockHeader memory header = _checkUpdateHeader(proof.updateHeader);
+            (success, message, log) = _verifyProofData(_logIndex, proof.receiptProof, header.receiptsRoot);
+            if (success) cachedReceiptRoot[verifyBlockNum] = header.receiptsRoot;
+        }
+    }
+
     function _verifyProofData(
         ReceiptProof memory receiptProof,
         bytes32 root
     ) private view returns (bool success, string memory message, bytes memory logs) { 
-        (success, logs) = Helper._validateProof(root, receiptProof, mptVerify);
+        (success, logs) = Helper._validateProofV2(root, receiptProof, mptVerify);
+        if (!success) message = "mpt verification failed";
+    }
+
+    function _verifyProofData(
+        uint256 logIndex,
+        ReceiptProof memory receiptProof,
+        bytes32 root
+    ) private view returns (bool success, string memory message, txLog memory log) {
+        (success, log) = Helper._validateProofV2(logIndex, root, receiptProof, mptVerify);
         if (!success) message = "mpt verification failed";
     }
 

@@ -6,7 +6,7 @@
     "format": "prettier --print-width 120 --tab-width 4 --write ./contracts ./deploy ./data ./test ./scripts ./utils"
   },
   "dependencies": {
-    "@mapprotocol/protocol": "^0.7.6",
+    "@mapprotocol/protocol": "^0.8.3",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.2",
     "@nomicfoundation/solidity-analyzer-win32-x64-msvc": "^0.1.1",
     "@openzeppelin/contracts": "^4.6.0",

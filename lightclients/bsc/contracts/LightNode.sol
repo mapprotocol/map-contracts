@@ -120,6 +120,12 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         return _verifyProofData(proof, headers);
     }
 
+    function verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, txLog memory log) {
+    }
+
     function verifyProofDataWithCache(
         bytes memory _receiptProof
     ) external override returns (bool success, string memory message, bytes memory logs) {
@@ -137,6 +143,14 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             (success, message, logs) = _verifyProofData(proof, headers);
             if (success) cachedReceiptRoot[verifyBlockNum] = bytes32(headers[0].receiptsRoot);
         }
+    }
+
+    function verifyProofDataWithCache(
+        bool _cache,
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, txLog memory log) {
+
     }
 
     function _verifyProofData(

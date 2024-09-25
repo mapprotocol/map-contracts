@@ -4,7 +4,9 @@ pragma solidity 0.8.17;
 
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 import "@mapprotocol/protocol/contracts/lib/LibRLP.sol";
+import "@mapprotocol/protocol/contracts/lib/LogDecode.sol";
 import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
+import "@mapprotocol/protocol/contracts/interface/ILightVerifier.sol";
 import {
     BlockHeader,
     ReceiptProof,
@@ -15,7 +17,7 @@ import {
 
 import { BLS, Bytes, Memory } from "./bls/BLS.sol";
 
-library Helper { 
+library Helper {
     using Memory for bytes32;
     using Bytes for bytes;
     using RLPReader for bytes;
@@ -56,6 +58,39 @@ library Helper {
             expectedValue
         );
         if (success) logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).unsafeToRlpBytes(); // list length must be 4
+    }
+
+    function _validateProofV2(
+        bytes32 _receiptsRoot,
+        ReceiptProof memory _receipt,
+        address _mptVerify
+    ) internal pure returns (bool success, bytes memory logs) {
+        bytes32 expectedValue = keccak256(_receipt.txReceipt);
+
+        success = IMPTVerify(_mptVerify).verifyTrieProof(
+            _receiptsRoot,
+            expectedValue,
+            _receipt.keyIndex,
+            _receipt.proof
+        );
+        if (success) logs = LogDecode.getLogsFromTypedReceipt(_receipt.receiptType, _receipt.txReceipt); // list length must be 4
+    }
+
+    function _validateProofV2(
+        uint256 _logIndex,
+        bytes32 _receiptsRoot,
+        ReceiptProof memory _receipt,
+        address _mptVerify
+    ) internal pure returns (bool success, ILightVerifier.txLog memory log) {
+        bytes32 expectedValue = keccak256(_receipt.txReceipt);
+
+        success = IMPTVerify(_mptVerify).verifyTrieProof(
+            _receiptsRoot,
+            expectedValue,
+            _receipt.keyIndex,
+            _receipt.proof
+        );
+        if (success) log = LogDecode.decodeTxLogFromTypedReceipt(_logIndex, _receipt.receiptType, _receipt.txReceipt); // list length must be 4
     }
 
 
