@@ -28,7 +28,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightVerifier {
         bytes signHeader;   // RLP header for proposer sign, remove seal and agg signs
         IVerifyToolV2.istanbulExtra ist;
         uint256[] pairKeys; // all validator G1 pk + G2 agg pk
-        BGLS.G2 aggPk;
+        uint256[4] aggPk;   // BGLS.G2 aggPk;
 
         uint256 receiptType;
         bytes receiptRlp;
@@ -102,7 +102,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightVerifier {
         bytes memory aggHeader,
         bytes calldata signHeader,
         IVerifyToolV2.istanbulExtra memory ist,
-        BGLS.G2 memory aggPk,
+        uint256[4] memory aggPk,
         uint256[] memory pairKeys
     ) external {
         require(aggHeader.length > MIN_HEADER_LENGTH, "Invalid agg header");
@@ -116,7 +116,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightVerifier {
         (bool success, string memory message, address coinbase, ) = verifyTool.checkHeader(blockNumber, aggHeader, signHeader, ist, true, false);
         require(success, message);
 
-        _verifyHeaderSig(epoch, aggHeader, signHeader, coinbase, pairKeys, ist, aggPk);
+        _verifyHeaderSig(epoch, aggHeader, signHeader, coinbase, pairKeys, aggPk, ist);
 
         _updateValidators(blockNumber, epoch, pairKeys, ist);
 
@@ -129,7 +129,6 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightVerifier {
         bytes memory _receiptProofBytes
     ) external override returns (bool success, string memory message, txLog memory log) {
         ReceiptProofV2 memory _receiptProof = abi.decode(_receiptProofBytes, (ReceiptProofV2));
-
         bytes32 receiptRoot;
         if (_cache) {
             receiptRoot = cachedReceiptRoot[_receiptProof.blockNumber];
@@ -397,8 +396,9 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightVerifier {
             _receiptProof.signHeader,
             coinbase,
             _receiptProof.pairKeys,
-            _receiptProof.ist,
-            _receiptProof.aggPk);
+            _receiptProof.aggPk,
+            _receiptProof.ist
+            );
 
         return receiptRoot;
     }
@@ -409,15 +409,15 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightVerifier {
         bytes memory _signHeader,
         address _coinbase,
         uint256[] memory _pairKeys,
-        IVerifyToolV2.istanbulExtra memory ist,
-        BGLS.G2 memory _aggPk
+        uint256[4] memory _aggG2Pk,
+        IVerifyToolV2.istanbulExtra memory ist
     ) internal view returns (bool success) {
         bytes32 headerHash = keccak256(_signHeader);
         success = verifyTool.verifyHeaderHash(_coinbase, ist.seal, headerHash);
         require(success, "Invalid header hash");
 
         headerHash = keccak256(_header);
-        success = checkSig(headerHash, _epoch, _aggPk, _pairKeys, ist);
+        success = checkSig(headerHash, _epoch, _aggG2Pk, _pairKeys, ist);
         require(success, "check sig failed");
 
         return success;
@@ -428,11 +428,13 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, ILightVerifier {
     function checkSig(
         bytes32 _headerHash,
         Epoch memory _epoch,
-        BGLS.G2 memory _aggPk,
+        uint256[4] memory _aggG2Pk,
         uint256[] memory _pairKeys,
         IVerifyToolV2.istanbulExtra memory _ist
     ) internal view returns (bool) {
         bytes memory message = getPrepareCommittedSeal(_headerHash, _ist.aggregatedSeal.round);
+
+        BGLS.G2 memory _aggPk = BGLS.G2(_aggG2Pk[0], _aggG2Pk[1], _aggG2Pk[2], _aggG2Pk[3]);
 
         return
             BGLS.checkAggPk2(_epoch.aggKey, _ist.aggregatedSeal.bitmap, _aggPk, _pairKeys, _epoch.threshold) &&

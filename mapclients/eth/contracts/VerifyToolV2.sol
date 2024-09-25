@@ -5,6 +5,7 @@ pragma solidity 0.8.20;
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 import "@mapprotocol/protocol/contracts/lib/MPT.sol";
 import "@mapprotocol/protocol/contracts/lib/LibRLP.sol";
+import "@mapprotocol/protocol/contracts/lib/LogDecode.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./interface/IVerifyToolV2.sol";
 
@@ -76,58 +77,44 @@ contract VerifyToolV2 is IVerifyToolV2 {
         bytes32 expectedHash = keccak256(_receiptRlp);
         success = MPT.verify(expectedHash, _keyIndex, _proof, _receiptHash);
         if (success) {
-            uint256 offset = (_receiptType == 0) ? 0 : 1;
-            RLPReader.RLPItem memory rlpItem = _receiptRlp.toRlpItem(offset);
-            RLPReader.RLPItem memory logs = rlpItem.safeGetItemByIndex(3);
-            log = _decodeTxLog(logs.safeGetItemByIndex(_logIndex));
+            log = LogDecode.decodeTxLogFromTypedReceipt(_logIndex, _receiptType, _receiptRlp);
         }
         return (success, log);
     }
 
-    function _decodeTxLog(RLPReader.RLPItem memory item) private pure returns (ILightVerifier.txLog memory _txLog) {
-        RLPReader.RLPItem[] memory items = item.toList();
-        require(items.length >= 3, "log length to low");
-        RLPReader.RLPItem[] memory firstItemList = items[1].toList();
-        bytes32[] memory topic = new bytes32[](firstItemList.length);
-        for (uint256 j = 0; j < firstItemList.length; j++) {
-            topic[j] = firstItemList[j].toBytes32();
-        }
-        _txLog = ILightVerifier.txLog({addr: items[0].toAddress(), topics: topic, data: items[2].unsafeToBytes()});
-    }
-
     function checkHeader(
         uint256 _blockNumber,
-        bytes memory _header,
+        bytes memory _aggHeader,
         bytes memory _signHeader,
         IVerifyToolV2.istanbulExtra memory ist,
         bool checkValidator,
         bool getReceiptRoot
     ) external override pure returns (bool success, string memory message, address coinbase, bytes32 receiptRoot) {
         // check block number
-        RLPReader.RLPItem memory item = _header.toRlpItem(BLOCK_NUMBER_OFFSET);
+        RLPReader.RLPItem memory item = _aggHeader.toRlpItem(BLOCK_NUMBER_OFFSET);
         uint256 number = item.toUint();
         if (_blockNumber != number) {
             return (false, "Invalid block number", coinbase, receiptRoot);
         }
 
         uint256 offset;
-        (success, message, offset) = checkExtraData(checkValidator, _header, item, ist);
+        (success, message, offset) = checkExtraData(checkValidator, _aggHeader, item, ist);
         if (!success) {
             return (success, message, coinbase, receiptRoot);
         }
 
         // check bytes before extra data
-        if (!checkBeforeExt(_header, _signHeader, offset - 3)) {
+        if (!checkBeforeExt(_aggHeader, _signHeader, offset - 3)) {
             return (false, "Invalid header", coinbase, receiptRoot);
         }
 
         // todo: check after ext
 
-        item = _header.toRlpItem(COINBASE_OFFSET);
+        item = _aggHeader.toRlpItem(COINBASE_OFFSET);
         coinbase = item.toAddress();
 
         if (getReceiptRoot) {
-            item = _header.toRlpItem(RECEIPT_ROOT_OFFSET);
+            item = _aggHeader.toRlpItem(RECEIPT_ROOT_OFFSET);
             receiptRoot = item.toBytes32();
         }
 
@@ -143,9 +130,10 @@ contract VerifyToolV2 is IVerifyToolV2 {
         bytes32 result1;
         bytes32 result2;
         assembly {
-            memPtr := add(_header, 0x23)
+            memPtr := add(_header, 0x23)  // skip RLP header
             result1 := keccak256(memPtr, lengthBeforeExtra)
-            memPtr := add(_signHeader, 0x23)
+
+            memPtr := add(_signHeader, 0x23) // skip RLP header
             result2 := keccak256(memPtr, lengthBeforeExtra)
         }
 
@@ -156,7 +144,7 @@ contract VerifyToolV2 is IVerifyToolV2 {
         bool checkValidator,
         bytes memory _header,
         RLPReader.RLPItem memory numberItem,
-        istanbulExtra memory ist
+        IVerifyToolV2.istanbulExtra memory ist
     ) internal pure returns (bool success, string memory message, uint256 extraOffset) {
         // get extra item
         RLPReader.RLPItem memory item = numberItem;
@@ -211,7 +199,7 @@ contract VerifyToolV2 is IVerifyToolV2 {
 
     function checkIst(
         RLPReader.RLPItem memory istItem,
-        istanbulExtra memory ist
+        IVerifyToolV2.istanbulExtra memory ist
     ) internal pure returns (bool) {
         if (ist.validators.length == 0 && ist.removeList == 0) {
             //

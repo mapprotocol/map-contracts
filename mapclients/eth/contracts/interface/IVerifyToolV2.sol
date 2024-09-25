@@ -73,7 +73,7 @@ interface IVerifyToolV2 {
 
     function checkHeader(
         uint256 _blockNumber,
-        bytes memory _header,
+        bytes memory _aggHeader,
         bytes memory _signHeader,
         IVerifyToolV2.istanbulExtra memory ist,
         bool checkValidator,
