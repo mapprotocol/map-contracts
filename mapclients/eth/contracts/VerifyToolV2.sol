@@ -59,9 +59,7 @@ contract VerifyToolV2 is IVerifyToolV2 {
         bytes32 expectedHash = keccak256(_receiptRlp);
         success = MPT.verify(expectedHash, _keyIndex, _proof, _receiptHash);
         if (success) {
-            uint256 offset = (_receiptType == 0) ? 0 : 1;
-            RLPReader.RLPItem memory rlpItem = _receiptRlp.toRlpItem(offset);
-            logs = rlpItem.safeGetItemByIndex(3).unsafeToRlpBytes();
+            logs = LogDecode.getLogsFromTypedReceipt(_receiptType, _receiptRlp);
         }
         return (success, logs);
     }
