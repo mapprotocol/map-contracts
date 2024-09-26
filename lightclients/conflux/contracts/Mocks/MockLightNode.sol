@@ -201,6 +201,12 @@ contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         }
     }
 
+    function verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, txLog memory log) {
+    }
+
     function verifyProofDataWithCache(
         bytes memory _receiptProof
     ) external override returns (bool success, string memory message, bytes memory logs) {
@@ -212,6 +218,14 @@ contract MockLightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         } else {
             message = "failed to verify mpt";
         }
+    }
+
+    function verifyProofDataWithCache(
+        bool _cache,
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, txLog memory log) {
+
     }
 
     function clientState() external view override returns (bytes memory) {
