@@ -23,11 +23,14 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     event AdminTransferred(address indexed previous, address indexed newAdmin);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
 
+    enum ProofType { MPT, LOG }
+
     struct ProofData {
+        ProofType proofType;
         uint256 blockNum;
         bytes32 receiptRoot;
         bytes[] signatures;
-        Verify.ReceiptProof receiptProof;
+        bytes proof;
     }
 
     modifier onlyOwner() {
@@ -111,21 +114,45 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     function _verifyProofData(
         bytes memory _receiptProof
     ) private view returns (bool success, string memory message, bytes memory logs) {
-        ProofData memory proof = abi.decode(_receiptProof, (ProofData));
-        _verifySignatures(proof.receiptRoot, proof.blockNum, chainId, proof.signatures);
-        (success, logs) = Verify._validateProof(proof.receiptRoot, proof.receiptProof, address(0x0));
-        require(success, "mpt verification failed");
+        ProofData memory data = abi.decode(_receiptProof, (ProofData));
+        _verifySignatures(data.receiptRoot, data.blockNum, chainId, data.signatures);
+        if(data.proofType == ProofType.MPT){
+            Verify.ReceiptProof memory receiptProof = abi.decode(data.proof,(Verify.ReceiptProof));
+            (success, logs) = Verify._validateProof(data.receiptRoot, receiptProof, address(0x0));
+            if(!success) message = "mpt verification failed";
+        } else {
+            if(keccak256(data.proof) == data.receiptRoot){
+                success = true;
+                logs = data.proof;
+            } else {
+                success = false;
+                message = "invalid event bytes";
+            }
+        }
+        
     }
+
+
 
     function _verifyProofData(
         uint256 _logIndex,
         bytes memory _receiptProof
     ) private view returns (bool success, string memory message, ILightVerifier.txLog memory log) {
-        ProofData memory proof = abi.decode(_receiptProof, (ProofData));
-        _verifySignatures(proof.receiptRoot, proof.blockNum, chainId, proof.signatures);
-        (success, log) = Verify._validateProofWithLog(_logIndex, proof.receiptRoot, proof.receiptProof);
-
-        require(success, "mpt verification failed");
+        ProofData memory data = abi.decode(_receiptProof, (ProofData));
+        _verifySignatures(data.receiptRoot, data.blockNum, chainId, data.signatures);
+        if(data.proofType == ProofType.MPT) {
+            Verify.ReceiptProof memory receiptProof = abi.decode(data.proof,(Verify.ReceiptProof));
+            (success, log) = Verify._validateProofWithLog(_logIndex, data.receiptRoot, receiptProof);
+            if(!success) message = "mpt verification failed";
+        } else {
+            if(keccak256(data.proof) == data.receiptRoot){
+                success = true;
+                log = Verify._decodeLogFromBytes(data.proof);
+            } else {
+                success = false;
+                message = "invalid event bytes";
+            }
+        }
     }
 
     function multisigInfo() external view returns (bytes32 version, uint256 quorum, address[] memory singers) {

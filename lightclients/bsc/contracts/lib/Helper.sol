@@ -44,27 +44,6 @@ library Helper {
         ReceiptProof memory _receipt,
         address _mptVerify
     ) internal pure returns (bool success, bytes memory logs) {
-
-        bytes memory bytesReceipt = _receipt.txReceipt;
-        bytes memory expectedValue = bytesReceipt;
-        if (_receipt.receiptType > 0) {
-            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.receiptType)), expectedValue);
-        }
-
-        success = IMPTVerify(_mptVerify).verifyTrieProof(
-            _receiptsRoot,
-            _receipt.keyIndex,
-            _receipt.proof,
-            expectedValue
-        );
-        if (success) logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).unsafeToRlpBytes(); // list length must be 4
-    }
-
-    function _validateProofV2(
-        bytes32 _receiptsRoot,
-        ReceiptProof memory _receipt,
-        address _mptVerify
-    ) internal pure returns (bool success, bytes memory logs) {
         bytes32 expectedValue = keccak256(_receipt.txReceipt);
 
         success = IMPTVerify(_mptVerify).verifyTrieProof(
@@ -76,7 +55,7 @@ library Helper {
         if (success) logs = LogDecode.getLogsFromTypedReceipt(_receipt.receiptType, _receipt.txReceipt); // list length must be 4
     }
 
-    function _validateProofV2(
+    function _validateProof(
         uint256 _logIndex,
         bytes32 _receiptsRoot,
         ReceiptProof memory _receipt,
