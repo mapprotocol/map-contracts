@@ -5,6 +5,9 @@ pragma solidity 0.8.7;
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPEncode.sol";
 import "@mapprotocol/protocol/contracts/interface/IMPTVerify.sol";
+import "@mapprotocol/protocol/contracts/lib/LogDecode.sol";
+import "@mapprotocol/protocol/contracts/lib/MPT.sol";
+import "@mapprotocol/protocol/contracts/interface/ILightVerifier.sol";
 
 library Verify {
     using RLPReader for bytes;
@@ -61,18 +64,19 @@ library Verify {
     }
 
     struct ReceiptProof {
-        TxReceipt txReceipt;
+        bytes txReceipt;
+        uint256 receiptType;
         bytes keyIndex;
         bytes[] proof;
     }
 
-    struct TxReceipt {
-        uint256 receiptType;
-        bytes postStateOrStatus;
-        uint256 cumulativeGasUsed;
-        bytes bloom;
-        TxLog[] logs;
-    }
+    // struct TxReceipt {
+    //     uint256 receiptType;
+    //     bytes postStateOrStatus;
+    //     uint256 cumulativeGasUsed;
+    //     bytes bloom;
+    //     TxLog[] logs;
+    // }
 
     struct TxLog {
         address addr;
@@ -241,47 +245,60 @@ library Verify {
     function _validateProof(
         bytes32 _receiptsRoot,
         ReceiptProof memory _receipt,
-        address _mptVerify
+        address _mpt
     ) internal pure returns (bool success, bytes memory logs) {
-        bytes memory bytesReceipt = _encodeReceipt(_receipt.txReceipt);
-        bytes memory expectedValue = bytesReceipt;
-        if (_receipt.txReceipt.receiptType > 0) {
-            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.txReceipt.receiptType)), bytesReceipt);
-        }
+        success = _mptVerify(_receiptsRoot, _receipt, _mpt);
+        if (success) logs = LogDecode.getLogsFromTypedReceipt(_receipt.receiptType, _receipt.txReceipt); 
+    }
 
-        success = IMPTVerify(_mptVerify).verifyTrieProof(
+    function _validateProofWithLog(
+        uint256 _logIndex,
+        bytes32 _receiptsRoot,
+        ReceiptProof memory _receipt,
+        address _mpt
+    ) internal pure returns (bool success, ILightVerifier.txLog memory log) {
+        success = _mptVerify(_receiptsRoot, _receipt, _mpt);
+        if (success) log = LogDecode.decodeTxLogFromTypedReceipt(_logIndex, _receipt.receiptType, _receipt.txReceipt);
+    }
+
+    function _mptVerify(
+        bytes32 _receiptsRoot,
+        ReceiptProof memory _receipt,
+        address _mpt
+    ) internal pure returns (bool success) {
+        bytes32 expectedValue = keccak256(_receipt.txReceipt);
+        success = IMPTVerify(_mpt).verifyTrieProof(
             _receiptsRoot,
+            expectedValue,
             _receipt.keyIndex,
-            _receipt.proof,
-            expectedValue
+            _receipt.proof
         );
-
-        if (success) logs = bytesReceipt.toRlpItem().toList()[3].toRlpBytes(); // list length must be 4
     }
 
-    function _encodeReceipt(TxReceipt memory _txReceipt) internal pure returns (bytes memory output) {
-        bytes[] memory list = new bytes[](4);
-        list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
-        list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
-        list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
-        bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
-        bytes[] memory loglist = new bytes[](3);
 
-        for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
-            loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
-            bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
+    // function _encodeReceipt(TxReceipt memory _txReceipt) internal pure returns (bytes memory output) {
+    //     bytes[] memory list = new bytes[](4);
+    //     list[0] = RLPEncode.encodeBytes(_txReceipt.postStateOrStatus);
+    //     list[1] = RLPEncode.encodeUint(_txReceipt.cumulativeGasUsed);
+    //     list[2] = RLPEncode.encodeBytes(_txReceipt.bloom);
+    //     bytes[] memory listLog = new bytes[](_txReceipt.logs.length);
+    //     bytes[] memory loglist = new bytes[](3);
 
-            for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
-                loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
-            }
-            loglist[1] = RLPEncode.encodeList(loglist1);
-            loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
-            bytes memory logBytes = RLPEncode.encodeList(loglist);
-            listLog[j] = logBytes;
-        }
-        list[3] = RLPEncode.encodeList(listLog);
-        output = RLPEncode.encodeList(list);
-    }
+    //     for (uint256 j = 0; j < _txReceipt.logs.length; j++) {
+    //         loglist[0] = RLPEncode.encodeAddress(_txReceipt.logs[j].addr);
+    //         bytes[] memory loglist1 = new bytes[](_txReceipt.logs[j].topics.length);
+
+    //         for (uint256 i = 0; i < _txReceipt.logs[j].topics.length; i++) {
+    //             loglist1[i] = RLPEncode.encodeBytes(_txReceipt.logs[j].topics[i]);
+    //         }
+    //         loglist[1] = RLPEncode.encodeList(loglist1);
+    //         loglist[2] = RLPEncode.encodeBytes(_txReceipt.logs[j].data);
+    //         bytes memory logBytes = RLPEncode.encodeList(loglist);
+    //         listLog[j] = logBytes;
+    //     }
+    //     list[3] = RLPEncode.encodeList(listLog);
+    //     output = RLPEncode.encodeList(list);
+    // }
 
     function _splitExtra(
         bytes memory _extraData

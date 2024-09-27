@@ -115,43 +115,72 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         bytes memory _receiptProof
     ) external view override returns (bool success, string memory message, bytes memory logs) {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
-
-        Verify.BlockHeader[] memory headers = proof.headers;
-        return _verifyProofData(proof, headers);
+        return _verifyProofData(proof.receiptProof, proof.headers);
     }
 
     function verifyProofDataWithCache(
         bytes memory _receiptProof
     ) external view override returns (bool success, string memory message, bytes memory logs) {
         ProofData memory proof = abi.decode(_receiptProof, (ProofData));
+        return _verifyProofData(proof.receiptProof, proof.headers);
+    }
 
-        Verify.BlockHeader[] memory headers = proof.headers;
-        return _verifyProofData(proof, headers);
+    function verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, txLog memory log){
+        ProofData memory proof = abi.decode(_receiptProof, (ProofData));
+        return _validateProofWithLog(_logIndex, proof.receiptProof, proof.headers);
+    }
+
+    function verifyProofDataWithCache(
+        bool _cache,
+        uint256 _logIndex,
+        bytes memory _receiptProofBytes
+    ) external override returns (bool success, string memory message, txLog memory log){
+        ProofData memory proof = abi.decode(_receiptProofBytes, (ProofData));
+        return _validateProofWithLog(_logIndex, proof.receiptProof, proof.headers);
     }
 
     function _verifyProofData(
-        ProofData memory proof,
+        Verify.ReceiptProof memory receiptProof,
         Verify.BlockHeader[] memory headers
     ) private view returns (bool success, string memory message, bytes memory logs) {
-        require(confirms > 0, "light node uninitialized");
-
-        require(headers.length == confirms, "proof headers not enough");
-
-        require(
-            headers[0].number >= minValidBlocknum && headers[headers.length - 1].number <= maxCanVerifyNum(),
-            "Out of verify range"
-        );
-
-        (success, message) = _verifyBlockHeaders(headers);
-
+        bytes32 rootHash;
+        (rootHash, success, message) = _getReceiptsRoot(headers);
         if (success) {
-            bytes32 rootHash = bytes32(headers[0].receiptsRoot);
-            (success, logs) = Verify._validateProof(rootHash, proof.receiptProof, mptVerify);
-
+            (success, logs) = Verify._validateProof(rootHash, receiptProof, mptVerify);
             if (!success) {
                 message = "mpt verification failed";
             }
         }
+    }
+
+    function _validateProofWithLog(
+        uint256 _logIndex,
+        Verify.ReceiptProof memory receiptProof,
+        Verify.BlockHeader[] memory headers
+    ) private view returns (bool success, string memory message, ILightVerifier.txLog memory log) {
+        bytes32 rootHash;
+        (rootHash, success, message) = _getReceiptsRoot(headers);
+        if (success) {
+            (success, log) = Verify._validateProofWithLog(_logIndex, rootHash, receiptProof, mptVerify);
+            if (!success) {
+                message = "mpt verification failed";
+            }
+        }
+    }
+
+    function _getReceiptsRoot(Verify.BlockHeader[] memory headers) private view returns(bytes32 rootHash, bool success, string memory message){
+        require(confirms > 0, "light node uninitialized");
+        require(headers.length == confirms, "proof headers not enough");
+        require(
+            headers[0].number >= minValidBlocknum && headers[headers.length - 1].number <= maxCanVerifyNum(),
+            "Out of verify range"
+        );
+        (success, message) = _verifyBlockHeaders(headers);
+
+        if(success) rootHash = bytes32(headers[0].receiptsRoot);
     }
 
     function _initBlock(Verify.BlockHeader memory _header) internal {

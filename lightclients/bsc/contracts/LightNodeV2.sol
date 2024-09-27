@@ -151,7 +151,7 @@ contract LightNodeV2 is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         ReceiptProof memory receiptProof,
         bytes32 root
     ) private view returns (bool success, string memory message, txLog memory log) {
-        (success, log) = Helper._validateProof(logIndex, root, receiptProof, mptVerify);
+        (success, log) = Helper._validateProofWithLog(logIndex, root, receiptProof, mptVerify);
         if (!success) message = "mpt verification failed";
     }
 
