@@ -42,55 +42,35 @@ library Helper {
     function _validateProof(
         bytes32 _receiptsRoot,
         ReceiptProof memory _receipt,
-        address _mptVerify
+        address _mpt
     ) internal pure returns (bool success, bytes memory logs) {
-
-        bytes memory bytesReceipt = _receipt.txReceipt;
-        bytes memory expectedValue = bytesReceipt;
-        if (_receipt.receiptType > 0) {
-            expectedValue = abi.encodePacked(bytes1(uint8(_receipt.receiptType)), expectedValue);
-        }
-
-        success = IMPTVerify(_mptVerify).verifyTrieProof(
-            _receiptsRoot,
-            _receipt.keyIndex,
-            _receipt.proof,
-            expectedValue
-        );
-        if (success) logs = bytesReceipt.toRlpItem().safeGetItemByIndex(3).unsafeToRlpBytes(); // list length must be 4
+        success = _mptVerify(_receiptsRoot, _receipt, _mpt);
+        if (success) logs = LogDecode.getLogsFromTypedReceipt(_receipt.receiptType, _receipt.txReceipt); 
     }
 
-    function _validateProofV2(
-        bytes32 _receiptsRoot,
-        ReceiptProof memory _receipt,
-        address _mptVerify
-    ) internal pure returns (bool success, bytes memory logs) {
-        bytes32 expectedValue = keccak256(_receipt.txReceipt);
-
-        success = IMPTVerify(_mptVerify).verifyTrieProof(
-            _receiptsRoot,
-            expectedValue,
-            _receipt.keyIndex,
-            _receipt.proof
-        );
-        if (success) logs = LogDecode.getLogsFromTypedReceipt(_receipt.receiptType, _receipt.txReceipt); // list length must be 4
-    }
-
-    function _validateProofV2(
+    function _validateProofWithLog(
         uint256 _logIndex,
         bytes32 _receiptsRoot,
         ReceiptProof memory _receipt,
-        address _mptVerify
+        address _mpt
     ) internal pure returns (bool success, ILightVerifier.txLog memory log) {
-        bytes32 expectedValue = keccak256(_receipt.txReceipt);
+        success = _mptVerify(_receiptsRoot, _receipt, _mpt);
+        if (success) log = LogDecode.decodeTxLogFromTypedReceipt(_logIndex, _receipt.receiptType, _receipt.txReceipt);
+    }
 
-        success = IMPTVerify(_mptVerify).verifyTrieProof(
+
+    function _mptVerify(
+        bytes32 _receiptsRoot,
+        ReceiptProof memory _receipt,
+        address _mpt
+    ) internal pure returns (bool success) {
+        bytes32 expectedValue = keccak256(_receipt.txReceipt);
+        success = IMPTVerify(_mpt).verifyTrieProof(
             _receiptsRoot,
             expectedValue,
             _receipt.keyIndex,
             _receipt.proof
         );
-        if (success) log = LogDecode.decodeTxLogFromTypedReceipt(_logIndex, _receipt.receiptType, _receipt.txReceipt); // list length must be 4
     }
 
 
