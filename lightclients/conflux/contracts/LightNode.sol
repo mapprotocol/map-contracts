@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@mapprotocol/protocol/contracts/lib/RLPReader.sol";
+import "@mapprotocol/protocol/contracts/lib/LogDecode.sol";
 import "./interface/IConflux.sol";
 import "./lib/LedgerInfoLib.sol";
 import "./lib/Types.sol";
@@ -204,6 +205,22 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
         }
     }
 
+    function verifyProofData(
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external view override returns (bool success, string memory message, txLog memory log) {
+        Types.ReceiptProof memory proof = abi.decode(_receiptProof, (Types.ReceiptProof));
+        success = verifyReceiptProof(proof);
+
+        if (success) {
+            bytes memory rlpLogs = RLPReader.toRlpItem(proof.receipt).toList()[4].toRlpBytes();
+            log = LogDecode.decodeTxLog(rlpLogs,_logIndex);
+        } else {
+            message = "failed to verify mpt";
+        }
+
+    }
+
     function verifyProofDataWithCache(
         bytes memory _receiptProof
     ) external override returns (bool success, string memory message, bytes memory logs) {
@@ -212,6 +229,22 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, IConflux {
 
         if (success) {
             logs = RLPReader.toRlpItem(proof.receipt).toList()[4].toRlpBytes();
+        } else {
+            message = "failed to verify mpt";
+        }
+    }
+
+    function verifyProofDataWithCache(
+        bool _cache,
+        uint256 _logIndex,
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, txLog memory log) {
+        Types.ReceiptProof memory proof = abi.decode(_receiptProof, (Types.ReceiptProof));
+        success = verifyReceiptProof(proof);
+
+        if (success) {
+            bytes memory rlpLogs = RLPReader.toRlpItem(proof.receipt).toList()[4].toRlpBytes();
+            log = LogDecode.decodeTxLog(rlpLogs,_logIndex);
         } else {
             message = "failed to verify mpt";
         }
