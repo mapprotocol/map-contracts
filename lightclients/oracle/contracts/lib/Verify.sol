@@ -68,38 +68,12 @@ library Verify {
             }
             log.topics[i] = t;
         }
-        point += 32;
-        log.data = toBytes(point, dataLen);
-    }
 
-    function toBytes(uint addr, uint len) internal pure returns (bytes memory bts) {
-        bts = new bytes(len);
-        uint btsptr;
+        bytes memory d;
         assembly {
-            btsptr := add(bts, /*BYTES_HEADER_SIZE*/32)
+            mstore(point, dataLen)
+            d := point
         }
-        copy(addr, btsptr, len);
-    }
-
-    // Copy 'len' bytes from memory address 'src', to address 'dest'.
-    // This function does not check the or destination, it only copies
-    // the bytes.
-    function copy(uint src, uint dest, uint len) internal pure {
-        // Mostly based on Solidity's copy_memory_to_memory:
-        // https://github.com/ethereum/solidity/blob/34dd30d71b4da730488be72ff6af7083cf2a91f6/libsolidity/codegen/YulUtilFunctions.cpp#L102-L114
-        assembly {
-            let i := 0
-            for {
-
-            } lt(i, len) {
-                i := add(i, 32)
-            } {
-                mstore(add(dest, i), mload(add(src, i)))
-            }
-
-            if gt(i, len) {
-                mstore(add(dest, len), 0)
-            }
-        }
+        log.data = d;
     }
 }
