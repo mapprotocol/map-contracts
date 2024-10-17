@@ -19,6 +19,7 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     uint256 private _nodeType;
 
     event SetMptVerify(address newMptVerify);
+    event SetNodeType(uint256 nodeType);
     event UpdateMultisig(bytes32 version, uint256 quorum, address[] signers);
     event AdminTransferred(address indexed previous, address indexed newAdmin);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
@@ -76,6 +77,12 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
         emit SetMptVerify(_verifier);
     }*/
 
+    function setNodeType(uint256 _type) external onlyOwner {
+        require(_type == 4 || _type == 5, "LightNode: invalid node type");
+        _nodeType = _type;
+        emit SetNodeType(_type);
+    }
+
     function togglePause() external onlyOwner {
          paused() ? _unpause() : _pause();
     }
@@ -132,8 +139,6 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
         
     }
 
-
-
     function _verifyProofData(
         uint256 _logIndex,
         bytes memory _receiptProof
@@ -167,7 +172,9 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
         // return this chain light node type on target chain
         // 1 default light client
         // 2 zk light client
-        // 3 oracle client
+        // 3 oracle node v1
+        // 4 oracle node v2 - mpt verification
+        // 5 oracle node v2 - log verification
         return _nodeType;
     }
 
@@ -178,11 +185,6 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     function getBytes(ProofData calldata _proof) external pure returns (bytes memory) {
         return abi.encode(_proof);
     }
-
-    /*
-    function getHeadersBytes(uint256 blockNum, bytes32 receiptRoot) external pure returns (bytes memory) {
-        return abi.encode(blockNum, receiptRoot);
-    }*/
 
     function headerHeight() external view override returns (uint256) {
         return 0;

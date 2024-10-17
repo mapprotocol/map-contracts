@@ -257,6 +257,56 @@ task("nodeV2:setMptVerify", "set mpt verify address")
         }
     });
 
+task("nodeV2:setNodeType", "set mpt verify address")
+    .addOptionalParam("chain", "chainId", 0, types.int)
+    .addOptionalParam("node", "light node address", "node", types.string)
+    .addParam("type", "node type, 4 - mpt, 5 - log")
+    .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+        let [wallet] = await hre.ethers.getSigners();
+        console.log("wallet address is:", wallet.address);
+        const { network } = hre;
+
+        let d = await readFromFile(network.name);
+
+        let chain = taskArgs.chain;
+        if (chain == 0) {
+            chain = Object.keys(d.networks[network.name].lightNodes)[0];
+        }
+
+        let node = taskArgs.node;
+        if (node === "node") {
+            if (d.networks[network.name].oracle === undefined || d.networks[network.name].oracle === "") {
+                throw "oracle not deploy";
+            }
+            if (!d.networks[network.name].lightNodes[chain]) {
+                throw "oracle light node not deploy";
+            }
+            if (
+                d.networks[network.name].lightNodes[chain].proxy === undefined ||
+                d.networks[network.name].lightNodes[chain].proxy === ""
+            ) {
+                throw "oracle light node not deploy";
+            }
+            node = d.networks[network.name].lightNodes[chain].proxy;
+        }
+
+        if (network.name === "Tron" || network.name === "TronTest") {
+            let lightNode = await getTronContractAt(hre.artifacts, "LightNodeV2", node, network.name);
+            let old_type = await lightNode.nodeType().call();
+            console.log("old node type is :", old_type);
+            let result = await lightNode.setNodeType(taskArgs.type).send();
+            //console.log(result);
+            let new_type = await lightNode.nodeType().call();
+            console.log("new node type is :", new_type);
+        } else {
+            const LightNode = await hre.ethers.getContractFactory("LightNodeV2");
+            let proxy = LightNode.attach(node);
+            console.log("old node type is :", await proxy.nodeType());
+            await (await proxy.setNodeType(taskArgs.type)).wait();
+            console.log("new node type is :", await proxy.nodeType());
+        }
+    });
+
 task("nodeV2:updateMultisig", "update multi sign address")
     .addOptionalParam("chain", "chainId", 0, types.int)
     .addOptionalParam("node", "light node address", "node", types.string)
