@@ -168,17 +168,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         {
             uint256 beyond = headers[0].number % EPOCH_NUM;
             uint256 recently = headers[0].number - beyond;
-
-            if (beyond == 0) {
-                min = _getValidatorNum(validators[recently - EPOCH_NUM]) / 2 + 1;
-                //Spanning two validator sets if Spanning two validator validators[recently].lenght must > 0
-                //take the recently one
-            } else if (beyond <= _getValidatorNum(validators[recently - EPOCH_NUM]) / 2) {
-                require(validators[recently].length > 0, "Out of verify range");
-                min = _getValidatorNum(validators[recently]) / 2 + 1;
-            } else {
-                min = _getValidatorNum(validators[recently]) / 2 + 1;
-            }
+            min = _getValidatorNum(validators[recently - EPOCH_NUM]) / 2 + 1;
         }
         require(headers.length >= min, "proof headers not enough");
 
@@ -245,11 +235,7 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
 
             uint256 recently = _blockHeaders[i].number - (_blockHeaders[i].number % EPOCH_NUM);
             // get the block validators
-            if (_blockHeaders[i].number % EPOCH_NUM > _getValidatorNum(validators[recently - EPOCH_NUM]) / 2) {
-                vals = validators[recently];
-            } else {
-                vals = validators[recently - EPOCH_NUM];
-            }
+            vals = validators[recently - EPOCH_NUM];
 
             if (
                 !Verify._containsValidator(
@@ -264,26 +250,20 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             if (!Verify._verifyHeaderSignature(_blockHeaders[i], chainId)) {
                 return (false, "invalid Signature");
             }
-            // if (i > 0) {
-            //     if (_isRepeat(miners, _blockHeaders[i].miner, i)) {
-            //         return (false, "miner repeat");
-            //     }
-            // }
-            // miners[i] = _blockHeaders[i].miner;
         }
 
         return (true, "");
     }
 
-    function _isRepeat(address[] memory _miners, address _miner, uint256 _limit) private pure returns (bool) {
-        for (uint256 i = 0; i < _limit; i++) {
-            if (_miners[i] == _miner) {
-                return true;
-            }
-        }
+    // function _isRepeat(address[] memory _miners, address _miner, uint256 _limit) private pure returns (bool) {
+    //     for (uint256 i = 0; i < _limit; i++) {
+    //         if (_miners[i] == _miner) {
+    //             return true;
+    //         }
+    //     }
 
-        return false;
-    }
+    //     return false;
+    // }
 
     function _removeExcessEpochValidators() internal {
         if (_lastSyncedBlock > EPOCH_NUM * MAX_SAVED_EPOCH_NUM) {
