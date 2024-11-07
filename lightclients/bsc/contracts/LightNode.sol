@@ -211,9 +211,8 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
         uint256 preGasLimt = _blockHeaders[0].gasLimit;
 
         uint256 preBlockTime;
-
         bytes memory vals;
-
+        uint256 vNum;
         for (uint256 i = 0; i < _min; i++) {
             if (_blockHeaders[i].number != start + i) {
                 return (false, "invalid block number");
@@ -226,25 +225,24 @@ contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
             }
 
             preBlockTime = _blockHeaders[i].timestamp;
-
             if (!Verify._validateHeader(_blockHeaders[i], preGasLimt, minEpochBlockExtraDataLen)) {
                 return (false, "invalid block");
             }
-
             preGasLimt = _blockHeaders[i].gasLimit;
-
-            uint256 recently = _blockHeaders[i].number - (_blockHeaders[i].number % EPOCH_NUM);
-            // get the block validators
+            uint256 mod = (_blockHeaders[i].number % EPOCH_NUM);
+            uint256 recently = _blockHeaders[i].number - mod;
             vals = validators[recently - EPOCH_NUM];
-
-            if (
-                !Verify._containsValidator(
-                    vals,
-                    _blockHeaders[i].miner,
-                    _blockHeaders[i].number % (_getValidatorNum(vals))
-                )
-            ) {
-                return (false, "invalid signer");
+            vNum = _getValidatorNum(vals);
+            if (!Verify._containsValidator(vals,_blockHeaders[i].miner, _blockHeaders[i].number % vNum)) {
+                if(mod > 10) {
+                    vals = validators[recently];
+                    vNum = _getValidatorNum(vals);
+                    if(!Verify._containsValidator(vals, _blockHeaders[i].miner, _blockHeaders[i].number % (vNum))){
+                        return (false, "invalid signer");
+                    }
+                } else {
+                    return (false, "invalid signer");
+                }
             }
 
             if (!Verify._verifyHeaderSignature(_blockHeaders[i], chainId)) {
