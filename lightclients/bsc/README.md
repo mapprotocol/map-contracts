@@ -12,7 +12,7 @@ the light node implementation principle is to verify the legitimacy of the block
 
 If we want to validate a transaction, we need to validate the block header that the transaction is in,to validate a block header and we need to validate the signature of the block header.
 
-by tracking validatorSet changes light node can verify all bsc transations.
+by tracking validatorSet changes light node can verify all bsc transactions, translations, transitions.
 
 Here are some important public interfaces.
 
