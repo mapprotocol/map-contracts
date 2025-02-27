@@ -13,11 +13,11 @@ The repository has the following packages (sub projects):
   - [Near](mapclients/near) - MAP Relay Chain light client on Near Protocol
 - [light clients on MAPO](lightclients) - All light client deployed on MAP Relay Chain
   - [BNB Smart Chain light client](lightclients/bsc) - BNB smart chain light client on MAP Relay Chain
-  - [Ploygon light client](lightclients/matic) - Playton light client on MAP Relay Chain
+  - [Polygon light client](lightclients/matic) - Playton light client on MAP Relay Chain
   - [Ethereum light client](lightclients/eth2) - Ethereum light client on MAP Relay Chain
-  - [Near light client](lightclients/near) - Near Protocl light client on MAP Relay Chain
+  - [Near light client](lightclients/near) - Near Protocol light client on MAP Relay Chain
   - [Klaytn light client](lightclients/klaytn) - Klaytn light client on MAP Relay Chain
   - [Platon light client](lightclients/platon) - Platon light client on MAP Relay Chain
-- [MAP Omnichain Service](mos) - MAP omnichain Service reference implementation, mos contracts will be deplyed on every chain to achieve cross-chain interoperablity
+- [MAP Omnichain Service](mos) - MAP omnichain Service reference implementation, mos contracts will be deployed on every chain to achieve cross-chain interoperablity
   - [MOS on evm chains](mos/evm) - mos on evm chains
   - [MOS on near](mos/near)
