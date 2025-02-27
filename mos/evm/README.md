@@ -66,7 +66,7 @@ npx hardhat relayDeploy --wrapped <wrapped token> --lightnode <lightNodeManager 
 ````
 
 * `wrapped token` is wrapped MAP token address on MAP mainnet or MAP Makalu.
-* `lightNodeManager address` is the light client mananger address deployed on MAP mainnet or MAP Makalu. See [here](../protocol/README.md) for more information.
+* `lightNodeManager address` is the light client manager address deployed on MAP mainnet or MAP Makalu. See [here](../protocol/README.md) for more information.
 
 3. Init MOS Relay
 ```
@@ -118,7 +118,7 @@ npx hardhat tokenDeploy --name <token name > --symbol <token symbol> --balance <
 
 2. Grant Mint Role to relay or mos contract
 ````
-npx hardhat tokenGrant --token <token address > --minter <adress/mos/relay> --network <network>
+npx hardhat tokenGrant --token <token address > --minter <address/mos/relay> --network <network>
 ````
 
 ### Register Token
