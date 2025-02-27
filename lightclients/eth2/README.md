@@ -147,7 +147,7 @@ The file LightNode.sol implements the main logic of eth2.0 PoS light client. Her
 
 ```
 
-* Everytime the maintainer calls the above interface to update the light client successfully, the finalized beacon
+* Every time the maintainer calls the above interface to update the light client successfully, the finalized beacon
   header number and finalized execution layer header number are updated. There is a gap between the latest finalized
   execution layer header and the previous finalized header. The maintainer should call below method to update the block
   headers one or more times, and the light client will verify the validity of the block headers and store the hashes
