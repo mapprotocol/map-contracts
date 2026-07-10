@@ -57,7 +57,7 @@ npx hardhat relayDeploy --wrapped <wrapped token> --lightnode <lightNodeManager 
 ````
 
 * `wrapped token` is wrapped MAP token address on MAP mainnet or MAP Makalu.
-* `lightNodeManager address` is the light client mananger address deployed on MAP mainnet or MAP Makalu. See [here](../protocol/README.md) for more information.
+* `lightNodeManager address` is the light client manager address deployed on MAP mainnet or MAP Makalu. See [here](../protocol/README.md) for more information.
 
 3. Init MOS Relay
 ```
