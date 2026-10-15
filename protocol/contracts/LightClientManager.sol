@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+
 pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
@@ -23,6 +24,12 @@ contract LightClientManager is ILightClientManager, Initializable, UUPSUpgradeab
     modifier onlyOwner() {
         require(msg.sender == _getAdmin(), "manager: only owner");
         _;
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // lock the implementation so nobody can initialize it and take over its admin role
+        _disableInitializers();
     }
 
     function initialize() public initializer {
