@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.20;
 
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {EnumerableSet} from "../lib/EnumerableSet.sol";
-import {ECDSAMultisigStorage} from "../lib/ECDSAMultisigStorage.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { MultisigEnumerableSet } from "../lib/MultisigEnumerableSet.sol";
+import { ECDSAMultisigStorage } from "../lib/ECDSAMultisigStorage.sol";
 
 /**
  * @title ECDSAMultisig
@@ -14,14 +14,16 @@ abstract contract ECDSAMultisig {
     error ECDSAMultisig_AddSignerFailed();
     error ECDSAMultisig_QuorumNotReached();
     error ECDSAMultisig_RemoveSignerFailed();
+    error ECDSAMultisig_SignerZeroAddress();
     error ECDSAMultisig_SignerLimitReached();
     error ECDSAMultisig_SignerAlreadySigned();
     error ECDSAMultisig_InsufficientSigners();
     error ECDSAMultisig_MessageValueMismatch();
+    error ECDSAMultisig_QuorumValueZero();
     error ECDSAMultisig_RecoveredSignerNotAuthorized();
 
     using ECDSA for bytes32;
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using MultisigEnumerableSet for MultisigEnumerableSet.AddressSet;
 
     function _setQuorum(uint256 quorum) internal {
         ECDSAMultisigStorage.Layout storage l = ECDSAMultisigStorage.layout();
@@ -43,6 +45,7 @@ abstract contract ECDSAMultisig {
         ECDSAMultisigStorage.Layout storage l = ECDSAMultisigStorage.layout();
 
         if (l.signers.length() >= 256) revert ECDSAMultisig_SignerLimitReached();
+        if (account == address(0)) revert ECDSAMultisig_SignerZeroAddress();
         if (!l.signers.add(account)) revert ECDSAMultisig_AddSignerFailed();
     }
 
@@ -82,6 +85,8 @@ abstract contract ECDSAMultisig {
         bytes[] memory signatures
     ) internal view virtual {
         ECDSAMultisigStorage.Layout storage l = ECDSAMultisigStorage.layout();
+
+        if (l.quorum == 0) revert ECDSAMultisig_QuorumValueZero();
 
         if (l.quorum > signatures.length) revert ECDSAMultisig_QuorumNotReached();
 

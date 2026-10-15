@@ -1,9 +1,6 @@
-import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { BigNumber } from "ethers";
-import { TxLog, ReceiptProof, TxReceipt, index2key, ProofData } from "../utils/Util";
 import { keccak256 } from "ethers/lib/utils";
 
 let chainId = 137;
@@ -55,7 +52,7 @@ describe("OracleV2", function () {
             expect(await oracle.paused()).to.false;
         });
 
-        it("updateMultisg() -> correct ", async function () {
+        it("updateMultisig() -> correct ", async function () {
             let [wallet, addr1, addr2, addr3] = await ethers.getSigners();
 
             let oracle = await loadFixture(deployFixture);
@@ -68,31 +65,31 @@ describe("OracleV2", function () {
 
             console.log(info);
 
-            expect(info.quorum).eq(0);
+            expect(info.quorum).to.equal(0);
 
-            await expect(oracle.updateMultisg(quorum, signers)).to.be.reverted;
+            await expect(oracle.updateMultisig(quorum, signers)).to.be.reverted;
 
             quorum = 3;
 
-            await oracle.updateMultisg(quorum, signers);
+            await oracle.updateMultisig(quorum, signers);
 
             info = await oracle.multisigInfo();
 
             console.log(info);
 
-            expect(info.quorum).eq(3);
+            expect(info.quorum).to.equal(3);
 
             quorum = 2;
 
             signers = [wallet.address, addr2.address, addr3.address];
 
-            await oracle.updateMultisg(quorum, signers);
+            await oracle.updateMultisig(quorum, signers);
 
             info = await oracle.multisigInfo();
 
             console.log(info);
 
-            expect(info.quorum).eq(2);
+            expect(info.quorum).to.equal(2);
         });
 
         it("proposal", async function () {
@@ -104,7 +101,7 @@ describe("OracleV2", function () {
 
             let quorum = 2;
 
-            await oracle.updateMultisg(quorum, signers);
+            await oracle.updateMultisig(quorum, signers);
 
             let receiptRoot = "0x9d1a63e744550eebbb4d141e5b77c13cb1c21f40fb4f124bb9f161cea166b8ff";
 
@@ -123,17 +120,17 @@ describe("OracleV2", function () {
 
             let s2 = addr2.signMessage(ethers.utils.arrayify(hash));
 
-            let isProposaled = await oracle.isProposaled(chainId, info.version, blockNum, addr1.address);
+            let isProposaled = await oracle.isProposed(chainId, info.version, blockNum, addr1.address);
 
             expect(isProposaled).to.be.eq(ethers.constants.HashZero);
 
-            await expect(oracle.connect(addr2).proposal(chainId, blockNum, receiptRoot, s1)).to.be.reverted;
+            await expect(oracle.connect(addr2).propose(chainId, blockNum, receiptRoot, s1)).to.be.reverted;
 
-            await oracle.connect(addr1).proposal(chainId, blockNum, receiptRoot, s1);
+            await oracle.connect(addr1).propose(chainId, blockNum, receiptRoot, s1);
 
-            await expect(oracle.connect(addr1).proposal(chainId, blockNum, receiptRoot, s1)).to.be.reverted;
+            await expect(oracle.connect(addr1).propose(chainId, blockNum, receiptRoot, s1)).to.be.reverted;
 
-            isProposaled = await oracle.isProposaled(chainId, info.version, blockNum, addr1.address);
+            isProposaled = await oracle.isProposed(chainId, info.version, blockNum, addr1.address);
 
             expect(isProposaled).eq(receiptRoot);
 
@@ -141,13 +138,13 @@ describe("OracleV2", function () {
 
             await oracle.connect(addr1).recoverProposal(chainId, blockNum, addr1.address, 0);
 
-            isProposaled = await oracle.isProposaled(chainId, info.version, blockNum, addr1.address);
+            isProposaled = await oracle.isProposed(chainId, info.version, blockNum, addr1.address);
 
             expect(isProposaled).eq(ethers.constants.HashZero);
 
-            await oracle.connect(addr1).proposal(chainId, blockNum, receiptRoot, s1);
+            await oracle.connect(addr1).propose(chainId, blockNum, receiptRoot, s1);
 
-            isProposaled = await oracle.isProposaled(chainId, info.version, blockNum, addr1.address);
+            isProposaled = await oracle.isProposed(chainId, info.version, blockNum, addr1.address);
 
             expect(isProposaled).eq(receiptRoot);
 
@@ -155,9 +152,9 @@ describe("OracleV2", function () {
 
             expect(p.canVerify).to.be.false;
 
-            await expect(oracle.connect(addr2).proposal(chainId, blockNum, receiptRoot, s2)).to.be.emit(oracle, "Meet");
+            await expect(oracle.connect(addr2).propose(chainId, blockNum, receiptRoot, s2)).to.be.emit(oracle, "Meet");
 
-            isProposaled = await oracle.isProposaled(chainId, info.version, blockNum, addr1.address);
+            isProposaled = await oracle.isProposed(chainId, info.version, blockNum, addr1.address);
 
             expect(isProposaled).eq(receiptRoot);
 

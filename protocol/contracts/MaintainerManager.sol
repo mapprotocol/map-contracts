@@ -26,7 +26,7 @@ contract MaintainerManager is UUPSUpgradeable, Initializable {
 
     // Info of each pool.
     struct PoolInfo {
-        uint256 accMapsPerShare; // Accumulated MAPs per share, times 1e23. See below.
+        uint256 accMapsPerShare; // Accumulated MAPs per share, times 1e12. See below.
         uint256 lastAwards;
         uint256 allStake;
         uint256 awardWithdraw;
@@ -42,7 +42,10 @@ contract MaintainerManager is UUPSUpgradeable, Initializable {
     mapping(address => address) public workerUser;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {}
+    constructor() {
+        // lock the implementation so nobody can initialize it and take over its admin role
+        _disableInitializers();
+    }
 
     /** initialize  **********************************************************/
     function initialize() external initializer {

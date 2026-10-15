@@ -58,6 +58,7 @@ task("oracleV2:removeProposal", "set light node address")
     .addOptionalParam("oracle", "oracle address", "", types.string)
     .addOptionalParam("chainid", "oracle address", "", types.string)
     .addOptionalParam("block", "oracle address", "", types.string)
+    .addOptionalParam("transation", "transation index", "", types.string)
     .addOptionalParam("signer", "oracle address", "", types.string)
     .addOptionalParam("index", "oracle address", "", types.string)
     .setAction(async (taskArgs, hre: HardhatRuntimeEnvironment) => {
@@ -76,6 +77,12 @@ task("oracleV2:removeProposal", "set light node address")
         console.log("wallet address is:", wallet.address);
         const Oracle = await hre.ethers.getContractFactory("OracleV2");
         let oracle = Oracle.attach(oracleAddr);
-        let rst = await oracle.recoverProposal(taskArgs.chainid, taskArgs.block, taskArgs.signer, taskArgs.index);
+        let block;
+        if(!taskArgs.transation || taskArgs.transation === 0){
+            block = taskArgs.block;
+        } else {
+           block = hre.ethers.BigNumber.from(taskArgs.transation).shl(64).or(hre.ethers.BigNumber.from(taskArgs.block))
+        }
+        let rst = await oracle.recoverProposal(taskArgs.chainid, block, taskArgs.signer, taskArgs.index);
     });
 

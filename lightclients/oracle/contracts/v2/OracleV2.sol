@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
-import "./abstract/ECDSAMultisig.sol";
+import "../abstract/ECDSAMultisig.sol";
 
 contract OracleV2 is ECDSAMultisig, Ownable, Pausable, ReentrancyGuard {
     struct LightNodeInfo {
@@ -40,6 +40,7 @@ contract OracleV2 is ECDSAMultisig, Ownable, Pausable, ReentrancyGuard {
     }
 
     function updateMultisig(uint256 quorum, address[] calldata signers) external onlyOwner {
+        if(quorum == 0) revert ECDSAMultisig_QuorumValueZero();
         _setQuorum(0);
         address[] memory preSigners = _signers();
         uint256 preLen = preSigners.length;
@@ -123,7 +124,7 @@ contract OracleV2 is ECDSAMultisig, Ownable, Pausable, ReentrancyGuard {
             singers[i] = signer;
             signatures[i] = signature;
         }
-        canVerify = (len >= _quorum());
+        canVerify = (_version() == version && len >= _quorum());
     }
 
     function isProposed(

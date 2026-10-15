@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.20;
 
-import {EnumerableSet} from "../lib/EnumerableSet.sol";
+import { MultisigEnumerableSet } from "../lib/MultisigEnumerableSet.sol";
 
 /**
  * @title ECDSAMultisig Storage
@@ -12,7 +12,7 @@ library ECDSAMultisigStorage {
     struct Layout {
         bytes32 version;
         uint256 quorum;
-        EnumerableSet.AddressSet signers;
+        MultisigEnumerableSet.AddressSet signers;
     }
 
     bytes32 internal constant STORAGE_SLOT = keccak256("map.contracts.storage.ECDSAMultisig");

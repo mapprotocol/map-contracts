@@ -6,11 +6,14 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@mapprotocol/protocol/contracts/interface/ILightNode.sol";
-import "./abstract/ECDSAMultisig.sol";
-import "./lib/Verify.sol";
+import "../lib/Verify.sol";
 
-contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable, ILightNode {
+contract LightNode is UUPSUpgradeable, Initializable, Pausable, ILightNode {
     address public mptVerify;
+
+    mapping(uint256 => bytes32) public receiptRoots;
+
+    address public oracle;
 
     uint256 public chainId;
 
@@ -19,23 +22,22 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     uint256 private _nodeType;
 
     event SetMptVerify(address newMptVerify);
-    event SetNodeType(uint256 nodeType);
-    event UpdateMultisig(bytes32 version, uint256 quorum, address[] signers);
-    event AdminTransferred(address indexed previous, address indexed newAdmin);
+    event SetOracle(address _oracle);
     event ChangePendingAdmin(address indexed previousPending, address indexed newPending);
-
-    enum ProofType { MPT, LOG }
+    event AdminTransferred(address indexed previous, address indexed newAdmin);
 
     struct ProofData {
-        ProofType proofType;
         uint256 blockNum;
-        bytes32 receiptRoot;
-        bytes[] signatures;
-        bytes proof;
+        Verify.ReceiptProof receiptProof;
     }
 
     modifier onlyOwner() {
         require(msg.sender == _getAdmin(), "lightnode :: only admin");
+        _;
+    }
+
+    modifier onlyOracle() {
+        require(msg.sender == oracle, "lightnode :: only oracle");
         _;
     }
 
@@ -51,47 +53,50 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
         _changeAdmin(_controller);
     }
 
-    function updateMultisig(uint256 quorum, address[] calldata signers) external onlyOwner {
-        _setQuorum(0);
-        address[] memory preSigners = _signers();
-        uint256 preLen = preSigners.length;
-        for (uint i = 0; i < preLen; i++) {
-            _removeSigner(preSigners[i]);
-        }
-
-        uint256 len = signers.length;
-        for (uint i = 0; i < len; i++) {
-            _addSigner(signers[i]);
-        }
-        _setQuorum(quorum);
-
-        bytes32 version = keccak256(abi.encodePacked(quorum, signers));
-        _setVersion(version);
-        emit UpdateMultisig(version, quorum, signers);
+    function removeRoot(uint256 _blockNumber) external onlyOwner {
+        receiptRoots[_blockNumber] = bytes32("");
     }
 
-    /*
     function setMptVerify(address _verifier) external onlyOwner {
         require(_verifier != address(0), "LightNode: verifier is the zero address");
         mptVerify = _verifier;
         emit SetMptVerify(_verifier);
-    }*/
-
-    function setNodeType(uint256 _type) external onlyOwner {
-        require(_type == 4 || _type == 5, "LightNode: invalid node type");
-        _nodeType = _type;
-        emit SetNodeType(_type);
     }
 
-    function togglePause() external onlyOwner {
-         paused() ? _unpause() : _pause();
+    function setOracle(address _oracle) external onlyOwner {
+        require(_oracle != address(0), "LightNode: _oracle is the zero address");
+        oracle = _oracle;
+        emit SetOracle(_oracle);
     }
 
-    function updateBlockHeader(bytes memory _blockHeader) external override {}
+    function togglePause(bool _flag) external onlyOwner returns (bool) {
+        if (_flag) {
+            _pause();
+        } else {
+            _unpause();
+        }
+
+        return true;
+    }
+
+    function updateBlockHeader(bytes memory _blockHeadersBytes) external override whenNotPaused onlyOracle {
+        (uint256 blockNum, bytes32 receiptRoot) = abi.decode(_blockHeadersBytes, (uint256, bytes32));
+        require(blockNum > 0, "LightNode: zero block number");
+        require(receiptRoot != bytes32(""), "LightNode: empty receipt root");
+        require(receiptRoots[blockNum] == bytes32(""), "LightNode: already update");
+        receiptRoots[blockNum] = receiptRoot;
+        emit UpdateBlockHeader(tx.origin, blockNum);
+    }
 
     function verifyProofData(
         bytes memory _receiptProof
-    ) external view override whenNotPaused returns (bool success, string memory message, bytes memory logs) {
+    ) external view override returns (bool success, string memory message, bytes memory logs) {
+        return _verifyProofData(_receiptProof);
+    }
+
+    function verifyProofDataWithCache(
+        bytes memory _receiptProof
+    ) external override returns (bool success, string memory message, bytes memory logs) {
         return _verifyProofData(_receiptProof);
     }
 
@@ -103,13 +108,6 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     }
 
     function verifyProofDataWithCache(
-        bytes memory _receiptProof
-    ) external override whenNotPaused returns (bool success, string memory message, bytes memory logs) {
-        return _verifyProofData(_receiptProof);
-    }
-
-
-    function verifyProofDataWithCache(
         bool _cache,
         uint256 _logIndex,
         bytes memory _receiptProof
@@ -117,64 +115,40 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
         return _verifyProofData(_logIndex, _receiptProof);
     }
 
-
     function _verifyProofData(
         bytes memory _receiptProof
     ) private view returns (bool success, string memory message, bytes memory logs) {
-        ProofData memory data = abi.decode(_receiptProof, (ProofData));
-        _verifySignatures(data.receiptRoot, data.blockNum, chainId, data.signatures);
-        if(data.proofType == ProofType.MPT){
-            Verify.ReceiptProof memory receiptProof = abi.decode(data.proof,(Verify.ReceiptProof));
-            (success, logs) = Verify._validateProof(data.receiptRoot, receiptProof, address(0x0));
-            if(!success) message = "mpt verification failed";
-        } else {
-            if(keccak256(data.proof) == data.receiptRoot){
-                success = true;
-                logs = data.proof;
-            } else {
-                success = false;
-                message = "invalid event bytes";
-            }
+        ProofData memory proof = abi.decode(_receiptProof, (ProofData));
+        bytes32 rootHash = receiptRoots[proof.blockNum];
+        require(rootHash != bytes32(""), "LightNode: receipt root not update");
+        (success, logs) = Verify._validateProof(rootHash, proof.receiptProof, mptVerify);
+        if (!success) {
+            message = "mpt verification failed";
         }
-        
     }
 
     function _verifyProofData(
         uint256 _logIndex,
         bytes memory _receiptProof
     ) private view returns (bool success, string memory message, ILightVerifier.txLog memory log) {
-        ProofData memory data = abi.decode(_receiptProof, (ProofData));
-        _verifySignatures(data.receiptRoot, data.blockNum, chainId, data.signatures);
-        if(data.proofType == ProofType.MPT) {
-            Verify.ReceiptProof memory receiptProof = abi.decode(data.proof,(Verify.ReceiptProof));
-            (success, log) = Verify._validateProofWithLog(_logIndex, data.receiptRoot, receiptProof);
-            if(!success) message = "mpt verification failed";
-        } else {
-            if(keccak256(data.proof) == data.receiptRoot){
-                success = true;
-                log = Verify._decodeLogFromBytes(data.proof);
-            } else {
-                success = false;
-                message = "invalid event bytes";
-            }
+        ProofData memory proof = abi.decode(_receiptProof, (ProofData));
+        bytes32 rootHash = receiptRoots[proof.blockNum];
+        require(rootHash != bytes32(""), "LightNode: receipt root not update");
+        (success, log) = Verify._validateProofWithLog(_logIndex, rootHash, proof.receiptProof);
+        if (!success) {
+            message = "mpt verification failed";
         }
     }
 
-    function multisigInfo() external view returns (bytes32 version, uint256 quorum, address[] memory singers) {
-        return _multisigInfo();
-    }
-
-    function isVerifiable(uint256, bytes32) external view override returns (bool) {
-        return true;
+    function isVerifiable(uint256 _blockHeight, bytes32) external view override returns (bool) {
+        return receiptRoots[_blockHeight] != bytes32("");
     }
 
     function nodeType() external view override returns (uint256) {
         // return this chain light node type on target chain
         // 1 default light client
         // 2 zk light client
-        // 3 oracle node v1
-        // 4 oracle node v2 - mpt verification
-        // 5 oracle node v2 - log verification
+        // 3 oracle client
         return _nodeType;
     }
 
@@ -184,6 +158,10 @@ contract LightNodeV2 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
 
     function getBytes(ProofData calldata _proof) external pure returns (bytes memory) {
         return abi.encode(_proof);
+    }
+
+    function getHeadersBytes(uint256 blockNum, bytes32 receiptRoot) external pure returns (bytes memory) {
+        return abi.encode(blockNum, receiptRoot);
     }
 
     function headerHeight() external view override returns (uint256) {

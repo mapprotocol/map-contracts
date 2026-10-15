@@ -7,7 +7,7 @@ pragma solidity 0.8.20;
  * @dev https://github.com/solidstate-network/solidstate-solidity/blob/master/contracts/data/EnumerableSet.sol
  * @dev derived from https://github.com/OpenZeppelin/openzeppelin-contracts (MIT license)
  */
-library EnumerableSet {
+library MultisigEnumerableSet {
     error EnumerableSet__IndexOutOfBounds();
 
     struct Set {

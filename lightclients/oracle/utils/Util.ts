@@ -1,4 +1,4 @@
-import { BigNumber, BigNumber } from "ethers";
+import { BigNumber } from "ethers";
 import { JsonRpcProvider } from "@ethersproject/providers";
 const Rpc = require("isomorphic-rpc");
 const { encode, toBuffer } = require("eth-util-lite");

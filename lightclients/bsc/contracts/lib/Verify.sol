@@ -61,6 +61,7 @@ library Verify {
         uint256 blobGasUsed;
         uint256 excessBlobGas;
         bytes parentBeaconBlockRoot;
+        bytes requestsHash;
     }
 
     struct ReceiptProof {
@@ -161,6 +162,8 @@ library Verify {
         bytes[] memory list;
         if(bytes32(_header.parentBeaconBlockRoot) != bytes32("")){
             list = new bytes[](16);
+        } else if(bytes32(_header.requestsHash) != bytes32("")){
+            list = new bytes[](22);
         } else {
             list = new bytes[](21);
         }
@@ -195,7 +198,10 @@ library Verify {
             _list[18] = RLPEncode.encodeUint(_header.blobGasUsed);
             _list[19] = RLPEncode.encodeUint(_header.excessBlobGas);
             _list[20] = RLPEncode.encodeBytes(_header.parentBeaconBlockRoot);
-        }
+            if(_list.length != 21){
+                _list[21] = RLPEncode.encodeBytes(_header.requestsHash);
+            }
+        } 
     }
 
     function _validateProof(

@@ -61,14 +61,35 @@ library MPT {
                 }
 
                 uint8 nextPathNibble = uint8(path[pathPtr]);
-                if (nextPathNibble > 16) {
+                if (nextPathNibble >= 16) {
+                    // only nibbles 0..15 select a child, slot 16 holds the branch value
                     return false;
                 }
                 nodeKey = bytes32(RLPReader.toUintStrict(currentNodeList[nextPathNibble]));
                 pathPtr += 1;
             } else if (currentNodeList.length == 2) {
-                uint256 traversed = _nibblesToTraverse(RLPReader.toBytes(currentNodeList[0]), path, pathPtr);
+                bytes memory encodedPartialPath = RLPReader.toBytes(currentNodeList[0]);
+                if (encodedPartialPath.length == 0) {
+                    return false;
+                }
+                // HP (hex-prefix) flag nibble: 0/1 = extension node, 2/3 = leaf node.
+                // Without this check, a 2-item node is treated as a leaf purely because
+                // the path pointer happens to reach the end, even when the node is
+                // actually an extension node whose second item is a child node hash
+                // rather than the terminal value.
+                bool isLeafNode = (uint8(encodedPartialPath[0]) >> 4) >= 2;
+
+                (bool matched, uint256 traversed) = _nibblesToTraverse(encodedPartialPath, path, pathPtr);
+                if (!matched) {
+                    // the node path diverges from (or runs past the end of) the requested path
+                    return false;
+                }
                 if (pathPtr + traversed == path.length) {
+                    if (!isLeafNode) {
+                        // An extension node can never be the terminal node of a valid
+                        // proof path; reject instead of treating its child hash as value.
+                        return false;
+                    }
                     //leaf node
                     //if (keccak256(RLPReader.toBytes(currentNodeList[1])) == keccak256(value)) {
                     if (RLPReader.payloadKeccak256(currentNodeList[1]) == value) {
@@ -76,6 +97,11 @@ library MPT {
                     } else {
                         return false;
                     }
+                }
+
+                if (isLeafNode) {
+                    // Leaf node whose path does not fully match the requested path.
+                    return false;
                 }
 
                 //extension node
@@ -97,26 +123,22 @@ library MPT {
         bytes memory encodedPartialPath,
         bytes memory path,
         uint256 pathPtr
-    ) private pure returns (uint256) {
-        uint256 len;
+    ) private pure returns (bool matched, uint256 len) {
         // encodedPartialPath has elements that are each two hex characters (1 byte), but partialPath
         // and slicedPath have elements that are each one hex character (1 nibble)
         bytes memory partialPath = _getNibbleArray(encodedPartialPath);
-        bytes memory slicedPath = new bytes(partialPath.length);
 
-        // pathPtr counts nibbles in path
-        // partialPath.length is a number of nibbles
-        for (uint256 i = pathPtr; i < pathPtr + partialPath.length; i++) {
-            bytes1 pathNibble = path[i];
-            slicedPath[i - pathPtr] = pathNibble;
+        // pathPtr counts nibbles in path, partialPath.length is a number of nibbles
+        if (pathPtr + partialPath.length > path.length) {
+            return (false, 0);
         }
 
-        if (keccak256(partialPath) == keccak256(slicedPath)) {
-            len = partialPath.length;
-        } else {
-            len = 0;
+        for (uint256 i = 0; i < partialPath.length; i++) {
+            if (partialPath[i] != path[pathPtr + i]) {
+                return (false, 0);
+            }
         }
-        return len;
+        return (true, partialPath.length);
     }
 
     // bytes b must be hp encoded

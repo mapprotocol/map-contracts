@@ -38,6 +38,7 @@ library Verify {
         bytes32 _receiptsRoot,
         ReceiptProof memory _receipt
     ) internal pure returns (bool success) {
+        require(_receipt.txReceipt.length > 64, "invalid receipt length");
         bytes32 expectedHash = keccak256(_receipt.txReceipt);
         return MPT.verify(expectedHash, _receipt.keyIndex, _receipt.proof, _receiptsRoot);
     }

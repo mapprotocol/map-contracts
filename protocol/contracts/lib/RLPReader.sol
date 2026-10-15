@@ -61,12 +61,14 @@ library RLPReader {
     }
 
     function toRlpItem(bytes memory item, uint256 offset) internal pure returns (RLPItem memory) {
+        require(offset <= item.length, "RLPReader: offset out of range");
         uint256 memPtr;
         assembly {
             memPtr := add(item, add(offset, 0x20))
         }
-
-        return RLPItem(_itemLength(memPtr) , memPtr);
+        uint256 len = _itemLength(memPtr);
+        require(len <= item.length - offset, "RLPReader: item length exceeds buffer");
+        return RLPItem(len , memPtr);
     }
 
     /*

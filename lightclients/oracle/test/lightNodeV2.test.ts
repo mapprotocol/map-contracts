@@ -1,9 +1,6 @@
-import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { BigNumber } from "ethers";
-import { TxLog, ReceiptProof, TxReceipt, index2key, ProofData } from "../utils/Util";
 import { keccak256 } from "ethers/lib/utils";
 
 let chainId = 137;
@@ -33,7 +30,7 @@ describe("LightNode", function () {
             chainId,
             wallet.address,
             wallet.address,
-            2,
+            4,
         ]);
 
         const lightNodeProxy = await LightNodeProxy.deploy(lightNode.address, initData);
@@ -149,7 +146,7 @@ describe("LightNode", function () {
 
             console.log(info);
 
-            expect(info.quorum).eq(0);
+            expect(info.quorum).to.equal(0);
 
             await expect(lightNode.updateMultisig(quorum, signers)).to.be.reverted;
 
@@ -161,7 +158,7 @@ describe("LightNode", function () {
 
             console.log(info);
 
-            expect(info.quorum).eq(3);
+            expect(info.quorum).to.equal(3);
 
             quorum = 2;
 
@@ -173,7 +170,7 @@ describe("LightNode", function () {
 
             console.log(info);
 
-            expect(info.quorum).eq(2);
+            expect(info.quorum).to.equal(2);
         });
 
         it("verifyProofData() mpt-> correct ", async function () {

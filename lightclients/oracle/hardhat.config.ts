@@ -1,7 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import * as dotenv from "dotenv";
 import "@nomiclabs/hardhat-etherscan";
-import "@nomiclabs/hardhat-waffle";
+import "@nomicfoundation/hardhat-chai-matchers";
 import 'hardhat-deploy';
 import "hardhat-gas-reporter";
 import "solidity-coverage";
@@ -118,6 +118,13 @@ const config: HardhatUserConfig ={
       url:"https://testnet-rpc.maplabs.io",
       accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
     },
+
+    bsc_test: {
+      chainId: 97,
+      url:"https://bsc-testnet.public.blastapi.io",
+      accounts: process.env.TESTNET_PRIVATE_KEY !== undefined ? [process.env.TESTNET_PRIVATE_KEY] : [],
+    },
+
     Sepolia: {
       url: `https://eth-sepolia.public.blastapi.io`,
       chainId: 11155111,
@@ -157,7 +164,17 @@ const config: HardhatUserConfig ={
   //   currency: "USD",
   // },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: ' ',
+    customChains: [
+      {
+        network: "Mapo",
+        chainId: 22776,
+        urls: {
+          apiURL: "https://explorer-api.chainservice.io/api",
+          browserURL: "https://explorer.mapprotocol.io"
+        },
+      },
+    ]
   },
 };
 

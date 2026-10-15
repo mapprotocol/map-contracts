@@ -29,6 +29,7 @@ const { promisfy } = require("promisfy");
         public blobGasUsed?:BigNumber;
         public excessBlobGas?:BigNumber;
         public parentBeaconBlockRoot?:string
+        public requestsHash ?:string
         constructor(
             parentHash: string,
             sha3Uncles: string,
@@ -50,6 +51,7 @@ const { promisfy } = require("promisfy");
             blobGasUsed:BigNumber,
             excessBlobGas:BigNumber,
             parentBeaconBlockRoot:string,
+            requestsHash:string,
         ) {
             this.parentHash = parentHash;
             this.sha3Uncles = sha3Uncles;
@@ -69,6 +71,7 @@ const { promisfy } = require("promisfy");
             this.blobGasUsed = blobGasUsed;
             this.excessBlobGas = excessBlobGas;
             this.parentBeaconBlockRoot = parentBeaconBlockRoot;
+            this.requestsHash = requestsHash;
         }
     }
 
@@ -109,7 +112,7 @@ const { promisfy } = require("promisfy");
 
 
     export class ReceiptProof {
-        public txReceipt?: string;;
+        public txReceipt?: string;
         public keyIndex?: string;
         public proof?: Array<string>;
 
@@ -137,7 +140,7 @@ const { promisfy } = require("promisfy");
         let blobGasUsed = rpcHeader.blobGasUsed ? BigNumber.from(rpcHeader.blobGasUsed) : BigNumber.from("0");
         let excessBlobGas = rpcHeader.excessBlobGas ? BigNumber.from(rpcHeader.excessBlobGas) : BigNumber.from("0");
         let parentBeaconBlockRoot = rpcHeader.parentBeaconBlockRoot ? rpcHeader.parentBeaconBlockRoot : "0x0000000000000000000000000000000000000000000000000000000000000001";
-
+        let requestsHash = rpcHeader.requestsHash ? rpcHeader.requestsHash : "0x0000000000000000000000000000000000000000000000000000000000000000";
         let blockHeader = new BlockHeader(
             rpcHeader.parentHash,
             rpcHeader.sha3Uncles,
@@ -158,7 +161,8 @@ const { promisfy } = require("promisfy");
             withdrawalsRoot,
             blobGasUsed,
             excessBlobGas,
-            parentBeaconBlockRoot
+            parentBeaconBlockRoot,
+            requestsHash
         );
         return blockHeader;
     }
