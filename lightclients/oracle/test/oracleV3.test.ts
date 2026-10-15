@@ -102,7 +102,7 @@ describe("OracleV3", function () {
             let blockNum = 12913052;
             let txIndex = 0;
             let logIndex = 0;
-            let position = await oracle.encodePosition(blockNum, txIndex, logIndex);
+            let position = await oracle.encodePosition(blockNum, txIndex, logIndex, 0);
 
             let info = await oracle.multisigInfo();
             let hash = keccak256(
@@ -172,7 +172,7 @@ describe("OracleV3", function () {
             let txIndex = 7;
             let logIndex = 3;
 
-            let position = await oracle.encodePosition(blockNum, txIndex, logIndex);
+            let position = await oracle.encodePosition(blockNum, txIndex, logIndex, 0);
             let decoded = await oracle.decodePosition(position);
             expect(decoded.blockNum).to.equal(blockNum);
             expect(decoded.txIndex).to.equal(txIndex);
@@ -186,23 +186,25 @@ describe("OracleV3", function () {
             let s1 = addr1.signMessage(ethers.utils.arrayify(hash));
             let s2 = addr2.signMessage(ethers.utils.arrayify(hash));
 
-            await oracle.connect(addr1)["propose(uint256,uint256,uint256,uint256,bytes32,bytes)"](
+            await oracle.connect(addr1)["propose(uint256,uint256,uint256,uint256,uint256,bytes32,bytes)"](
                 chainId,
                 blockNum,
                 txIndex,
                 logIndex,
+                0,
                 receiptRoot,
                 s1
             );
             await oracle.connect(addr2)["propose(uint256,uint256,bytes32,bytes)"](chainId, position, receiptRoot, s2);
 
             expect(
-                await oracle["isProposed(uint256,bytes32,uint256,uint256,uint256,address)"](
+                await oracle["isProposed(uint256,bytes32,uint256,uint256,uint256,uint256,address)"](
                     chainId,
                     info.version,
                     blockNum,
                     txIndex,
                     logIndex,
+                    0,
                     addr1.address
                 )
             ).to.equal(receiptRoot);

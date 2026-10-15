@@ -144,6 +144,7 @@ task("oracleV3:removeProposal", "remove oracle proposal")
     .addOptionalParam("block", "block number", "", types.string)
     .addOptionalParam("txIndex", "transaction index", "", types.string)
     .addOptionalParam("logIndex", "log index", "", types.string)
+    .addOptionalParam("expiry", "signature expiry (unix timestamp in seconds), 0 never expires", "0", types.string)
     .addOptionalParam("position", "packed position", "", types.string)
     .addOptionalParam("signer", "proposal signer", "", types.string)
     .addOptionalParam("index", "signature index", "", types.string)
@@ -170,7 +171,7 @@ task("oracleV3:removeProposal", "remove oracle proposal")
             if (taskArgs.block === "" || taskArgs.txIndex === "" || taskArgs.logIndex === "") {
                 throw "need position or block + txIndex + logIndex";
             }
-            position = await oracle.encodePosition(taskArgs.block, taskArgs.txIndex, taskArgs.logIndex);
+            position = await oracle.encodePosition(taskArgs.block, taskArgs.txIndex, taskArgs.logIndex, taskArgs.expiry);
         }
         if (taskArgs.chainid === "" || taskArgs.signer === "" || taskArgs.index === "") {
             throw "need chainid + signer + index";

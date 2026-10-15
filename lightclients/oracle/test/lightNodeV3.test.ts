@@ -25,7 +25,7 @@ describe("LightNodeV3", function () {
         const Oracle = await ethers.getContractFactory("contracts/v3/OracleV3.sol:OracleV3");
         const oracleImpl = await Oracle.deploy();
         await oracleImpl.deployed();
-        return oracleImpl.encodePosition(blockNum, txIndex, logIndex);
+        return oracleImpl.encodePosition(blockNum, txIndex, logIndex, 0);
     }
 
     describe("Deployment", function () {

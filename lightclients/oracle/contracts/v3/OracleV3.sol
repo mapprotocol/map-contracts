@@ -16,6 +16,8 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     uint256 private constant POSITION_MASK = type(uint128).max;
+    // the high 128 bits of position carry the signature expiry (unix timestamp in seconds, 0 = never expires)
+    uint256 private constant EXPIRY_SHIFT = 128;
     uint256 private constant BLOCK_NUM_MASK = type(uint64).max;
     uint256 private constant TX_INDEX_MASK = type(uint32).max;
     uint256 private constant LOG_INDEX_MASK = type(uint32).max;
@@ -37,6 +39,7 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
     error only_signer_or_owner();
     error singer_mismatching();
     error invalid_proposal_param();
+    error proposal_expired(uint256 expiry, uint256 currentTime);
 
     event UpdateMultisig(bytes32 version, uint256 quorum, address[] signers);
     event Meet(uint256 chainId, uint256 position, bytes32 rootHash, bytes[] signature);
@@ -83,7 +86,7 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
         emit UpdateMultisig(version, quorum, signers);
     }
 
-    // position: (reserved 16 bytes | log index 4 bytes | tx index 4 bytes | block number 8 bytes)
+    // position: (expiry 16 bytes | log index 4 bytes | tx index 4 bytes | block number 8 bytes)
     function propose(
         uint256 chainId,
         uint256 position,
@@ -99,10 +102,11 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
         uint256 blockNum,
         uint256 txIndex,
         uint256 logIndex,
+        uint256 expiry,
         bytes32 rootHash,
         bytes calldata signature
     ) external whenNotPaused nonReentrant {
-       _propose(chainId, _encodePosition(blockNum, txIndex, logIndex), rootHash, signature);
+       _propose(chainId, _encodePosition(blockNum, txIndex, logIndex, expiry), rootHash, signature);
     }
 
     struct BatchProposeParam {
@@ -129,6 +133,7 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
         bytes calldata signature
     ) private {
         if (chainId == 0 || rootHash == bytes32("")) revert invalid_proposal_param();
+        _validateExpiry(position);
         address signer = _verifySignature(rootHash, position, chainId, signature);
         if (msg.sender != signer) revert only_signer();
 
@@ -157,7 +162,7 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
         }
     }
     
-    // position: (reserved 16 bytes | log index 4 bytes | tx index 4 bytes | block number 8 bytes)
+    // position: (expiry 16 bytes | log index 4 bytes | tx index 4 bytes | block number 8 bytes)
     function recoverProposal(uint256 chainId, uint256 position, address signer, uint256 index) external {
         _validatePosition(position);
         _recoverProposal(chainId, position, signer, index);
@@ -168,13 +173,14 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
         uint256 blockNum,
         uint256 txIndex,
         uint256 logIndex,
+        uint256 expiry,
         address signer,
         uint256 index
     ) external {
-        _recoverProposal(chainId, _encodePosition(blockNum, txIndex, logIndex), signer, index);
+        _recoverProposal(chainId, _encodePosition(blockNum, txIndex, logIndex, expiry), signer, index);
     }
 
-    // position: (reserved 16 bytes | log index 4 bytes | tx index 4 bytes | block number 8 bytes)
+    // position: (expiry 16 bytes | log index 4 bytes | tx index 4 bytes | block number 8 bytes)
     function proposalInfo(
         uint256 chainId,
         uint256 position,
@@ -190,10 +196,11 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
         uint256 blockNum,
         uint256 txIndex,
         uint256 logIndex,
+        uint256 expiry,
         bytes32 rootHash,
         bytes32 version
     ) external view returns (address[] memory singers, bytes[] memory signatures, bool canVerify) {
-        return _proposalInfo(chainId, _encodePosition(blockNum, txIndex, logIndex), rootHash, version);
+        return _proposalInfo(chainId, _encodePosition(blockNum, txIndex, logIndex, expiry), rootHash, version);
     }
 
     function _proposalInfo(
@@ -218,7 +225,7 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
         canVerify = (_version() == version && len >= _quorum());
     }
 
-    // position: (reserved 16 bytes | log index 4 bytes | tx index 4 bytes | block number 8 bytes)
+    // position: (expiry 16 bytes | log index 4 bytes | tx index 4 bytes | block number 8 bytes)
     function isProposed(
         uint256 chainId,
         bytes32 version,
@@ -235,9 +242,10 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
         uint256 blockNum,
         uint256 txIndex,
         uint256 logIndex,
+        uint256 expiry,
         address signer
     ) external view returns (bytes32) {
-        uint256 position = _encodePosition(blockNum, txIndex, logIndex);
+        uint256 position = _encodePosition(blockNum, txIndex, logIndex, expiry);
         return _isProposed(chainId, version, position, signer);
     }
 
@@ -252,13 +260,19 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
         return info.records[key][signer];
     }
 
-    function encodePosition(uint256 blockNum, uint256 txIndex, uint256 logIndex) external pure returns (uint256) {
-        return _encodePosition(blockNum, txIndex, logIndex);
+    // expiry: unix timestamp in seconds, the signature is valid while block.timestamp <= expiry, 0 never expires
+    function encodePosition(
+        uint256 blockNum,
+        uint256 txIndex,
+        uint256 logIndex,
+        uint256 expiry
+    ) external pure returns (uint256) {
+        return _encodePosition(blockNum, txIndex, logIndex, expiry);
     }
 
     function decodePosition(
         uint256 position
-    ) external pure returns (uint256 blockNum, uint256 txIndex, uint256 logIndex) {
+    ) external pure returns (uint256 blockNum, uint256 txIndex, uint256 logIndex, uint256 expiry) {
         _validatePosition(position);
         return _decodePosition(position);
     }
@@ -298,30 +312,41 @@ contract OracleV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, AccessContro
     }
 
     function _validatePosition(uint256 position) private pure {
-        if (position == 0 || position > POSITION_MASK) revert invalid_proposal_param();
+        // the low 128 bits (log index | tx index | block number) must not be empty, the high
+        // 128 bits are the signature expiry that LightNodeV3 enforces when it verifies the proof
+        if (position & POSITION_MASK == 0) revert invalid_proposal_param();
+    }
+
+    // only new proposals are checked, recovering and reading old proposals stays possible after the expiry
+    function _validateExpiry(uint256 position) private view {
+        uint256 expiry = position >> EXPIRY_SHIFT;
+        if (expiry != 0 && block.timestamp > expiry) revert proposal_expired(expiry, block.timestamp);
     }
 
     function _encodePosition(
         uint256 blockNum,
         uint256 txIndex,
-        uint256 logIndex
+        uint256 logIndex,
+        uint256 expiry
     ) private pure returns (uint256 position) {
         if (
             blockNum == 0 ||
             blockNum > BLOCK_NUM_MASK ||
             txIndex > TX_INDEX_MASK ||
-            logIndex > LOG_INDEX_MASK
+            logIndex > LOG_INDEX_MASK ||
+            expiry > POSITION_MASK
         ) revert invalid_proposal_param();
-        return (logIndex << 96) | (txIndex << 64) | blockNum;
+        return (expiry << EXPIRY_SHIFT) | (logIndex << 96) | (txIndex << 64) | blockNum;
     }
 
     function _decodePosition(
         uint256 position
-    ) private pure returns (uint256 blockNum, uint256 txIndex, uint256 logIndex) {
+    ) private pure returns (uint256 blockNum, uint256 txIndex, uint256 logIndex, uint256 expiry) {
         _validatePosition(position);
         blockNum = position & BLOCK_NUM_MASK;
         txIndex = (position >> 64) & TX_INDEX_MASK;
         logIndex = (position >> 96) & LOG_INDEX_MASK;
+        expiry = position >> EXPIRY_SHIFT;
     }
 
     /** UUPS *********************************************************/

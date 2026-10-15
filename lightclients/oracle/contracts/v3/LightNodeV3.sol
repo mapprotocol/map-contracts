@@ -15,7 +15,8 @@ contract LightNodeV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     
-    uint256 private constant POSITION_MASK = type(uint128).max;
+    // the reserved high 128 bits of position carry the signature expiry (unix timestamp in seconds)
+    uint256 private constant EXPIRY_SHIFT = 128;
 
     uint256 public chainId;
     
@@ -24,6 +25,7 @@ contract LightNodeV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     error LightNodeV3_Unsupport_Type();
     error LightNodeV3_Invalid_Log_Bytes();
     error LightNodeV3_Invalid_Position();
+    error LightNodeV3_Signature_Expired(uint256 expiry, uint256 currentTime);
 
     event UpdateMultisig(bytes32 version, uint256 quorum, address[] signers);
 
@@ -31,7 +33,8 @@ contract LightNodeV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
 
     struct ProofData {
         ProofType proofType;
-        //position: (reserved 16 bytes | log index 4 bytes | tx index 4 bytes | block number 8 bytes)
+        //position: (expiry 16 bytes | log index 4 bytes | tx index 4 bytes | block number 8 bytes)
+        //expiry: signature is valid while block.timestamp <= expiry, 0 means it never expires
         uint256 position;
         bytes32 receiptRoot;
         bytes[] signatures;
@@ -124,6 +127,7 @@ contract LightNodeV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     ) private view returns (bool success, string memory message, bytes memory logs) {
         ProofData memory data = abi.decode(_receiptProof, (ProofData));
         _validatePosition(data.position);
+        _validateExpiry(data.position);
         _verifySignatures(data.receiptRoot, data.position, chainId, data.signatures);
         if(data.proofType != ProofType.LOG) revert LightNodeV3_Unsupport_Type();
         if(keccak256(data.encodeLog) == data.receiptRoot){
@@ -138,7 +142,13 @@ contract LightNodeV3 is ECDSAMultisig, UUPSUpgradeable, Initializable, Pausable,
     }
 
     function _validatePosition(uint256 position) private pure {
-        if (position == 0 || position > POSITION_MASK) revert LightNodeV3_Invalid_Position();
+        // the low 128 bits (log index | tx index | block number) must not be empty
+        if (uint128(position) == 0) revert LightNodeV3_Invalid_Position();
+    }
+
+    function _validateExpiry(uint256 position) private view {
+        uint256 expiry = position >> EXPIRY_SHIFT;
+        if (expiry != 0 && block.timestamp > expiry) revert LightNodeV3_Signature_Expired(expiry, block.timestamp);
     }
 
     //addr(20) + 4 + 4(topic num) +4(data len) + topic[] + data
